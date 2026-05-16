@@ -418,7 +418,7 @@ export interface BaselineBundle {
 export interface BaselineCellEntry {
   key: CellKey;
   n_samples: number;
-  confidence: 'strict' | 'pooled' | 'aggregate' | 'none' | 'warm_start';  // ─── Tessera SLICE 1 Delta 2: 'warm_start' added
+  confidence: CellConfidence;  // ─── Tessera SLICE 2a Delta 7: extracted-typedef ref
   /** Populated iff `confidence === 'pooled'`; lists the adjacent cells
    *  whose samples were combined to hit `min_samples_pooled`. */
   pooled_from?: CellKey[];
@@ -435,7 +435,7 @@ export interface BaselineCellEntry {
 }
 
 export interface BaselineCellsConfig {
-  dimensions: Array<'hour_of_day' | 'day_of_week' | 'workload_class' | 'tenant_slice' | 'tenant_tier' | 'region' | 'shard_id'>;  // ─── Tessera SLICE 1 Delta 1: 'shard_id' added
+  dimensions: CellDimension[];  // ─── Tessera SLICE 2a Delta 7: extracted-typedef ref
   cells: BaselineCellEntry[];
   aggregate_fallback: {
     family_A?: { per_signal: Record<string, FamilyAPerSignalParams> };
@@ -836,32 +836,54 @@ export interface SweepCheckpoint {
   error?: string;
 }
 
-// ─── TESSERA SLICE 1 ADDITIONS ──────────────────────────────────────────────
+// ─── TESSERA SLICE 1 + SLICE 2a ADDITIONS ──────────────────────────────────
 
-/** Tessera SLICE 1 Delta 3 — per-shard residual delta from fleet-aggregate.
- *  Sparse-encoded: mean_vector + covariance present only at strict-upgraded cells.
- *  Full runtime semantics (population, merging, warm-start policy) deferred to SLICE 2. */
-export interface PerShardResidual {
-  mean_vector?: number[];   // Sparse: present only at strict-upgraded cells.
-  covariance?: number[][];  // Sparse: present only at strict-upgraded cells.
-  confidence: 'strict' | 'pooled' | 'aggregate' | 'none' | 'warm_start';
-}
-
-/** Tessera SLICE 1 Delta 3 — one per-shard entry in CompiledConfig.per_shard_cells. */
-export interface PerShardCell {
-  shard_id: string;
-  residual: PerShardResidual;
-}
-
-// Convenience type aliases for test/consumer imports.
-// Inline unions on BaselineCellsConfig.dimensions + BaselineCellEntry.confidence
-// are extended in-place (architect-pick α); these aliases capture the extended
-// union for named import ergonomics without extracting from the interfaces.
+/** Tessera SLICE 1 Delta 1 + 2 + SLICE 2a Delta 7 — canonical typedef extractions.
+ *  Single source of truth for the cell-dimension and confidence-tier vocabularies.
+ *  Referenced from BaselineCellEntry.confidence, BaselineCellsConfig.dimensions[],
+ *  and PerShardResidual.confidence. */
 export type CellDimension =
   | 'hour_of_day' | 'day_of_week' | 'workload_class'
   | 'tenant_slice' | 'tenant_tier' | 'region'
-  | 'shard_id';  // Tessera SLICE 1
+  | 'shard_id';  // ─── Tessera SLICE 1 Delta 1: 'shard_id' added
 
 export type CellConfidence =
   | 'strict' | 'pooled' | 'aggregate' | 'none'
-  | 'warm_start';  // Tessera SLICE 1
+  | 'warm_start';  // ─── Tessera SLICE 1 Delta 2: 'warm_start' added
+
+/** Tessera SLICE 1 Delta 3 + SLICE 2a Delta 5 — per-shard residual delta from fleet-aggregate.
+ *  Sparse-encoded by confidence tier:
+ *    - 'strict':     mean_vector + covariance present; mean_delta absent.
+ *    - 'warm_start': mean_delta present; mean_vector + covariance absent.
+ *    - 'pooled' / 'aggregate' / 'none': all delta fields absent; n_samples only.
+ *  Full runtime population semantics deferred to SLICE 2b. */
+export interface PerShardResidual {
+  /** Mandatory — sample count for this (shard, cell). Load-bearing for SLICE 2b
+   *  warm-start (n ≥ 20) and strict-upgrade (n ≥ 60) transitions. */
+  n_samples: number;
+  /** Mandatory — confidence tier; discriminates which optional fields are populated. */
+  confidence: CellConfidence;
+  /** Optional — present only at confidence === 'strict' (full residual). */
+  mean_vector?: number[];
+  /** Optional — present only at confidence === 'strict' (full residual). */
+  covariance?: number[][];
+  /** Optional — present only at confidence === 'warm_start' (delta from fleet-aggregate
+   *  mean; length matches BaselineCellEntry's effective mean-vector length, semantic-not-typed). */
+  mean_delta?: number[];
+  /** Optional — opaque identifier for the fleet-aggregate baseline this residual was
+   *  computed against. Enables SLICE 2b runtime to detect fleet-aggregate-refresh
+   *  invalidation. Hash function choice is SLICE 2b scope. */
+  residual_seed_hash?: string;
+  /** Optional — Unix epoch milliseconds of the most recent sample observed at this
+   *  (shard, cell). Enables SLICE 2b warm-start eligibility window logic. */
+  last_observed_at?: number;
+}
+
+/** Tessera SLICE 1 Delta 3 + SLICE 2a Delta 6 — one (shard_id, cell_key) entry in
+ *  CompiledConfig.per_shard_cells. Mirrors BaselineCellEntry's `key: CellKey` shape
+ *  so per-(shard_id, cell_key) lookup is the natural array iteration pattern. */
+export interface PerShardCell {
+  shard_id: string;
+  key: CellKey;  // ─── Tessera SLICE 2a Delta 6: cell-key field added (restructure from SLICE 1)
+  residual: PerShardResidual;
+}

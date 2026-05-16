@@ -22,6 +22,7 @@ import type { FamilyAPerSignalParams } from './families/a';
 import type { FamilyCPerCell } from './families/c';
 import type { FamilyDPerSignal } from './families/d';
 import type { ConformalParams } from './families/e';
+import type { WelfordState } from '../per-shard/welford';
 
 // ── Misc shared constants type ────────────────────────────────────
 
@@ -852,11 +853,18 @@ export type CellConfidence =
   | 'warm_start';  // ─── Tessera SLICE 1 Delta 2: 'warm_start' added
 
 /** Tessera SLICE 1 Delta 3 + SLICE 2a Delta 5 — per-shard residual delta from fleet-aggregate.
- *  Sparse-encoded by confidence tier:
+ *  Sparse-encoded by confidence tier (OUTPUT fields only — see below):
  *    - 'strict':     mean_vector + covariance present; mean_delta absent.
  *    - 'warm_start': mean_delta present; mean_vector + covariance absent.
  *    - 'pooled' / 'aggregate' / 'none': all delta fields absent; n_samples only.
- *  Full runtime population semantics deferred to SLICE 2b. */
+ *  Full runtime population semantics deferred to SLICE 2b.
+ *
+ *  R05 (SLICE 2b3) addition: welford_state is INTERNAL ACCUMULATOR STATE, NOT subject
+ *  to the sparse-encoding convention above. It is present whenever n_samples >= 1
+ *  regardless of confidence tier (the Welford recurrence accumulates across tier
+ *  transitions to preserve PRD AC-P2's "single-instance behavior" invariant).
+ *  R06 will project welford_state to the tier-gated OUTPUT fields (mean_vector /
+ *  covariance / mean_delta) via the baseline-injection orchestration boundary. */
 export interface PerShardResidual {
   /** Mandatory — sample count for this (shard, cell). Load-bearing for SLICE 2b
    *  warm-start (n ≥ 20) and strict-upgrade (n ≥ 60) transitions. */
@@ -877,6 +885,12 @@ export interface PerShardResidual {
   /** Optional — Unix epoch milliseconds of the most recent sample observed at this
    *  (shard, cell). Enables SLICE 2b warm-start eligibility window logic. */
   last_observed_at?: number;
+  /** R05 (SLICE 2b3) — internal Welford accumulator carrying running mean + M2 across
+   *  samples for this (shard, cell). Present iff n_samples >= 1 under stable seed; reset
+   *  on baseline-refresh (residual_seed_hash change). Source of truth for SLICE 2b3+
+   *  derivation of mean_vector / covariance / mean_delta at the orchestration boundary
+   *  (R06 scope). NOT subject to the R02 sparse-encoding convention. */
+  welford_state?: WelfordState;
 }
 
 /** Tessera SLICE 1 Delta 3 + SLICE 2a Delta 6 — one (shard_id, cell_key) entry in

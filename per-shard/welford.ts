@@ -17,19 +17,18 @@
 // AC-P2 operates in (fleet-scale shard residuals where absolute magnitudes
 // may shift but inter-sample variance stays moderate).
 //
-// R04 ships the algorithm as a standalone building block. Integration with
-// observeSample (engine/per-shard/warm-start.ts) is R05 scope and requires
-// resolving the accumulator-strategy decision documented in
-// Q-R03-SPEC-AUDIT.md § Q-R03 → Q-R04 sequencing context.
+// R05 (SLICE 2b3) integrates this algorithm into PerShardResidual via
+// engine/per-shard/runtime.ts (composition function updatePerShardResidual).
+// Accumulator-strategy decision resolved at R05: option (a) — schema extension
+// via PerShardResidual.welford_state? optional field. See Q-R05-SPEC.md.
 //
 // Tessera-original code (NOT vendored from DeploySignal). Extracts to the
 // shared npm package at Tessera Phase 2 close alongside the vendored engine
 // subset.
 
 /** Running accumulator for Welford's online mean + covariance algorithm.
- *  Module-local — intentionally NOT a field on PerShardResidual at R04.
- *  Integration with PerShardResidual + accumulator-strategy choice (per
- *  Q-R03-SPEC-AUDIT.md § Q-R03 → Q-R04 sequencing context) is R05 scope. */
+ *  R05 (SLICE 2b3) integration: this state is carried on PerShardResidual.welford_state
+ *  via engine/per-shard/runtime.ts (function updatePerShardResidual). */
 export interface WelfordState {
   /** Number of samples observed so far (n ≥ 0). */
   n: number;

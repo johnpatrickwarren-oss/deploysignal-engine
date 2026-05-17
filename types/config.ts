@@ -206,11 +206,16 @@ export interface CompiledConfig {
 
 /** Q61 SPEC-1 — 10-decision baseline curation pipeline canonical
  *  decision identifier. SLICE 1 ships D1-D4; SLICE 2 ships D5-D7;
- *  SLICE 3 ships D8-D10. */
+ *  SLICE 3 ships D8-D10.
+ *  Tessera SLICE 4 (R06) — additive extension D11; reserves D12 + D13 for SLICE 5 (R07).
+ *    D11: per-shard within-window contamination screening (R06-shipped; tools/curate-baseline-pre-pass.ts).
+ *    D12: fleet-correlated contamination detection (R07 reserved per Q-JC4; Stage 2b FCP-1).
+ *    D13: warm-start eligibility tagging (R07 reserved per Q-JC5; Stage 3b). */
 export type BaselineCurationDecisionId =
   | 'D1' | 'D2' | 'D3' | 'D4'
   | 'D5' | 'D6' | 'D7'
-  | 'D8' | 'D9' | 'D10';
+  | 'D8' | 'D9' | 'D10'
+  | 'D11' | 'D12' | 'D13';  // ─── Tessera SLICE 4 Delta 1: per-shard contamination decisions
 
 /** Q61 SPEC-1 — per-decision audit-emission record. Each decision in
  *  the baseline curation pipeline emits one of these, capturing the

@@ -1,4 +1,4 @@
-// engine/per-shard/runtime.ts — Tessera SLICE 2b3 + SLICE 2b4 + SLICE 2 carry-forwards:
+// engine/per-shard/runtime.ts — Tessera SLICE 2b3 + R10 (SLICE 2b4) + R14 (SLICE 2 carry-forwards):
 // per-shard runtime composition.
 //
 // Composes the R03 state machine (observeSample) and R04 Welford accumulator

@@ -20,6 +20,8 @@ import {
 import {
   initialWelfordState,
   updateWelford,
+  welfordMean,
+  welfordCovariance,
   type WelfordState,
 } from './welford';
 
@@ -88,8 +90,67 @@ export function updatePerShardResidual(
   const newAccumulator = updateWelford(accumulatorBase, obs.sampleVector);
 
   // 3. Merge state-machine output with new accumulator.
-  return {
+  const merged: PerShardResidual = {
     ...stateTransition,
     welford_state: newAccumulator,
   };
+
+  // 4. R10 (SLICE 2b4) emission + sparse-encoding inverse-convention enforcement.
+  return projectTierGatedOutputs(merged);
+}
+
+/** R10 (SLICE 2b4) — pure helper that enforces the R02 sparse-encoding convention
+ *  at the per-shard runtime's emission boundary. Atomically populates mean_vector
+ *  AND covariance at strict tier (when welford_state has accumulated enough samples
+ *  for a valid covariance, i.e., welfordCovariance returns non-null) and explicitly
+ *  omits both fields at all other tiers.
+ *
+ *  Gate criterion (all three clauses required for emission):
+ *    1. residual.confidence === 'strict'
+ *    2. residual.welford_state !== undefined
+ *    3. welfordCovariance(residual.welford_state) !== null  (i.e., welford_state.n >= 2)
+ *
+ *  When the gate fires: emit mean_vector = welfordMean(state) AND covariance = (the
+ *  non-null welfordCovariance return), overriding any stale spread of those fields
+ *  from the input residual.
+ *
+ *  When the gate does NOT fire (non-strict tier OR strict-with-insufficient-welford):
+ *  return the input residual with mean_vector and covariance keys destructured-out
+ *  (keys ABSENT, not present-with-undefined). This strips any stale spread of those
+ *  fields from a malformed input.
+ *
+ *  mean_delta is untouched (R11+ scope per R10-SAS-4 + R10-SAS-5); the helper carries
+ *  it through unchanged via the `...rest` spread.
+ *
+ *  welford_state is untouched (the helper reads it at strict tier to derive emission
+ *  values but does not modify or remove it on the output).
+ *
+ *  Pure function: no mutation of input residual; returns a new object (the destructure-
+ *  spread always constructs a fresh object literal).
+ */
+export function projectTierGatedOutputs(
+  residual: PerShardResidual,
+): PerShardResidual {
+  // Destructure mean_vector and covariance OUT of the input. `rest` contains everything
+  // else, including welford_state, mean_delta, and the state-machine fields. This is the
+  // sparse-encoding inverse-convention enforcement at non-strict tiers.
+  const { mean_vector: _omitMv, covariance: _omitCov, ...rest } = residual;
+
+  // Strict-tier atomic emission gate.
+  if (
+    residual.confidence === 'strict' &&
+    residual.welford_state !== undefined
+  ) {
+    const cov = welfordCovariance(residual.welford_state);
+    if (cov !== null) {
+      return {
+        ...rest,
+        mean_vector: welfordMean(residual.welford_state),
+        covariance: cov,
+      };
+    }
+  }
+
+  // Non-strict OR strict-but-insufficient: emit without mean_vector / covariance.
+  return rest;
 }

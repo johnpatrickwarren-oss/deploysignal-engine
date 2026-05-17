@@ -862,14 +862,22 @@ export type CellConfidence =
  *    - 'strict':     mean_vector + covariance present; mean_delta absent.
  *    - 'warm_start': mean_delta present; mean_vector + covariance absent.
  *    - 'pooled' / 'aggregate' / 'none': all delta fields absent; n_samples only.
- *  Full runtime population semantics deferred to SLICE 2b.
+ *  R10 (SLICE 2b4) emission contract — enforced by engine/per-shard/runtime.ts
+ *  projectTierGatedOutputs (called as the final step of updatePerShardResidual):
+ *    - At strict tier with welford_state present AND welfordCovariance(state) non-null
+ *      (state.n >= 2): mean_vector AND covariance populated atomically from welfordMean
+ *      + welfordCovariance.
+ *    - At all other tiers ('none' / 'warm_start' / 'pooled' / 'aggregate') AND at
+ *      strict-with-insufficient-welford: mean_vector AND covariance explicitly omitted
+ *      from the output (destructure-then-spread; keys absent, not present-with-undefined).
+ *    - mean_delta emission + inverse-convention enforcement remain R11+ scope; R10's
+ *      runtime carries mean_delta through unchanged.
  *
  *  R05 (SLICE 2b3) addition: welford_state is INTERNAL ACCUMULATOR STATE, NOT subject
  *  to the sparse-encoding convention above. It is present whenever n_samples >= 1
  *  regardless of confidence tier (the Welford recurrence accumulates across tier
  *  transitions to preserve PRD AC-P2's "single-instance behavior" invariant).
- *  R06 will project welford_state to the tier-gated OUTPUT fields (mean_vector /
- *  covariance / mean_delta) via the baseline-injection orchestration boundary. */
+ *  R10 (above) consumes welford_state at the strict-tier emission boundary. */
 export interface PerShardResidual {
   /** Mandatory — sample count for this (shard, cell). Load-bearing for SLICE 2b
    *  warm-start (n ≥ 20) and strict-upgrade (n ≥ 60) transitions. */

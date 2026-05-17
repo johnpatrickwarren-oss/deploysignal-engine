@@ -225,7 +225,7 @@ export type BaselineCurationDecisionId =
  *  (architect-prior-spec reference). Audit trail enables Reviewer
  *  cross-references + future spec-drafting layer-attribution. */
 export interface BaselineCurationDecision {
-  /** Canonical decision identifier (D1-D10). */
+  /** Canonical decision identifier (D1-D13). */
   decision_id: BaselineCurationDecisionId;
   /** Human-readable decision name (e.g., 'Per-cell μ aggregation'). */
   decision_name: string;

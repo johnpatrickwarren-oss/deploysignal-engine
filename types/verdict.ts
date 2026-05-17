@@ -3,6 +3,16 @@
 // Sync policy: vendored-at-pin
 // Extract target: @johnpatrickwarren-oss/deploysignal-engine (Tessera Phase 2 close commitment)
 // DO NOT modify internals without ADR; deltas only at architecturally-anchored extension points (see SCOPING-MEMO-v0.3 § 9).
+// Tessera Phase 2 SLICE 1 amendments (R18, 2026-05-17) — three additive extensions
+// per SCOPING-MEMO-v0.3.md § 2.3 + § 9.4:
+//   1. TopologyNode.kind union extends to include 'gpu_shard' | 'rack' (subset of v0.3 list;
+//      'psu' | 'cooling_zone' deferred to later Phase 2 SLICE).
+//   2. TopologyEdge.relationship union extends to include 'contains' (hierarchical containment;
+//      BFS at engine/topology-overlay.ts treats edges bidirectionally regardless of relationship,
+//      inherited semantic accepted at SLICE 1).
+//   3. VerdictGroup adds optional `cluster_event_id?: string` (Phase 2 outer-aggregator hook;
+//      preserves Addition #25 D2 + D5 at SLICE 1; SLICE 2 may amend D5).
+// All three extensions are additive-only; Addition #25 D2 + D5 and Addition #26 D4 preserved.
 
 // engine/types/verdict.ts — Scenario, orchestrator return, fusion
 // output, detector-verdict, verdict-group + topology overlay artifacts.
@@ -188,6 +198,15 @@ export interface VerdictGroup {
   /** Late-arrival verdicts attached within the grace window post-close.
    *  Also appended to `verdicts` / `firing_verdicts` as appropriate. */
   late_arrival_verdicts: FusedVerdict[];
+  /** Phase 2 SLICE 1 (R18) — cluster-event scope-extension. Optional;
+   *  populated by Phase 2 outer aggregator (SLICE 2+) when a fleet-level
+   *  cluster event (firmware push / config change / deploy) is the
+   *  attribution scope for this group. SLICE 1 ships the field; SLICE 2
+   *  wires the aggregator. Preserves Addition #25 D2 (window-based close
+   *  at (deploy_id, window_start_ts) scope is unchanged at SLICE 1) and
+   *  D5 (group_id format `group-{deploy_id}-{window_start_ts}` retained
+   *  at SLICE 1; potential D5 amendment is SLICE 2 work). */
+  cluster_event_id?: string;
   closed: boolean;
   /** Epoch seconds at close; `null` while open. */
   closed_at_ts: number | null;
@@ -214,7 +233,7 @@ export interface TopologyNode {
    *  service name, or OTel resource id). Used for BFS + hashing. */
   id: string;
   service_name: string;
-  kind: 'service' | 'database' | 'queue' | 'external';
+  kind: 'service' | 'database' | 'queue' | 'external' | 'gpu_shard' | 'rack';
   metadata?: Record<string, string>;
 }
 
@@ -224,7 +243,7 @@ export interface TopologyEdge {
   from: string;
   /** Target node id (callee / owning store). */
   to: string;
-  relationship: 'calls' | 'reads' | 'writes' | 'publishes';
+  relationship: 'calls' | 'reads' | 'writes' | 'publishes' | 'contains';
   metadata?: Record<string, string>;
 }
 

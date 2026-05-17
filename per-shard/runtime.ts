@@ -1,4 +1,5 @@
-// engine/per-shard/runtime.ts — Tessera SLICE 2b3: per-shard runtime composition.
+// engine/per-shard/runtime.ts — Tessera SLICE 2b3 + SLICE 2b4 + SLICE 2 carry-forwards:
+// per-shard runtime composition.
 //
 // Composes the R03 state machine (observeSample) and R04 Welford accumulator
 // (updateWelford) into a single pure-function update that threads accumulator
@@ -8,6 +9,19 @@
 // The composition returns a NEW PerShardResidual per update; both input arguments
 // are left unchanged. Internal calls to observeSample and updateWelford each
 // preserve their own pure-function contracts.
+//
+// R10 (SLICE 2b4): also exports projectTierGatedOutputs, which enforces the R02
+// sparse-encoding inverse-convention at the emission boundary. Strict-tier atomically
+// populates mean_vector + covariance from welford_state when welfordCovariance
+// returns non-null (n ≥ 2). All other tiers emit without these fields (keys ABSENT,
+// not present-with-undefined). Per-shard R10 spec: REVIEWER-REPORT-R10.md.
+//
+// R14 (SLICE 2 carry-forwards): updatePerShardResidual and projectTierGatedOutputs
+// each accept an optional baselineCell: BaselineCellEntry | undefined argument.
+// Warm-start tier emits mean_delta = welfordMean(welford_state) −
+// baselineCell.family_C.mean_vector when baselineCell is provided and the
+// mean_vector lengths match. mean_delta is absent when baselineCell is absent or
+// has no usable family_C.mean_vector. Per-shard R14 spec: REVIEWER-REPORT-R14.md.
 //
 // Tessera-original code (NOT vendored from DeploySignal). Extracts to the shared
 // npm package at Tessera Phase 2 close.

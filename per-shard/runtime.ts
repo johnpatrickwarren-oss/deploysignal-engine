@@ -12,7 +12,7 @@
 // Tessera-original code (NOT vendored from DeploySignal). Extracts to the shared
 // npm package at Tessera Phase 2 close.
 
-import type { PerShardResidual } from '../types/config';
+import type { PerShardResidual, BaselineCellEntry } from '../types/config';
 import {
   observeSample,
   type SampleObservation,
@@ -68,6 +68,7 @@ export interface ExtendedSampleObservation extends SampleObservation {
 export function updatePerShardResidual(
   current: PerShardResidual,
   obs: ExtendedSampleObservation,
+  baselineCell?: BaselineCellEntry,
 ): PerShardResidual {
   // 1. State-machine transition (observeSample takes only the SampleObservation parent shape).
   const stateTransition = observeSample(current, {
@@ -95,48 +96,39 @@ export function updatePerShardResidual(
     welford_state: newAccumulator,
   };
 
-  // 4. R10 (SLICE 2b4) emission + sparse-encoding inverse-convention enforcement.
-  return projectTierGatedOutputs(merged);
+  // 4. R10/R14 emission + sparse-encoding inverse-convention enforcement.
+  return projectTierGatedOutputs(merged, baselineCell);
 }
 
-/** R10 (SLICE 2b4) — pure helper that enforces the R02 sparse-encoding convention
- *  at the per-shard runtime's emission boundary. Atomically populates mean_vector
- *  AND covariance at strict tier (when welford_state has accumulated enough samples
- *  for a valid covariance, i.e., welfordCovariance returns non-null) and explicitly
- *  omits both fields at all other tiers.
+/** R10 (SLICE 2b4) + R14 (SLICE 2 carry-forwards) — pure helper that enforces the
+ *  R02 sparse-encoding convention at the per-shard runtime's emission boundary.
  *
- *  Gate criterion (all three clauses required for emission):
- *    1. residual.confidence === 'strict'
- *    2. residual.welford_state !== undefined
- *    3. welfordCovariance(residual.welford_state) !== null  (i.e., welford_state.n >= 2)
+ *  Strict-tier: atomically populates mean_vector AND covariance from welford_state
+ *  when welfordCovariance returns non-null (n >= 2). Both absent when gate fails.
  *
- *  When the gate fires: emit mean_vector = welfordMean(state) AND covariance = (the
- *  non-null welfordCovariance return), overriding any stale spread of those fields
- *  from the input residual.
+ *  Warm-start tier (R14): emits mean_delta = welfordMean(welford_state) -
+ *  baselineCell.family_C.mean_vector when baselineCell is provided and lengths match.
+ *  mean_delta is absent when baselineCell is not provided or has no family_C.mean_vector.
  *
- *  When the gate does NOT fire (non-strict tier OR strict-with-insufficient-welford):
- *  return the input residual with mean_vector and covariance keys destructured-out
- *  (keys ABSENT, not present-with-undefined). This strips any stale spread of those
- *  fields from a malformed input.
+ *  All other tiers: mean_vector, covariance, AND mean_delta all absent (inverse-
+ *  convention enforcement; keys ABSENT not present-with-undefined).
  *
- *  mean_delta is untouched (R11+ scope per R10-SAS-4 + R10-SAS-5); the helper carries
- *  it through unchanged via the `...rest` spread.
+ *  welford_state is carried through unchanged (not subject to the sparse-encoding
+ *  convention; present whenever n_samples >= 1 regardless of tier).
  *
- *  welford_state is untouched (the helper reads it at strict tier to derive emission
- *  values but does not modify or remove it on the output).
- *
- *  Pure function: no mutation of input residual; returns a new object (the destructure-
- *  spread always constructs a fresh object literal).
+ *  Pure function: no mutation of input residual; returns a new object.
  */
 export function projectTierGatedOutputs(
   residual: PerShardResidual,
+  baselineCell?: BaselineCellEntry,
 ): PerShardResidual {
-  // Destructure mean_vector and covariance OUT of the input. `rest` contains everything
-  // else, including welford_state, mean_delta, and the state-machine fields. This is the
-  // sparse-encoding inverse-convention enforcement at non-strict tiers.
-  const { mean_vector: _omitMv, covariance: _omitCov, ...rest } = residual;
+  // Destructure mean_vector, covariance, AND mean_delta OUT of the input.
+  // This enforces the sparse-encoding inverse-convention for all three fields:
+  // they are only re-added below at the tiers where the convention permits them.
+  // R14 (SLICE 2 carry-forward) extends the R10 two-field destructure to three.
+  const { mean_vector: _omitMv, covariance: _omitCov, mean_delta: _omitMd, ...rest } = residual;
 
-  // Strict-tier atomic emission gate.
+  // Strict-tier atomic emission gate (R10 behavior unchanged).
   if (
     residual.confidence === 'strict' &&
     residual.welford_state !== undefined
@@ -147,10 +139,28 @@ export function projectTierGatedOutputs(
         ...rest,
         mean_vector: welfordMean(residual.welford_state),
         covariance: cov,
+        // mean_delta intentionally absent at strict tier (inverse-convention)
       };
     }
   }
 
-  // Non-strict OR strict-but-insufficient: emit without mean_vector / covariance.
+  // Warm-start tier: emit mean_delta when baselineCell provides a usable mean.
+  if (
+    residual.confidence === 'warm_start' &&
+    residual.welford_state !== undefined &&
+    baselineCell?.family_C?.mean_vector !== undefined
+  ) {
+    const perShardMean = welfordMean(residual.welford_state);
+    const baselineMean = baselineCell.family_C.mean_vector;
+    if (perShardMean.length === baselineMean.length) {
+      return {
+        ...rest,
+        mean_delta: perShardMean.map((v, i) => v - baselineMean[i]),
+      };
+    }
+  }
+
+  // All other cases (non-warm_start non-strict, or warm_start without usable baselineCell):
+  // emit without mean_vector / covariance / mean_delta.
   return rest;
 }

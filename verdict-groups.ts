@@ -3,6 +3,17 @@
 // Sync policy: vendored-at-pin
 // Extract target: @johnpatrickwarren-oss/deploysignal-engine (Tessera Phase 2 close commitment)
 // DO NOT modify internals without ADR; deltas only at architecturally-anchored extension points (see SCOPING-MEMO-v0.3 § 9).
+// Tessera Phase 2 SLICE 2.A amendments (R20, 2026-05-17) — wire VerdictGroup.cluster_event_id
+// per SCOPING-MEMO-v0.3.md § 2.3 + § 9 vendored-with-deltas policy:
+//   1. VerdictGrouper.ingest opts adds optional cluster_event_id?: string (per-call origination).
+//   2. Internal keying transitions to (cluster_event_id, deploy_id) tuple via groupKey() helper;
+//      legacy single-deploy mode preserved when cluster_event_id is absent.
+//   3. group_id format is conditional: composite `group-{cluster_event_id}-{deploy_id}-{ts}`
+//      when cluster_event_id present; inherited `group-{deploy_id}-{ts}` preserved when absent.
+//   4. Late-arrival lookup matches on (cluster_event_id, deploy_id) tuple-equality; mismatch
+//      opens a new group rather than attaching across scopes (D2 preserved/extended).
+// All deltas additive; Addition #25 D2 + D5 preserved (legacy mode byte-identical at the
+// observable level; cluster-event mode is a strict superset of behavior).
 
 // engine/verdict-groups.ts — Addition #25 (ARCHITECT-REPLY-47) L3b aggregator.
 //
@@ -63,7 +74,7 @@ export class VerdictGrouper {
   private readonly graceSeconds: number;
   private readonly confidenceSaturation: number;
 
-  private readonly openByDeploy: Map<string, VerdictGroup> = new Map();
+  private readonly openByGroupKey: Map<string, VerdictGroup> = new Map();
   private readonly recentlyClosed: Map<VerdictGroupId, VerdictGroup> = new Map();
 
   constructor(opts: VerdictGroupOpts = {}) {
@@ -75,18 +86,20 @@ export class VerdictGrouper {
   ingest(
     verdict: FusedVerdict,
     ts_seconds: number,
-    opts: { terminal?: boolean } = {},
+    opts: { terminal?: boolean; cluster_event_id?: string } = {},
   ): IngestResult {
     const deployId = verdict.deploy_ref;
+    const clusterEventId = opts.cluster_event_id;
+    const key = this.groupKey(clusterEventId, deployId);
     this.evictStaleClosed(ts_seconds);
 
-    let openGroup = this.openByDeploy.get(deployId);
+    let openGroup = this.openByGroupKey.get(key);
     let closedByThisCall: VerdictGroup | null = null;
     let lateArrival = false;
     let rotated = false;
 
     if (openGroup && ts_seconds - openGroup.window_start_ts > this.windowSeconds) {
-      closedByThisCall = this.closeDeployGroup(deployId, ts_seconds, 'window_elapsed')!;
+      closedByThisCall = this.closeGroup(key, ts_seconds, 'window_elapsed')!;
       openGroup = undefined;
       rotated = true;
     }
@@ -98,7 +111,9 @@ export class VerdictGrouper {
       // just rotate (window-elapsed close). A rotation-triggering
       // verdict always opens a new group — it's the first verdict of
       // the next window, not a straggler for the previous one.
-      const lateTarget = rotated ? null : this.findRecentClosedForDeploy(deployId, ts_seconds);
+      const lateTarget = rotated
+        ? null
+        : this.findRecentClosedForKey(clusterEventId, deployId, ts_seconds);
       if (lateTarget) {
         lateTarget.late_arrival_verdicts.push(verdict);
         lateTarget.verdicts.push(verdict);
@@ -107,7 +122,7 @@ export class VerdictGrouper {
         lateArrival = true;
         attributed = lateTarget;
       } else {
-        attributed = this.openGroup(deployId, verdict, ts_seconds);
+        attributed = this.openGroupAt(key, clusterEventId, deployId, verdict, ts_seconds);
       }
     } else {
       this.appendToOpen(openGroup, verdict);
@@ -115,7 +130,7 @@ export class VerdictGrouper {
     }
 
     if (opts.terminal && !lateArrival && !attributed.closed) {
-      const terminalClose = this.closeDeployGroup(deployId, ts_seconds, 'terminal_verdict');
+      const terminalClose = this.closeGroup(key, ts_seconds, 'terminal_verdict');
       if (terminalClose && !closedByThisCall) closedByThisCall = terminalClose;
     }
 
@@ -124,29 +139,48 @@ export class VerdictGrouper {
 
   flush(ts_seconds: number): VerdictGroup[] {
     const closed: VerdictGroup[] = [];
-    for (const deployId of Array.from(this.openByDeploy.keys())) {
-      const g = this.closeDeployGroup(deployId, ts_seconds, 'window_elapsed');
+    for (const key of Array.from(this.openByGroupKey.keys())) {
+      const g = this.closeGroup(key, ts_seconds, 'window_elapsed');
       if (g) closed.push(g);
     }
     return closed;
   }
 
   /** Public for test + orchestrator visibility. Does not mutate. */
-  openGroupForDeploy(deploy_id: string): VerdictGroup | undefined {
-    return this.openByDeploy.get(deploy_id);
+  openGroupForDeploy(deploy_id: string, cluster_event_id?: string): VerdictGroup | undefined {
+    return this.openByGroupKey.get(this.groupKey(cluster_event_id, deploy_id));
   }
 
   // ── Internal helpers ────────────────────────────────────────────────
 
-  private groupId(deployId: string, window_start_ts: number): VerdictGroupId {
+  private groupKey(cluster_event_id: string | undefined, deploy_id: string): string {
+    const eventSeg = cluster_event_id ? cluster_event_id : '';
+    return `${eventSeg}|${deploy_id}`;
+  }
+
+  private groupId(
+    cluster_event_id: string | undefined,
+    deployId: string,
+    window_start_ts: number,
+  ): VerdictGroupId {
+    if (cluster_event_id) {
+      return `group-${cluster_event_id}-${deployId}-${window_start_ts}`;
+    }
     return `group-${deployId}-${window_start_ts}`;
   }
 
-  private openGroup(deployId: string, verdict: FusedVerdict, ts: number): VerdictGroup {
+  private openGroupAt(
+    key: string,
+    cluster_event_id: string | undefined,
+    deployId: string,
+    verdict: FusedVerdict,
+    ts: number,
+  ): VerdictGroup {
     const firing = verdict.firing_families.length > 0;
     const group: VerdictGroup = {
-      group_id: this.groupId(deployId, ts),
+      group_id: this.groupId(cluster_event_id, deployId, ts),
       deploy_id: deployId,
+      cluster_event_id: cluster_event_id,
       window_start_ts: ts,
       window_end_ts: ts + this.windowSeconds,
       verdicts: [verdict],
@@ -158,7 +192,7 @@ export class VerdictGrouper {
       closed_at_ts: null,
     };
     this.recomputeDerived(group);
-    this.openByDeploy.set(deployId, group);
+    this.openByGroupKey.set(key, group);
     return group;
   }
 
@@ -168,14 +202,14 @@ export class VerdictGrouper {
     this.recomputeDerived(group);
   }
 
-  private closeDeployGroup(
-    deployId: string,
+  private closeGroup(
+    key: string,
     ts: number,
     _reason: VerdictGroupCloseReason,
   ): VerdictGroup | null {
-    const group = this.openByDeploy.get(deployId);
+    const group = this.openByGroupKey.get(key);
     if (!group) return null;
-    this.openByDeploy.delete(deployId);
+    this.openByGroupKey.delete(key);
     group.closed = true;
     group.closed_at_ts = ts;
     group.window_end_ts = ts;
@@ -213,10 +247,15 @@ export class VerdictGrouper {
     group.confidence = Math.min(1, families.size / this.confidenceSaturation);
   }
 
-  private findRecentClosedForDeploy(deployId: string, ts: number): VerdictGroup | null {
+  private findRecentClosedForKey(
+    cluster_event_id: string | undefined,
+    deployId: string,
+    ts: number,
+  ): VerdictGroup | null {
     let best: VerdictGroup | null = null;
     for (const g of this.recentlyClosed.values()) {
       if (g.deploy_id !== deployId) continue;
+      if ((g.cluster_event_id ?? '') !== (cluster_event_id ?? '')) continue;
       if (g.closed_at_ts === null) continue;
       if (ts - g.closed_at_ts > this.graceSeconds) continue;
       if (best === null || g.closed_at_ts > (best.closed_at_ts ?? -Infinity)) best = g;

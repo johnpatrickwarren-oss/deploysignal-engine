@@ -65,9 +65,9 @@ export interface CommonModeCandidate {
    *  to shared_node_id. Always ≤ opts.max_hop_distance. For v9Y at
    *  max_hop=1 this is always 1. */
   topology_distance: number;
-  /** Min event_ts across the records contributing to this candidate
-   *  (one record per distinct member shard, picking the earliest
-   *  event_ts for that shard if it appears multiple times). */
+  /** Min event_ts across all touch records contributing to this candidate
+   *  (all appearances of each shard are considered; iteration over all
+   *  touches, not per-distinct-shard dedup — R26 MINOR-2 docstring correction). */
   earliest_event_ts: number;
   /** Max event_ts across the same set of records. */
   latest_event_ts: number;

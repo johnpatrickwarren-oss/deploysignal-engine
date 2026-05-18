@@ -130,6 +130,9 @@ export class NvlinkTopologySource implements TopologySource {
       source_version: opts.source_version,
     });
     this.snapshot = snapshot;
+    // Third operands ('nvlink_topology_source' / 'nvlink-1') are structurally unreachable:
+    // parseNvlinkStatus always defaults snapshot.source_id / source_version (typed string, never
+    // undefined). Retained for defensive correctness if parseNvlinkStatus is ever modified.
     this.id      = opts.id      ?? snapshot.source_id     ?? 'nvlink_topology_source';
     this.version = opts.version ?? snapshot.source_version ?? 'nvlink-1';
   }

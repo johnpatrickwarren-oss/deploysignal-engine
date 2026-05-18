@@ -13,6 +13,15 @@
 //   3. VerdictGroup adds optional `cluster_event_id?: string` (Phase 2 outer-aggregator hook;
 //      preserves Addition #25 D2 + D5 at SLICE 1; SLICE 2 may amend D5).
 // All three extensions are additive-only; Addition #25 D2 + D5 and Addition #26 D4 preserved.
+//
+// Tessera Phase 2 SLICE 3.A amendments (R23, 2026-05-18) — two additive extensions
+// per Q-R23-SPEC.md § 2.1 (remaining node-kind enumerations from SCOPING-MEMO-v0.3 § 2.3):
+//   4. TopologyNode.kind union extends to include 'psu' | 'cooling_zone' (completes the
+//      v0.3 four-kind hardware-topology set deferred at SLICE 1).
+//   5. TopologyEdge.relationship union extends to include 'nvlink_peer' (peer-to-peer GPU
+//      interconnect; semantically distinct from containment; BFS at
+//      engine/topology-overlay.ts treats edges bidirectionally regardless of relationship).
+// Both extensions are additive-only; Addition #25 D2 + D5 and Addition #26 D4 preserved.
 
 // engine/types/verdict.ts — Scenario, orchestrator return, fusion
 // output, detector-verdict, verdict-group + topology overlay artifacts.
@@ -233,7 +242,7 @@ export interface TopologyNode {
    *  service name, or OTel resource id). Used for BFS + hashing. */
   id: string;
   service_name: string;
-  kind: 'service' | 'database' | 'queue' | 'external' | 'gpu_shard' | 'rack';
+  kind: 'service' | 'database' | 'queue' | 'external' | 'gpu_shard' | 'rack' | 'psu' | 'cooling_zone';
   metadata?: Record<string, string>;
 }
 
@@ -243,7 +252,7 @@ export interface TopologyEdge {
   from: string;
   /** Target node id (callee / owning store). */
   to: string;
-  relationship: 'calls' | 'reads' | 'writes' | 'publishes' | 'contains';
+  relationship: 'calls' | 'reads' | 'writes' | 'publishes' | 'contains' | 'nvlink_peer';
   metadata?: Record<string, string>;
 }
 

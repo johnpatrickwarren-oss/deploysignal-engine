@@ -4,11 +4,14 @@
 // Extract target: @johnpatrickwarren-oss/deploysignal-engine (Tessera Phase 2 close commitment)
 // DO NOT modify internals without ADR; deltas only at architecturally-anchored extension points (see SCOPING-MEMO-v0.3 § 9).
 //
-// ─── TESSERA SLICE 1 DELTAS (4 changes to inherited 820 LOC) ───────────────
+// ─── TESSERA DELTAS (5 changes to inherited 820 LOC) ───────────────────────
 // Delta 1: BaselineCellsConfig.dimensions extended with 'shard_id' as 7th member.
 // Delta 2: BaselineCellEntry.confidence extended with 'warm_start' as 5th member.
 // Delta 3: PerShardResidual + PerShardCell new interface declarations at module level.
 // Delta 4: CompiledConfig.per_shard_cells?: PerShardCell[] new optional field.
+// Delta 5 (R34): CompiledConfig.freeze_hook_enabled?: boolean new optional field
+//          (Phase 2 SLICE 4 event-driven freeze hook activation flag; default-absent
+//          equivalent to false; consumed by engine/events/freeze-hook.ts wrapper).
 // Convenience: CellDimension + CellConfidence type aliases added for test/type consumers.
 // Inline union extensions are in-place per architect-pick (α); typedef-extract deferred to SLICE 2+.
 
@@ -111,6 +114,14 @@ export interface CompiledConfig {
   /** Tessera SLICE 1 Delta 4 — per-shard residual cells. Optional parallel to
    *  baseline_cells. Runtime population at SLICE 2; SLICE 1 ships type only. */
   per_shard_cells?: PerShardCell[];
+  /** R34 Delta 5 — Phase 2 SLICE 4 event-driven freeze-hook activation flag.
+   *  Default-absent equivalent to false. When true AND the runtime caller
+   *  supplies a FreezeHookState with active=true (see
+   *  engine/events/freeze-hook.ts), per-shard baseline accumulation pauses
+   *  during the post-deploy-event window so event-driven drift is NOT
+   *  absorbed into per-shard residual. Per SCOPING-MEMO-v0.3 § 2.4
+   *  circular-coupling surface. */
+  freeze_hook_enabled?: boolean;
   /** Week 3 (Addition #4): signal-level bake profile, keyed by signal id.
    *  Applies to Families A, C, D, E; Family B has its own warmup config. */
   bake_profiles?: Record<string, BakeProfile>;

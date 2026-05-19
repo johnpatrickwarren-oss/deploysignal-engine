@@ -65,11 +65,15 @@ export interface CommonModeCandidate {
    *  to shared_node_id. Always ≤ opts.max_hop_distance. For v9Y at
    *  max_hop=1 this is always 1. */
   topology_distance: number;
-  /** Min event_ts across all touch records contributing to this candidate
-   *  (all appearances of each shard are considered; iteration over all
-   *  touches, not per-distinct-shard dedup — R26 MINOR-2 docstring correction). */
+  /** Min over distinct member shards of that shard's earliest event_ts.
+   *  per-distinct-shard dedup: one earliest value per distinct member_shard_id
+   *  (min of all that shard's touches), then min across those per-shard values.
+   *  R26 MINOR-2 fix; R38 MAJOR-1 extends the same dedup to latest_event_ts. */
   earliest_event_ts: number;
-  /** Max event_ts across the same set of records. */
+  /** Max over distinct member shards of that shard's latest event_ts.
+   *  per-distinct-shard dedup: one latest value per distinct member_shard_id
+   *  (max of all that shard's touches), then max across those per-shard values.
+   *  R38 MAJOR-1 fix: was incorrectly using shardEarliest in the max path. */
   latest_event_ts: number;
   /** Literal `true` per inherited Addition #26 D4. Forces audit
    *  consumers to acknowledge the non-causal labeling in type
@@ -182,17 +186,17 @@ export function attributeCommonMode(
       const minHop = Math.min(...hops);
       if (minHop > maxOfMinHops) maxOfMinHops = minHop;
     }
-    // event-ts: per-distinct-member-shard earliest, then aggregate across those values.
-    // R26 MINOR-2 fix: iterate per distinct shard (not all touches), picking earliest
-    // event_ts for each shard before computing overall earliest/latest.
+    // event-ts: per-distinct-member-shard min/max, then aggregate across shards.
+    // R26 MINOR-2: iterate per distinct shard, not all touches.
+    // R38 MAJOR-1 fix: use shardLatest (not shardEarliest) in the max-aggregation path.
     let earliest = Number.POSITIVE_INFINITY;
     let latest = Number.NEGATIVE_INFINITY;
     for (const sid of distinct) {
-      const shardEarliest = Math.min(
-        ...touches.filter((t) => t.member_shard_id === sid).map((t) => t.event_ts),
-      );
+      const sidTouches = touches.filter((t) => t.member_shard_id === sid);
+      const shardEarliest = Math.min(...sidTouches.map((t) => t.event_ts));
+      const shardLatest = Math.max(...sidTouches.map((t) => t.event_ts));
       if (shardEarliest < earliest) earliest = shardEarliest;
-      if (shardEarliest > latest) latest = shardEarliest;
+      if (shardLatest > latest) latest = shardLatest;
     }
     candidates.push({
       shared_node_id: sharedNodeId,

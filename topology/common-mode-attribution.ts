@@ -182,12 +182,17 @@ export function attributeCommonMode(
       const minHop = Math.min(...hops);
       if (minHop > maxOfMinHops) maxOfMinHops = minHop;
     }
-    // event-ts aggregates over records of distinct members.
+    // event-ts: per-distinct-member-shard earliest, then aggregate across those values.
+    // R26 MINOR-2 fix: iterate per distinct shard (not all touches), picking earliest
+    // event_ts for each shard before computing overall earliest/latest.
     let earliest = Number.POSITIVE_INFINITY;
     let latest = Number.NEGATIVE_INFINITY;
-    for (const t of touches) {
-      if (t.event_ts < earliest) earliest = t.event_ts;
-      if (t.event_ts > latest) latest = t.event_ts;
+    for (const sid of distinct) {
+      const shardEarliest = Math.min(
+        ...touches.filter((t) => t.member_shard_id === sid).map((t) => t.event_ts),
+      );
+      if (shardEarliest < earliest) earliest = shardEarliest;
+      if (shardEarliest > latest) latest = shardEarliest;
     }
     candidates.push({
       shared_node_id: sharedNodeId,

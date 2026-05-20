@@ -8,3 +8,4 @@
 
 export * from './feed-contract';
 export * from './event-contract';
+export * from './feed';

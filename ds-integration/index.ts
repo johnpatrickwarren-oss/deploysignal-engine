@@ -9,3 +9,5 @@
 export * from './feed-contract';
 export * from './event-contract';
 export * from './feed';
+export * from './event-consumer';        // R66 addition
+export * from './freeze-hook-factory';   // R66 addition

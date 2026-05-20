@@ -251,7 +251,7 @@ export interface TopologyNode {
    *  service name, or OTel resource id). Used for BFS + hashing. */
   id: string;
   service_name: string;
-  kind: 'service' | 'database' | 'queue' | 'external' | 'gpu_shard' | 'rack' | 'psu' | 'cooling_zone' | 'trainium_chip' | 'inferentia_chip';
+  kind: 'service' | 'database' | 'queue' | 'external' | 'gpu_shard' | 'rack' | 'psu' | 'cooling_zone' | 'trainium_chip' | 'inferentia_chip' | 'tpu_shard';
   metadata?: Record<string, string>;
 }
 
@@ -261,7 +261,7 @@ export interface TopologyEdge {
   from: string;
   /** Target node id (callee / owning store). */
   to: string;
-  relationship: 'calls' | 'reads' | 'writes' | 'publishes' | 'contains' | 'nvlink_peer' | 'neuron_link_peer';
+  relationship: 'calls' | 'reads' | 'writes' | 'publishes' | 'contains' | 'nvlink_peer' | 'neuron_link_peer' | 'tpu_ici_peer';
   metadata?: Record<string, string>;
 }
 

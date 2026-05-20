@@ -26,6 +26,7 @@ import {
   type FetchContext,
   type TopologySource,
 } from '../topology-overlay';
+import type { TopologyFetchContext } from './fetch-context';
 import {
   transformPair,
   type CounterMetadata,
@@ -137,7 +138,10 @@ export class NvlinkTopologySource implements TopologySource {
     this.version = opts.version ?? snapshot.source_version ?? 'nvlink-1';
   }
 
-  async fetchSnapshot(_ctx?: FetchContext): Promise<TopologySnapshot> {
+  async fetchSnapshot(ctx?: TopologyFetchContext): Promise<TopologySnapshot> {
+    if (ctx?.apiEndpoint !== undefined) {
+      throw new Error('LIVE_FETCH_NOT_IMPLEMENTED_PATH_B: nvlink');
+    }
     return this.snapshot;
   }
 

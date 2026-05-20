@@ -32,6 +32,7 @@ import {
   type FetchContext,
   type TopologySource,
 } from '../topology-overlay';
+import type { TopologyFetchContext } from './fetch-context';
 
 const KNOWN_TPU_VERSIONS = ['v4', 'v5p', 'v5e'] as const;
 export type TpuVersion = (typeof KNOWN_TPU_VERSIONS)[number];
@@ -198,7 +199,10 @@ export class TpuTopologySource implements TopologySource {
     this.version = opts.version ?? snapshot.source_version ?? 'tpu-1';
   }
 
-  async fetchSnapshot(_ctx?: FetchContext): Promise<TopologySnapshot> {
+  async fetchSnapshot(ctx?: TopologyFetchContext): Promise<TopologySnapshot> {
+    if (ctx?.apiEndpoint !== undefined) {
+      throw new Error('LIVE_FETCH_NOT_IMPLEMENTED_PATH_B: tpu');
+    }
     return this.snapshot;
   }
 

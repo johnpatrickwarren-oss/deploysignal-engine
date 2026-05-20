@@ -23,6 +23,7 @@ import {
   type FetchContext,
   type TopologySource,
 } from '../topology-overlay';
+import type { TopologyFetchContext } from './fetch-context';
 
 export interface SlurmTopologySourceOpts {
   /** Identifier override; defaults to 'slurm_topology_source'. Surfaces on .id + snapshot.source_id. */
@@ -55,7 +56,10 @@ export class SlurmTopologySource implements TopologySource {
     });
   }
 
-  async fetchSnapshot(_ctx?: FetchContext): Promise<TopologySnapshot> {
+  async fetchSnapshot(ctx?: TopologyFetchContext): Promise<TopologySnapshot> {
+    if (ctx?.apiEndpoint !== undefined) {
+      throw new Error('LIVE_FETCH_NOT_IMPLEMENTED_PATH_B: slurm');
+    }
     return this.snapshot;
   }
 

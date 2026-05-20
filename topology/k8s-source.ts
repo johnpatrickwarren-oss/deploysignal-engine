@@ -28,6 +28,7 @@ import {
   type FetchContext,
   type TopologySource,
 } from '../topology-overlay';
+import type { TopologyFetchContext } from './fetch-context';
 
 // Structural-subset input shape — only the fields this adapter reads from
 // upstream K8s corev1.NodeList JSON. Importing the full corev1 types is
@@ -65,7 +66,10 @@ export class K8sNodeLabelSource implements TopologySource {
     this.snapshot = parseNodeListToSnapshot(nodeList, this.id, this.version, now());
   }
 
-  async fetchSnapshot(_ctx?: FetchContext): Promise<TopologySnapshot> {
+  async fetchSnapshot(ctx?: TopologyFetchContext): Promise<TopologySnapshot> {
+    if (ctx?.apiEndpoint !== undefined) {
+      throw new Error('LIVE_FETCH_NOT_IMPLEMENTED_PATH_B: k8s');
+    }
     return this.snapshot;
   }
 

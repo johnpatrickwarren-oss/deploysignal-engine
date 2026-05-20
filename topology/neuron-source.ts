@@ -27,6 +27,7 @@ import {
   type FetchContext,
   type TopologySource,
 } from '../topology-overlay';
+import type { TopologyFetchContext } from './fetch-context';
 
 export interface NeuronParseOpts {
   /** Epoch-seconds timestamp for the produced snapshot. Defaults to current wall clock. */
@@ -163,7 +164,10 @@ export class NeuronTopologySource implements TopologySource {
     this.version = opts.version ?? snapshot.source_version ?? 'neuron-1';
   }
 
-  async fetchSnapshot(_ctx?: FetchContext): Promise<TopologySnapshot> {
+  async fetchSnapshot(ctx?: TopologyFetchContext): Promise<TopologySnapshot> {
+    if (ctx?.apiEndpoint !== undefined) {
+      throw new Error('LIVE_FETCH_NOT_IMPLEMENTED_PATH_B: neuron');
+    }
     return this.snapshot;
   }
 

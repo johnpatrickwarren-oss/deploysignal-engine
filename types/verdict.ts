@@ -22,6 +22,15 @@
 //      interconnect; semantically distinct from containment; BFS at
 //      engine/topology-overlay.ts treats edges bidirectionally regardless of relationship).
 // Both extensions are additive-only; Addition #25 D2 + D5 and Addition #26 D4 preserved.
+//
+// Tessera Phase 3 SLICE 1 amendments (R53, 2026-05-19) — two additive extensions
+// per Q-R53-SPEC.md § 2.4 (AWS Neuron family adapter enum additions):
+//   6. TopologyNode.kind union extends to include 'trainium_chip' | 'inferentia_chip'
+//      (AWS Trainium + Inferentia2 chip-family node kinds; discriminated by instance_type prefix).
+//   7. TopologyEdge.relationship union extends to include 'neuron_link_peer' (NeuronLink-v2
+//      peer-to-peer interconnect; undirected-deduped; BFS at engine/topology-overlay.ts
+//      treats edges bidirectionally regardless of relationship).
+// Both extensions are additive-only; Addition #25 D2/D5 + Addition #26 D4 preserved.
 
 // engine/types/verdict.ts — Scenario, orchestrator return, fusion
 // output, detector-verdict, verdict-group + topology overlay artifacts.
@@ -242,7 +251,7 @@ export interface TopologyNode {
    *  service name, or OTel resource id). Used for BFS + hashing. */
   id: string;
   service_name: string;
-  kind: 'service' | 'database' | 'queue' | 'external' | 'gpu_shard' | 'rack' | 'psu' | 'cooling_zone';
+  kind: 'service' | 'database' | 'queue' | 'external' | 'gpu_shard' | 'rack' | 'psu' | 'cooling_zone' | 'trainium_chip' | 'inferentia_chip';
   metadata?: Record<string, string>;
 }
 
@@ -252,7 +261,7 @@ export interface TopologyEdge {
   from: string;
   /** Target node id (callee / owning store). */
   to: string;
-  relationship: 'calls' | 'reads' | 'writes' | 'publishes' | 'contains' | 'nvlink_peer';
+  relationship: 'calls' | 'reads' | 'writes' | 'publishes' | 'contains' | 'nvlink_peer' | 'neuron_link_peer';
   metadata?: Record<string, string>;
 }
 

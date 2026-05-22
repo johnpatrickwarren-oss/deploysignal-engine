@@ -1,0 +1,1 @@
+{"version":3,"file":"fetch-context.d.ts","sourceRoot":"","sources":["../../topology/fetch-context.ts"],"names":[],"mappings":"AAuBA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,qBAAqB,CAAC;AAExD,MAAM,WAAW,oBAAqB,SAAQ,YAAY;IACxD;iEAC6D;IAC7D,SAAS,CAAC,EAAE,MAAM,CAAC;IACnB;4DACwD;IACxD,WAAW,CAAC,EAAE,MAAM,CAAC;IACrB;0CACsC;IACtC,SAAS,CAAC,EAAE,MAAM,CAAC;CACpB"}

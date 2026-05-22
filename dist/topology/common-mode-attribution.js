@@ -1,0 +1,167 @@
+"use strict";
+// engine/topology/common-mode-attribution.ts — Tessera Phase 2 SLICE 3.C (R26) WU-04 MD-F4.
+//
+// Topology-aware spatial attribution layer. Consumes a list of fired per-shard
+// events plus a TopologySnapshot (from HardwareTopologySource, R23) and surfaces
+// common-mode candidates: shared hardware-substrate nodes (PSU / rack /
+// cooling_zone) that have at least DEFAULT_MIN_MEMBER_COUNT fired shards within
+// DEFAULT_MAX_HOP_DISTANCE. Each candidate carries the literal
+// `correlational_not_causal: true` label per inherited Addition #26 D4.
+//
+// Operates DOWNSTREAM of per-shard detectors — does NOT modify detector
+// internals (A12/A5). Re-implements BFS-on-undirected (matching the semantics
+// of the inherited engine/topology-overlay.ts:262-285 private BFS) so that the
+// inherited topology-overlay body stays at-pin (A12). Hash semantics delegate
+// to the inherited computeSnapshotHash free function (Addition #26 D6).
+//
+// PR-F6 hybrid Reviewer evidence package: this module's behavior is exercised
+// by the 4-cell matrix in test/q-md-f4-common-mode-injection.test.ts; the
+// external literature citation package lives at coordination/evidence/PR-F6-
+// EVIDENCE.md. The hybrid Reviewer pair-review runs at WU-05 SLICE 3 close per
+// SCOPING-MEMO-v0.3 § 3 SLICE 3.C row.
+//
+// Tessera-original code (NOT vendored from DeploySignal). Extract target at
+// Phase 2 close: @johnpatrickwarren-oss/deploysignal-engine.
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_CANDIDATE_NODE_KINDS = exports.DEFAULT_MIN_MEMBER_COUNT = exports.DEFAULT_MAX_HOP_DISTANCE = void 0;
+exports.attributeCommonMode = attributeCommonMode;
+const topology_overlay_1 = require("../topology-overlay");
+// ── Module constants ──────────────────────────────────────────────────
+exports.DEFAULT_MAX_HOP_DISTANCE = 1;
+exports.DEFAULT_MIN_MEMBER_COUNT = 2;
+exports.DEFAULT_CANDIDATE_NODE_KINDS = ['psu', 'rack', 'cooling_zone'];
+/** Canonical ordering for candidate sort. Lower index = earlier in
+ *  output list. Restricted to the three hardware-substrate kinds; any
+ *  other kind is excluded by candidate_node_kinds default and would
+ *  not reach the sort step. */
+const KIND_SORT_ORDER = {
+    psu: 0,
+    rack: 1,
+    cooling_zone: 2,
+};
+// ── Public function ───────────────────────────────────────────────────
+function attributeCommonMode(input) {
+    const { fired_events, snapshot } = input;
+    const opts = input.opts ?? {};
+    const maxHop = opts.max_hop_distance ?? exports.DEFAULT_MAX_HOP_DISTANCE;
+    const minMembers = opts.min_member_count ?? exports.DEFAULT_MIN_MEMBER_COUNT;
+    const candidateKinds = opts.candidate_node_kinds ?? exports.DEFAULT_CANDIDATE_NODE_KINDS;
+    const candidateKindsSet = new Set(candidateKinds);
+    const now = opts.now ?? (() => Math.floor(Date.now() / 1000));
+    // Build adjacency (bidirectional).
+    const adjacency = new Map();
+    for (const n of snapshot.nodes)
+        adjacency.set(n.id, new Set());
+    for (const e of snapshot.edges) {
+        adjacency.get(e.from)?.add(e.to);
+        adjacency.get(e.to)?.add(e.from);
+    }
+    // kind-by-id lookup.
+    const kindById = new Map();
+    for (const n of snapshot.nodes)
+        kindById.set(n.id, n.kind);
+    // For each fired event, BFS-bounded and collect candidate-node touches.
+    // Structure: shared_node_id → array of (member_shard_id, hop, event_ts).
+    const touchesByNode = new Map();
+    for (const ev of fired_events) {
+        if (!adjacency.has(ev.shard_node_id))
+            continue; // F4: unknown shard silently skipped
+        const hops = bfsBounded(adjacency, ev.shard_node_id, maxHop);
+        for (const [nodeId, hop] of hops) {
+            if (nodeId === ev.shard_node_id)
+                continue; // self-exclusion
+            const kind = kindById.get(nodeId);
+            if (kind === undefined)
+                continue; // defensive (shouldn't happen)
+            if (!candidateKindsSet.has(kind))
+                continue;
+            const arr = touchesByNode.get(nodeId) ?? [];
+            arr.push({ member_shard_id: ev.shard_node_id, hop, event_ts: ev.event_ts });
+            touchesByNode.set(nodeId, arr);
+        }
+    }
+    // Aggregate per candidate.
+    const candidates = [];
+    for (const [sharedNodeId, touches] of touchesByNode) {
+        // distinct member shard ids (sorted lex asc).
+        const distinct = Array.from(new Set(touches.map((t) => t.member_shard_id))).sort();
+        if (distinct.length < minMembers)
+            continue; // F2 / F9: singleton not surfaced
+        const kind = kindById.get(sharedNodeId);
+        if (kind !== 'psu' && kind !== 'rack' && kind !== 'cooling_zone')
+            continue;
+        // topology_distance = max over distinct shards of min hop from that shard.
+        let maxOfMinHops = 0;
+        for (const sid of distinct) {
+            const hops = touches.filter((t) => t.member_shard_id === sid).map((t) => t.hop);
+            const minHop = Math.min(...hops);
+            if (minHop > maxOfMinHops)
+                maxOfMinHops = minHop;
+        }
+        // event-ts: per-distinct-member-shard min/max, then aggregate across shards.
+        // R26 MINOR-2: iterate per distinct shard, not all touches.
+        // R38 MAJOR-1 fix: use shardLatest (not shardEarliest) in the max-aggregation path.
+        let earliest = Number.POSITIVE_INFINITY;
+        let latest = Number.NEGATIVE_INFINITY;
+        for (const sid of distinct) {
+            const sidTouches = touches.filter((t) => t.member_shard_id === sid);
+            const shardEarliest = Math.min(...sidTouches.map((t) => t.event_ts));
+            const shardLatest = Math.max(...sidTouches.map((t) => t.event_ts));
+            if (shardEarliest < earliest)
+                earliest = shardEarliest;
+            if (shardLatest > latest)
+                latest = shardLatest;
+        }
+        candidates.push({
+            shared_node_id: sharedNodeId,
+            shared_node_kind: kind,
+            member_shard_ids: distinct,
+            member_count: distinct.length,
+            topology_distance: maxOfMinHops,
+            earliest_event_ts: earliest,
+            latest_event_ts: latest,
+            correlational_not_causal: true,
+        });
+    }
+    // Sort: (kind canonical-order, then shared_node_id lex asc).
+    candidates.sort((a, b) => {
+        if (a.shared_node_kind !== b.shared_node_kind) {
+            return KIND_SORT_ORDER[a.shared_node_kind] - KIND_SORT_ORDER[b.shared_node_kind];
+        }
+        return a.shared_node_id < b.shared_node_id ? -1 : a.shared_node_id > b.shared_node_id ? 1 : 0;
+    });
+    return {
+        candidates,
+        snapshot_hash: (0, topology_overlay_1.computeSnapshotHash)(snapshot),
+        attributed_at_ts: now(),
+    };
+}
+// ── Private BFS ───────────────────────────────────────────────────────
+/** Bounded BFS over a pre-built bidirectional adjacency map. Returns
+ *  hop distance per node up to maxHop inclusive; nodes beyond cap are
+ *  omitted. Neighbor visit order is canonical (lex asc by id) so
+ *  identical inputs produce identical hop maps. Mirrors the semantics
+ *  of the inherited private BFS at engine/topology-overlay.ts:262-285;
+ *  re-implemented here so the inherited file stays at-pin (A12). */
+function bfsBounded(adjacency, startId, maxHop) {
+    const hops = new Map();
+    hops.set(startId, 0);
+    if (maxHop <= 0)
+        return hops;
+    const queue = [startId];
+    while (queue.length > 0) {
+        const cur = queue.shift();
+        const curHop = hops.get(cur);
+        if (curHop >= maxHop)
+            continue;
+        const neighbors = Array.from(adjacency.get(cur) ?? []).sort();
+        for (const n of neighbors) {
+            if (hops.has(n))
+                continue;
+            hops.set(n, curHop + 1);
+            queue.push(n);
+        }
+    }
+    return hops;
+}
+//# sourceMappingURL=common-mode-attribution.js.map

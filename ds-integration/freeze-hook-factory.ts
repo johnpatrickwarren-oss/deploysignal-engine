@@ -37,11 +37,12 @@ export function mapEventClassToKind(
   event_class: DeployEventPayload['event_class'],
 ): ClusterEventKind {
   switch (event_class) {
-    case 'firmware_push':   return 'firmware_push';
-    case 'model_redeploy':  return 'model_redeploy';
-    case 'env_change':      return 'env_change';
-    case 'config_change':   return 'config_change';
-    case 'capacity_change': return 'capacity_change';
+    case 'firmware_push':    return 'firmware_push';
+    case 'model_redeploy':   return 'model_redeploy';
+    case 'env_change':       return 'env_change';
+    case 'config_change':    return 'config_change';
+    case 'capacity_change':  return 'capacity_change';
+    case 'chaos_experiment': return 'chaos_experiment';
     default: {
       const _exhaustive: never = event_class;
       throw new Error(`mapEventClassToKind: unhandled event_class: ${_exhaustive as string}`);

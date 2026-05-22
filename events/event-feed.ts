@@ -12,7 +12,8 @@ export type ClusterEventKind =
   | 'model_redeploy'
   | 'env_change'
   | 'config_change'
-  | 'capacity_change';
+  | 'capacity_change'
+  | 'chaos_experiment';
 
 export interface ClusterEvent {
   /** Caller-supplied stable identifier; used as cluster_event_id downstream

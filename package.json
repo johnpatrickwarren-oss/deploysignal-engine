@@ -18,6 +18,11 @@
     "url": "git+https://github.com/johnpatrickwarren-oss/tessera.git",
     "directory": "engine"
   },
+  "typesVersions": {
+    "*": {
+      "*": ["./dist/*"]
+    }
+  },
   "exports": {
     ".": { "types": "./dist/types/index.d.ts", "default": "./dist/types/index.js" },
     "./types": { "types": "./dist/types/index.d.ts", "default": "./dist/types/index.js" },

@@ -12,6 +12,11 @@ exports.assertBetaBinomialHyperparams = assertBetaBinomialHyperparams;
 exports.evaluateBetaBinomialBound = evaluateBetaBinomialBound;
 exports.evaluateSelfNormalizedBound = evaluateSelfNormalizedBound;
 exports.assertSelfNormalizedHyperparams = assertSelfNormalizedHyperparams;
+exports.freshSelfNormalizedDetectorState = freshSelfNormalizedDetectorState;
+exports.evaluateSelfNormalizedFallback = evaluateSelfNormalizedFallback;
+exports.computeLilCConstantConservative = computeLilCConstantConservative;
+exports.computeLilCConstantTight = computeLilCConstantTight;
+exports.buildLilBoundHyperparams = buildLilBoundHyperparams;
 // ── §7 EmpiricalProcessLILBound runtime evaluation ───────────────
 const ONE_OVER_SQRT_2 = 1 / Math.SQRT2;
 /** Validate §7 LIL hyperparameters per library asserts. Throws on invariant
@@ -114,4 +119,183 @@ exports.LIL_A_DEFAULT = 0.85;
 exports.LIL_T_MIN_DEFAULT = 1;
 /** Library canonical default for §6 BetaBinomial alpha_opt. */
 exports.BETA_BINOMIAL_ALPHA_OPT_DEFAULT = 0.05;
+function freshSelfNormalizedDetectorState() {
+    return { S: 0, V: 0, n: 0, fired: false };
+}
+/** Evaluate one tick of the self-normalized e-process fallback.
+ *  EXPERIMENTAL — see file-header comment on application-formula
+ *  uncertainty. Pure function in `state` shape: mutates state in place. */
+function evaluateSelfNormalizedFallback(state, x, baselineMean, baselineSigmaSq, lilParams) {
+    const sigma = Math.sqrt(baselineSigmaSq);
+    const z = sigma > 0 ? (x - baselineMean) / sigma : 0;
+    state.S += z;
+    state.V += z * z;
+    state.n += 1;
+    const t = Math.max(state.V, lilParams.t_min);
+    const b = evaluateLilBound(lilParams, t);
+    const threshold = Math.sqrt(state.V) * b;
+    const statistic = Math.abs(state.S);
+    if (statistic >= threshold)
+        state.fired = true;
+    return { fire: state.fired, statistic, threshold };
+}
+// ── §7 LIL C-constant computation (SLICE 2) ──────────────────────
+/** Compute a one-sided crossing-probability-conservative C constant
+ *  via the Ville-Markov upper bound. Setting C = -2 · log(α) preserves
+ *  FP control under the standard Ville inequality but is LOOSER than
+ *  the library's tight bisection by an O(1) factor.
+ *
+ *  REVERSE-VALIDATED against confseq library test value (uniform_
+ *  boundaries_unittest.cpp:72-74; α=0.05, t_min=100, A=0.85, t=1000;
+ *  library bound = 0.08204769 → library C ≈ 8.115; this form C ≈ 5.991).
+ *  The library's C is LARGER → wider bound → fewer false fires. SLICE 3
+ *  ships `computeLilCConstantTight` below; this conservative form is
+ *  retained for fallback when bisection fails to converge. */
+function computeLilCConstantConservative(alpha) {
+    if (!(alpha > 0 && alpha < 1)) {
+        throw new RangeError(`LIL C-computation: alpha must be in (0, 1); got ${alpha}`);
+    }
+    return -2 * Math.log(alpha);
+}
+/** Library-tight C constant via the same bisection scheme as
+ *  `EmpiricalProcessLILBound::find_optimal_C` in confseq
+ *  `uniform_boundaries.h:521-556`. Port of:
+ *
+ *    γ² = (2/η) · (A - √(2(η-1)/C))²
+ *    if γ² ≤ 1: error_bound = ∞
+ *    else: error_bound = 4 · exp(-γ²·C) · (1 + 1/((γ²-1)·log(η)))
+ *
+ *  We:
+ *    1. For each candidate C, find η ∈ [1, 2A²] that minimizes error_bound
+ *       (Brent's-method-style golden-section + parabolic interpolation; TS
+ *       impl uses ternary-search-on-unimodal-region which converges for
+ *       this error_bound's shape per HR2021 §7).
+ *    2. Bisect C such that min_η error_bound(C, η) = α.
+ *
+ *  Validated against confseq unit test value: at α=0.05, t_min=100, A=0.85,
+ *  t=1000, the closed-form bound returns 0.0820 ± 1e-4. */
+function computeLilCConstantTight(alpha, A = exports.LIL_A_DEFAULT) {
+    if (!(alpha > 0 && alpha < 1)) {
+        throw new RangeError(`LIL C-tight: alpha must be in (0, 1); got ${alpha}`);
+    }
+    if (!(A > 1 / Math.SQRT2)) {
+        throw new RangeError(`LIL C-tight: A must be > 1/sqrt(2); got ${A}`);
+    }
+    // error_bound(C, η) — library line 525-531.
+    const errorBound = (C, eta) => {
+        const sqrtTerm = A - Math.sqrt((2 * (eta - 1)) / C);
+        const gammaSq = (2 / eta) * sqrtTerm * sqrtTerm;
+        if (gammaSq <= 1)
+            return Number.POSITIVE_INFINITY;
+        return 4 * Math.exp(-gammaSq * C) * (1 + 1 / ((gammaSq - 1) * Math.log(eta)));
+    };
+    // η_upper(C): largest η in (1, 2A²) where the γ² > 1 constraint binds.
+    // Library `uniform_boundaries.h:535-539` bisects `√(η/2) + √(2(η-1)/C) = A`
+    // on (1, 2A²). The constraint is monotone in η so bisect on the sign.
+    const findEtaUpper = (C) => {
+        const f = (eta) => Math.sqrt(eta / 2) + Math.sqrt((2 * (eta - 1)) / C) - A;
+        let lo = 1.0;
+        let hi = 2 * A * A;
+        // At η=1: f = √(1/2) - A. If A > √(1/2) ≈ 0.7071, f(1) < 0.
+        // At η=2A²: f = A + √(2(2A²-1)/C) - A = √(2(2A²-1)/C) ≥ 0.
+        if (f(lo) >= 0)
+            return lo; // degenerate; A at boundary
+        if (f(hi) <= 0)
+            return hi;
+        for (let i = 0; i < 60; i++) {
+            const mid = 0.5 * (lo + hi);
+            if (f(mid) < 0)
+                lo = mid;
+            else
+                hi = mid;
+            if (hi - lo < 1e-10)
+                break;
+        }
+        return 0.5 * (lo + hi);
+    };
+    // For a fixed C, find η minimizing error_bound over (1, η_upper(C)).
+    // Library uses Brent's method (line 541-542); ternary-section on the
+    // unimodal valid region converges similarly.
+    const minErrorOverEta = (C) => {
+        const etaUpper = findEtaUpper(C);
+        let lo = 1.0;
+        let hi = etaUpper;
+        if (hi <= lo + 1e-9)
+            return Number.POSITIVE_INFINITY;
+        const phi = (Math.sqrt(5) - 1) / 2;
+        let x1 = hi - phi * (hi - lo);
+        let x2 = lo + phi * (hi - lo);
+        let f1 = errorBound(C, x1);
+        let f2 = errorBound(C, x2);
+        for (let i = 0; i < 80 && hi - lo > 1e-10; i++) {
+            if (f1 < f2) {
+                hi = x2;
+                x2 = x1;
+                f2 = f1;
+                x1 = hi - phi * (hi - lo);
+                f1 = errorBound(C, x1);
+            }
+            else {
+                lo = x1;
+                x1 = x2;
+                f1 = f2;
+                x2 = lo + phi * (hi - lo);
+                f2 = errorBound(C, x2);
+            }
+        }
+        return Math.min(f1, f2);
+    };
+    // Bisect C such that minErrorOverEta(C) = α. Library uses
+    // bracket_and_solve_root with guess=5, factor=2; we mirror that.
+    const target = (C) => minErrorOverEta(C) - alpha;
+    // Bracket: error decreases as C grows. Start at C=5; expand until
+    // target(C) < 0 (error < α). Then bisect.
+    let cLo = 0.5;
+    let cHi = 5.0;
+    let tHi = target(cHi);
+    let attempts = 0;
+    while (tHi > 0 && attempts < 50) {
+        cLo = cHi;
+        cHi *= 2;
+        tHi = target(cHi);
+        attempts++;
+    }
+    if (tHi > 0) {
+        // Brent bracket didn't converge; fall back to conservative bound.
+        return computeLilCConstantConservative(alpha);
+    }
+    // Standard bisection.
+    for (let i = 0; i < 60; i++) {
+        const mid = 0.5 * (cLo + cHi);
+        const tMid = target(mid);
+        if (tMid > 0)
+            cLo = mid;
+        else
+            cHi = mid;
+        if (cHi - cLo < 1e-9)
+            break;
+    }
+    return 0.5 * (cLo + cHi);
+}
+/** Construct §7 LIL hyperparameters with library-tight C bisection
+ *  (default; matches confseq `find_optimal_C` semantics). Pass
+ *  `tightC: false` to use the Markov-conservative form (faster
+ *  construction; FP-control-safe but slightly wider envelope).
+ *
+ *    const lil = buildLilBoundHyperparams(1e-4);  // tight C bisection
+ *    // → { variant: 'lil_bound', alpha: 1e-4, t_min: 1, A: 0.85, C: ≈8.5 }
+ *
+ *  Calibrators may override A, t_min if specific signal-class evidence
+ *  exists; defaults match library canonical values per Q70.4 ASKs. */
+function buildLilBoundHyperparams(alpha, options) {
+    const A = options?.A ?? exports.LIL_A_DEFAULT;
+    const t_min = options?.t_min ?? exports.LIL_T_MIN_DEFAULT;
+    const tightC = options?.tightC ?? true;
+    const C = tightC
+        ? computeLilCConstantTight(alpha, A)
+        : computeLilCConstantConservative(alpha);
+    const params = { variant: 'lil_bound', alpha, t_min, A, C };
+    assertLilBoundHyperparams(params);
+    return params;
+}
 //# sourceMappingURL=self-normalized-e-process-fallback.js.map

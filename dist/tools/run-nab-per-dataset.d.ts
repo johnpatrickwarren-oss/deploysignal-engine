@@ -93,6 +93,26 @@ export interface PerDatasetCalibrationProvenance {
     };
     /** SLICE 5 — post-fire cooldown applied to Family A detectors. */
     family_a_cooldown_ticks: number;
+    /** SLICE 6 — per-detector anomaly-likelihood smoothing parameters
+     *  (Numenta-style persistence filter). Stamped only when smoothing is
+     *  enabled at the calibrator level. */
+    smoothing?: {
+        page_cusum: {
+            window: number;
+            threshold_count: number;
+            cooldown_ticks: number;
+        };
+        betting: {
+            window: number;
+            threshold_count: number;
+            cooldown_ticks: number;
+        };
+        spectral: {
+            window: number;
+            threshold_count: number;
+            cooldown_ticks: number;
+        };
+    };
 }
 /** SLICE 5 — calibrate the spectral bootstrap-null quantile from the
  *  probationary window's empirical peak-ACF distribution. Computes
@@ -128,6 +148,10 @@ export declare function buildPerDatasetConfig(values: number[], calibrationSigna
     /** SLICE 5 post-fire cooldown for Family A detectors. Default 1000.
      *  Set to 0 to disable. */
     familyACooldownTicks?: number;
+    /** SLICE 6 — enable anomaly-likelihood smoothing (Numenta-style
+     *  persistence filter). Default true. Set false to revert to SLICE 5
+     *  raw cooldown wrapper. */
+    useAnomalyLikelihoodSmoothing?: boolean;
 }): {
     config: Record<string, unknown>;
     provenance: PerDatasetCalibrationProvenance;
@@ -149,6 +173,8 @@ export interface PerDatasetNABValidationOpts {
     usePrewhitening?: boolean;
     /** SLICE 5 — Family A post-fire cooldown ticks. Default 1000. */
     familyACooldownTicks?: number;
+    /** SLICE 6 — anomaly-likelihood smoothing. Default true. */
+    useAnomalyLikelihoodSmoothing?: boolean;
 }
 export interface PerDatasetNABDatasetScore {
     dataset_path: string;

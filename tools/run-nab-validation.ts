@@ -118,6 +118,63 @@ export function applyFireCooldown(
   return out;
 }
 
+/** SLICE 6 — anomaly-likelihood smoothing (NAB-aware window logic).
+ *
+ *  Replaces the raw cooldown wrapper with a Numenta-style persistence
+ *  filter: a fire is emitted only when at least `thresholdCount` of the
+ *  most recent `windowK` ticks have detector-fire=true. After emit,
+ *  fires are suppressed for `cooldownTicks` (anomaly-likelihood
+ *  effectively forms a "confirmed alert" once the rolling count crosses
+ *  threshold).
+ *
+ *  Motivation: page-CUSUM crosses threshold at the FIRST tick of a
+ *  sustained shift, but NAB labeled windows trail the actual change
+ *  point by ~200–1500 ticks. Empirical classification of the SLICE 5
+ *  output showed ~30% of labeled windows have detector fires within
+ *  ±500 ticks of the window edge but OUTSIDE the credit zone. Requiring
+ *  the rolling fire-count to cross a threshold (a) delays emit until
+ *  the anomaly is sustained, increasing the chance the emit lands
+ *  inside the labeled window, and (b) dedupes noisy spurious fires
+ *  (single-tick CUSUM spikes that don't repeat) so they don't burn
+ *  cooldown windows on isolated FPs.
+ *
+ *  Parameters:
+ *  - `windowK`: rolling-window length over which fire-count is summed.
+ *  - `thresholdCount`: minimum count of fire=true ticks in the window
+ *    required to emit. With windowK=50, thresholdCount=25 means
+ *    "detector must have fired in ≥ 50% of the last 50 ticks".
+ *  - `cooldownTicks`: post-emit suppression length.
+ *
+ *  Anti-scope: pure dispatch-layer wrapper; no engine state coupling. */
+export function applyAnomalyLikelihoodSmoothing(
+  firings: DetectorFiringDecision[],
+  windowK: number,
+  thresholdCount: number,
+  cooldownTicks: number,
+): DetectorFiringDecision[] {
+  if (windowK <= 0 || thresholdCount <= 0) return firings;
+  if (thresholdCount > windowK) {
+    throw new Error(
+      `applyAnomalyLikelihoodSmoothing: thresholdCount (${thresholdCount}) `
+      + `must not exceed windowK (${windowK})`,
+    );
+  }
+  const out = firings.map((f) => ({ ...f, fire: false }));
+  let rolling = 0;
+  let suppressUntil = -1;
+  for (let i = 0; i < firings.length; i++) {
+    if (firings[i].fire) rolling += 1;
+    if (i >= windowK && firings[i - windowK].fire) rolling -= 1;
+    const t = firings[i].tick;
+    if (t <= suppressUntil) continue;
+    if (rolling >= thresholdCount) {
+      out[i].fire = true;
+      suppressUntil = t + cooldownTicks;
+    }
+  }
+  return out;
+}
+
 // ── Public types ─────────────────────────────────────────────────
 
 /** Detector family identifier (subset of full DetectorFamily enum;
@@ -331,11 +388,12 @@ export const DEFAULT_CALIBRATION_SIGNAL = 'p99_latency';
 /** Rolling window length for Family D spectral peak-ACF evaluation. */
 const FAMILY_D_WINDOW = 60;
 
-/** SLICE 5 dispatcher options. All optional with backward-compatible
+/** SLICE 5+6 dispatcher options. All optional with backward-compatible
  *  defaults: when none are supplied, runDetectorOverDataset retains its
- *  pre-SLICE-5 behavior (no pre-whitening, no cooldown). buildPerDataset
- *  Config wires these into the dispatch automatically when its own
- *  `usePrewhitening` / `cooldownTicks` defaults are active. */
+ *  pre-SLICE-5 behavior (no pre-whitening, no cooldown, no smoothing).
+ *  buildPerDatasetConfig wires these into the dispatch automatically
+ *  when its own `usePrewhitening` / `cooldownTicks` /
+ *  `useAnomalyLikelihoodSmoothing` defaults are active. */
 export interface RunDetectorDispatchOpts {
   /** When set, pre-whiten the input series by AR(1) with this φ and the
    *  baseline mean (also supplied). Detector receives the pre-whitened
@@ -345,11 +403,22 @@ export interface RunDetectorDispatchOpts {
   /** Required when `prewhitenPhi` is set. The calibration mean used by the
    *  detector internally (so pre-whitened residuals re-center to it). */
   prewhitenMean?: number;
-  /** When > 0, suppress firing for this many ticks after each `fire`
-   *  decision. Applied to ALL detector families (CUSUM doesn't reset on
-   *  fire; betting wealth grows unboundedly — both produce dense FP
-   *  trains without cooldown). */
+  /** When > 0 AND `smoothingWindow` is unset, suppress firing for this
+   *  many ticks after each `fire` decision (raw cooldown wrapper).
+   *  When `smoothingWindow` is set, this value is interpreted as the
+   *  post-emit cooldown applied by the smoothing wrapper. */
   cooldownTicks?: number;
+  /** SLICE 6 — anomaly-likelihood smoothing window length. When > 0,
+   *  the dispatcher replaces the raw cooldown wrapper with the
+   *  persistence-filter wrapper (`applyAnomalyLikelihoodSmoothing`).
+   *  Sweep-tuned default for Family A page-cusum is 50; Family D
+   *  spectral is 30 (oscillation periods are shorter). */
+  smoothingWindow?: number;
+  /** SLICE 6 — anomaly-likelihood smoothing threshold count. Must
+   *  satisfy 1 ≤ thresholdCount ≤ smoothingWindow. Detector emits a
+   *  fire only when ≥ this many of the most recent `smoothingWindow`
+   *  ticks have detector-fire=true. */
+  smoothingThresholdCount?: number;
 }
 
 export function runDetectorOverDataset(
@@ -458,8 +527,20 @@ export function runDetectorOverDataset(
       + '(per Q64 spec § Q64.1 + ARCHITECT-REPLY-Q64-PHASE-4-NAB-ACQUISITION-STUB-DISPOSITION.md).');
   }
 
-  // SLICE 5 — apply post-fire cooldown to dedupe sustained firings.
-  return applyFireCooldown(out, dispatchOpts?.cooldownTicks ?? 0);
+  // SLICE 6 — when smoothing window is set, apply anomaly-likelihood
+  // smoothing (Numenta-style persistence filter with post-emit cooldown).
+  // Otherwise fall back to SLICE 5 raw cooldown wrapper.
+  const cooldown = dispatchOpts?.cooldownTicks ?? 0;
+  if (dispatchOpts?.smoothingWindow && dispatchOpts.smoothingWindow > 0
+      && dispatchOpts.smoothingThresholdCount && dispatchOpts.smoothingThresholdCount > 0) {
+    return applyAnomalyLikelihoodSmoothing(
+      out,
+      dispatchOpts.smoothingWindow,
+      dispatchOpts.smoothingThresholdCount,
+      cooldown,
+    );
+  }
+  return applyFireCooldown(out, cooldown);
 }
 
 // ── Main runNABValidation ────────────────────────────────────────

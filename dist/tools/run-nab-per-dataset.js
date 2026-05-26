@@ -58,6 +58,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DEFAULT_PROBATIONARY_FRACTION = void 0;
 exports.hacInflationFactor = hacInflationFactor;
+exports.calibrateSpectralBootstrapQuantile = calibrateSpectralBootstrapQuantile;
 exports.buildPerDatasetConfig = buildPerDatasetConfig;
 exports.scorePostProbationary = scorePostProbationary;
 exports.runPerDatasetNABValidation = runPerDatasetNABValidation;
@@ -67,8 +68,51 @@ const os = __importStar(require("node:os"));
 const run_nab_validation_1 = require("./run-nab-validation");
 const nab_scoring_1 = require("./nab-scoring");
 const self_normalized_e_process_fallback_1 = require("../detectors/self-normalized-e-process-fallback");
+const spectral_1 = require("../detectors/spectral");
 const DEFAULT_PROBATIONARY_FRACTION = 0.15;
 exports.DEFAULT_PROBATIONARY_FRACTION = DEFAULT_PROBATIONARY_FRACTION;
+/** Q70 SLICE 5 — Family D spectral lag bounds for peak-ACF search.
+ *  WEEK4-HANDOFF.md §4.1.d specifies oscillation periods ~3–10 ticks.
+ *  These are stamped into the per-dataset config's family_D entry so the
+ *  spectral detector's `peakACF(samples, min_peak_lag, max_peak_lag)`
+ *  receives concrete numbers (SLICE 4's stub config omitted them →
+ *  peakACF returned 0 → spectral never fired). */
+const DEFAULT_SPECTRAL_MIN_PEAK_LAG = 3;
+const DEFAULT_SPECTRAL_MAX_PEAK_LAG = 10;
+/** Q70 SLICE 5 — rolling window length the spectral dispatcher uses to
+ *  feed `recentSamples` into evaluateFamilyD. Mirrors `FAMILY_D_WINDOW`
+ *  in run-nab-validation.ts; duplicated here so the per-dataset bootstrap
+ *  calibration uses the SAME window-size the runtime dispatcher will
+ *  later use (matched-conditions H₀ calibration per the bootstrap-null
+ *  convention in detectors/spectral.ts comments). */
+const SPECTRAL_BOOTSTRAP_WINDOW = 60;
+/** Q70 SLICE 5 — bootstrap-null quantile target. NAB Family D acceptance
+ *  gate is ≥40; the per-dataset calibration takes the (1 − α_D) quantile
+ *  of probationary peak-ACF distribution but with a small margin so the
+ *  threshold sits in the upper tail of the H₀ distribution (otherwise
+ *  ACF noise spikes register as fires). 0.99 gives ~ Type-I-error 0.01
+ *  per evaluation tick — conservative under Bonferroni-class multiple-
+ *  test correction at scale. */
+const SPECTRAL_BOOTSTRAP_QUANTILE = 0.99;
+/** Q70 SLICE 5 — minimum number of probationary subwindows required for
+ *  reliable bootstrap calibration. Below this, fall back to a fixed
+ *  conservative quantile. (At 60-tick window + ~600-tick probationary,
+ *  ~540 overlapping subwindows are available — well above this floor.) */
+const SPECTRAL_BOOTSTRAP_MIN_SUBWINDOWS = 30;
+/** Q70 SLICE 5 — fallback bootstrap quantile when the probationary window
+ *  is too short for empirical calibration. 0.90 is a tighter floor than
+ *  SLICE 4's 0.5 stub but still loose enough to avoid silent never-fire
+ *  on short datasets. */
+const SPECTRAL_BOOTSTRAP_FALLBACK_QUANTILE = 0.90;
+/** Q70 SLICE 5 — post-fire cooldown ticks for Family A detectors. After
+ *  a fire, suppress subsequent firings for K ticks. NAB scoring rewards
+ *  the FIRST detection in a labeled window; subsequent fires from a
+ *  sustained-shift CUSUM (or wealth-still-above-threshold betting) are
+ *  FPs that swamp per-dataset scores. K=1000 matches the typical NAB
+ *  labeled-window width on the realKnownCause / realAWSCloudwatch sub-
+ *  benchmarks (~362–566 ticks). Sweep-tuned: 1000 ticks dominates 200/
+ *  500/2000/5000 across the 35-dataset suite. */
+const DEFAULT_FAMILY_A_COOLDOWN_TICKS = 1000;
 /** φ̂ threshold above which the Q70 SLICE 2 self-normalized fallback is
  *  stamped on the per-dataset config. NAB real datasets exhibit φ ≈ 0.95
  *  on temperature / sensor signals; the 0.5 threshold engages fallback
@@ -171,39 +215,124 @@ function ar1Phi(xs, mu) {
     const phi = num / den;
     return Math.max(-0.95, Math.min(0.95, phi));
 }
+/** SLICE 5 — calibrate the spectral bootstrap-null quantile from the
+ *  probationary window's empirical peak-ACF distribution. Computes
+ *  peakACF on each overlapping length-`SPECTRAL_BOOTSTRAP_WINDOW`
+ *  subwindow of the probationary data, then returns the (quantile)-th
+ *  order statistic. When the probationary window is too short for
+ *  reliable calibration, returns SPECTRAL_BOOTSTRAP_FALLBACK_QUANTILE
+ *  (≪ SLICE 4's hardcoded 0.5 but still loose enough to not silent-fail). */
+function calibrateSpectralBootstrapQuantile(probationary, minLag, maxLag, quantile) {
+    if (probationary.length < SPECTRAL_BOOTSTRAP_WINDOW + minLag) {
+        return {
+            quantile_used: SPECTRAL_BOOTSTRAP_FALLBACK_QUANTILE,
+            n_subwindows: 0,
+            empirically_calibrated: false,
+        };
+    }
+    const peaks = [];
+    for (let i = 0; i + SPECTRAL_BOOTSTRAP_WINDOW <= probationary.length; i++) {
+        const win = probationary.slice(i, i + SPECTRAL_BOOTSTRAP_WINDOW);
+        const p = (0, spectral_1.peakACF)(win, minLag, maxLag).peak;
+        peaks.push(p);
+    }
+    if (peaks.length < SPECTRAL_BOOTSTRAP_MIN_SUBWINDOWS) {
+        return {
+            quantile_used: SPECTRAL_BOOTSTRAP_FALLBACK_QUANTILE,
+            n_subwindows: peaks.length,
+            empirically_calibrated: false,
+        };
+    }
+    peaks.sort((a, b) => a - b);
+    const idx = Math.min(peaks.length - 1, Math.floor(quantile * peaks.length));
+    return {
+        quantile_used: peaks[idx],
+        n_subwindows: peaks.length,
+        empirically_calibrated: true,
+    };
+}
 /** Build a compiled config calibrated against the probationary window of
  *  one NAB dataset. Schema mirrors the mini-fixture in
  *  test/q64-nab-validation.test.ts (family_A.per_signal[sig] +
- *  family_D[sig] under baseline_cells.aggregate_fallback). */
+ *  family_D[sig] under baseline_cells.aggregate_fallback).
+ *
+ *  SLICE 5 default behavior: AR(1) pre-whitening + innovation variance
+ *  (NOT HAC inflation) + per-dataset spectral bootstrap calibration +
+ *  Family A post-fire cooldown. SLICE 4's HAC inflation is preserved as
+ *  an opt-in for back-compat regression comparison via the
+ *  `useHacInflation: true, usePrewhitening: false` option combination. */
 function buildPerDatasetConfig(values, calibrationSignal, probationaryFraction, options) {
-    const useHac = options?.useHacInflation ?? true;
+    // SLICE 5 — default mode: pre-whitening ON, HAC OFF, cooldown=1000.
+    // The legacy SLICE 4 path (HAC=true, prewhiten=false) is preserved for
+    // regression measurement but is no longer the default — the empirical
+    // sweep showed HAC inflation silently disabled page-CUSUM fires and
+    // did nothing for betting; pre-whitening is the active correction.
+    const usePrewhitening = options?.usePrewhitening ?? true;
+    const useHac = options?.useHacInflation ?? false;
+    if (usePrewhitening && useHac) {
+        throw new Error('buildPerDatasetConfig: usePrewhitening and useHacInflation are mutually '
+            + 'exclusive — both correct the iid-vs-AR(1) mismatch but via opposing '
+            + 'mechanisms. Pick one.');
+    }
+    const familyACooldownTicks = options?.familyACooldownTicks ?? DEFAULT_FAMILY_A_COOLDOWN_TICKS;
     const nProbationary = Math.max(2, Math.floor(values.length * probationaryFraction));
     const probationary = values.slice(0, nProbationary);
     const mu = mean(probationary);
     const iidSigma2 = sampleVariance(probationary, mu);
     const phi = ar1Phi(probationary, mu);
-    // Path B: replace the iid σ² with HAC long-run variance when enabled.
-    // Always applied (no φ threshold) — the inflation factor naturally
-    // shrinks to ≈1 for low-φ iid data, so this graceful generalizes the
-    // iid case without an activation cliff.
-    const inflationFactor = useHac ? hacInflationFactor(phi) : 1;
-    const sigma2 = iidSigma2 * inflationFactor;
+    // Variance to stamp into the per-signal config. SLICE 5 default uses
+    // INNOVATION variance σ²·(1−φ²) so the detector — receiving pre-
+    // whitened residuals — operates on the right scale. SLICE 4 legacy:
+    // HAC long-run σ²·(1+φ)/(1−φ).
+    let sigma2;
+    if (usePrewhitening) {
+        // Innovation variance under AR(1). Floor against degenerate φ̂ = ±1.
+        const phiSquared = Math.min(phi * phi, 0.9999);
+        sigma2 = Math.max(iidSigma2 * (1 - phiSquared), 1e-12);
+    }
+    else if (useHac) {
+        sigma2 = iidSigma2 * hacInflationFactor(phi);
+    }
+    else {
+        // Raw marginal variance (pre-SLICE-4 iid-calibrated baseline).
+        sigma2 = iidSigma2;
+    }
     const sigma = Math.sqrt(sigma2);
+    // Calibrate spectral bootstrap-null quantile from probationary
+    // peak-ACF distribution. This stays in marginal-variance scale (raw
+    // values) because spectral consumes raw observations — pre-whitening
+    // would destroy the autocorrelation it measures.
+    const spectralCalib = calibrateSpectralBootstrapQuantile(probationary, DEFAULT_SPECTRAL_MIN_PEAK_LAG, DEFAULT_SPECTRAL_MAX_PEAK_LAG, SPECTRAL_BOOTSTRAP_QUANTILE);
     const provenance = {
         probationary_fraction: probationaryFraction,
         n_probationary_ticks: nProbationary,
         n_total_ticks: values.length,
-        derived: { baseline_mean: mu, baseline_sigma_squared: sigma2, ar1_phi: phi },
+        derived: { baseline_mean: mu, baseline_sigma_squared: iidSigma2, ar1_phi: phi },
         hac_inflation: useHac ? {
             phi_used: phi,
-            factor: inflationFactor,
+            factor: hacInflationFactor(phi),
             iid_sigma_squared: iidSigma2,
             inflated_sigma_squared: sigma2,
         } : undefined,
+        pre_whitening: usePrewhitening ? {
+            phi_used: phi,
+            marginal_sigma_squared: iidSigma2,
+            innovation_sigma_squared: sigma2,
+        } : undefined,
+        spectral_bootstrap: {
+            quantile_target: SPECTRAL_BOOTSTRAP_QUANTILE,
+            quantile_used: spectralCalib.quantile_used,
+            n_subwindows: spectralCalib.n_subwindows,
+            min_peak_lag: DEFAULT_SPECTRAL_MIN_PEAK_LAG,
+            max_peak_lag: DEFAULT_SPECTRAL_MAX_PEAK_LAG,
+            empirically_calibrated: spectralCalib.empirically_calibrated,
+        },
+        family_a_cooldown_ticks: familyACooldownTicks,
     };
-    // Q70 SLICE 2 fallback stamping (independent of HAC). φ̂ above threshold
-    // → stamp LIL hyperparameters; downstream consumers (per-detector
-    // wiring; Anvil chaos-experiment scoring) decide whether to engage.
+    // Q70 SLICE 2 fallback stamping (independent of HAC/pre-whitening
+    // mode). φ̂ above threshold → stamp LIL hyperparameters; downstream
+    // consumers (per-detector wiring; Anvil chaos-experiment scoring)
+    // decide whether to engage.
     if (Math.abs(phi) >= AR1_PHI_FALLBACK_THRESHOLD) {
         const lilHyperparams = (0, self_normalized_e_process_fallback_1.buildLilBoundHyperparams)(4e-4);
         provenance.self_normalized_fallback = {
@@ -257,8 +386,16 @@ function buildPerDatasetConfig(values, calibrationSignal, probationaryFraction, 
                 family_D: {
                     [calibrationSignal]: {
                         ar1_phi: phi,
-                        peak_acf_threshold: 0.5,
-                        bootstrap_null_quantile: 0.5,
+                        // SLICE 5 — stamp lag bounds (SLICE 4 omitted these, making
+                        // peakACF return 0 always).
+                        min_peak_lag: DEFAULT_SPECTRAL_MIN_PEAK_LAG,
+                        max_peak_lag: DEFAULT_SPECTRAL_MAX_PEAK_LAG,
+                        // SLICE 5 — per-dataset bootstrap calibration. SLICE 4
+                        // hardcoded 0.5 (which was below the AR(1) baseline-ACF for
+                        // φ ≈ 0.95 datasets → fire on every tick if lag bounds had
+                        // been present).
+                        bootstrap_null_quantile: spectralCalib.quantile_used,
+                        peak_acf_threshold: spectralCalib.quantile_used,
                         spectral_variant: 'bootstrap_null',
                     },
                 },
@@ -333,18 +470,36 @@ function runPerDatasetNABValidation(opts) {
             continue;
         const labelWindows = labels[dataset.relPath] ?? [];
         const annotations = (0, run_nab_validation_1.annotationsFromLabels)(labelWindows, timestamps);
-        const { config, provenance } = buildPerDatasetConfig(values, calibrationSignal, probationaryFraction, { useHacInflation: opts.useHacInflation });
+        const { config, provenance } = buildPerDatasetConfig(values, calibrationSignal, probationaryFraction, {
+            useHacInflation: opts.useHacInflation,
+            usePrewhitening: opts.usePrewhitening,
+            familyACooldownTicks: opts.familyACooldownTicks,
+        });
         const cfgPath = path.join(tmpDir, dataset.relPath.replace(/\//g, '__').replace(/\.csv$/, '.json'));
         fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
         fs.writeFileSync(cfgPath, JSON.stringify(config));
         const nProbationary = provenance.n_probationary_ticks;
+        // SLICE 5 — pass pre-whitening + cooldown into Family A dispatch.
+        // Spectral (Family D) does NOT pre-whiten (autocorrelation is the
+        // signal). Cooldown applies to all dispatched detectors.
+        const familyADispatchOpts = provenance.pre_whitening ? {
+            prewhitenPhi: provenance.pre_whitening.phi_used,
+            prewhitenMean: provenance.derived.baseline_mean,
+            cooldownTicks: provenance.family_a_cooldown_ticks,
+        } : {
+            cooldownTicks: provenance.family_a_cooldown_ticks,
+        };
+        const familyDDispatchOpts = {
+            cooldownTicks: provenance.family_a_cooldown_ticks,
+        };
         for (const fam of detectors) {
             let firings;
             if (fam === 'self_normalized_lil') {
                 firings = runSelfNormalizedOverDataset(values, provenance);
             }
             else {
-                firings = (0, run_nab_validation_1.runDetectorOverDataset)(fam, values, cfgPath, calibrationSignal);
+                const dispatchOpts = fam === 'family_D_spectral' ? familyDDispatchOpts : familyADispatchOpts;
+                firings = (0, run_nab_validation_1.runDetectorOverDataset)(fam, values, cfgPath, calibrationSignal, dispatchOpts);
             }
             const standard = scorePostProbationary(firings, annotations, nProbationary, nab_scoring_1.NAB_PROFILES.standard);
             const lowFp = scorePostProbationary(firings, annotations, nProbationary, nab_scoring_1.NAB_PROFILES.reward_low_fp);
@@ -436,15 +591,29 @@ function parseArgs(argv) {
                 out.subBenchmarks = v.split(',');
                 i++;
                 break;
+            // SLICE 4 legacy HAC inflation knob retained for regression comparison.
+            case '--use-hac-inflation':
+                out.useHacInflation = true;
+                out.usePrewhitening = false;
+                break;
             case '--no-hac-inflation':
                 out.useHacInflation = false;
+                break;
+            // SLICE 5 — pre-whitening on by default; flag exposes the off-switch.
+            case '--no-prewhitening':
+                out.usePrewhitening = false;
+                break;
+            case '--family-a-cooldown-ticks':
+                out.familyACooldownTicks = parseInt(v, 10);
+                i++;
                 break;
         }
     }
     if (!out.nabRepo || !out.out) {
         throw new Error('Required: --nab-repo <path> --out <path>. '
             + 'Optional: --probationary-fraction <0..1> --calibration-signal <name> '
-            + '--detectors <a,b,c> --sub-benchmarks <a,b,c>');
+            + '--detectors <a,b,c> --sub-benchmarks <a,b,c> '
+            + '--no-prewhitening --use-hac-inflation --family-a-cooldown-ticks <N>');
     }
     return out;
 }
@@ -460,6 +629,8 @@ function main() {
         calibrationSignal: args.calibrationSignal,
         probationaryFraction: args.probationaryFraction,
         useHacInflation: args.useHacInflation,
+        usePrewhitening: args.usePrewhitening,
+        familyACooldownTicks: args.familyACooldownTicks,
     });
     fs.writeFileSync(args.out, JSON.stringify(report, null, 2));
     console.log(`[run-nab-per-dataset] wrote ${args.out}`);

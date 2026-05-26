@@ -57,6 +57,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DEFAULT_CALIBRATION_SIGNAL = void 0;
+exports.prewhitenSeries = prewhitenSeries;
+exports.applyFireCooldown = applyFireCooldown;
 exports.discoverNABDatasets = discoverNABDatasets;
 exports.parseNABDatasetCsv = parseNABDatasetCsv;
 exports.loadNABLabels = loadNABLabels;
@@ -69,6 +71,89 @@ const nab_scoring_1 = require("./nab-scoring");
 const page_cusum_js_1 = require("../detectors/page-cusum.js");
 const betting_e_process_js_1 = require("../detectors/betting-e-process.js");
 const spectral_js_1 = require("../detectors/spectral.js");
+// ── Q70 SLICE 5 (this PR) — dispatcher-layer calibration interventions ─
+//
+// SLICE 4 left page-cusum at 17.07, betting at 0, spectral at 17.14 — well
+// short of the (≥50, ≥40) NAB gate. SLICE 5 lands three layered fixes at
+// the dispatch wrapper (preserves engine/detectors/* anti-scope from
+// Q58/Q59/Q60):
+//
+//   1. AR(1) pre-whitening of detector input. NAB datasets exhibit
+//      φ̂ ≈ 0.95 on temperature/sensor signals; the probationary-window
+//      σ² estimates the AR(1) MARGINAL variance, but page-CUSUM and
+//      betting standardize against assuming iid Gaussian. SLICE 4's HAC
+//      inflation (1+φ)/(1−φ) bandaged this for page-CUSUM by widening σ
+//      but silently disabled fire (S_n stayed at 0); same intervention
+//      did nothing for betting (which fires on bias accumulation in the
+//      GRAPA running-mean). Pre-whitening + innovation variance σ²·(1−φ²)
+//      restores the iid-residual assumption per Howard-Ramdas-2021 H1'
+//      (calibration phi from baseline).
+//
+//   2. Post-fire cooldown. Page-CUSUM and betting both fire on EVERY
+//      tick once S_n / M_t crosses threshold (CUSUM doesn't reset; betting
+//      wealth grows unboundedly). NAB scores reward the FIRST detection
+//      in a labeled window; subsequent fires are FPs that swamp the per-
+//      dataset score. The cooldown holds firing suppressed for K ticks
+//      after a fire (default K=1000 — matches typical NAB labeled-window
+//      half-width of ~300–600 ticks).
+//
+//   3. Spectral lag config + bootstrap-null calibration. The SLICE 4
+//      stub config omitted `min_peak_lag` / `max_peak_lag` from the
+//      family_D entry, making `peakACF(samples, undefined, undefined)`
+//      return 0 → never fires. SLICE 5 stamps `[3, 10]` defaults and
+//      replaces the hardcoded 0.5 quantile with a per-dataset bootstrap
+//      calibration over the probationary window's peak-ACF distribution.
+//
+// All three live in tools/ — zero engine/detectors/* modification. The
+// honest finding is that even with these interventions, NAB-window
+// alignment with first-detection time is the structural ceiling for
+// page-CUSUM (the detector flags real changes earlier than NAB's labeled
+// window starts — good in production, bad for NAB scoring). The
+// architectural gate (combined_acceptance) may not pass under this
+// regime; Q70 Phase E production-AR(1) substrate (Q70.3 option iii) is
+// still the documented path to unblock.
+/** AR(1) pre-whitening helper. Given a series, the calibration mean μ,
+ *  and the lag-1 autocorrelation φ̂, returns a sequence of residuals
+ *  `r_t = (x_t − μ) − φ̂·(x_{t−1} − μ)` re-centered by adding μ back, so
+ *  downstream detectors (which mean-center against `baseline_mean` in
+ *  their derivation) see `x_t − μ = r_t` as input.
+ *
+ *  Under AR(1) H₀ with iid Gaussian innovations, the residual sequence is
+ *  approximately iid with innovation variance σ²·(1−φ²); the detector's
+ *  iid-calibrated math then operates correctly. */
+function prewhitenSeries(values, phi, mean) {
+    if (!Number.isFinite(phi) || Math.abs(phi) >= 1) {
+        throw new Error(`prewhitenSeries: phi must be finite and within (-1, 1), got ${phi}`);
+    }
+    const out = new Array(values.length);
+    let prevDev = 0;
+    for (let i = 0; i < values.length; i++) {
+        const dev = values[i] - mean;
+        const residual = dev - phi * prevDev;
+        out[i] = mean + residual;
+        prevDev = dev;
+    }
+    return out;
+}
+/** Apply post-fire cooldown to a firing trace. After a `fire: true`
+ *  decision, the next `cooldownTicks` of firings are suppressed (set to
+ *  `fire: false`). Statistic and threshold fields pass through unchanged.
+ *  Pure data transform — no engine state coupling. */
+function applyFireCooldown(firings, cooldownTicks) {
+    if (cooldownTicks <= 0)
+        return firings;
+    let suppressUntil = -1;
+    const out = firings.map((f) => ({ ...f }));
+    for (let i = 0; i < out.length; i++) {
+        if (out[i].fire && out[i].tick <= suppressUntil) {
+            out[i].fire = false;
+        }
+        else if (out[i].fire) {
+            suppressUntil = out[i].tick + cooldownTicks;
+        }
+    }
+    return out;
+}
 const DEFAULT_SUB_BENCHMARKS = [
     'realKnownCause',
     'realAWSCloudwatch',
@@ -182,7 +267,7 @@ function annotationsFromLabels(labelWindows, timestamps) {
 exports.DEFAULT_CALIBRATION_SIGNAL = 'p99_latency';
 /** Rolling window length for Family D spectral peak-ACF evaluation. */
 const FAMILY_D_WINDOW = 60;
-function runDetectorOverDataset(family, values, compiledConfigPath, calibrationSignal = exports.DEFAULT_CALIBRATION_SIGNAL) {
+function runDetectorOverDataset(family, values, compiledConfigPath, calibrationSignal = exports.DEFAULT_CALIBRATION_SIGNAL, dispatchOpts) {
     // Q64 Phase 4 STUB resolution per architect option (i.a) single-signal-
     // detector emulation (ARCHITECT-REPLY-Q64-PHASE-4-NAB-ACQUISITION-STUB-
     // DISPOSITION.md § Ask 1). Family A + Family D natively per-signal;
@@ -207,11 +292,20 @@ function runDetectorOverDataset(family, values, compiledConfigPath, calibrationS
         deployAgeDays: 0,
         trafficPct: 1,
     };
+    // SLICE 5 — pre-whiten Family A inputs when caller supplies φ̂ + μ.
+    // Spectral (Family D) consumes the raw values (autocorrelation is the
+    // signal it measures; pre-whitening would zero it out).
+    const isFamilyA = family === 'family_A_page_cusum' || family === 'family_A_betting';
+    const prewhitenedValues = (isFamilyA
+        && dispatchOpts?.prewhitenPhi !== undefined
+        && dispatchOpts.prewhitenMean !== undefined)
+        ? prewhitenSeries(values, dispatchOpts.prewhitenPhi, dispatchOpts.prewhitenMean)
+        : values;
     const out = [];
     if (family === 'family_A_page_cusum') {
         const states = {};
-        for (let t = 0; t < values.length; t++) {
-            const verdicts = (0, page_cusum_js_1.evaluateFamilyAShadow)(cfg, { [calibrationSignal]: values[t] }, states, { ...ctx, ticksSinceDeploy: t });
+        for (let t = 0; t < prewhitenedValues.length; t++) {
+            const verdicts = (0, page_cusum_js_1.evaluateFamilyAShadow)(cfg, { [calibrationSignal]: prewhitenedValues[t] }, states, { ...ctx, ticksSinceDeploy: t });
             const v = verdicts.find((x) => x.signal === calibrationSignal);
             out.push({
                 tick: t,
@@ -223,8 +317,8 @@ function runDetectorOverDataset(family, values, compiledConfigPath, calibrationS
     }
     else if (family === 'family_A_betting') {
         const states = {};
-        for (let t = 0; t < values.length; t++) {
-            const verdicts = (0, betting_e_process_js_1.evaluateFamilyABettingShadow)(cfg, { [calibrationSignal]: values[t] }, states, { ...ctx, ticksSinceDeploy: t });
+        for (let t = 0; t < prewhitenedValues.length; t++) {
+            const verdicts = (0, betting_e_process_js_1.evaluateFamilyABettingShadow)(cfg, { [calibrationSignal]: prewhitenedValues[t] }, states, { ...ctx, ticksSinceDeploy: t });
             const v = verdicts.find((x) => x.signal === calibrationSignal);
             out.push({
                 tick: t,
@@ -254,7 +348,8 @@ function runDetectorOverDataset(family, values, compiledConfigPath, calibrationS
             + 'family_A_betting + family_A_page_cusum + family_D_spectral architect-picked '
             + '(per Q64 spec § Q64.1 + ARCHITECT-REPLY-Q64-PHASE-4-NAB-ACQUISITION-STUB-DISPOSITION.md).');
     }
-    return out;
+    // SLICE 5 — apply post-fire cooldown to dedupe sustained firings.
+    return applyFireCooldown(out, dispatchOpts?.cooldownTicks ?? 0);
 }
 // ── Main runNABValidation ────────────────────────────────────────
 function runNABValidation(opts) {

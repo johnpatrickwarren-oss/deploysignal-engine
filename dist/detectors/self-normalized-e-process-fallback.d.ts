@@ -46,4 +46,46 @@ export declare const LIL_A_DEFAULT = 0.85;
 export declare const LIL_T_MIN_DEFAULT = 1;
 /** Library canonical default for §6 BetaBinomial alpha_opt. */
 export declare const BETA_BINOMIAL_ALPHA_OPT_DEFAULT = 0.05;
+/** Compute a one-sided crossing-probability-conservative C constant
+ *  via the Ville-Markov upper bound on the empirical-process LIL
+ *  martingale. Derivation:
+ *
+ *  Under H₀ the self-normalized empirical process S_t / √V_t admits an
+ *  e-process M_t with M_0 = 1 and E[M_t | H₀] ≤ 1. By Ville's inequality:
+ *
+ *    P( sup_t M_t ≥ 1/α | H₀ ) ≤ α.
+ *
+ *  The LIL boundary B(t) = A √((log(1 + log(t/t_min)) + C) / t)
+ *  corresponds to the e-process crossing 1/α when M_t exceeds the
+ *  exponential of the bracket. Setting C = -2 · log(α) gives the
+ *  one-sided Markov-conservative crossing-probability ≤ α.
+ *
+ *  This is the SLICE 2 v0.1 closed-form C. The library reference impl
+ *  uses Brent's-method bisection on the EXACT crossing-probability
+ *  integral over [t_min, ∞), producing a slightly tighter C (and
+ *  correspondingly slightly tighter detection envelope). The Markov-
+ *  conservative form is FP-control-safe — it overstates C marginally,
+ *  yielding a slightly wider envelope. Tightening to the library-exact
+ *  form is SLICE 3 follow-on.
+ *
+ *  Properties:
+ *  - Monotone increasing in -log(α): smaller α → larger C → wider bound
+ *  - Independent of A and t_min in this conservative form (library-tight
+ *    form is jointly determined by all three; the conservatism increases
+ *    as A or t_min deviate from canonical defaults)
+ *
+ *  Asserts α in (0, 1) per the boundary's domain. */
+export declare function computeLilCConstantConservative(alpha: number): number;
+/** Construct §7 LIL hyperparameters with sensible defaults +
+ *  Markov-conservative C. The typical calibrator-side use:
+ *
+ *    const lil = buildLilBoundHyperparams(1e-4);  // α = 1e-4
+ *    // → { variant: 'lil_bound', alpha: 1e-4, t_min: 1, A: 0.85, C: 18.42 }
+ *
+ *  Calibrators may override A, t_min if specific signal-class evidence
+ *  exists; defaults match library canonical values per Q70.4 ASKs. */
+export declare function buildLilBoundHyperparams(alpha: number, options?: {
+    A?: number;
+    t_min?: number;
+}): LilBoundHyperparams;
 //# sourceMappingURL=self-normalized-e-process-fallback.d.ts.map

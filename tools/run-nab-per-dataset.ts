@@ -39,8 +39,19 @@ import {
   type DetectorFiringDecision,
 } from './run-nab-validation';
 import { computeNABScore, aggregateFamilyScore, NAB_PROFILES, type NABProfile } from './nab-scoring';
+import { buildLilBoundHyperparams } from '../detectors/self-normalized-e-process-fallback';
+import type { LilBoundHyperparams } from '../types/self-normalized-fallback';
 
 const DEFAULT_PROBATIONARY_FRACTION = 0.15;
+
+/** φ̂ threshold above which the Q70 SLICE 2 self-normalized fallback is
+ *  stamped on the per-dataset config. NAB real datasets exhibit φ ≈ 0.95
+ *  on temperature / sensor signals; the 0.5 threshold engages fallback
+ *  metadata generously to leave room for per-detector wiring to decide
+ *  whether to consume it. This is metadata-stamping only at SLICE 2 v0.1
+ *  — per-detector dispatch wiring is gated on architect units-mapping
+ *  cross-check per Q70 spec § Library cross-check status item 2. */
+const AR1_PHI_FALLBACK_THRESHOLD = 0.5;
 const DEFAULT_SUB_BENCHMARKS: NABSubBenchmark[] = [
   'realKnownCause',
   'realAWSCloudwatch',
@@ -103,6 +114,20 @@ export interface PerDatasetCalibrationProvenance {
     baseline_sigma_squared: number;
     ar1_phi: number;
   };
+  /** Q70 SLICE 2 metadata. Populated when |φ̂| ≥
+   *  AR1_PHI_FALLBACK_THRESHOLD — the calibration substrate is iid by
+   *  construction (probationary window of length n_probationary_ticks)
+   *  but the dataset's empirical AR(1) structure suggests runtime
+   *  observations carry correlation the iid calibration does not
+   *  capture. The LIL hyperparameters are stamped into the compiled
+   *  config so a wiring-aware detector can substitute the LIL bound
+   *  for the standard 1/α threshold. */
+  self_normalized_fallback?: {
+    reason: 'ar1_phi_exceeds_threshold';
+    threshold: number;
+    observed_phi: number;
+    lil_hyperparams: LilBoundHyperparams;
+  };
 }
 
 /** Build a compiled config calibrated against the probationary window of
@@ -126,6 +151,20 @@ export function buildPerDatasetConfig(
     n_total_ticks: values.length,
     derived: { baseline_mean: mu, baseline_sigma_squared: sigma2, ar1_phi: phi },
   };
+  // Q70 SLICE 2 fallback stamping. φ̂ above threshold → stamp LIL
+  // hyperparameters; downstream consumers (per-detector wiring; Anvil
+  // chaos-experiment scoring) decide whether to engage. Per-α-budget
+  // family allocation: A gets the largest share so calibrate LIL against
+  // A's α (4e-4 per the alpha_budget below).
+  if (Math.abs(phi) >= AR1_PHI_FALLBACK_THRESHOLD) {
+    const lilHyperparams = buildLilBoundHyperparams(4e-4);
+    provenance.self_normalized_fallback = {
+      reason: 'ar1_phi_exceeds_threshold',
+      threshold: AR1_PHI_FALLBACK_THRESHOLD,
+      observed_phi: phi,
+      lil_hyperparams: lilHyperparams,
+    };
+  }
   const config = {
     version: 'nab-per-dataset-calibrated',
     compiler_version: '0.2.0',

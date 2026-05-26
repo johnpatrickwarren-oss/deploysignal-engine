@@ -65,8 +65,17 @@ const path = __importStar(require("node:path"));
 const os = __importStar(require("node:os"));
 const run_nab_validation_1 = require("./run-nab-validation");
 const nab_scoring_1 = require("./nab-scoring");
+const self_normalized_e_process_fallback_1 = require("../detectors/self-normalized-e-process-fallback");
 const DEFAULT_PROBATIONARY_FRACTION = 0.15;
 exports.DEFAULT_PROBATIONARY_FRACTION = DEFAULT_PROBATIONARY_FRACTION;
+/** φ̂ threshold above which the Q70 SLICE 2 self-normalized fallback is
+ *  stamped on the per-dataset config. NAB real datasets exhibit φ ≈ 0.95
+ *  on temperature / sensor signals; the 0.5 threshold engages fallback
+ *  metadata generously to leave room for per-detector wiring to decide
+ *  whether to consume it. This is metadata-stamping only at SLICE 2 v0.1
+ *  — per-detector dispatch wiring is gated on architect units-mapping
+ *  cross-check per Q70 spec § Library cross-check status item 2. */
+const AR1_PHI_FALLBACK_THRESHOLD = 0.5;
 const DEFAULT_SUB_BENCHMARKS = [
     'realKnownCause',
     'realAWSCloudwatch',
@@ -135,6 +144,20 @@ function buildPerDatasetConfig(values, calibrationSignal, probationaryFraction) 
         n_total_ticks: values.length,
         derived: { baseline_mean: mu, baseline_sigma_squared: sigma2, ar1_phi: phi },
     };
+    // Q70 SLICE 2 fallback stamping. φ̂ above threshold → stamp LIL
+    // hyperparameters; downstream consumers (per-detector wiring; Anvil
+    // chaos-experiment scoring) decide whether to engage. Per-α-budget
+    // family allocation: A gets the largest share so calibrate LIL against
+    // A's α (4e-4 per the alpha_budget below).
+    if (Math.abs(phi) >= AR1_PHI_FALLBACK_THRESHOLD) {
+        const lilHyperparams = (0, self_normalized_e_process_fallback_1.buildLilBoundHyperparams)(4e-4);
+        provenance.self_normalized_fallback = {
+            reason: 'ar1_phi_exceeds_threshold',
+            threshold: AR1_PHI_FALLBACK_THRESHOLD,
+            observed_phi: phi,
+            lil_hyperparams: lilHyperparams,
+        };
+    }
     const config = {
         version: 'nab-per-dataset-calibrated',
         compiler_version: '0.2.0',

@@ -1,5 +1,6 @@
 import { type NABSubBenchmark, type NABDetectorFamily, type NABDatasetAnnotation, type DetectorFiringDecision } from './run-nab-validation';
 import { type NABProfile } from './nab-scoring';
+import type { LilBoundHyperparams } from '../types/self-normalized-fallback';
 declare const DEFAULT_PROBATIONARY_FRACTION = 0.15;
 export interface PerDatasetCalibrationProvenance {
     probationary_fraction: number;
@@ -9,6 +10,20 @@ export interface PerDatasetCalibrationProvenance {
         baseline_mean: number;
         baseline_sigma_squared: number;
         ar1_phi: number;
+    };
+    /** Q70 SLICE 2 metadata. Populated when |φ̂| ≥
+     *  AR1_PHI_FALLBACK_THRESHOLD — the calibration substrate is iid by
+     *  construction (probationary window of length n_probationary_ticks)
+     *  but the dataset's empirical AR(1) structure suggests runtime
+     *  observations carry correlation the iid calibration does not
+     *  capture. The LIL hyperparameters are stamped into the compiled
+     *  config so a wiring-aware detector can substitute the LIL bound
+     *  for the standard 1/α threshold. */
+    self_normalized_fallback?: {
+        reason: 'ar1_phi_exceeds_threshold';
+        threshold: number;
+        observed_phi: number;
+        lil_hyperparams: LilBoundHyperparams;
     };
 }
 /** Build a compiled config calibrated against the probationary window of

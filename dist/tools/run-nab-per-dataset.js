@@ -70,6 +70,7 @@ const nab_scoring_1 = require("./nab-scoring");
 const self_normalized_e_process_fallback_1 = require("../detectors/self-normalized-e-process-fallback");
 const spectral_1 = require("../detectors/spectral");
 const family_a_mixture_supermartingale_1 = require("../detectors/family-a-mixture-supermartingale");
+const ar_p_1 = require("../detectors/ar-p");
 const DEFAULT_PROBATIONARY_FRACTION = 0.15;
 exports.DEFAULT_PROBATIONARY_FRACTION = DEFAULT_PROBATIONARY_FRACTION;
 /** Q70 SLICE 5 — Family D spectral lag bounds for peak-ACF search.
@@ -308,17 +309,37 @@ function buildPerDatasetConfig(values, calibrationSignal, probationaryFraction, 
     }
     const familyACooldownTicks = options?.familyACooldownTicks ?? DEFAULT_FAMILY_A_COOLDOWN_TICKS;
     const useSmoothing = options?.useAnomalyLikelihoodSmoothing ?? true;
+    // Phase E SLICE 8 — AR(p) opt-in (architect-pick: default false at
+    // emit; SLICE 11 may flip after periodic-decomp landing).
+    const useArP = options?.useArPCalibration ?? false;
     const nProbationary = Math.max(2, Math.floor(values.length * probationaryFraction));
     const probationary = values.slice(0, nProbationary);
     const mu = mean(probationary);
     const iidSigma2 = sampleVariance(probationary, mu);
     const phi = ar1Phi(probationary, mu);
+    // Phase E SLICE 8 — AR(p) multi-lag fit on probationary window with
+    // AIC-optimal order. Default off; opt-in via `useArPCalibration`.
+    // When enabled, both the stamped innovation variance AND the
+    // dispatcher's pre-whitening φ-vector come from this fit; the single-
+    // lag SLICE 5 phi above is retained for back-compat provenance only.
+    const arPFit = useArP
+        ? (0, ar_p_1.fitArP)(probationary, mu, {
+            p_max: options?.arPMaxOrder,
+            ic: options?.arPInformationCriterion,
+        })
+        : null;
     // Variance to stamp into the per-signal config. SLICE 5 default uses
     // INNOVATION variance σ²·(1−φ²) so the detector — receiving pre-
     // whitened residuals — operates on the right scale. SLICE 4 legacy:
-    // HAC long-run σ²·(1+φ)/(1−φ).
+    // HAC long-run σ²·(1+φ)/(1−φ). Phase E SLICE 8 (AR(p)): innovation
+    // variance comes from the multi-lag Yule-Walker fit; supersedes the
+    // single-lag (1-φ²) formula above.
     let sigma2;
-    if (usePrewhitening) {
+    if (arPFit && arPFit.sigma2_innovation > 1e-12) {
+        // AR(p) fit dominates when opted in and the fit is non-degenerate.
+        sigma2 = arPFit.sigma2_innovation;
+    }
+    else if (usePrewhitening) {
         // Innovation variance under AR(1). Floor against degenerate φ̂ = ±1.
         const phiSquared = Math.min(phi * phi, 0.9999);
         sigma2 = Math.max(iidSigma2 * (1 - phiSquared), 1e-12);
@@ -361,6 +382,15 @@ function buildPerDatasetConfig(values, calibrationSignal, probationaryFraction, 
             empirically_calibrated: spectralCalib.empirically_calibrated,
         },
         family_a_cooldown_ticks: familyACooldownTicks,
+        ar_p_calibration: arPFit ? {
+            p: arPFit.p,
+            phi: arPFit.phi,
+            sigma2_innovation: arPFit.sigma2_innovation,
+            ic_trace: arPFit.ic_trace,
+            ic_kind: arPFit.ic_kind,
+            reflection_coefficients: arPFit.reflection_coefficients,
+            p_max: Math.max(1, Math.min(30, options?.arPMaxOrder ?? Math.floor(probationary.length / 10))),
+        } : undefined,
         smoothing: useSmoothing ? {
             page_cusum: {
                 window: DEFAULT_SMOOTHING.pageCusum.window,
@@ -552,19 +582,30 @@ function runPerDatasetNABValidation(opts) {
             usePrewhitening: opts.usePrewhitening,
             familyACooldownTicks: opts.familyACooldownTicks,
             useAnomalyLikelihoodSmoothing: opts.useAnomalyLikelihoodSmoothing,
+            useArPCalibration: opts.useArPCalibration,
+            arPMaxOrder: opts.arPMaxOrder,
+            arPInformationCriterion: opts.arPInformationCriterion,
         });
         const cfgPath = path.join(tmpDir, dataset.relPath.replace(/\//g, '__').replace(/\.csv$/, '.json'));
         fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
         fs.writeFileSync(cfgPath, JSON.stringify(config));
         const nProbationary = provenance.n_probationary_ticks;
-        // SLICE 5+6 — per-detector dispatch opts:
-        // - Family A page-cusum + betting: pre-whitening + smoothing (or raw cooldown)
+        // SLICE 5+6+8 — per-detector dispatch opts:
+        // - Family A page-cusum + betting: pre-whitening (single- or multi-
+        //   lag) + smoothing (or raw cooldown). Phase E SLICE 8: when
+        //   ar_p_calibration is stamped, the multi-lag φ vector supersedes
+        //   the single-lag φ̂ for these detectors.
         // - Family D spectral: NO pre-whitening (autocorrelation is the
-        //   signal); smoothing applies to dedupe + delay
+        //   signal); smoothing applies to dedupe + delay.
         const sm = provenance.smoothing;
         const baseFamilyA = provenance.pre_whitening ? {
             prewhitenPhi: provenance.pre_whitening.phi_used,
             prewhitenMean: provenance.derived.baseline_mean,
+            // Phase E SLICE 8 — when AR(p) calibration ran, hand the
+            // multi-lag φ vector to the dispatcher; the dispatcher's
+            // prewhitenPhiArray path supersedes the single-lag prewhitenPhi
+            // when both are present.
+            prewhitenPhiArray: provenance.ar_p_calibration?.phi,
         } : {};
         const familyAPageCusumOpts = sm ? {
             ...baseFamilyA,
@@ -724,6 +765,19 @@ function parseArgs(argv) {
             case '--no-smoothing':
                 out.useAnomalyLikelihoodSmoothing = false;
                 break;
+            case '--ar-p-calibration':
+                out.useArPCalibration = true;
+                break;
+            case '--ar-p-max-order':
+                out.arPMaxOrder = parseInt(v, 10);
+                i++;
+                break;
+            case '--ar-p-ic':
+                if (v !== 'aic' && v !== 'bic')
+                    throw new Error(`--ar-p-ic must be 'aic' or 'bic'; got ${v}`);
+                out.arPInformationCriterion = v;
+                i++;
+                break;
         }
     }
     if (!out.nabRepo || !out.out) {
@@ -749,6 +803,9 @@ function main() {
         usePrewhitening: args.usePrewhitening,
         familyACooldownTicks: args.familyACooldownTicks,
         useAnomalyLikelihoodSmoothing: args.useAnomalyLikelihoodSmoothing,
+        useArPCalibration: args.useArPCalibration,
+        arPMaxOrder: args.arPMaxOrder,
+        arPInformationCriterion: args.arPInformationCriterion,
     });
     fs.writeFileSync(args.out, JSON.stringify(report, null, 2));
     console.log(`[run-nab-per-dataset] wrote ${args.out}`);

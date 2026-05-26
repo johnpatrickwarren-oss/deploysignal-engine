@@ -73,6 +73,7 @@ const page_cusum_js_1 = require("../detectors/page-cusum.js");
 const betting_e_process_js_1 = require("../detectors/betting-e-process.js");
 const spectral_js_1 = require("../detectors/spectral.js");
 const family_a_mixture_supermartingale_js_1 = require("../detectors/family-a-mixture-supermartingale.js");
+const ar_p_js_1 = require("../detectors/ar-p.js");
 // ── Q70 SLICE 5 (this PR) — dispatcher-layer calibration interventions ─
 //
 // SLICE 4 left page-cusum at 17.07, betting at 0, spectral at 17.14 — well
@@ -372,15 +373,20 @@ function runDetectorOverDataset(family, values, compiledConfigPath, calibrationS
         deployAgeDays: 0,
         trafficPct: 1,
     };
-    // SLICE 5 — pre-whiten Family A inputs when caller supplies φ̂ + μ.
-    // Spectral (Family D) consumes the raw values (autocorrelation is the
-    // signal it measures; pre-whitening would zero it out).
+    // SLICE 5 / Phase E SLICE 8 — pre-whiten Family A inputs when caller
+    // supplies φ vector(s) + μ. Spectral (Family D) consumes raw values.
+    // Phase E SLICE 8: `prewhitenPhiArray` (multi-lag) supersedes the
+    // single-lag `prewhitenPhi` when both are present.
     const isFamilyA = family === 'family_A_page_cusum' || family === 'family_A_betting';
-    const prewhitenedValues = (isFamilyA
-        && dispatchOpts?.prewhitenPhi !== undefined
-        && dispatchOpts.prewhitenMean !== undefined)
-        ? prewhitenSeries(values, dispatchOpts.prewhitenPhi, dispatchOpts.prewhitenMean)
-        : values;
+    let prewhitenedValues = values;
+    if (isFamilyA && dispatchOpts?.prewhitenMean !== undefined) {
+        if (dispatchOpts.prewhitenPhiArray && dispatchOpts.prewhitenPhiArray.length > 0) {
+            prewhitenedValues = (0, ar_p_js_1.prewhitenAr)(values, dispatchOpts.prewhitenMean, dispatchOpts.prewhitenPhiArray);
+        }
+        else if (dispatchOpts.prewhitenPhi !== undefined) {
+            prewhitenedValues = prewhitenSeries(values, dispatchOpts.prewhitenPhi, dispatchOpts.prewhitenMean);
+        }
+    }
     const out = [];
     if (family === 'family_A_page_cusum') {
         const states = {};

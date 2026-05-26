@@ -45,7 +45,9 @@ import {
   evaluateSelfNormalizedFallback,
 } from '../detectors/self-normalized-e-process-fallback';
 import { peakACF } from '../detectors/spectral';
+import { deriveMixtureSupermartingaleParams } from '../detectors/family-a-mixture-supermartingale';
 import type { LilBoundHyperparams } from '../types/self-normalized-fallback';
+import type { FamilyAPerSignalParams } from '../types/families/a';
 
 const DEFAULT_PROBATIONARY_FRACTION = 0.15;
 
@@ -114,14 +116,19 @@ const DEFAULT_FAMILY_A_COOLDOWN_TICKS = 1000;
  *  so a longer cooldown after emit is preferred. Spectral oscillation
  *  detection operates on shorter windows by design (lag bounds 3–10),
  *  so its smoothing window is also shorter. */
-const DEFAULT_SMOOTHING: Record<'pageCusum' | 'betting' | 'spectral', {
+const DEFAULT_SMOOTHING: Record<'pageCusum' | 'betting' | 'mixtureSupermartingale' | 'spectral', {
   window: number;
   thresholdCount: number;
   cooldownTicks: number;
 }> = {
-  pageCusum: { window: 50, thresholdCount: 25, cooldownTicks: 1000 },
-  betting:   { window: 50, thresholdCount: 20, cooldownTicks: 1500 },
-  spectral:  { window: 30, thresholdCount:  9, cooldownTicks: 1500 },
+  pageCusum:               { window: 50, thresholdCount: 25, cooldownTicks: 1000 },
+  betting:                 { window: 50, thresholdCount: 20, cooldownTicks: 1500 },
+  // SLICE 7 — mixture-supermartingale fires on per-tick threshold
+  // crossings (non-sticky for dispatch downstream); smoothing dedupes
+  // the same way page-cusum does. Same defaults as page-cusum tuned in
+  // the SLICE 6 sweep; per-detector empirical re-tune may follow.
+  mixtureSupermartingale:  { window: 50, thresholdCount: 25, cooldownTicks: 1000 },
+  spectral:                { window: 30, thresholdCount:  9, cooldownTicks: 1500 },
 };
 
 /** φ̂ threshold above which the Q70 SLICE 2 self-normalized fallback is
@@ -175,18 +182,22 @@ const DEFAULT_SUB_BENCHMARKS: NABSubBenchmark[] = [
 const DEFAULT_DETECTORS: NABDetectorFamily[] = [
   'family_A_betting',
   'family_A_page_cusum',
+  // SLICE 7 — Howard-Ramdas-2021 mixture-supermartingale variant.
+  // Anytime-valid Ville-bounded by construction (P(sup_t M_t ≥ 1/α) ≤
+  // α uniformly); AR(1) pre-whitening built into the detector. This is
+  // the architecturally-correct mean-shift detector that resolves the
+  // PR #3 "LIL application formula" deferred question — the §7 LIL
+  // bound was for empirical-CDF / quantile work (per confseq library
+  // docstring), not for mean-shift detection. The mixture-supermartingale
+  // is the right tool for mean-shift; the LIL primitive is retained for
+  // future quantile-detector work (family_E_conformal trajectory).
+  'family_A_mixture_supermartingale',
   'family_D_spectral',
-  // NOTE: `self_normalized_lil` is implemented + tested but NOT in the
-  // default NAB sweep. SLICE 3 architectural finding: the LIL fallback
-  // is appropriate for Q70's design target (synthetic substrate where
-  // sweep-mode injects AR(1) AND calibration baseline is iid — the
-  // mismatch case the fallback was architected for) but produces
-  // excessive firings on NAB-style production-AR(1) data where natural
-  // diurnal/seasonal patterns triggers continuous fires. The Q70 spec
-  // explicitly anti-scoped production-AR(1) at Q70.3 option (ii) (TAGGED
-  // FUTURE Phase E). To enable for NAB use the --detectors flag with
-  // `self_normalized_lil` and review per-dataset firing patterns before
-  // claiming the score.
+  // NOTE: `self_normalized_lil` was an experimental evaluator from
+  // SLICE 3; the SLICE 7 architectural decision deprecates its
+  // application for mean-shift detection in favor of the mixture-
+  // supermartingale path. The math primitive remains valid for
+  // empirical-CDF / quantile work.
 ];
 const TOOL_VERSION = 'NAB-per-dataset v0.1.0';
 
@@ -301,9 +312,10 @@ export interface PerDatasetCalibrationProvenance {
    *  (Numenta-style persistence filter). Stamped only when smoothing is
    *  enabled at the calibrator level. */
   smoothing?: {
-    page_cusum: { window: number; threshold_count: number; cooldown_ticks: number };
-    betting:    { window: number; threshold_count: number; cooldown_ticks: number };
-    spectral:   { window: number; threshold_count: number; cooldown_ticks: number };
+    page_cusum:              { window: number; threshold_count: number; cooldown_ticks: number };
+    betting:                 { window: number; threshold_count: number; cooldown_ticks: number };
+    mixture_supermartingale: { window: number; threshold_count: number; cooldown_ticks: number };
+    spectral:                { window: number; threshold_count: number; cooldown_ticks: number };
   };
 }
 
@@ -468,6 +480,11 @@ export function buildPerDatasetConfig(
         threshold_count: DEFAULT_SMOOTHING.betting.thresholdCount,
         cooldown_ticks: DEFAULT_SMOOTHING.betting.cooldownTicks,
       },
+      mixture_supermartingale: {
+        window: DEFAULT_SMOOTHING.mixtureSupermartingale.window,
+        threshold_count: DEFAULT_SMOOTHING.mixtureSupermartingale.thresholdCount,
+        cooldown_ticks: DEFAULT_SMOOTHING.mixtureSupermartingale.cooldownTicks,
+      },
       spectral: {
         window: DEFAULT_SMOOTHING.spectral.window,
         threshold_count: DEFAULT_SMOOTHING.spectral.thresholdCount,
@@ -518,16 +535,37 @@ export function buildPerDatasetConfig(
       aggregate_fallback: {
         family_A: {
           per_signal: {
-            [calibrationSignal]: {
-              baseline_mean: mu,
-              baseline_sigma_squared: sigma2,
-              tau_squared: sigma2 / 2,
-              delta_min: 1.5 * sigma,
-              signal_class: 'heavy_tail',
-              betting_sliding_buffer_threshold: 1000,
-              betting_calibration_scope: 'sliding_buffer_ar1',
-              derivation: { mean: mu, empirical_variance: sigma2 },
-            },
+            [calibrationSignal]: (() => {
+              const perSig: FamilyAPerSignalParams = {
+                baseline_mean: mu,
+                baseline_sigma_squared: sigma2,
+                // SLICE 7 — raw σ² for mixture-supermartingale + page-cusum
+                // Q2.B.5 consumption. Under pre-whitening mode, sigma2 = innovation
+                // variance, which is correct for both detector families:
+                // page-cusum receives pre-whitened input from dispatch; mixture-
+                // SM receives raw input and pre-whitens internally via ar1_phi.
+                // In both cases the per-tick variance proxy is the innovation σ².
+                baseline_mean_raw: mu,
+                baseline_sigma_squared_raw: sigma2,
+                tau_squared: sigma2 / 2,
+                delta_min: 1.5 * sigma,
+                signal_class: 'heavy_tail',
+                betting_sliding_buffer_threshold: 1000,
+                betting_calibration_scope: 'sliding_buffer_ar1',
+                // SLICE 7 — AR(1) phi from Yule-Walker on probationary
+                // window. mixture-supermartingale detector pre-whitens
+                // internally; page-cusum & betting pre-whiten externally
+                // via the dispatch wrapper.
+                ar1_phi: phi,
+              };
+              // SLICE 7 — derive mixture-supermartingale params (Howard-
+              // Ramdas-2021 Gaussian mixture for heavy_tail signal class).
+              // Returns { mixture_distribution: 'gaussian',
+              //          gaussian_sigma_squared_prior: σ²_raw }.
+              const msmParams = deriveMixtureSupermartingaleParams(perSig);
+              if (msmParams) perSig.mixture_supermartingale_params = msmParams;
+              return perSig;
+            })(),
           },
         },
         family_D: {
@@ -656,6 +694,7 @@ export interface PerDatasetNABValidationReport {
   acceptance_results: {
     family_A_betting_passes: boolean;
     family_A_page_cusum_passes: boolean;
+    family_A_mixture_supermartingale_passes: boolean;
     family_D_spectral_passes: boolean;
     family_A_passes: boolean;
     family_D_passes: boolean;
@@ -726,6 +765,16 @@ export function runPerDatasetNABValidation(opts: PerDatasetNABValidationOpts): P
       ...baseFamilyA,
       cooldownTicks: provenance.family_a_cooldown_ticks,
     };
+    // SLICE 7 — mixture-supermartingale detector. NO external
+    // pre-whitening (detector pre-whitens internally via its ar1_phi
+    // input — external pre-whitening would double-correct).
+    const familyAMixtureSMOpts = sm ? {
+      cooldownTicks: sm.mixture_supermartingale.cooldown_ticks,
+      smoothingWindow: sm.mixture_supermartingale.window,
+      smoothingThresholdCount: sm.mixture_supermartingale.threshold_count,
+    } : {
+      cooldownTicks: provenance.family_a_cooldown_ticks,
+    };
     const familyDSpectralOpts = sm ? {
       cooldownTicks: sm.spectral.cooldown_ticks,
       smoothingWindow: sm.spectral.window,
@@ -741,6 +790,7 @@ export function runPerDatasetNABValidation(opts: PerDatasetNABValidationOpts): P
         const dispatchOpts =
           fam === 'family_A_page_cusum' ? familyAPageCusumOpts
           : fam === 'family_A_betting' ? familyABettingOpts
+          : fam === 'family_A_mixture_supermartingale' ? familyAMixtureSMOpts
           : familyDSpectralOpts;
         firings = runDetectorOverDataset(fam, values, cfgPath, calibrationSignal, dispatchOpts);
       }
@@ -779,6 +829,7 @@ export function runPerDatasetNABValidation(opts: PerDatasetNABValidationOpts): P
 
   const aBettingPass = (perFamilyScores.family_A_betting?.standard_profile_score ?? 0) >= 50;
   const aPageCusumPass = (perFamilyScores.family_A_page_cusum?.standard_profile_score ?? 0) >= 50;
+  const aMixtureSMPass = (perFamilyScores.family_A_mixture_supermartingale?.standard_profile_score ?? 0) >= 50;
   const dSpectralPass = (perFamilyScores.family_D_spectral?.standard_profile_score ?? 0) >= 40;
 
   const report: PerDatasetNABValidationReport = {
@@ -795,10 +846,11 @@ export function runPerDatasetNABValidation(opts: PerDatasetNABValidationOpts): P
     acceptance_results: {
       family_A_betting_passes: aBettingPass,
       family_A_page_cusum_passes: aPageCusumPass,
+      family_A_mixture_supermartingale_passes: aMixtureSMPass,
       family_D_spectral_passes: dSpectralPass,
-      family_A_passes: aBettingPass || aPageCusumPass,
+      family_A_passes: aBettingPass || aPageCusumPass || aMixtureSMPass,
       family_D_passes: dSpectralPass,
-      combined_acceptance: (aBettingPass || aPageCusumPass) && dSpectralPass,
+      combined_acceptance: (aBettingPass || aPageCusumPass || aMixtureSMPass) && dSpectralPass,
     },
   };
 
@@ -875,7 +927,12 @@ function main(): void {
     console.log(`[run-nab-per-dataset]   ${fam}: standard=${s.standard_profile_score.toFixed(2)} low_fp=${s.reward_low_fp_score.toFixed(2)} low_fn=${s.reward_low_fn_score.toFixed(2)}`);
   }
   const a = report.acceptance_results;
-  console.log(`[run-nab-per-dataset]   acceptance: A_betting=${a.family_A_betting_passes} A_page_cusum=${a.family_A_page_cusum_passes} D_spectral=${a.family_D_spectral_passes} combined=${a.combined_acceptance}`);
+  console.log(
+    `[run-nab-per-dataset]   acceptance: A_betting=${a.family_A_betting_passes} `
+    + `A_page_cusum=${a.family_A_page_cusum_passes} `
+    + `A_mixture_supermartingale=${a.family_A_mixture_supermartingale_passes} `
+    + `D_spectral=${a.family_D_spectral_passes} combined=${a.combined_acceptance}`,
+  );
 }
 
 if (require.main === module) {

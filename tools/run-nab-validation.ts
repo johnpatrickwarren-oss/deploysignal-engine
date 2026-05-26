@@ -29,7 +29,13 @@ import { computeNABScore, aggregateFamilyScore, NAB_PROFILES, type NABProfile } 
 import { evaluateFamilyAShadow, type CUSUMStates } from '../detectors/page-cusum.js';
 import { evaluateFamilyABettingShadow, type BettingStates } from '../detectors/betting-e-process.js';
 import { evaluateFamilyD } from '../detectors/spectral.js';
-import type { CompiledConfig } from '../types/config.js';
+import {
+  evaluatePageCusumMixtureSupermartingale,
+  freshMixtureSupermartingaleState,
+  type MixtureSupermartingaleStates,
+} from '../detectors/family-a-mixture-supermartingale.js';
+import type { CompiledConfig, BaselineCellEntry } from '../types/config.js';
+import type { FamilyAPerSignalParams } from '../types/families/a.js';
 
 // ── Q70 SLICE 5 (this PR) — dispatcher-layer calibration interventions ─
 //
@@ -178,10 +184,14 @@ export function applyAnomalyLikelihoodSmoothing(
 // ── Public types ─────────────────────────────────────────────────
 
 /** Detector family identifier (subset of full DetectorFamily enum;
- *  Q64 evaluates Family A + Family D primary per § Q64.1). */
+ *  Q64 evaluates Family A + Family D primary per § Q64.1; Q70 SLICE 7
+ *  adds the Howard-Ramdas-2021 mixture-supermartingale variant —
+ *  anytime-valid Ville-bounded; the architecturally correct construct
+ *  for mean-shift detection under correlated observations). */
 export type NABDetectorFamily =
   | 'family_A_betting'
   | 'family_A_page_cusum'
+  | 'family_A_mixture_supermartingale'
   | 'family_D_spectral';
 
 export type NABSubBenchmark =
@@ -271,6 +281,7 @@ const DEFAULT_SUB_BENCHMARKS: NABSubBenchmark[] = [
 const DEFAULT_DETECTORS: NABDetectorFamily[] = [
   'family_A_betting',
   'family_A_page_cusum',
+  'family_A_mixture_supermartingale',
   'family_D_spectral',
 ];
 
@@ -421,6 +432,34 @@ export interface RunDetectorDispatchOpts {
   smoothingThresholdCount?: number;
 }
 
+/** SLICE 7 helper — find the {hour_of_day=0} aggregate stub cell that
+ *  the NAB calibrator stamps. Used by the mixture-supermartingale
+ *  dispatch case which doesn't go through `lookupCellParams`. */
+function findStubAggregateCell(cfg: CompiledConfig): BaselineCellEntry | undefined {
+  const cells = cfg.baseline_cells?.cells;
+  if (!cells) return undefined;
+  return cells.find((c) => c.key.hour_of_day === 0 && c.confidence === 'aggregate');
+}
+
+/** SLICE 7 helper — resolve the per-signal mixture-supermartingale
+ *  params from a cell, walking through aggregate_fallback when the
+ *  cell's own per_signal block is empty. Mirrors the same fallback
+ *  pattern as `lookupCellParams` in page-cusum.ts but returns the
+ *  raw FamilyAPerSignalParams shape (not the MSPRTParams view-model). */
+function resolveMixtureSupermartingalePerSignal(
+  cfg: CompiledConfig,
+  cell: BaselineCellEntry,
+  signal: string,
+): FamilyAPerSignalParams | undefined {
+  let perSig = cell.family_A?.per_signal[signal];
+  if (perSig) return perSig;
+  const aggregateFallback = cell.confidence === 'aggregate' || cell.confidence === 'none';
+  if (aggregateFallback) {
+    perSig = cfg.baseline_cells?.aggregate_fallback.family_A?.per_signal[signal];
+  }
+  return perSig;
+}
+
 export function runDetectorOverDataset(
   family: NABDetectorFamily,
   values: number[],
@@ -501,6 +540,62 @@ export function runDetectorOverDataset(
         statistic_value: v?.statistic ?? undefined,
         threshold: v?.threshold ?? undefined,
       });
+    }
+  } else if (family === 'family_A_mixture_supermartingale') {
+    // Q70 SLICE 7 — Howard-Ramdas-2021 mixture-supermartingale Page-CUSUM
+    // variant. Anytime-valid Ville-bounded: P(sup_t M_t ≥ 1/α) ≤ α by
+    // construction. AR(1) pre-whitening is built INTO the detector via
+    // its `ar1_phi` input — caller must NOT pre-whiten externally
+    // (double-whitening would compound the correction).
+    //
+    // SLICE 7 architectural decision: this detector is the empirically-
+    // verifiable replacement for the deferred §7 LIL fallback wiring
+    // from SLICE 1-3. The LIL bound (per confseq library docstring) is
+    // for empirical-CDF / quantile work, NOT mean-shift detection. The
+    // mixture-supermartingale is the right tool for mean-shift; both
+    // are anytime-valid Ville-bounded but for different statistics.
+    const states: MixtureSupermartingaleStates = {};
+    const cell = findStubAggregateCell(cfg);
+    const perSig = cell ? resolveMixtureSupermartingalePerSignal(cfg, cell, calibrationSignal) : undefined;
+    if (!perSig || !perSig.mixture_supermartingale_params) {
+      // Calibrator did not stamp mixture params — emit all-false (silent)
+      // rather than throw, mirroring the page-cusum dispatch's null-cell
+      // behavior. Configs predating SLICE 7 carry no mixture params.
+      for (let t = 0; t < values.length; t++) {
+        out.push({ tick: t, fire: false });
+      }
+    } else {
+      const alphaFamilyA = cfg.alpha_budget.per_family.A ?? 4e-4;
+      const bonf = cfg.bonferroni_factor ?? 6;
+      const alpha = alphaFamilyA / bonf;
+      const baselineMean = perSig.baseline_mean_raw ?? perSig.baseline_mean;
+      const sigmaSquared = perSig.baseline_sigma_squared_raw ?? perSig.baseline_sigma_squared;
+      const phi = perSig.ar1_phi ?? 0;
+      for (let t = 0; t < values.length; t++) {
+        if (!states[calibrationSignal]) states[calibrationSignal] = freshMixtureSupermartingaleState();
+        const xCentered = values[t] - baselineMean;
+        const result = evaluatePageCusumMixtureSupermartingale({
+          signal: calibrationSignal,
+          x_centered: xCentered,
+          live_value: values[t],
+          baseline_mean: baselineMean,
+          sigma_squared: sigmaSquared,
+          params: perSig.mixture_supermartingale_params,
+          ar1_phi: phi,
+          state: states[calibrationSignal],
+          alpha,
+        });
+        // Per-tick threshold-crossing (non-sticky) so downstream
+        // anomaly-likelihood smoothing can dedupe; the detector's own
+        // sticky fire latch is not the right unit for window alignment.
+        const tickFire = result.M_t >= result.threshold;
+        out.push({
+          tick: t,
+          fire: tickFire,
+          statistic_value: result.M_t,
+          threshold: result.threshold,
+        });
+      }
     }
   } else if (family === 'family_D_spectral') {
     const recent: number[] = [];

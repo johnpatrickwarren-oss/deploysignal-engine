@@ -194,32 +194,43 @@ export const LIL_T_MIN_DEFAULT = 1;
 /** Library canonical default for §6 BetaBinomial alpha_opt. */
 export const BETA_BINOMIAL_ALPHA_OPT_DEFAULT = 0.05;
 
-// ── Self-normalized e-process detector evaluator (SLICE 3 — EXPERIMENTAL) ─
+// ── Self-normalized e-process detector evaluator (SLICE 3 — DEPRECATED FOR MEAN-SHIFT) ─
 //
-// HONEST SCOPE: the math primitive (evaluateLilBound + computeLilCConstantTight
-// above) is validated correct against the confseq library reference value
-// to 1e-7. The APPLICATION of that bound to a fire decision on a detector's
-// statistic is NOT YET DETERMINED — exactly the architect-cross-check item
-// Q70 SLICE 1 named "Mac Claude CLI library cross-check PENDING" per
-// Q70-PHASE-3-D-E-CALIBRATION-REGIME-ARCHITECTURE-SPEC.md.
+// SLICE 7 ARCHITECT DECISION (resolves the SLICE 1-3 cross-check question):
 //
-// Empirical finding from SLICE 3 attempt: applying b(V_n) as a self-
-// normalized t-statistic threshold (|S_n| ≥ √V_n · b(V_n)) yields ~100%
-// false-positive rate on iid Gaussian H₀ across 200 trajectories of
-// length 1000 — far above the architect-aspired α-bound. Two possible
-// causes: (a) the application formula is wrong (the bound may apply to
-// a different statistic like |S_n / n| · √n or a process-stopping
-// reformulation), (b) the LIL form is finite-sample-loose at the
-// trajectory lengths tested. Both call for architect cross-check of
-// the actual confseq application pattern.
+//   The §7 EmpiricalProcessLILBound is for empirical-CDF / quantile
+//   work, NOT for mean-shift detection. Per the confseq library
+//   docstring on `empirical_process_lil_bound`:
 //
-// Until the cross-check resolves, this evaluator + state machinery
-// stay exported for development against the application formula, but
-// they are NOT wired into any consumer (NAB tool, detector dispatch).
-// The evaluator's per-tick semantics use supremum persistence (state.fired
-// persists once set) because the LIL bound is mathematically a supremum
-// bound — but that doesn't validate the application formula, only the
-// state-machine semantics for the bound's intended use.
+//     "This bound controls the deviations of the empirical CDF from
+//      the true CDF uniformly over x and time, or yields a confidence
+//      sequences uniform over quantiles and time (Corollary 2 of the
+//      quantile paper)."
+//
+//   The bound applies to |F̂_n(x) − F(x)|, not |Σ z_i / √n|. Applying
+//   it as a self-normalized t-statistic threshold (|S_n| ≥ √V_n · b(V_n))
+//   produces ~100% FP rate on iid Gaussian H₀ — the SLICE 3 empirical
+//   finding — because the LIL bound decays like √(loglog(t)/t) while
+//   |S_n|/√V_n grows like √(loglog(n)) under H₀ (classical LIL). The
+//   bound is much tighter than CLT scaling for this statistic.
+//
+//   The correct anytime-valid construct for MEAN-SHIFT detection is
+//   the Howard-Ramdas-2021 mixture-supermartingale (closed-form
+//   Ville-bounded). Already shipped at detectors/family-a-mixture-supermartingale.ts;
+//   SLICE 7 wires it into NAB dispatch. The two constructs come from
+//   the same theoretical paper but address different statistics.
+//
+//   FUTURE USE for this primitive: family_E_conformal (quantile-based
+//   conformal novelty detection) is the architectural trajectory where
+//   the §7 LIL bound APPLIES correctly. The math primitive +
+//   computeLilCConstantTight are library-validated to 1e-7 and remain
+//   exported for that future wiring.
+//
+// `evaluateSelfNormalizedFallback` BELOW IS DEPRECATED. Retained
+// because tests reference it (and removal would break consumers that
+// imported the experimental API); it should not be added to new
+// consumers. New mean-shift work should use the mixture-supermartingale
+// path instead.
 
 export interface SelfNormalizedDetectorState {
   S: number;          // running sum of standardized increments

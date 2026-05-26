@@ -319,6 +319,14 @@ function buildMiniNABRepo() {
             "from '../detectors/page-cusum.js'",
             "from '../detectors/betting-e-process.js'",
             "from '../detectors/spectral.js'",
+            // Q70 SLICE 7 — architect-PICKED addition resolving the deferred
+            // §7 LIL application-formula question. The Howard-Ramdas-2021
+            // mixture-supermartingale variant is the architecturally correct
+            // anytime-valid mean-shift detector; the LIL primitive is for
+            // empirical-CDF / quantile work per the confseq library
+            // docstring. SLICE 7 wires the existing mixture-supermartingale
+            // detector into NAB dispatch (zero engine modification).
+            "from '../detectors/family-a-mixture-supermartingale.js'",
         ];
         strict_1.default.ok(allowed.includes(imp), `detectors/* import must be on architect-disposed allowlist (Q64 Phase 4 (i.a)); got ${imp}`);
     }

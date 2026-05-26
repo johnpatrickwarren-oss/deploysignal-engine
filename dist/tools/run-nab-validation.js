@@ -72,6 +72,7 @@ const nab_scoring_1 = require("./nab-scoring");
 const page_cusum_js_1 = require("../detectors/page-cusum.js");
 const betting_e_process_js_1 = require("../detectors/betting-e-process.js");
 const spectral_js_1 = require("../detectors/spectral.js");
+const family_a_mixture_supermartingale_js_1 = require("../detectors/family-a-mixture-supermartingale.js");
 // ── Q70 SLICE 5 (this PR) — dispatcher-layer calibration interventions ─
 //
 // SLICE 4 left page-cusum at 17.07, betting at 0, spectral at 17.14 — well
@@ -217,6 +218,7 @@ const DEFAULT_SUB_BENCHMARKS = [
 const DEFAULT_DETECTORS = [
     'family_A_betting',
     'family_A_page_cusum',
+    'family_A_mixture_supermartingale',
     'family_D_spectral',
 ];
 const TOOL_VERSION = 'Q64 SPEC-4 v1.0';
@@ -321,6 +323,30 @@ function annotationsFromLabels(labelWindows, timestamps) {
 exports.DEFAULT_CALIBRATION_SIGNAL = 'p99_latency';
 /** Rolling window length for Family D spectral peak-ACF evaluation. */
 const FAMILY_D_WINDOW = 60;
+/** SLICE 7 helper — find the {hour_of_day=0} aggregate stub cell that
+ *  the NAB calibrator stamps. Used by the mixture-supermartingale
+ *  dispatch case which doesn't go through `lookupCellParams`. */
+function findStubAggregateCell(cfg) {
+    const cells = cfg.baseline_cells?.cells;
+    if (!cells)
+        return undefined;
+    return cells.find((c) => c.key.hour_of_day === 0 && c.confidence === 'aggregate');
+}
+/** SLICE 7 helper — resolve the per-signal mixture-supermartingale
+ *  params from a cell, walking through aggregate_fallback when the
+ *  cell's own per_signal block is empty. Mirrors the same fallback
+ *  pattern as `lookupCellParams` in page-cusum.ts but returns the
+ *  raw FamilyAPerSignalParams shape (not the MSPRTParams view-model). */
+function resolveMixtureSupermartingalePerSignal(cfg, cell, signal) {
+    let perSig = cell.family_A?.per_signal[signal];
+    if (perSig)
+        return perSig;
+    const aggregateFallback = cell.confidence === 'aggregate' || cell.confidence === 'none';
+    if (aggregateFallback) {
+        perSig = cfg.baseline_cells?.aggregate_fallback.family_A?.per_signal[signal];
+    }
+    return perSig;
+}
 function runDetectorOverDataset(family, values, compiledConfigPath, calibrationSignal = exports.DEFAULT_CALIBRATION_SIGNAL, dispatchOpts) {
     // Q64 Phase 4 STUB resolution per architect option (i.a) single-signal-
     // detector emulation (ARCHITECT-REPLY-Q64-PHASE-4-NAB-ACQUISITION-STUB-
@@ -380,6 +406,65 @@ function runDetectorOverDataset(family, values, compiledConfigPath, calibrationS
                 statistic_value: v?.statistic ?? undefined,
                 threshold: v?.threshold ?? undefined,
             });
+        }
+    }
+    else if (family === 'family_A_mixture_supermartingale') {
+        // Q70 SLICE 7 — Howard-Ramdas-2021 mixture-supermartingale Page-CUSUM
+        // variant. Anytime-valid Ville-bounded: P(sup_t M_t ≥ 1/α) ≤ α by
+        // construction. AR(1) pre-whitening is built INTO the detector via
+        // its `ar1_phi` input — caller must NOT pre-whiten externally
+        // (double-whitening would compound the correction).
+        //
+        // SLICE 7 architectural decision: this detector is the empirically-
+        // verifiable replacement for the deferred §7 LIL fallback wiring
+        // from SLICE 1-3. The LIL bound (per confseq library docstring) is
+        // for empirical-CDF / quantile work, NOT mean-shift detection. The
+        // mixture-supermartingale is the right tool for mean-shift; both
+        // are anytime-valid Ville-bounded but for different statistics.
+        const states = {};
+        const cell = findStubAggregateCell(cfg);
+        const perSig = cell ? resolveMixtureSupermartingalePerSignal(cfg, cell, calibrationSignal) : undefined;
+        if (!perSig || !perSig.mixture_supermartingale_params) {
+            // Calibrator did not stamp mixture params — emit all-false (silent)
+            // rather than throw, mirroring the page-cusum dispatch's null-cell
+            // behavior. Configs predating SLICE 7 carry no mixture params.
+            for (let t = 0; t < values.length; t++) {
+                out.push({ tick: t, fire: false });
+            }
+        }
+        else {
+            const alphaFamilyA = cfg.alpha_budget.per_family.A ?? 4e-4;
+            const bonf = cfg.bonferroni_factor ?? 6;
+            const alpha = alphaFamilyA / bonf;
+            const baselineMean = perSig.baseline_mean_raw ?? perSig.baseline_mean;
+            const sigmaSquared = perSig.baseline_sigma_squared_raw ?? perSig.baseline_sigma_squared;
+            const phi = perSig.ar1_phi ?? 0;
+            for (let t = 0; t < values.length; t++) {
+                if (!states[calibrationSignal])
+                    states[calibrationSignal] = (0, family_a_mixture_supermartingale_js_1.freshMixtureSupermartingaleState)();
+                const xCentered = values[t] - baselineMean;
+                const result = (0, family_a_mixture_supermartingale_js_1.evaluatePageCusumMixtureSupermartingale)({
+                    signal: calibrationSignal,
+                    x_centered: xCentered,
+                    live_value: values[t],
+                    baseline_mean: baselineMean,
+                    sigma_squared: sigmaSquared,
+                    params: perSig.mixture_supermartingale_params,
+                    ar1_phi: phi,
+                    state: states[calibrationSignal],
+                    alpha,
+                });
+                // Per-tick threshold-crossing (non-sticky) so downstream
+                // anomaly-likelihood smoothing can dedupe; the detector's own
+                // sticky fire latch is not the right unit for window alignment.
+                const tickFire = result.M_t >= result.threshold;
+                out.push({
+                    tick: t,
+                    fire: tickFire,
+                    statistic_value: result.M_t,
+                    threshold: result.threshold,
+                });
+            }
         }
     }
     else if (family === 'family_D_spectral') {

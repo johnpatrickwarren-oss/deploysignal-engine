@@ -19,7 +19,8 @@
   },
   "bin": {
     "ds-engine-nab-validate": "./dist/tools/run-nab-validation.js",
-    "ds-engine-nab-per-dataset": "./dist/tools/run-nab-per-dataset.js"
+    "ds-engine-nab-per-dataset": "./dist/tools/run-nab-per-dataset.js",
+    "ds-engine-fit-substrate": "./dist/tools/fit-production-substrate.js"
   },
   "scripts": {
     "build": "tsc",

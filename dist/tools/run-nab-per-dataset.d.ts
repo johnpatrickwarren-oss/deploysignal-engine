@@ -107,6 +107,11 @@ export interface PerDatasetCalibrationProvenance {
             threshold_count: number;
             cooldown_ticks: number;
         };
+        mixture_supermartingale: {
+            window: number;
+            threshold_count: number;
+            cooldown_ticks: number;
+        };
         spectral: {
             window: number;
             threshold_count: number;
@@ -207,6 +212,7 @@ export interface PerDatasetNABValidationReport {
     acceptance_results: {
         family_A_betting_passes: boolean;
         family_A_page_cusum_passes: boolean;
+        family_A_mixture_supermartingale_passes: boolean;
         family_D_spectral_passes: boolean;
         family_A_passes: boolean;
         family_D_passes: boolean;

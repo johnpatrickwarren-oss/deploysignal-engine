@@ -36,6 +36,40 @@ pnpm exec tsc            # emits engine/dist/
 cd engine && pnpm pack   # emits johnpatrickwarren-oss-deploysignal-engine-0.1.0-pre.tgz
 ```
 
+## NAB validation tools
+
+```bash
+# Per-dataset calibrated NAB validation (default config)
+node dist/tools/run-nab-per-dataset.js \
+  --nab-repo ~/concord/NAB --out report.json
+
+# Optional opt-in calibration paths (see coordination/PHASE-E-CLOSE.md
+# for empirical guidance on when each applies):
+#   --ar-p-calibration       multi-lag AR(p) Yule-Walker + AIC order selection
+#   --seasonal-decomposition seasonal-naive (per-phase mean subtraction)
+#   --no-smoothing           disable SLICE 6 anomaly-likelihood smoothing
+#   --no-prewhitening        disable SLICE 5 AR(1) pre-whitening
+#   --use-hac-inflation      SLICE 4 HAC long-run variance (legacy)
+```
+
+## Production-AR substrate calibrator (Phase E SLICE 10)
+
+For offline calibration against a representative production window
+(decouples calibration from runtime; produces a portable substrate
+JSON consumable by the engine and external consumers):
+
+```bash
+# Fit a substrate from a production CSV
+node dist/tools/fit-production-substrate.js \
+  --csv production-data.csv \
+  --signal-name p99_latency \
+  --out substrate.json \
+  --ar-p --seasonal --spectral
+```
+
+Substrate schema: see `types/production-ar-substrate.ts`. Consumer
+loader: `tools/load-production-substrate.ts`.
+
 ## Authoritative documentation
 
 Canonical engine semantics live in the DeploySignal repository. Tessera-evolved deltas (per-file SHA pins; vendored-with-deltas vs vendored-at-pin) are tracked in [`coordination/VENDORING-MANIFEST.md`](../coordination/VENDORING-MANIFEST.md).

@@ -113,6 +113,28 @@ const SPECTRAL_BOOTSTRAP_FALLBACK_QUANTILE = 0.90;
  *  benchmarks (~362–566 ticks). Sweep-tuned: 1000 ticks dominates 200/
  *  500/2000/5000 across the 35-dataset suite. */
 const DEFAULT_FAMILY_A_COOLDOWN_TICKS = 1000;
+/** Q70 SLICE 6 — anomaly-likelihood smoothing defaults per detector
+ *  family. SLICE 5's raw cooldown wrapper emits at the FIRST tick of a
+ *  sustained shift; the empirical classification across 35 NAB datasets
+ *  (55 labeled windows) showed ~30% of windows have detector fires
+ *  within ±500 ticks of the window edge but OUTSIDE the credit zone.
+ *  Anomaly-likelihood smoothing requires the rolling fire-count over
+ *  `window` ticks to exceed `thresholdCount` before emitting, which (a)
+ *  delays emit until the anomaly is sustained — increasing the chance
+ *  the emit lands inside the labeled window — and (b) dedupes spurious
+ *  single-tick fires that don't repeat.
+ *
+ *  Defaults are sweep-tuned per detector. Page-cusum tolerates a tighter
+ *  threshold ratio because its raw fire trace is dense in sustained
+ *  shifts. Betting's wealth process produces stickier elevated states,
+ *  so a longer cooldown after emit is preferred. Spectral oscillation
+ *  detection operates on shorter windows by design (lag bounds 3–10),
+ *  so its smoothing window is also shorter. */
+const DEFAULT_SMOOTHING = {
+    pageCusum: { window: 50, thresholdCount: 25, cooldownTicks: 1000 },
+    betting: { window: 50, thresholdCount: 20, cooldownTicks: 1500 },
+    spectral: { window: 30, thresholdCount: 9, cooldownTicks: 1500 },
+};
 /** φ̂ threshold above which the Q70 SLICE 2 self-normalized fallback is
  *  stamped on the per-dataset config. NAB real datasets exhibit φ ≈ 0.95
  *  on temperature / sensor signals; the 0.5 threshold engages fallback
@@ -275,6 +297,7 @@ function buildPerDatasetConfig(values, calibrationSignal, probationaryFraction, 
             + 'mechanisms. Pick one.');
     }
     const familyACooldownTicks = options?.familyACooldownTicks ?? DEFAULT_FAMILY_A_COOLDOWN_TICKS;
+    const useSmoothing = options?.useAnomalyLikelihoodSmoothing ?? true;
     const nProbationary = Math.max(2, Math.floor(values.length * probationaryFraction));
     const probationary = values.slice(0, nProbationary);
     const mu = mean(probationary);
@@ -328,6 +351,23 @@ function buildPerDatasetConfig(values, calibrationSignal, probationaryFraction, 
             empirically_calibrated: spectralCalib.empirically_calibrated,
         },
         family_a_cooldown_ticks: familyACooldownTicks,
+        smoothing: useSmoothing ? {
+            page_cusum: {
+                window: DEFAULT_SMOOTHING.pageCusum.window,
+                threshold_count: DEFAULT_SMOOTHING.pageCusum.thresholdCount,
+                cooldown_ticks: DEFAULT_SMOOTHING.pageCusum.cooldownTicks,
+            },
+            betting: {
+                window: DEFAULT_SMOOTHING.betting.window,
+                threshold_count: DEFAULT_SMOOTHING.betting.thresholdCount,
+                cooldown_ticks: DEFAULT_SMOOTHING.betting.cooldownTicks,
+            },
+            spectral: {
+                window: DEFAULT_SMOOTHING.spectral.window,
+                threshold_count: DEFAULT_SMOOTHING.spectral.thresholdCount,
+                cooldown_ticks: DEFAULT_SMOOTHING.spectral.cooldownTicks,
+            },
+        } : undefined,
     };
     // Q70 SLICE 2 fallback stamping (independent of HAC/pre-whitening
     // mode). φ̂ above threshold → stamp LIL hyperparameters; downstream
@@ -474,22 +514,44 @@ function runPerDatasetNABValidation(opts) {
             useHacInflation: opts.useHacInflation,
             usePrewhitening: opts.usePrewhitening,
             familyACooldownTicks: opts.familyACooldownTicks,
+            useAnomalyLikelihoodSmoothing: opts.useAnomalyLikelihoodSmoothing,
         });
         const cfgPath = path.join(tmpDir, dataset.relPath.replace(/\//g, '__').replace(/\.csv$/, '.json'));
         fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
         fs.writeFileSync(cfgPath, JSON.stringify(config));
         const nProbationary = provenance.n_probationary_ticks;
-        // SLICE 5 — pass pre-whitening + cooldown into Family A dispatch.
-        // Spectral (Family D) does NOT pre-whiten (autocorrelation is the
-        // signal). Cooldown applies to all dispatched detectors.
-        const familyADispatchOpts = provenance.pre_whitening ? {
+        // SLICE 5+6 — per-detector dispatch opts:
+        // - Family A page-cusum + betting: pre-whitening + smoothing (or raw cooldown)
+        // - Family D spectral: NO pre-whitening (autocorrelation is the
+        //   signal); smoothing applies to dedupe + delay
+        const sm = provenance.smoothing;
+        const baseFamilyA = provenance.pre_whitening ? {
             prewhitenPhi: provenance.pre_whitening.phi_used,
             prewhitenMean: provenance.derived.baseline_mean,
-            cooldownTicks: provenance.family_a_cooldown_ticks,
+        } : {};
+        const familyAPageCusumOpts = sm ? {
+            ...baseFamilyA,
+            cooldownTicks: sm.page_cusum.cooldown_ticks,
+            smoothingWindow: sm.page_cusum.window,
+            smoothingThresholdCount: sm.page_cusum.threshold_count,
         } : {
+            ...baseFamilyA,
             cooldownTicks: provenance.family_a_cooldown_ticks,
         };
-        const familyDDispatchOpts = {
+        const familyABettingOpts = sm ? {
+            ...baseFamilyA,
+            cooldownTicks: sm.betting.cooldown_ticks,
+            smoothingWindow: sm.betting.window,
+            smoothingThresholdCount: sm.betting.threshold_count,
+        } : {
+            ...baseFamilyA,
+            cooldownTicks: provenance.family_a_cooldown_ticks,
+        };
+        const familyDSpectralOpts = sm ? {
+            cooldownTicks: sm.spectral.cooldown_ticks,
+            smoothingWindow: sm.spectral.window,
+            smoothingThresholdCount: sm.spectral.threshold_count,
+        } : {
             cooldownTicks: provenance.family_a_cooldown_ticks,
         };
         for (const fam of detectors) {
@@ -498,7 +560,9 @@ function runPerDatasetNABValidation(opts) {
                 firings = runSelfNormalizedOverDataset(values, provenance);
             }
             else {
-                const dispatchOpts = fam === 'family_D_spectral' ? familyDDispatchOpts : familyADispatchOpts;
+                const dispatchOpts = fam === 'family_A_page_cusum' ? familyAPageCusumOpts
+                    : fam === 'family_A_betting' ? familyABettingOpts
+                        : familyDSpectralOpts;
                 firings = (0, run_nab_validation_1.runDetectorOverDataset)(fam, values, cfgPath, calibrationSignal, dispatchOpts);
             }
             const standard = scorePostProbationary(firings, annotations, nProbationary, nab_scoring_1.NAB_PROFILES.standard);
@@ -607,6 +671,9 @@ function parseArgs(argv) {
                 out.familyACooldownTicks = parseInt(v, 10);
                 i++;
                 break;
+            case '--no-smoothing':
+                out.useAnomalyLikelihoodSmoothing = false;
+                break;
         }
     }
     if (!out.nabRepo || !out.out) {
@@ -631,6 +698,7 @@ function main() {
         useHacInflation: args.useHacInflation,
         usePrewhitening: args.usePrewhitening,
         familyACooldownTicks: args.familyACooldownTicks,
+        useAnomalyLikelihoodSmoothing: args.useAnomalyLikelihoodSmoothing,
     });
     fs.writeFileSync(args.out, JSON.stringify(report, null, 2));
     console.log(`[run-nab-per-dataset] wrote ${args.out}`);

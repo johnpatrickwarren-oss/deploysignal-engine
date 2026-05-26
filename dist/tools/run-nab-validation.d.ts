@@ -13,6 +13,35 @@ export declare function prewhitenSeries(values: number[], phi: number, mean: num
  *  `fire: false`). Statistic and threshold fields pass through unchanged.
  *  Pure data transform — no engine state coupling. */
 export declare function applyFireCooldown(firings: DetectorFiringDecision[], cooldownTicks: number): DetectorFiringDecision[];
+/** SLICE 6 — anomaly-likelihood smoothing (NAB-aware window logic).
+ *
+ *  Replaces the raw cooldown wrapper with a Numenta-style persistence
+ *  filter: a fire is emitted only when at least `thresholdCount` of the
+ *  most recent `windowK` ticks have detector-fire=true. After emit,
+ *  fires are suppressed for `cooldownTicks` (anomaly-likelihood
+ *  effectively forms a "confirmed alert" once the rolling count crosses
+ *  threshold).
+ *
+ *  Motivation: page-CUSUM crosses threshold at the FIRST tick of a
+ *  sustained shift, but NAB labeled windows trail the actual change
+ *  point by ~200–1500 ticks. Empirical classification of the SLICE 5
+ *  output showed ~30% of labeled windows have detector fires within
+ *  ±500 ticks of the window edge but OUTSIDE the credit zone. Requiring
+ *  the rolling fire-count to cross a threshold (a) delays emit until
+ *  the anomaly is sustained, increasing the chance the emit lands
+ *  inside the labeled window, and (b) dedupes noisy spurious fires
+ *  (single-tick CUSUM spikes that don't repeat) so they don't burn
+ *  cooldown windows on isolated FPs.
+ *
+ *  Parameters:
+ *  - `windowK`: rolling-window length over which fire-count is summed.
+ *  - `thresholdCount`: minimum count of fire=true ticks in the window
+ *    required to emit. With windowK=50, thresholdCount=25 means
+ *    "detector must have fired in ≥ 50% of the last 50 ticks".
+ *  - `cooldownTicks`: post-emit suppression length.
+ *
+ *  Anti-scope: pure dispatch-layer wrapper; no engine state coupling. */
+export declare function applyAnomalyLikelihoodSmoothing(firings: DetectorFiringDecision[], windowK: number, thresholdCount: number, cooldownTicks: number): DetectorFiringDecision[];
 /** Detector family identifier (subset of full DetectorFamily enum;
  *  Q64 evaluates Family A + Family D primary per § Q64.1). */
 export type NABDetectorFamily = 'family_A_betting' | 'family_A_page_cusum' | 'family_D_spectral';
@@ -115,11 +144,12 @@ export declare function annotationsFromLabels(labelWindows: Array<[string, strin
  *  (realAWSCloudwatch CPU; realKnownCause sensor data). Settable via
  *  --calibration-signal CLI flag. */
 export declare const DEFAULT_CALIBRATION_SIGNAL = "p99_latency";
-/** SLICE 5 dispatcher options. All optional with backward-compatible
+/** SLICE 5+6 dispatcher options. All optional with backward-compatible
  *  defaults: when none are supplied, runDetectorOverDataset retains its
- *  pre-SLICE-5 behavior (no pre-whitening, no cooldown). buildPerDataset
- *  Config wires these into the dispatch automatically when its own
- *  `usePrewhitening` / `cooldownTicks` defaults are active. */
+ *  pre-SLICE-5 behavior (no pre-whitening, no cooldown, no smoothing).
+ *  buildPerDatasetConfig wires these into the dispatch automatically
+ *  when its own `usePrewhitening` / `cooldownTicks` /
+ *  `useAnomalyLikelihoodSmoothing` defaults are active. */
 export interface RunDetectorDispatchOpts {
     /** When set, pre-whiten the input series by AR(1) with this φ and the
      *  baseline mean (also supplied). Detector receives the pre-whitened
@@ -129,11 +159,22 @@ export interface RunDetectorDispatchOpts {
     /** Required when `prewhitenPhi` is set. The calibration mean used by the
      *  detector internally (so pre-whitened residuals re-center to it). */
     prewhitenMean?: number;
-    /** When > 0, suppress firing for this many ticks after each `fire`
-     *  decision. Applied to ALL detector families (CUSUM doesn't reset on
-     *  fire; betting wealth grows unboundedly — both produce dense FP
-     *  trains without cooldown). */
+    /** When > 0 AND `smoothingWindow` is unset, suppress firing for this
+     *  many ticks after each `fire` decision (raw cooldown wrapper).
+     *  When `smoothingWindow` is set, this value is interpreted as the
+     *  post-emit cooldown applied by the smoothing wrapper. */
     cooldownTicks?: number;
+    /** SLICE 6 — anomaly-likelihood smoothing window length. When > 0,
+     *  the dispatcher replaces the raw cooldown wrapper with the
+     *  persistence-filter wrapper (`applyAnomalyLikelihoodSmoothing`).
+     *  Sweep-tuned default for Family A page-cusum is 50; Family D
+     *  spectral is 30 (oscillation periods are shorter). */
+    smoothingWindow?: number;
+    /** SLICE 6 — anomaly-likelihood smoothing threshold count. Must
+     *  satisfy 1 ≤ thresholdCount ≤ smoothingWindow. Detector emits a
+     *  fire only when ≥ this many of the most recent `smoothingWindow`
+     *  ticks have detector-fire=true. */
+    smoothingThresholdCount?: number;
 }
 export declare function runDetectorOverDataset(family: NABDetectorFamily, values: number[], compiledConfigPath: string, calibrationSignal?: string, dispatchOpts?: RunDetectorDispatchOpts): DetectorFiringDecision[];
 export declare function runNABValidation(opts: NABValidationOpts): NABValidationReport;

@@ -31,6 +31,7 @@ function mapEventClassToKind(event_class) {
         case 'env_change': return 'env_change';
         case 'config_change': return 'config_change';
         case 'capacity_change': return 'capacity_change';
+        case 'chaos_experiment': return 'chaos_experiment';
         default: {
             const _exhaustive = event_class;
             throw new Error(`mapEventClassToKind: unhandled event_class: ${_exhaustive}`);

@@ -9,9 +9,13 @@ export interface DeployEventPayload {
     /** Event identifier; stable across DS retries; used as
      *  `cluster_event_id` downstream in Tessera's freeze-hook flow. */
     event_id: string;
-    /** Closed-set 5 event classes. Mirrors `engine/events/event-feed.ts:10-15`
-     *  ClusterEventKind. */
-    event_class: 'firmware_push' | 'model_redeploy' | 'env_change' | 'config_change' | 'capacity_change';
+    /** Closed-set 6 event classes. Mirrors `events/event-feed.ts:10-16`
+     *  ClusterEventKind. `'chaos_experiment'` added per DS-side Anvil
+     *  (DeploySignal Addition #29 / PRD-29 / Q29): DeploySignal emits a
+     *  `chaos_experiment` event when an Anvil chaos run starts so Tessera's
+     *  freeze-hook activates over the experiment's declared fault window,
+     *  same semantic as the other 5 event classes. */
+    event_class: 'firmware_push' | 'model_redeploy' | 'env_change' | 'config_change' | 'capacity_change' | 'chaos_experiment';
     /** Epoch seconds when the event occurred (point-shaped) or began
      *  (interval-shaped; event_window_end_ts populated). */
     event_ts: number;

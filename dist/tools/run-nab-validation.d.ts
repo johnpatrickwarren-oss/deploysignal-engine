@@ -1,3 +1,18 @@
+/** AR(1) pre-whitening helper. Given a series, the calibration mean μ,
+ *  and the lag-1 autocorrelation φ̂, returns a sequence of residuals
+ *  `r_t = (x_t − μ) − φ̂·(x_{t−1} − μ)` re-centered by adding μ back, so
+ *  downstream detectors (which mean-center against `baseline_mean` in
+ *  their derivation) see `x_t − μ = r_t` as input.
+ *
+ *  Under AR(1) H₀ with iid Gaussian innovations, the residual sequence is
+ *  approximately iid with innovation variance σ²·(1−φ²); the detector's
+ *  iid-calibrated math then operates correctly. */
+export declare function prewhitenSeries(values: number[], phi: number, mean: number): number[];
+/** Apply post-fire cooldown to a firing trace. After a `fire: true`
+ *  decision, the next `cooldownTicks` of firings are suppressed (set to
+ *  `fire: false`). Statistic and threshold fields pass through unchanged.
+ *  Pure data transform — no engine state coupling. */
+export declare function applyFireCooldown(firings: DetectorFiringDecision[], cooldownTicks: number): DetectorFiringDecision[];
 /** Detector family identifier (subset of full DetectorFamily enum;
  *  Q64 evaluates Family A + Family D primary per § Q64.1). */
 export type NABDetectorFamily = 'family_A_betting' | 'family_A_page_cusum' | 'family_D_spectral';
@@ -100,6 +115,26 @@ export declare function annotationsFromLabels(labelWindows: Array<[string, strin
  *  (realAWSCloudwatch CPU; realKnownCause sensor data). Settable via
  *  --calibration-signal CLI flag. */
 export declare const DEFAULT_CALIBRATION_SIGNAL = "p99_latency";
-export declare function runDetectorOverDataset(family: NABDetectorFamily, values: number[], compiledConfigPath: string, calibrationSignal?: string): DetectorFiringDecision[];
+/** SLICE 5 dispatcher options. All optional with backward-compatible
+ *  defaults: when none are supplied, runDetectorOverDataset retains its
+ *  pre-SLICE-5 behavior (no pre-whitening, no cooldown). buildPerDataset
+ *  Config wires these into the dispatch automatically when its own
+ *  `usePrewhitening` / `cooldownTicks` defaults are active. */
+export interface RunDetectorDispatchOpts {
+    /** When set, pre-whiten the input series by AR(1) with this φ and the
+     *  baseline mean (also supplied). Detector receives the pre-whitened
+     *  values. Family D spectral is EXEMPT — autocorrelation IS its signal;
+     *  pre-whitening would destroy what the detector measures. */
+    prewhitenPhi?: number;
+    /** Required when `prewhitenPhi` is set. The calibration mean used by the
+     *  detector internally (so pre-whitened residuals re-center to it). */
+    prewhitenMean?: number;
+    /** When > 0, suppress firing for this many ticks after each `fire`
+     *  decision. Applied to ALL detector families (CUSUM doesn't reset on
+     *  fire; betting wealth grows unboundedly — both produce dense FP
+     *  trains without cooldown). */
+    cooldownTicks?: number;
+}
+export declare function runDetectorOverDataset(family: NABDetectorFamily, values: number[], compiledConfigPath: string, calibrationSignal?: string, dispatchOpts?: RunDetectorDispatchOpts): DetectorFiringDecision[];
 export declare function runNABValidation(opts: NABValidationOpts): NABValidationReport;
 //# sourceMappingURL=run-nab-validation.d.ts.map

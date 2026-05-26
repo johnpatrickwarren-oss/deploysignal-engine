@@ -32,6 +32,11 @@ export interface PerDatasetCalibrationProvenance {
     n_total_ticks: number;
     derived: {
         baseline_mean: number;
+        /** Marginal variance estimated from the probationary window. Kept
+         *  as the canonical `baseline_sigma_squared` for back-compat with
+         *  existing tests + downstream consumers; the variance ACTUALLY
+         *  stamped into the per-signal config may be innovation variance
+         *  (see SLICE 5 below) when pre-whitening is enabled. */
         baseline_sigma_squared: number;
         ar1_phi: number;
     };
@@ -49,23 +54,80 @@ export interface PerDatasetCalibrationProvenance {
         observed_phi: number;
         lil_hyperparams: LilBoundHyperparams;
     };
-    /** Path B (HAC variance inflation) provenance. Always populated. The
-     *  inflated_sigma_squared field is what gets stamped into the
-     *  detector's variance configuration; downstream consumers can recover
-     *  the iid σ² by dividing inflated_sigma_squared by hac_inflation_factor. */
+    /** Path B (HAC variance inflation) provenance. Populated only when
+     *  the caller opts into legacy HAC inflation (SLICE 4 behavior).
+     *  SLICE 5 default is pre-whitening + innovation variance, in which
+     *  case `pre_whitening` is populated instead. The two corrections
+     *  are mutually exclusive — both attempt to bridge the iid-calibration
+     *  vs AR(1)-runtime gap but via opposite mechanisms (HAC widens σ to
+     *  cover unwhitened observations; pre-whitening produces near-iid
+     *  residuals so σ stays at innovation scale). */
     hac_inflation?: {
         phi_used: number;
         factor: number;
         iid_sigma_squared: number;
         inflated_sigma_squared: number;
     };
+    /** SLICE 5 — pre-whitening provenance. Populated when the caller opts
+     *  into AR(1) pre-whitening + innovation variance (default). The
+     *  innovation variance σ²·(1−φ²) is stamped into the per-signal config;
+     *  the dispatcher pre-whitens the input series before passing to
+     *  Family A detectors. Spectral (Family D) consumes raw values. */
+    pre_whitening?: {
+        phi_used: number;
+        marginal_sigma_squared: number;
+        innovation_sigma_squared: number;
+    };
+    /** SLICE 5 — spectral bootstrap calibration provenance. Records the
+     *  per-dataset peak-ACF empirical distribution properties from the
+     *  probationary window's overlapping subwindows. */
+    spectral_bootstrap?: {
+        quantile_target: number;
+        quantile_used: number;
+        n_subwindows: number;
+        min_peak_lag: number;
+        max_peak_lag: number;
+        /** False when n_subwindows was too small for reliable calibration
+         *  and the fallback fixed quantile was used. */
+        empirically_calibrated: boolean;
+    };
+    /** SLICE 5 — post-fire cooldown applied to Family A detectors. */
+    family_a_cooldown_ticks: number;
 }
+/** SLICE 5 — calibrate the spectral bootstrap-null quantile from the
+ *  probationary window's empirical peak-ACF distribution. Computes
+ *  peakACF on each overlapping length-`SPECTRAL_BOOTSTRAP_WINDOW`
+ *  subwindow of the probationary data, then returns the (quantile)-th
+ *  order statistic. When the probationary window is too short for
+ *  reliable calibration, returns SPECTRAL_BOOTSTRAP_FALLBACK_QUANTILE
+ *  (≪ SLICE 4's hardcoded 0.5 but still loose enough to not silent-fail). */
+export declare function calibrateSpectralBootstrapQuantile(probationary: number[], minLag: number, maxLag: number, quantile: number): {
+    quantile_used: number;
+    n_subwindows: number;
+    empirically_calibrated: boolean;
+};
 /** Build a compiled config calibrated against the probationary window of
  *  one NAB dataset. Schema mirrors the mini-fixture in
  *  test/q64-nab-validation.test.ts (family_A.per_signal[sig] +
- *  family_D[sig] under baseline_cells.aggregate_fallback). */
+ *  family_D[sig] under baseline_cells.aggregate_fallback).
+ *
+ *  SLICE 5 default behavior: AR(1) pre-whitening + innovation variance
+ *  (NOT HAC inflation) + per-dataset spectral bootstrap calibration +
+ *  Family A post-fire cooldown. SLICE 4's HAC inflation is preserved as
+ *  an opt-in for back-compat regression comparison via the
+ *  `useHacInflation: true, usePrewhitening: false` option combination. */
 export declare function buildPerDatasetConfig(values: number[], calibrationSignal: string, probationaryFraction: number, options?: {
+    /** SLICE 4 HAC inflation (mutually exclusive with usePrewhitening).
+     *  Default false in SLICE 5 — pre-whitening is the active correction. */
     useHacInflation?: boolean;
+    /** SLICE 5 AR(1) pre-whitening + innovation variance. Default true.
+     *  When false AND useHacInflation false, falls back to iid-calibrated
+     *  marginal σ² (the pre-SLICE-4 behavior; mostly silent-fails on
+     *  high-φ NAB data — kept for SLICE-by-SLICE regression measurement). */
+    usePrewhitening?: boolean;
+    /** SLICE 5 post-fire cooldown for Family A detectors. Default 1000.
+     *  Set to 0 to disable. */
+    familyACooldownTicks?: number;
 }): {
     config: Record<string, unknown>;
     provenance: PerDatasetCalibrationProvenance;
@@ -81,7 +143,12 @@ export interface PerDatasetNABValidationOpts {
     labelsPath?: string;
     calibrationSignal?: string;
     probationaryFraction?: number;
+    /** SLICE 4 legacy HAC inflation. Default false (SLICE 5 uses pre-whitening). */
     useHacInflation?: boolean;
+    /** SLICE 5 — AR(1) pre-whitening + innovation variance. Default true. */
+    usePrewhitening?: boolean;
+    /** SLICE 5 — Family A post-fire cooldown ticks. Default 1000. */
+    familyACooldownTicks?: number;
 }
 export interface PerDatasetNABDatasetScore {
     dataset_path: string;

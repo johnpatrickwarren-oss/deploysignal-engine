@@ -2,6 +2,30 @@ import { type NABSubBenchmark, type NABDetectorFamily, type NABDatasetAnnotation
 import { type NABProfile } from './nab-scoring';
 import type { LilBoundHyperparams } from '../types/self-normalized-fallback';
 declare const DEFAULT_PROBATIONARY_FRACTION = 0.15;
+/** AR(1) long-run variance inflation factor for HAC-style σ² correction
+ *  (Path B). For an AR(1) process with stationary variance σ² and lag-1
+ *  correlation φ, the variance of the cumulative sum S_n = Σ X_i grows
+ *  as `n · σ² · (1 + φ) / (1 - φ)` — not `n · σ²`. The CUSUM detector
+ *  assumes the iid form when it standardizes; if calibration was done
+ *  on an iid probationary window but runtime data exhibits AR(1)
+ *  autocorrelation (e.g., NAB temperature data with φ ≈ 0.95), the
+ *  detector under-estimates the variance of its test statistic by this
+ *  factor, producing FPR inflation.
+ *
+ *  Path B intervention: replace the iid-calibrated σ² with the HAC
+ *  long-run variance σ² · (1+φ)/(1-φ) before stamping into the per-
+ *  dataset config. The detector consumes this via its existing variance
+ *  field (no engine math change); FP control is restored to the
+ *  standard Ville bound, just at the corrected effective variance.
+ *
+ *  Trade-off: TPR can also drop because the detector's effective signal-
+ *  to-noise threshold is wider. NAB-style anomalies (sharp shifts) should
+ *  still cross the inflated threshold; subtle drift detection becomes
+ *  harder. Empirical question — that's what running NAB validates.
+ *
+ *  Reference: Newey-Hac (1987) for the AR(1)-corrected long-run variance;
+ *  classic in econometric time-series literature. */
+export declare function hacInflationFactor(phi: number): number;
 export interface PerDatasetCalibrationProvenance {
     probationary_fraction: number;
     n_probationary_ticks: number;
@@ -25,12 +49,24 @@ export interface PerDatasetCalibrationProvenance {
         observed_phi: number;
         lil_hyperparams: LilBoundHyperparams;
     };
+    /** Path B (HAC variance inflation) provenance. Always populated. The
+     *  inflated_sigma_squared field is what gets stamped into the
+     *  detector's variance configuration; downstream consumers can recover
+     *  the iid σ² by dividing inflated_sigma_squared by hac_inflation_factor. */
+    hac_inflation?: {
+        phi_used: number;
+        factor: number;
+        iid_sigma_squared: number;
+        inflated_sigma_squared: number;
+    };
 }
 /** Build a compiled config calibrated against the probationary window of
  *  one NAB dataset. Schema mirrors the mini-fixture in
  *  test/q64-nab-validation.test.ts (family_A.per_signal[sig] +
  *  family_D[sig] under baseline_cells.aggregate_fallback). */
-export declare function buildPerDatasetConfig(values: number[], calibrationSignal: string, probationaryFraction: number): {
+export declare function buildPerDatasetConfig(values: number[], calibrationSignal: string, probationaryFraction: number, options?: {
+    useHacInflation?: boolean;
+}): {
     config: Record<string, unknown>;
     provenance: PerDatasetCalibrationProvenance;
 };
@@ -45,6 +81,7 @@ export interface PerDatasetNABValidationOpts {
     labelsPath?: string;
     calibrationSignal?: string;
     probationaryFraction?: number;
+    useHacInflation?: boolean;
 }
 export interface PerDatasetNABDatasetScore {
     dataset_path: string;

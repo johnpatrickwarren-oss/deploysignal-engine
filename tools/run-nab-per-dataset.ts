@@ -56,6 +56,40 @@ const DEFAULT_PROBATIONARY_FRACTION = 0.15;
  *  — per-detector dispatch wiring is gated on architect units-mapping
  *  cross-check per Q70 spec § Library cross-check status item 2. */
 const AR1_PHI_FALLBACK_THRESHOLD = 0.5;
+
+/** φ̂ clamp for HAC long-run variance computation. As φ → ±1 the
+ *  factor (1+φ)/(1-φ) explodes (random-walk pole); clamp keeps the
+ *  inflation factor bounded by ~199× at φ=±0.99. NAB temperature / taxi
+ *  signals have φ̂ ≈ 0.95 → factor ≈ 39× which is the working regime. */
+const AR1_PHI_HAC_CLAMP = 0.99;
+
+/** AR(1) long-run variance inflation factor for HAC-style σ² correction
+ *  (Path B). For an AR(1) process with stationary variance σ² and lag-1
+ *  correlation φ, the variance of the cumulative sum S_n = Σ X_i grows
+ *  as `n · σ² · (1 + φ) / (1 - φ)` — not `n · σ²`. The CUSUM detector
+ *  assumes the iid form when it standardizes; if calibration was done
+ *  on an iid probationary window but runtime data exhibits AR(1)
+ *  autocorrelation (e.g., NAB temperature data with φ ≈ 0.95), the
+ *  detector under-estimates the variance of its test statistic by this
+ *  factor, producing FPR inflation.
+ *
+ *  Path B intervention: replace the iid-calibrated σ² with the HAC
+ *  long-run variance σ² · (1+φ)/(1-φ) before stamping into the per-
+ *  dataset config. The detector consumes this via its existing variance
+ *  field (no engine math change); FP control is restored to the
+ *  standard Ville bound, just at the corrected effective variance.
+ *
+ *  Trade-off: TPR can also drop because the detector's effective signal-
+ *  to-noise threshold is wider. NAB-style anomalies (sharp shifts) should
+ *  still cross the inflated threshold; subtle drift detection becomes
+ *  harder. Empirical question — that's what running NAB validates.
+ *
+ *  Reference: Newey-Hac (1987) for the AR(1)-corrected long-run variance;
+ *  classic in econometric time-series literature. */
+export function hacInflationFactor(phi: number): number {
+  const phiClamped = Math.max(-AR1_PHI_HAC_CLAMP, Math.min(AR1_PHI_HAC_CLAMP, phi));
+  return (1 + phiClamped) / (1 - phiClamped);
+}
 const DEFAULT_SUB_BENCHMARKS: NABSubBenchmark[] = [
   'realKnownCause',
   'realAWSCloudwatch',
@@ -143,6 +177,16 @@ export interface PerDatasetCalibrationProvenance {
     observed_phi: number;
     lil_hyperparams: LilBoundHyperparams;
   };
+  /** Path B (HAC variance inflation) provenance. Always populated. The
+   *  inflated_sigma_squared field is what gets stamped into the
+   *  detector's variance configuration; downstream consumers can recover
+   *  the iid σ² by dividing inflated_sigma_squared by hac_inflation_factor. */
+  hac_inflation?: {
+    phi_used: number;
+    factor: number;
+    iid_sigma_squared: number;
+    inflated_sigma_squared: number;
+  };
 }
 
 /** Build a compiled config calibrated against the probationary window of
@@ -153,24 +197,36 @@ export function buildPerDatasetConfig(
   values: number[],
   calibrationSignal: string,
   probationaryFraction: number,
+  options?: { useHacInflation?: boolean },
 ): { config: Record<string, unknown>; provenance: PerDatasetCalibrationProvenance } {
+  const useHac = options?.useHacInflation ?? true;
   const nProbationary = Math.max(2, Math.floor(values.length * probationaryFraction));
   const probationary = values.slice(0, nProbationary);
   const mu = mean(probationary);
-  const sigma2 = sampleVariance(probationary, mu);
-  const sigma = Math.sqrt(sigma2);
+  const iidSigma2 = sampleVariance(probationary, mu);
   const phi = ar1Phi(probationary, mu);
+  // Path B: replace the iid σ² with HAC long-run variance when enabled.
+  // Always applied (no φ threshold) — the inflation factor naturally
+  // shrinks to ≈1 for low-φ iid data, so this graceful generalizes the
+  // iid case without an activation cliff.
+  const inflationFactor = useHac ? hacInflationFactor(phi) : 1;
+  const sigma2 = iidSigma2 * inflationFactor;
+  const sigma = Math.sqrt(sigma2);
   const provenance: PerDatasetCalibrationProvenance = {
     probationary_fraction: probationaryFraction,
     n_probationary_ticks: nProbationary,
     n_total_ticks: values.length,
     derived: { baseline_mean: mu, baseline_sigma_squared: sigma2, ar1_phi: phi },
+    hac_inflation: useHac ? {
+      phi_used: phi,
+      factor: inflationFactor,
+      iid_sigma_squared: iidSigma2,
+      inflated_sigma_squared: sigma2,
+    } : undefined,
   };
-  // Q70 SLICE 2 fallback stamping. φ̂ above threshold → stamp LIL
-  // hyperparameters; downstream consumers (per-detector wiring; Anvil
-  // chaos-experiment scoring) decide whether to engage. Per-α-budget
-  // family allocation: A gets the largest share so calibrate LIL against
-  // A's α (4e-4 per the alpha_budget below).
+  // Q70 SLICE 2 fallback stamping (independent of HAC). φ̂ above threshold
+  // → stamp LIL hyperparameters; downstream consumers (per-detector
+  // wiring; Anvil chaos-experiment scoring) decide whether to engage.
   if (Math.abs(phi) >= AR1_PHI_FALLBACK_THRESHOLD) {
     const lilHyperparams = buildLilBoundHyperparams(4e-4);
     provenance.self_normalized_fallback = {
@@ -192,7 +248,20 @@ export function buildPerDatasetConfig(
     bonferroni_factor: 6,
     baseline_cells: {
       dimensions: ['hour_of_day'],
-      cells: [],
+      // The dispatcher routes through `matchCellByHour(cells, query)` →
+      // `buildMSPRTParams` and returns null if no cell matches the query.
+      // The query in run-nab-validation pins {hourOfDay: 0, dayOfWeek: 0}
+      // (NAB datasets have no temporal metadata), so we ship one stub
+      // cell at hour_of_day=0 with `confidence: 'aggregate'` to flow the
+      // dispatcher through to the aggregate_fallback path below. Without
+      // this cell, lookupCellParams returns null at line 349 and the
+      // detector silently no-ops every tick — a finding from Path B
+      // empirical run after HAC inflation failed to move NAB scores.
+      cells: [{
+        key: { hour_of_day: 0 },
+        confidence: 'aggregate',
+        family_A: { per_signal: {} },
+      }],
       aggregate_fallback: {
         family_A: {
           per_signal: {
@@ -284,6 +353,7 @@ export interface PerDatasetNABValidationOpts {
   labelsPath?: string;
   calibrationSignal?: string;
   probationaryFraction?: number;
+  useHacInflation?: boolean;
 }
 
 export interface PerDatasetNABDatasetScore {
@@ -351,7 +421,7 @@ export function runPerDatasetNABValidation(opts: PerDatasetNABValidationOpts): P
     if (values.length < 20) continue;
     const labelWindows = labels[dataset.relPath] ?? [];
     const annotations = annotationsFromLabels(labelWindows, timestamps);
-    const { config, provenance } = buildPerDatasetConfig(values, calibrationSignal, probationaryFraction);
+    const { config, provenance } = buildPerDatasetConfig(values, calibrationSignal, probationaryFraction, { useHacInflation: opts.useHacInflation });
     const cfgPath = path.join(tmpDir, dataset.relPath.replace(/\//g, '__').replace(/\.csv$/, '.json'));
     fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
     fs.writeFileSync(cfgPath, JSON.stringify(config));
@@ -435,6 +505,7 @@ interface CliArgs {
   calibrationSignal?: string;
   detectors?: NABDetectorFamily[];
   subBenchmarks?: NABSubBenchmark[];
+  useHacInflation?: boolean;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -449,6 +520,7 @@ function parseArgs(argv: string[]): CliArgs {
       case '--calibration-signal': out.calibrationSignal = v; i++; break;
       case '--detectors': out.detectors = v.split(',') as NABDetectorFamily[]; i++; break;
       case '--sub-benchmarks': out.subBenchmarks = v.split(',') as NABSubBenchmark[]; i++; break;
+      case '--no-hac-inflation': out.useHacInflation = false; break;
     }
   }
   if (!out.nabRepo || !out.out) {
@@ -470,6 +542,7 @@ function main(): void {
     nabSubBenchmarks: args.subBenchmarks,
     calibrationSignal: args.calibrationSignal,
     probationaryFraction: args.probationaryFraction,
+    useHacInflation: args.useHacInflation,
   });
   fs.writeFileSync(args.out!, JSON.stringify(report, null, 2));
   console.log(`[run-nab-per-dataset] wrote ${args.out}`);

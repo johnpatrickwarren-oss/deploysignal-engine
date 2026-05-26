@@ -35,6 +35,7 @@ import {
   type MixtureSupermartingaleStates,
 } from '../detectors/family-a-mixture-supermartingale.js';
 import { prewhitenAr } from '../detectors/ar-p.js';
+import { deseasonalize } from '../detectors/seasonal.js';
 import type { CompiledConfig, BaselineCellEntry } from '../types/config.js';
 import type { FamilyAPerSignalParams } from '../types/families/a.js';
 
@@ -440,6 +441,15 @@ export interface RunDetectorDispatchOpts {
    *  undefined → fall through to single-lag path. Family D spectral
    *  remains EXEMPT (autocorrelation IS its signal). */
   prewhitenPhiArray?: number[];
+  /** Phase E SLICE 9 — seasonal means for per-phase subtraction
+   *  BEFORE AR pre-whitening. When provided (and `seasonalPeriod` is
+   *  also set), the dispatcher first deseasonalizes the input series
+   *  by subtracting `seasonalMeans[t mod seasonalPeriod]` from each
+   *  observation, then applies AR pre-whitening. Family D spectral
+   *  remains EXEMPT (seasonal cycles are part of its signal). */
+  seasonalMeans?: number[];
+  /** Phase E SLICE 9 — seasonal period (length of seasonalMeans). */
+  seasonalPeriod?: number;
 }
 
 /** SLICE 7 helper — find the {hour_of_day=0} aggregate stub cell that
@@ -503,17 +513,37 @@ export function runDetectorOverDataset(
     trafficPct: 1,
   };
 
-  // SLICE 5 / Phase E SLICE 8 — pre-whiten Family A inputs when caller
-  // supplies φ vector(s) + μ. Spectral (Family D) consumes raw values.
-  // Phase E SLICE 8: `prewhitenPhiArray` (multi-lag) supersedes the
-  // single-lag `prewhitenPhi` when both are present.
+  // SLICE 5 / Phase E SLICE 8+9 — pre-whiten Family A inputs.
+  // Pipeline (when all options provided):
+  //   raw → deseasonalize → pre-whiten (multi-lag or single-lag) → detector
+  // Each stage is optional; missing options pass through.
+  // Spectral (Family D) consumes raw values throughout — seasonal
+  // cycles AND autocorrelation are part of its signal.
   const isFamilyA = family === 'family_A_page_cusum' || family === 'family_A_betting';
   let prewhitenedValues = values;
-  if (isFamilyA && dispatchOpts?.prewhitenMean !== undefined) {
-    if (dispatchOpts.prewhitenPhiArray && dispatchOpts.prewhitenPhiArray.length > 0) {
-      prewhitenedValues = prewhitenAr(values, dispatchOpts.prewhitenMean, dispatchOpts.prewhitenPhiArray);
-    } else if (dispatchOpts.prewhitenPhi !== undefined) {
-      prewhitenedValues = prewhitenSeries(values, dispatchOpts.prewhitenPhi, dispatchOpts.prewhitenMean);
+  if (isFamilyA) {
+    // SLICE 9 — first stage: deseasonalize using per-phase means.
+    if (
+      dispatchOpts?.seasonalMeans
+      && dispatchOpts.seasonalMeans.length > 0
+      && dispatchOpts.seasonalPeriod
+      && dispatchOpts.seasonalPeriod > 0
+    ) {
+      prewhitenedValues = deseasonalize(
+        prewhitenedValues,
+        dispatchOpts.seasonalMeans,
+        dispatchOpts.seasonalPeriod,
+        0,
+      );
+    }
+    // SLICE 5/8 — second stage: AR pre-whitening on the (possibly
+    // deseasonalized) series.
+    if (dispatchOpts?.prewhitenMean !== undefined) {
+      if (dispatchOpts.prewhitenPhiArray && dispatchOpts.prewhitenPhiArray.length > 0) {
+        prewhitenedValues = prewhitenAr(prewhitenedValues, dispatchOpts.prewhitenMean, dispatchOpts.prewhitenPhiArray);
+      } else if (dispatchOpts.prewhitenPhi !== undefined) {
+        prewhitenedValues = prewhitenSeries(prewhitenedValues, dispatchOpts.prewhitenPhi, dispatchOpts.prewhitenMean);
+      }
     }
   }
 

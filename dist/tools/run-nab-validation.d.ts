@@ -187,6 +187,15 @@ export interface RunDetectorDispatchOpts {
      *  undefined → fall through to single-lag path. Family D spectral
      *  remains EXEMPT (autocorrelation IS its signal). */
     prewhitenPhiArray?: number[];
+    /** Phase E SLICE 9 — seasonal means for per-phase subtraction
+     *  BEFORE AR pre-whitening. When provided (and `seasonalPeriod` is
+     *  also set), the dispatcher first deseasonalizes the input series
+     *  by subtracting `seasonalMeans[t mod seasonalPeriod]` from each
+     *  observation, then applies AR pre-whitening. Family D spectral
+     *  remains EXEMPT (seasonal cycles are part of its signal). */
+    seasonalMeans?: number[];
+    /** Phase E SLICE 9 — seasonal period (length of seasonalMeans). */
+    seasonalPeriod?: number;
 }
 export declare function runDetectorOverDataset(family: NABDetectorFamily, values: number[], compiledConfigPath: string, calibrationSignal?: string, dispatchOpts?: RunDetectorDispatchOpts): DetectorFiringDecision[];
 export declare function runNABValidation(opts: NABValidationOpts): NABValidationReport;

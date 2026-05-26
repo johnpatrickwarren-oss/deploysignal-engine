@@ -47,6 +47,7 @@ import {
 import { peakACF } from '../detectors/spectral';
 import { deriveMixtureSupermartingaleParams } from '../detectors/family-a-mixture-supermartingale';
 import { fitArP } from '../detectors/ar-p';
+import { decomposeSeasonal, deseasonalize } from '../detectors/seasonal';
 import type { LilBoundHyperparams } from '../types/self-normalized-fallback';
 import type { FamilyAPerSignalParams } from '../types/families/a';
 
@@ -333,6 +334,22 @@ export interface PerDatasetCalibrationProvenance {
     reflection_coefficients: number[];
     p_max: number;
   };
+  /** Phase E SLICE 9 — seasonal decomposition trail. When period is 0,
+   *  no strong periodicity was detected and seasonal_means is empty;
+   *  the dispatcher falls through to the single-lag AR(1) path. When
+   *  period > 0, the dispatcher subtracts `seasonal_means[t mod period]`
+   *  from each observation before AR(1) pre-whitening. */
+  seasonal_decomposition?: {
+    period: number;
+    acf_at_period: number;
+    seasonal_means: number[];
+    /** AR(1) phi refit on the deseasonalized probationary series.
+     *  Replaces the raw-series phi when seasonal decomposition is
+     *  active, so the dispatcher's pre-whitening operates on the
+     *  residual scale. */
+    ar1_phi_deseasoned: number;
+    sigma2_innovation_deseasoned: number;
+  };
 }
 
 /** SLICE 5 — calibrate the spectral bootstrap-null quantile from the
@@ -422,6 +439,20 @@ export function buildPerDatasetConfig(
     /** Phase E SLICE 8 — information criterion for order selection.
      *  Default 'aic' per spec § ASK 1. */
     arPInformationCriterion?: 'aic' | 'bic';
+    /** Phase E SLICE 9 — enable seasonal decomposition (per-phase mean
+     *  subtraction) before AR(1) pre-whitening. Default false at SLICE
+     *  9 emit (architect-pick per spec § ASK 4 — opt-in until SLICE 11
+     *  measurement validates default-flip). When enabled, the
+     *  calibrator detects the dominant period via ACF peak search,
+     *  computes per-phase seasonal means on the probationary window,
+     *  AND refits AR(1) on the deseasonalized residual; both are
+     *  stamped in `seasonal_decomposition` provenance so the
+     *  dispatcher subtracts the seasonal component AND uses the
+     *  refit phi for pre-whitening. */
+    useSeasonalDecomposition?: boolean;
+    /** Phase E SLICE 9 — override the ACF peak threshold for period
+     *  detection. Default 0.25 per spec § ASK 1. */
+    seasonalMinAcf?: number;
   },
 ): { config: Record<string, unknown>; provenance: PerDatasetCalibrationProvenance } {
   // SLICE 5 — default mode: pre-whitening ON, HAC OFF, cooldown=1000.
@@ -443,6 +474,9 @@ export function buildPerDatasetConfig(
   // Phase E SLICE 8 — AR(p) opt-in (architect-pick: default false at
   // emit; SLICE 11 may flip after periodic-decomp landing).
   const useArP = options?.useArPCalibration ?? false;
+  // Phase E SLICE 9 — seasonal decomposition opt-in (default off at
+  // SLICE 9 emit; SLICE 11 may flip after measurement).
+  const useSeasonal = options?.useSeasonalDecomposition ?? false;
 
   const nProbationary = Math.max(2, Math.floor(values.length * probationaryFraction));
   const probationary = values.slice(0, nProbationary);
@@ -450,13 +484,32 @@ export function buildPerDatasetConfig(
   const iidSigma2 = sampleVariance(probationary, mu);
   const phi = ar1Phi(probationary, mu);
 
-  // Phase E SLICE 8 — AR(p) multi-lag fit on probationary window with
-  // AIC-optimal order. Default off; opt-in via `useArPCalibration`.
-  // When enabled, both the stamped innovation variance AND the
-  // dispatcher's pre-whitening φ-vector come from this fit; the single-
-  // lag SLICE 5 phi above is retained for back-compat provenance only.
+  // Phase E SLICE 9 — seasonal decomposition (per-phase mean subtraction).
+  // Runs BEFORE AR fitting so subsequent AR(1)/AR(p) operates on the
+  // deseasonalized residual. The dispatcher will subtract the same
+  // seasonal means from runtime observations using the
+  // `seasonal_decomposition` provenance stamp + the spec § ASK 3
+  // convention (tick 0 = phase 0).
+  const seasonalFit = useSeasonal
+    ? decomposeSeasonal(probationary, mu, { min_acf: options?.seasonalMinAcf })
+    : { period: 0, acf_at_period: 0, seasonal_means: [], deseasonalized: probationary };
+  const probationaryResidual = seasonalFit.deseasonalized;
+  // Refit AR(1) phi on the deseasonalized series (it's a different
+  // process; the raw-series phi captures both AR(1) and periodic
+  // structure as one effective lag-1 correlation).
+  const phiDeseasoned = seasonalFit.period > 0 ? ar1Phi(probationaryResidual, mu) : phi;
+  const iidSigma2Deseasoned = seasonalFit.period > 0
+    ? sampleVariance(probationaryResidual, mu)
+    : iidSigma2;
+
+  // Phase E SLICE 8 — AR(p) multi-lag fit on the (possibly
+  // deseasonalized) probationary window with AIC-optimal order.
+  // Default off; opt-in via `useArPCalibration`. When SLICE 9 is also
+  // on, the AR(p) fit is on the deseasonalized residual — the cleanest
+  // composition (seasonal removes nuisance period; AR(p) captures
+  // remaining short-range correlation).
   const arPFit = useArP
-    ? fitArP(probationary, mu, {
+    ? fitArP(probationaryResidual, mu, {
         p_max: options?.arPMaxOrder,
         ic: options?.arPInformationCriterion,
       })
@@ -472,6 +525,12 @@ export function buildPerDatasetConfig(
   if (arPFit && arPFit.sigma2_innovation > 1e-12) {
     // AR(p) fit dominates when opted in and the fit is non-degenerate.
     sigma2 = arPFit.sigma2_innovation;
+  } else if (seasonalFit.period > 0) {
+    // SLICE 9 active: use the AR(1) innovation variance on the
+    // deseasonalized series. Both the dispatcher pre-whitening and the
+    // detector's per-tick variance proxy operate on the residual scale.
+    const phiSqDes = Math.min(phiDeseasoned * phiDeseasoned, 0.9999);
+    sigma2 = Math.max(iidSigma2Deseasoned * (1 - phiSqDes), 1e-12);
   } else if (usePrewhitening) {
     // Innovation variance under AR(1). Floor against degenerate φ̂ = ±1.
     const phiSquared = Math.min(phi * phi, 0.9999);
@@ -528,6 +587,13 @@ export function buildPerDatasetConfig(
       ic_kind: arPFit.ic_kind,
       reflection_coefficients: arPFit.reflection_coefficients,
       p_max: Math.max(1, Math.min(30, options?.arPMaxOrder ?? Math.floor(probationary.length / 10))),
+    } : undefined,
+    seasonal_decomposition: seasonalFit.period > 0 ? {
+      period: seasonalFit.period,
+      acf_at_period: seasonalFit.acf_at_period,
+      seasonal_means: seasonalFit.seasonal_means,
+      ar1_phi_deseasoned: phiDeseasoned,
+      sigma2_innovation_deseasoned: iidSigma2Deseasoned * (1 - Math.min(phiDeseasoned * phiDeseasoned, 0.9999)),
     } : undefined,
     smoothing: useSmoothing ? {
       page_cusum: {
@@ -726,6 +792,10 @@ export interface PerDatasetNABValidationOpts {
   arPMaxOrder?: number;
   /** Phase E SLICE 8 — AR(p) order selection criterion. */
   arPInformationCriterion?: 'aic' | 'bic';
+  /** Phase E SLICE 9 — seasonal decomposition. Default false. */
+  useSeasonalDecomposition?: boolean;
+  /** Phase E SLICE 9 — ACF threshold for period detection. */
+  seasonalMinAcf?: number;
 }
 
 export interface PerDatasetNABDatasetScore {
@@ -802,6 +872,8 @@ export function runPerDatasetNABValidation(opts: PerDatasetNABValidationOpts): P
       useArPCalibration: opts.useArPCalibration,
       arPMaxOrder: opts.arPMaxOrder,
       arPInformationCriterion: opts.arPInformationCriterion,
+      useSeasonalDecomposition: opts.useSeasonalDecomposition,
+      seasonalMinAcf: opts.seasonalMinAcf,
     });
     const cfgPath = path.join(tmpDir, dataset.relPath.replace(/\//g, '__').replace(/\.csv$/, '.json'));
     fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
@@ -815,14 +887,20 @@ export function runPerDatasetNABValidation(opts: PerDatasetNABValidationOpts): P
     // - Family D spectral: NO pre-whitening (autocorrelation is the
     //   signal); smoothing applies to dedupe + delay.
     const sm = provenance.smoothing;
-    const baseFamilyA = provenance.pre_whitening ? {
-      prewhitenPhi: provenance.pre_whitening.phi_used,
+    const seasonal = provenance.seasonal_decomposition;
+    // SLICE 9 — when seasonal decomposition is active, the deseasoned
+    // AR(1) phi supersedes the raw-series phi for pre-whitening
+    // (operating on residual scale). When AR(p) is ALSO active, the
+    // AR(p) phi vector (which was fit on the same deseasonalized
+    // series) supersedes both single-lag forms.
+    const effectivePrewhitenPhi = seasonal?.ar1_phi_deseasoned
+      ?? provenance.pre_whitening?.phi_used;
+    const baseFamilyA = (effectivePrewhitenPhi !== undefined) ? {
+      prewhitenPhi: effectivePrewhitenPhi,
       prewhitenMean: provenance.derived.baseline_mean,
-      // Phase E SLICE 8 — when AR(p) calibration ran, hand the
-      // multi-lag φ vector to the dispatcher; the dispatcher's
-      // prewhitenPhiArray path supersedes the single-lag prewhitenPhi
-      // when both are present.
       prewhitenPhiArray: provenance.ar_p_calibration?.phi,
+      seasonalMeans: seasonal?.seasonal_means,
+      seasonalPeriod: seasonal?.period,
     } : {};
     const familyAPageCusumOpts = sm ? {
       ...baseFamilyA,
@@ -952,6 +1030,8 @@ interface CliArgs {
   useArPCalibration?: boolean;
   arPMaxOrder?: number;
   arPInformationCriterion?: 'aic' | 'bic';
+  useSeasonalDecomposition?: boolean;
+  seasonalMinAcf?: number;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -980,6 +1060,8 @@ function parseArgs(argv: string[]): CliArgs {
         out.arPInformationCriterion = v;
         i++;
         break;
+      case '--seasonal-decomposition': out.useSeasonalDecomposition = true; break;
+      case '--seasonal-min-acf': out.seasonalMinAcf = parseFloat(v); i++; break;
     }
   }
   if (!out.nabRepo || !out.out) {
@@ -1009,6 +1091,8 @@ function main(): void {
     useArPCalibration: args.useArPCalibration,
     arPMaxOrder: args.arPMaxOrder,
     arPInformationCriterion: args.arPInformationCriterion,
+    useSeasonalDecomposition: args.useSeasonalDecomposition,
+    seasonalMinAcf: args.seasonalMinAcf,
   });
   fs.writeFileSync(args.out!, JSON.stringify(report, null, 2));
   console.log(`[run-nab-per-dataset] wrote ${args.out}`);

@@ -34,6 +34,7 @@ import {
   freshMixtureSupermartingaleState,
   type MixtureSupermartingaleStates,
 } from '../detectors/family-a-mixture-supermartingale.js';
+import { prewhitenAr } from '../detectors/ar-p.js';
 import type { CompiledConfig, BaselineCellEntry } from '../types/config.js';
 import type { FamilyAPerSignalParams } from '../types/families/a.js';
 
@@ -430,6 +431,15 @@ export interface RunDetectorDispatchOpts {
    *  fire only when ≥ this many of the most recent `smoothingWindow`
    *  ticks have detector-fire=true. */
   smoothingThresholdCount?: number;
+  /** Phase E SLICE 8 — multi-lag AR(p) pre-whitening φ vector.
+   *  When provided, supersedes the single-lag `prewhitenPhi` field
+   *  above; the dispatcher applies `prewhitenAr(values, mean, phi)`
+   *  using all lags simultaneously. Requires `prewhitenMean` to also
+   *  be set (the calibration mean used by the detector internally so
+   *  pre-whitened residuals re-center correctly). Empty array or
+   *  undefined → fall through to single-lag path. Family D spectral
+   *  remains EXEMPT (autocorrelation IS its signal). */
+  prewhitenPhiArray?: number[];
 }
 
 /** SLICE 7 helper — find the {hour_of_day=0} aggregate stub cell that
@@ -493,17 +503,19 @@ export function runDetectorOverDataset(
     trafficPct: 1,
   };
 
-  // SLICE 5 — pre-whiten Family A inputs when caller supplies φ̂ + μ.
-  // Spectral (Family D) consumes the raw values (autocorrelation is the
-  // signal it measures; pre-whitening would zero it out).
+  // SLICE 5 / Phase E SLICE 8 — pre-whiten Family A inputs when caller
+  // supplies φ vector(s) + μ. Spectral (Family D) consumes raw values.
+  // Phase E SLICE 8: `prewhitenPhiArray` (multi-lag) supersedes the
+  // single-lag `prewhitenPhi` when both are present.
   const isFamilyA = family === 'family_A_page_cusum' || family === 'family_A_betting';
-  const prewhitenedValues = (
-    isFamilyA
-    && dispatchOpts?.prewhitenPhi !== undefined
-    && dispatchOpts.prewhitenMean !== undefined
-  )
-    ? prewhitenSeries(values, dispatchOpts.prewhitenPhi, dispatchOpts.prewhitenMean)
-    : values;
+  let prewhitenedValues = values;
+  if (isFamilyA && dispatchOpts?.prewhitenMean !== undefined) {
+    if (dispatchOpts.prewhitenPhiArray && dispatchOpts.prewhitenPhiArray.length > 0) {
+      prewhitenedValues = prewhitenAr(values, dispatchOpts.prewhitenMean, dispatchOpts.prewhitenPhiArray);
+    } else if (dispatchOpts.prewhitenPhi !== undefined) {
+      prewhitenedValues = prewhitenSeries(values, dispatchOpts.prewhitenPhi, dispatchOpts.prewhitenMean);
+    }
+  }
 
   const out: DetectorFiringDecision[] = [];
 

@@ -315,6 +315,13 @@ test('Q64 #12: anti-scope verification — run-nab-validation.ts does NOT MODIFY
       // docstring. SLICE 7 wires the existing mixture-supermartingale
       // detector into NAB dispatch (zero engine modification).
       "from '../detectors/family-a-mixture-supermartingale.js'",
+      // Phase E SLICE 8 — AR(p) multi-lag Yule-Walker calibration
+      // (Levinson-Durbin recursion + AIC order selection). Math
+      // primitive consumed at dispatch for multi-lag pre-whitening.
+      // Per PHASE-E-SLICE-8-SPEC § ASK 3 — placed in detectors/ for
+      // future engine-internal consumption (e.g., production-AR(1)
+      // substrate work at SLICE 10).
+      "from '../detectors/ar-p.js'",
     ];
     assert.ok(allowed.includes(imp),
       `detectors/* import must be on architect-disposed allowlist (Q64 Phase 4 (i.a)); got ${imp}`);

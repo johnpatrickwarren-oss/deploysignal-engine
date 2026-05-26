@@ -178,6 +178,15 @@ export interface RunDetectorDispatchOpts {
      *  fire only when ≥ this many of the most recent `smoothingWindow`
      *  ticks have detector-fire=true. */
     smoothingThresholdCount?: number;
+    /** Phase E SLICE 8 — multi-lag AR(p) pre-whitening φ vector.
+     *  When provided, supersedes the single-lag `prewhitenPhi` field
+     *  above; the dispatcher applies `prewhitenAr(values, mean, phi)`
+     *  using all lags simultaneously. Requires `prewhitenMean` to also
+     *  be set (the calibration mean used by the detector internally so
+     *  pre-whitened residuals re-center correctly). Empty array or
+     *  undefined → fall through to single-lag path. Family D spectral
+     *  remains EXEMPT (autocorrelation IS its signal). */
+    prewhitenPhiArray?: number[];
 }
 export declare function runDetectorOverDataset(family: NABDetectorFamily, values: number[], compiledConfigPath: string, calibrationSignal?: string, dispatchOpts?: RunDetectorDispatchOpts): DetectorFiringDecision[];
 export declare function runNABValidation(opts: NABValidationOpts): NABValidationReport;

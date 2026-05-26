@@ -118,6 +118,21 @@ export interface PerDatasetCalibrationProvenance {
             cooldown_ticks: number;
         };
     };
+    /** Phase E SLICE 8 — multi-lag AR(p) Yule-Walker calibration trail.
+     *  Stamped only when `useArPCalibration: true`. The fitted `phi`
+     *  vector replaces SLICE 5's single-lag φ̂ at dispatch; the
+     *  innovation variance `sigma2_innovation` replaces the SLICE 5
+     *  single-lag innovation σ². `ic_trace` carries the per-order AIC
+     *  (or BIC) values for debugging; `p` is the AIC-optimal order. */
+    ar_p_calibration?: {
+        p: number;
+        phi: number[];
+        sigma2_innovation: number;
+        ic_trace: number[];
+        ic_kind: 'aic' | 'bic';
+        reflection_coefficients: number[];
+        p_max: number;
+    };
 }
 /** SLICE 5 — calibrate the spectral bootstrap-null quantile from the
  *  probationary window's empirical peak-ACF distribution. Computes
@@ -157,6 +172,21 @@ export declare function buildPerDatasetConfig(values: number[], calibrationSigna
      *  persistence filter). Default true. Set false to revert to SLICE 5
      *  raw cooldown wrapper. */
     useAnomalyLikelihoodSmoothing?: boolean;
+    /** Phase E SLICE 8 — enable multi-lag AR(p) Yule-Walker calibration
+     *  with AIC order selection (vs SLICE 5's single-lag AR(1)).
+     *  Default false at SLICE 8 emit (architect-pick per spec § ASK 4 —
+     *  opt-in until SLICE 11 measurement validates default-flip). When
+     *  enabled, the fitted `phi` vector + innovation σ² replace the
+     *  SLICE 5 single-lag stamping; the Family A dispatcher consumes
+     *  the multi-lag prewhitening helper. */
+    useArPCalibration?: boolean;
+    /** Phase E SLICE 8 — AR(p) order cap. Default `floor(N/10)` clamped
+     *  to [1, 30] per spec § ASK 2. Override for testing or for cases
+     *  with strong-prior order knowledge. */
+    arPMaxOrder?: number;
+    /** Phase E SLICE 8 — information criterion for order selection.
+     *  Default 'aic' per spec § ASK 1. */
+    arPInformationCriterion?: 'aic' | 'bic';
 }): {
     config: Record<string, unknown>;
     provenance: PerDatasetCalibrationProvenance;
@@ -180,6 +210,12 @@ export interface PerDatasetNABValidationOpts {
     familyACooldownTicks?: number;
     /** SLICE 6 — anomaly-likelihood smoothing. Default true. */
     useAnomalyLikelihoodSmoothing?: boolean;
+    /** Phase E SLICE 8 — AR(p) multi-lag calibration. Default false. */
+    useArPCalibration?: boolean;
+    /** Phase E SLICE 8 — AR(p) order cap. */
+    arPMaxOrder?: number;
+    /** Phase E SLICE 8 — AR(p) order selection criterion. */
+    arPInformationCriterion?: 'aic' | 'bic';
 }
 export interface PerDatasetNABDatasetScore {
     dataset_path: string;

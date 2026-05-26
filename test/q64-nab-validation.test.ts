@@ -322,6 +322,11 @@ test('Q64 #12: anti-scope verification — run-nab-validation.ts does NOT MODIFY
       // future engine-internal consumption (e.g., production-AR(1)
       // substrate work at SLICE 10).
       "from '../detectors/ar-p.js'",
+      // Phase E SLICE 9 — seasonal-naive decomposition (per-phase mean
+      // subtraction). Math primitive consumed at dispatch BEFORE AR
+      // pre-whitening; separates known-nuisance periodicity from
+      // anomaly-carrying residual structure. Per PHASE-E-SLICE-9-SPEC.
+      "from '../detectors/seasonal.js'",
     ];
     assert.ok(allowed.includes(imp),
       `detectors/* import must be on architect-disposed allowlist (Q64 Phase 4 (i.a)); got ${imp}`);

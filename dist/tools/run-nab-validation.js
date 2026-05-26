@@ -74,6 +74,7 @@ const betting_e_process_js_1 = require("../detectors/betting-e-process.js");
 const spectral_js_1 = require("../detectors/spectral.js");
 const family_a_mixture_supermartingale_js_1 = require("../detectors/family-a-mixture-supermartingale.js");
 const ar_p_js_1 = require("../detectors/ar-p.js");
+const seasonal_js_1 = require("../detectors/seasonal.js");
 // ── Q70 SLICE 5 (this PR) — dispatcher-layer calibration interventions ─
 //
 // SLICE 4 left page-cusum at 17.07, betting at 0, spectral at 17.14 — well
@@ -373,18 +374,31 @@ function runDetectorOverDataset(family, values, compiledConfigPath, calibrationS
         deployAgeDays: 0,
         trafficPct: 1,
     };
-    // SLICE 5 / Phase E SLICE 8 — pre-whiten Family A inputs when caller
-    // supplies φ vector(s) + μ. Spectral (Family D) consumes raw values.
-    // Phase E SLICE 8: `prewhitenPhiArray` (multi-lag) supersedes the
-    // single-lag `prewhitenPhi` when both are present.
+    // SLICE 5 / Phase E SLICE 8+9 — pre-whiten Family A inputs.
+    // Pipeline (when all options provided):
+    //   raw → deseasonalize → pre-whiten (multi-lag or single-lag) → detector
+    // Each stage is optional; missing options pass through.
+    // Spectral (Family D) consumes raw values throughout — seasonal
+    // cycles AND autocorrelation are part of its signal.
     const isFamilyA = family === 'family_A_page_cusum' || family === 'family_A_betting';
     let prewhitenedValues = values;
-    if (isFamilyA && dispatchOpts?.prewhitenMean !== undefined) {
-        if (dispatchOpts.prewhitenPhiArray && dispatchOpts.prewhitenPhiArray.length > 0) {
-            prewhitenedValues = (0, ar_p_js_1.prewhitenAr)(values, dispatchOpts.prewhitenMean, dispatchOpts.prewhitenPhiArray);
+    if (isFamilyA) {
+        // SLICE 9 — first stage: deseasonalize using per-phase means.
+        if (dispatchOpts?.seasonalMeans
+            && dispatchOpts.seasonalMeans.length > 0
+            && dispatchOpts.seasonalPeriod
+            && dispatchOpts.seasonalPeriod > 0) {
+            prewhitenedValues = (0, seasonal_js_1.deseasonalize)(prewhitenedValues, dispatchOpts.seasonalMeans, dispatchOpts.seasonalPeriod, 0);
         }
-        else if (dispatchOpts.prewhitenPhi !== undefined) {
-            prewhitenedValues = prewhitenSeries(values, dispatchOpts.prewhitenPhi, dispatchOpts.prewhitenMean);
+        // SLICE 5/8 — second stage: AR pre-whitening on the (possibly
+        // deseasonalized) series.
+        if (dispatchOpts?.prewhitenMean !== undefined) {
+            if (dispatchOpts.prewhitenPhiArray && dispatchOpts.prewhitenPhiArray.length > 0) {
+                prewhitenedValues = (0, ar_p_js_1.prewhitenAr)(prewhitenedValues, dispatchOpts.prewhitenMean, dispatchOpts.prewhitenPhiArray);
+            }
+            else if (dispatchOpts.prewhitenPhi !== undefined) {
+                prewhitenedValues = prewhitenSeries(prewhitenedValues, dispatchOpts.prewhitenPhi, dispatchOpts.prewhitenMean);
+            }
         }
     }
     const out = [];

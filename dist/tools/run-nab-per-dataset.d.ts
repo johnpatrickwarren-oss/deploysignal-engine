@@ -133,6 +133,22 @@ export interface PerDatasetCalibrationProvenance {
         reflection_coefficients: number[];
         p_max: number;
     };
+    /** Phase E SLICE 9 — seasonal decomposition trail. When period is 0,
+     *  no strong periodicity was detected and seasonal_means is empty;
+     *  the dispatcher falls through to the single-lag AR(1) path. When
+     *  period > 0, the dispatcher subtracts `seasonal_means[t mod period]`
+     *  from each observation before AR(1) pre-whitening. */
+    seasonal_decomposition?: {
+        period: number;
+        acf_at_period: number;
+        seasonal_means: number[];
+        /** AR(1) phi refit on the deseasonalized probationary series.
+         *  Replaces the raw-series phi when seasonal decomposition is
+         *  active, so the dispatcher's pre-whitening operates on the
+         *  residual scale. */
+        ar1_phi_deseasoned: number;
+        sigma2_innovation_deseasoned: number;
+    };
 }
 /** SLICE 5 — calibrate the spectral bootstrap-null quantile from the
  *  probationary window's empirical peak-ACF distribution. Computes
@@ -187,6 +203,20 @@ export declare function buildPerDatasetConfig(values: number[], calibrationSigna
     /** Phase E SLICE 8 — information criterion for order selection.
      *  Default 'aic' per spec § ASK 1. */
     arPInformationCriterion?: 'aic' | 'bic';
+    /** Phase E SLICE 9 — enable seasonal decomposition (per-phase mean
+     *  subtraction) before AR(1) pre-whitening. Default false at SLICE
+     *  9 emit (architect-pick per spec § ASK 4 — opt-in until SLICE 11
+     *  measurement validates default-flip). When enabled, the
+     *  calibrator detects the dominant period via ACF peak search,
+     *  computes per-phase seasonal means on the probationary window,
+     *  AND refits AR(1) on the deseasonalized residual; both are
+     *  stamped in `seasonal_decomposition` provenance so the
+     *  dispatcher subtracts the seasonal component AND uses the
+     *  refit phi for pre-whitening. */
+    useSeasonalDecomposition?: boolean;
+    /** Phase E SLICE 9 — override the ACF peak threshold for period
+     *  detection. Default 0.25 per spec § ASK 1. */
+    seasonalMinAcf?: number;
 }): {
     config: Record<string, unknown>;
     provenance: PerDatasetCalibrationProvenance;
@@ -216,6 +246,10 @@ export interface PerDatasetNABValidationOpts {
     arPMaxOrder?: number;
     /** Phase E SLICE 8 — AR(p) order selection criterion. */
     arPInformationCriterion?: 'aic' | 'bic';
+    /** Phase E SLICE 9 — seasonal decomposition. Default false. */
+    useSeasonalDecomposition?: boolean;
+    /** Phase E SLICE 9 — ACF threshold for period detection. */
+    seasonalMinAcf?: number;
 }
 export interface PerDatasetNABDatasetScore {
     dataset_path: string;

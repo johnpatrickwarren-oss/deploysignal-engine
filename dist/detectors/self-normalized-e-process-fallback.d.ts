@@ -46,46 +46,68 @@ export declare const LIL_A_DEFAULT = 0.85;
 export declare const LIL_T_MIN_DEFAULT = 1;
 /** Library canonical default for §6 BetaBinomial alpha_opt. */
 export declare const BETA_BINOMIAL_ALPHA_OPT_DEFAULT = 0.05;
+export interface SelfNormalizedDetectorState {
+    S: number;
+    V: number;
+    n: number;
+    fired: boolean;
+}
+export declare function freshSelfNormalizedDetectorState(): SelfNormalizedDetectorState;
+export interface SelfNormalizedDetectorVerdict {
+    fire: boolean;
+    /** |S_n| (running cumulative sum of standardized increments). */
+    statistic: number;
+    /** Application-formula threshold (PRELIMINARY: √V_n · b(V_n);
+     *  application formula gated on architect cross-check). */
+    threshold: number;
+}
+/** Evaluate one tick of the self-normalized e-process fallback.
+ *  EXPERIMENTAL — see file-header comment on application-formula
+ *  uncertainty. Pure function in `state` shape: mutates state in place. */
+export declare function evaluateSelfNormalizedFallback(state: SelfNormalizedDetectorState, x: number, baselineMean: number, baselineSigmaSq: number, lilParams: LilBoundHyperparams): SelfNormalizedDetectorVerdict;
 /** Compute a one-sided crossing-probability-conservative C constant
- *  via the Ville-Markov upper bound on the empirical-process LIL
- *  martingale. Derivation:
+ *  via the Ville-Markov upper bound. Setting C = -2 · log(α) preserves
+ *  FP control under the standard Ville inequality but is LOOSER than
+ *  the library's tight bisection by an O(1) factor.
  *
- *  Under H₀ the self-normalized empirical process S_t / √V_t admits an
- *  e-process M_t with M_0 = 1 and E[M_t | H₀] ≤ 1. By Ville's inequality:
- *
- *    P( sup_t M_t ≥ 1/α | H₀ ) ≤ α.
- *
- *  The LIL boundary B(t) = A √((log(1 + log(t/t_min)) + C) / t)
- *  corresponds to the e-process crossing 1/α when M_t exceeds the
- *  exponential of the bracket. Setting C = -2 · log(α) gives the
- *  one-sided Markov-conservative crossing-probability ≤ α.
- *
- *  This is the SLICE 2 v0.1 closed-form C. The library reference impl
- *  uses Brent's-method bisection on the EXACT crossing-probability
- *  integral over [t_min, ∞), producing a slightly tighter C (and
- *  correspondingly slightly tighter detection envelope). The Markov-
- *  conservative form is FP-control-safe — it overstates C marginally,
- *  yielding a slightly wider envelope. Tightening to the library-exact
- *  form is SLICE 3 follow-on.
- *
- *  Properties:
- *  - Monotone increasing in -log(α): smaller α → larger C → wider bound
- *  - Independent of A and t_min in this conservative form (library-tight
- *    form is jointly determined by all three; the conservatism increases
- *    as A or t_min deviate from canonical defaults)
- *
- *  Asserts α in (0, 1) per the boundary's domain. */
+ *  REVERSE-VALIDATED against confseq library test value (uniform_
+ *  boundaries_unittest.cpp:72-74; α=0.05, t_min=100, A=0.85, t=1000;
+ *  library bound = 0.08204769 → library C ≈ 8.115; this form C ≈ 5.991).
+ *  The library's C is LARGER → wider bound → fewer false fires. SLICE 3
+ *  ships `computeLilCConstantTight` below; this conservative form is
+ *  retained for fallback when bisection fails to converge. */
 export declare function computeLilCConstantConservative(alpha: number): number;
-/** Construct §7 LIL hyperparameters with sensible defaults +
- *  Markov-conservative C. The typical calibrator-side use:
+/** Library-tight C constant via the same bisection scheme as
+ *  `EmpiricalProcessLILBound::find_optimal_C` in confseq
+ *  `uniform_boundaries.h:521-556`. Port of:
  *
- *    const lil = buildLilBoundHyperparams(1e-4);  // α = 1e-4
- *    // → { variant: 'lil_bound', alpha: 1e-4, t_min: 1, A: 0.85, C: 18.42 }
+ *    γ² = (2/η) · (A - √(2(η-1)/C))²
+ *    if γ² ≤ 1: error_bound = ∞
+ *    else: error_bound = 4 · exp(-γ²·C) · (1 + 1/((γ²-1)·log(η)))
+ *
+ *  We:
+ *    1. For each candidate C, find η ∈ [1, 2A²] that minimizes error_bound
+ *       (Brent's-method-style golden-section + parabolic interpolation; TS
+ *       impl uses ternary-search-on-unimodal-region which converges for
+ *       this error_bound's shape per HR2021 §7).
+ *    2. Bisect C such that min_η error_bound(C, η) = α.
+ *
+ *  Validated against confseq unit test value: at α=0.05, t_min=100, A=0.85,
+ *  t=1000, the closed-form bound returns 0.0820 ± 1e-4. */
+export declare function computeLilCConstantTight(alpha: number, A?: number): number;
+/** Construct §7 LIL hyperparameters with library-tight C bisection
+ *  (default; matches confseq `find_optimal_C` semantics). Pass
+ *  `tightC: false` to use the Markov-conservative form (faster
+ *  construction; FP-control-safe but slightly wider envelope).
+ *
+ *    const lil = buildLilBoundHyperparams(1e-4);  // tight C bisection
+ *    // → { variant: 'lil_bound', alpha: 1e-4, t_min: 1, A: 0.85, C: ≈8.5 }
  *
  *  Calibrators may override A, t_min if specific signal-class evidence
  *  exists; defaults match library canonical values per Q70.4 ASKs. */
 export declare function buildLilBoundHyperparams(alpha: number, options?: {
     A?: number;
     t_min?: number;
+    tightC?: boolean;
 }): LilBoundHyperparams;
 //# sourceMappingURL=self-normalized-e-process-fallback.d.ts.map

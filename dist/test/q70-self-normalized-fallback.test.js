@@ -108,20 +108,80 @@ const run_nab_per_dataset_1 = require("../tools/run-nab-per-dataset");
     strict_1.default.throws(() => (0, self_normalized_e_process_fallback_1.computeLilCConstantConservative)(-0.1), /alpha/);
 });
 // ── buildLilBoundHyperparams constructor ──────────────────────────
-(0, node_test_1.test)('Q70 SLICE 2 — buildLilBoundHyperparams: defaults match Q70.4 ASKs', () => {
+(0, node_test_1.test)('Q70 SLICE 3 — buildLilBoundHyperparams: defaults match Q70.4 ASKs (tight C)', () => {
     const p = (0, self_normalized_e_process_fallback_1.buildLilBoundHyperparams)(1e-4);
     strict_1.default.equal(p.variant, 'lil_bound');
     strict_1.default.equal(p.alpha, 1e-4);
     strict_1.default.equal(p.t_min, self_normalized_e_process_fallback_1.LIL_T_MIN_DEFAULT); // = 1, library canonical (ASK A)
     strict_1.default.equal(p.A, self_normalized_e_process_fallback_1.LIL_A_DEFAULT); // = 0.85, library canonical (ASK A)
-    strict_1.default.ok(Math.abs(p.C - 18.42068) < 1e-3, `C should be Markov-conservative; got ${p.C}`);
+    // SLICE 3 default is tight C (library bisection); conservative was SLICE 2.
+    // For α=1e-4, A=0.85: tight C ≈ 11.6 (less than conservative 18.42).
+    strict_1.default.ok(p.C < 18.42, `tight C (${p.C}) should be less than conservative form (18.42)`);
 });
-(0, node_test_1.test)('Q70 SLICE 2 — buildLilBoundHyperparams: option overrides apply', () => {
+(0, node_test_1.test)('Q70 SLICE 3 — buildLilBoundHyperparams: tightC=false uses conservative form', () => {
+    const p = (0, self_normalized_e_process_fallback_1.buildLilBoundHyperparams)(1e-4, { tightC: false });
+    strict_1.default.ok(Math.abs(p.C - 18.42068) < 1e-3, `Markov-conservative form; got ${p.C}`);
+});
+(0, node_test_1.test)('Q70 SLICE 3 — buildLilBoundHyperparams: option overrides apply', () => {
     const p = (0, self_normalized_e_process_fallback_1.buildLilBoundHyperparams)(1e-4, { A: 0.9, t_min: 5 });
     strict_1.default.equal(p.A, 0.9);
     strict_1.default.equal(p.t_min, 5);
-    // C is determined by α only in the conservative form
-    strict_1.default.ok(Math.abs(p.C - 18.42068) < 1e-3);
+});
+// ── Library-tight C bisection ──────────────────────────────────────
+(0, node_test_1.test)('Q70 SLICE 3 — computeLilCConstantTight matches confseq library test value', () => {
+    // confseq `test/uniform_boundaries_unittest.cpp:72-74`:
+    //   empirical_process_lil_bound(t=1000, α=0.05, t_min=100, A=0.85) = 0.08204769
+    // Reverse-engineering: with this library bound value, library C ≈ 8.12.
+    // Validate our bisection converges to the same C (tight tolerance) and
+    // reproduces the library bound value (tight tolerance).
+    const C = (0, self_normalized_e_process_fallback_1.computeLilCConstantTight)(0.05, 0.85);
+    const p = { variant: 'lil_bound', alpha: 0.05, t_min: 100, A: 0.85, C };
+    const bound = (0, self_normalized_e_process_fallback_1.evaluateLilBound)(p, 1000);
+    strict_1.default.ok(Math.abs(bound - 0.08204769) < 1e-5, `LIL bound should match confseq test value 0.08204769; got ${bound} (diff ${Math.abs(bound - 0.08204769)})`);
+});
+(0, node_test_1.test)('Q70 SLICE 3 — computeLilCConstantTight: monotone increasing in -log(α)', () => {
+    const cLoose = (0, self_normalized_e_process_fallback_1.computeLilCConstantTight)(0.05, 0.85);
+    const cTight = (0, self_normalized_e_process_fallback_1.computeLilCConstantTight)(1e-4, 0.85);
+    strict_1.default.ok(cTight > cLoose, `tighter α should give larger C; got ${cTight} ≯ ${cLoose}`);
+});
+(0, node_test_1.test)('Q70 SLICE 3 — computeLilCConstantTight rejects α/A outside valid range', () => {
+    strict_1.default.throws(() => (0, self_normalized_e_process_fallback_1.computeLilCConstantTight)(0, 0.85), /alpha/);
+    strict_1.default.throws(() => (0, self_normalized_e_process_fallback_1.computeLilCConstantTight)(0.5, 0.5), /A/); // A ≤ 1/sqrt(2)
+});
+// ── Per-tick self-normalized evaluator ─────────────────────────────
+// Note: the application-formula validation tests (verifying that
+// evaluateSelfNormalizedFallback achieves the Ville bound under H₀ iid
+// Gaussian) were attempted at SLICE 3 and FAILED — observed
+// 100% ever-fire rate at α=0.1 across 200 trajectories of length 1000.
+// This empirically confirms the file-header comment that the application
+// formula `|S_n| ≥ √V_n · b(V_n)` is NOT the correct realization of the
+// confseq `empirical_process_lil_bound` semantics. Validation tests
+// will return when the architect cross-check resolves the actual
+// application pattern. The math primitive tests above (evaluateLilBound,
+// computeLilCConstantTight) remain valid and library-faithful.
+(0, node_test_1.test)('Q70 SLICE 3 / evaluator — drifted data does fire (sanity check on detection mechanics)', () => {
+    // Even with application-formula uncertainty, drift-strong data should
+    // trigger the state machine. Validates the state-mutation path, not
+    // FP control.
+    let seed = 0xDEAD;
+    const rng = () => { seed = (seed * 9301 + 49297) % 233280; return (seed / 233280) * 2 - 1; };
+    const lil = (0, self_normalized_e_process_fallback_1.buildLilBoundHyperparams)(0.05);
+    const state = (0, self_normalized_e_process_fallback_1.freshSelfNormalizedDetectorState)();
+    for (let t = 0; t < 1000; t++) {
+        const x = 0.5 + rng() * 0.3;
+        (0, self_normalized_e_process_fallback_1.evaluateSelfNormalizedFallback)(state, x, 0, 1, lil);
+        if (state.fired)
+            break;
+    }
+    strict_1.default.ok(state.fired, 'drift triggers detector state');
+});
+(0, node_test_1.test)('Q70 SLICE 3 / evaluator — state.fired persists (supremum-bound state-machine semantics)', () => {
+    const lil = (0, self_normalized_e_process_fallback_1.buildLilBoundHyperparams)(0.05);
+    const state = (0, self_normalized_e_process_fallback_1.freshSelfNormalizedDetectorState)();
+    (0, self_normalized_e_process_fallback_1.evaluateSelfNormalizedFallback)(state, 5.0, 0, 1, lil);
+    strict_1.default.ok(state.fired, 'large drift sets state.fired');
+    const v2 = (0, self_normalized_e_process_fallback_1.evaluateSelfNormalizedFallback)(state, 0, 0, 1, lil);
+    strict_1.default.ok(v2.fire, 'state.fired persists; subsequent fire=true');
 });
 // ── Variant dispatch ───────────────────────────────────────────────
 (0, node_test_1.test)('Q70 SLICE 2 — evaluateSelfNormalizedBound dispatches LIL variant', () => {

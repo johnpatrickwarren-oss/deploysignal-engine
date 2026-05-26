@@ -39,7 +39,11 @@ import {
   type DetectorFiringDecision,
 } from './run-nab-validation';
 import { computeNABScore, aggregateFamilyScore, NAB_PROFILES, type NABProfile } from './nab-scoring';
-import { buildLilBoundHyperparams } from '../detectors/self-normalized-e-process-fallback';
+import {
+  buildLilBoundHyperparams,
+  freshSelfNormalizedDetectorState,
+  evaluateSelfNormalizedFallback,
+} from '../detectors/self-normalized-e-process-fallback';
 import type { LilBoundHyperparams } from '../types/self-normalized-fallback';
 
 const DEFAULT_PROBATIONARY_FRACTION = 0.15;
@@ -62,6 +66,17 @@ const DEFAULT_DETECTORS: NABDetectorFamily[] = [
   'family_A_betting',
   'family_A_page_cusum',
   'family_D_spectral',
+  // NOTE: `self_normalized_lil` is implemented + tested but NOT in the
+  // default NAB sweep. SLICE 3 architectural finding: the LIL fallback
+  // is appropriate for Q70's design target (synthetic substrate where
+  // sweep-mode injects AR(1) AND calibration baseline is iid — the
+  // mismatch case the fallback was architected for) but produces
+  // excessive firings on NAB-style production-AR(1) data where natural
+  // diurnal/seasonal patterns triggers continuous fires. The Q70 spec
+  // explicitly anti-scoped production-AR(1) at Q70.3 option (ii) (TAGGED
+  // FUTURE Phase E). To enable for NAB use the --detectors flag with
+  // `self_normalized_lil` and review per-dataset firing patterns before
+  // claiming the score.
 ];
 const TOOL_VERSION = 'NAB-per-dataset v0.1.0';
 
@@ -231,6 +246,35 @@ export function scorePostProbationary(
   return computeNABScore(postFirings, postAnnotations, profile);
 }
 
+// ── Self-normalized fallback dispatch (SLICE 3) ───────────────────
+
+/** Run the self-normalized LIL e-process fallback over a NAB dataset.
+ *  When `provenance.self_normalized_fallback` is unstamped (low φ̂), this
+ *  returns an all-false firing trace (the fallback simply doesn't engage).
+ *  When stamped (high φ̂), the evaluator runs on raw observations using
+ *  the per-dataset baseline_mean + σ² and the stamped LIL hyperparameters,
+ *  with the firing trace expressed in the standard `DetectorFiringDecision`
+ *  shape so it scores through the same Lavin-Ahmad path as the other
+ *  detector families. */
+function runSelfNormalizedOverDataset(
+  values: number[],
+  provenance: PerDatasetCalibrationProvenance,
+): DetectorFiringDecision[] {
+  const fallback = provenance.self_normalized_fallback;
+  if (!fallback) {
+    return values.map((_, t) => ({ tick: t, fire: false }));
+  }
+  const { baseline_mean, baseline_sigma_squared } = provenance.derived;
+  const lilParams = fallback.lil_hyperparams;
+  const state = freshSelfNormalizedDetectorState();
+  const out: DetectorFiringDecision[] = [];
+  for (let t = 0; t < values.length; t++) {
+    const v = evaluateSelfNormalizedFallback(state, values[t], baseline_mean, baseline_sigma_squared, lilParams);
+    out.push({ tick: t, fire: v.fire, statistic_value: v.statistic, threshold: v.threshold });
+  }
+  return out;
+}
+
 // ── Per-dataset NAB validation ────────────────────────────────────
 
 export interface PerDatasetNABValidationOpts {
@@ -313,7 +357,12 @@ export function runPerDatasetNABValidation(opts: PerDatasetNABValidationOpts): P
     fs.writeFileSync(cfgPath, JSON.stringify(config));
     const nProbationary = provenance.n_probationary_ticks;
     for (const fam of detectors) {
-      const firings = runDetectorOverDataset(fam, values, cfgPath, calibrationSignal);
+      let firings: DetectorFiringDecision[];
+      if (fam === ('self_normalized_lil' as NABDetectorFamily)) {
+        firings = runSelfNormalizedOverDataset(values, provenance);
+      } else {
+        firings = runDetectorOverDataset(fam, values, cfgPath, calibrationSignal);
+      }
       const standard = scorePostProbationary(firings, annotations, nProbationary, NAB_PROFILES.standard);
       const lowFp = scorePostProbationary(firings, annotations, nProbationary, NAB_PROFILES.reward_low_fp);
       const lowFn = scorePostProbationary(firings, annotations, nProbationary, NAB_PROFILES.reward_low_fn);

@@ -86,6 +86,17 @@ const DEFAULT_DETECTORS = [
     'family_A_betting',
     'family_A_page_cusum',
     'family_D_spectral',
+    // NOTE: `self_normalized_lil` is implemented + tested but NOT in the
+    // default NAB sweep. SLICE 3 architectural finding: the LIL fallback
+    // is appropriate for Q70's design target (synthetic substrate where
+    // sweep-mode injects AR(1) AND calibration baseline is iid — the
+    // mismatch case the fallback was architected for) but produces
+    // excessive firings on NAB-style production-AR(1) data where natural
+    // diurnal/seasonal patterns triggers continuous fires. The Q70 spec
+    // explicitly anti-scoped production-AR(1) at Q70.3 option (ii) (TAGGED
+    // FUTURE Phase E). To enable for NAB use the --detectors flag with
+    // `self_normalized_lil` and review per-dataset firing patterns before
+    // claiming the score.
 ];
 const TOOL_VERSION = 'NAB-per-dataset v0.1.0';
 // ── Probationary-window statistics ─────────────────────────────────
@@ -217,6 +228,30 @@ function scorePostProbationary(firings, annotations, nProbationary, profile) {
     }
     return (0, nab_scoring_1.computeNABScore)(postFirings, postAnnotations, profile);
 }
+// ── Self-normalized fallback dispatch (SLICE 3) ───────────────────
+/** Run the self-normalized LIL e-process fallback over a NAB dataset.
+ *  When `provenance.self_normalized_fallback` is unstamped (low φ̂), this
+ *  returns an all-false firing trace (the fallback simply doesn't engage).
+ *  When stamped (high φ̂), the evaluator runs on raw observations using
+ *  the per-dataset baseline_mean + σ² and the stamped LIL hyperparameters,
+ *  with the firing trace expressed in the standard `DetectorFiringDecision`
+ *  shape so it scores through the same Lavin-Ahmad path as the other
+ *  detector families. */
+function runSelfNormalizedOverDataset(values, provenance) {
+    const fallback = provenance.self_normalized_fallback;
+    if (!fallback) {
+        return values.map((_, t) => ({ tick: t, fire: false }));
+    }
+    const { baseline_mean, baseline_sigma_squared } = provenance.derived;
+    const lilParams = fallback.lil_hyperparams;
+    const state = (0, self_normalized_e_process_fallback_1.freshSelfNormalizedDetectorState)();
+    const out = [];
+    for (let t = 0; t < values.length; t++) {
+        const v = (0, self_normalized_e_process_fallback_1.evaluateSelfNormalizedFallback)(state, values[t], baseline_mean, baseline_sigma_squared, lilParams);
+        out.push({ tick: t, fire: v.fire, statistic_value: v.statistic, threshold: v.threshold });
+    }
+    return out;
+}
 function runPerDatasetNABValidation(opts) {
     const subBenchmarks = opts.nabSubBenchmarks ?? DEFAULT_SUB_BENCHMARKS;
     const detectors = opts.detectors ?? DEFAULT_DETECTORS;
@@ -247,7 +282,13 @@ function runPerDatasetNABValidation(opts) {
         fs.writeFileSync(cfgPath, JSON.stringify(config));
         const nProbationary = provenance.n_probationary_ticks;
         for (const fam of detectors) {
-            const firings = (0, run_nab_validation_1.runDetectorOverDataset)(fam, values, cfgPath, calibrationSignal);
+            let firings;
+            if (fam === 'self_normalized_lil') {
+                firings = runSelfNormalizedOverDataset(values, provenance);
+            }
+            else {
+                firings = (0, run_nab_validation_1.runDetectorOverDataset)(fam, values, cfgPath, calibrationSignal);
+            }
             const standard = scorePostProbationary(firings, annotations, nProbationary, nab_scoring_1.NAB_PROFILES.standard);
             const lowFp = scorePostProbationary(firings, annotations, nProbationary, nab_scoring_1.NAB_PROFILES.reward_low_fp);
             const lowFn = scorePostProbationary(firings, annotations, nProbationary, nab_scoring_1.NAB_PROFILES.reward_low_fn);

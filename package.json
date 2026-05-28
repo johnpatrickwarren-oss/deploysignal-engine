@@ -85,6 +85,10 @@
       "types": "./dist/types/verdict.d.ts",
       "default": "./dist/types/verdict.js"
     },
+    "./types/verdict-extensions/cluster-topology": {
+      "types": "./dist/types/verdict-extensions/cluster-topology.d.ts",
+      "default": "./dist/types/verdict-extensions/cluster-topology.js"
+    },
     "./types/families/a": {
       "types": "./dist/types/families/a.d.ts",
       "default": "./dist/types/families/a.js"

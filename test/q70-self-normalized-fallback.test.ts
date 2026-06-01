@@ -247,7 +247,8 @@ test('Q70 SLICE 2 / calibrator — NAB-style real dataset (φ ≈ 0.95) stamps f
   // Match the diagnostic finding on realKnownCause/ambient_temperature
   // (n_ticks=7267, calibration: mean=70.2, σ²=9.17, φ̂≈0.95).
   // Use a real NAB CSV if available; otherwise simulate.
-  const nabCsv = '/Users/johnwarren/concord/NAB/data/realKnownCause/ambient_temperature_system_failure.csv';
+  // Opportunistic: point NAB_CSV at a local NAB checkout, else default to a sibling-repo path.
+  const nabCsv = process.env.NAB_CSV ?? '../NAB/data/realKnownCause/ambient_temperature_system_failure.csv';
   if (!fs.existsSync(nabCsv)) {
     // Skip if NAB repo not co-located; this test is opportunistic.
     return;

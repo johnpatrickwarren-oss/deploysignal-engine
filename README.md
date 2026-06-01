@@ -1,6 +1,6 @@
 # @johnpatrickwarren-oss/deploysignal-engine
 
-Statistical detector engine vendored from [DeploySignal](https://github.com/johnpatrickwarren-oss/deploysignal) at SHA `5a72371` and Tessera-evolved per [VENDORING-MANIFEST.md](../coordination/VENDORING-MANIFEST.md) (lives one directory up from this README inside the Tessera repository).
+Statistical detector engine vendored from [DeploySignal](https://github.com/johnpatrickwarren-oss/deploysignal) at SHA `5a72371`, with Tessera-evolved deltas.
 
 **Status:** Tessera Phase 5 SLICE 3 round 1 (R90) extraction — package boundary + types-barrel decoupling + verifiable tarball. Consumption migration (Tessera-internal + DS-side) lands in R91-R92. **Do not consume from external projects until R91/R92 close.**
 
@@ -43,8 +43,7 @@ cd engine && pnpm pack   # emits johnpatrickwarren-oss-deploysignal-engine-0.1.0
 node dist/tools/run-nab-per-dataset.js \
   --nab-repo ~/concord/NAB --out report.json
 
-# Optional opt-in calibration paths (see coordination/PHASE-E-CLOSE.md
-# for empirical guidance on when each applies):
+# Optional opt-in calibration paths:
 #   --ar-p-calibration       multi-lag AR(p) Yule-Walker + AIC order selection
 #   --seasonal-decomposition seasonal-naive (per-phase mean subtraction)
 #   --no-smoothing           disable SLICE 6 anomaly-likelihood smoothing
@@ -72,7 +71,7 @@ loader: `tools/load-production-substrate.ts`.
 
 ## Authoritative documentation
 
-Canonical engine semantics live in the DeploySignal repository. Tessera-evolved deltas (per-file SHA pins; vendored-with-deltas vs vendored-at-pin) are tracked in [`coordination/VENDORING-MANIFEST.md`](../coordination/VENDORING-MANIFEST.md).
+Canonical engine semantics live in the DeploySignal repository. Tessera-evolved deltas are tracked as per-file SHA pins (vendored-with-deltas vs vendored-at-pin).
 
 ## License
 

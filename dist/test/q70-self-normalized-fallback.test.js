@@ -235,7 +235,7 @@ const run_nab_per_dataset_1 = require("../tools/run-nab-per-dataset");
     // Match the diagnostic finding on realKnownCause/ambient_temperature
     // (n_ticks=7267, calibration: mean=70.2, σ²=9.17, φ̂≈0.95).
     // Use a real NAB CSV if available; otherwise simulate.
-    const nabCsv = '/Users/johnwarren/concord/NAB/data/realKnownCause/ambient_temperature_system_failure.csv';
+    const nabCsv = process.env.NAB_CSV ?? '../NAB/data/realKnownCause/ambient_temperature_system_failure.csv';
     if (!fs.existsSync(nabCsv)) {
         // Skip if NAB repo not co-located; this test is opportunistic.
         return;

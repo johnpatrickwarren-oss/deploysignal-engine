@@ -90,15 +90,6 @@ SLICE 6 numbers exactly. No consumer-facing regressions.
 - **Tessera**: pin bump optional; no breaking changes for existing
   consumers.
 
-### Architecture coordination docs
-
-- `coordination/PHASE-E-PRD.md`
-- `coordination/PHASE-E-SLICE-8-SPEC.md`
-- `coordination/PHASE-E-SLICE-9-SPEC.md`
-- `coordination/PHASE-E-SLICE-10-SPEC.md`
-- `coordination/PHASE-E-CLOSE.md` (cross-detector calibration regime
-  checklist; default-flip decision; recommended next direction)
-
 ### Test count
 
 - v0.2.0-pre baseline: 33 tests

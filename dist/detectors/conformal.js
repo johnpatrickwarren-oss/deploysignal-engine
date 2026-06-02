@@ -5,9 +5,7 @@
 // Extract target: @johnpatrickwarren-oss/deploysignal-engine (Tessera Phase 2 close commitment)
 // DO NOT modify internals without ADR; deltas only at architecturally-anchored extension points (see SCOPING-MEMO-v0.3 § 9).
 Object.defineProperty(exports, "__esModule", { value: true });
-exports._conformalKindForDispatch = exports._CONFORMAL_EVALUATORS_FOR_TEST = void 0;
-exports.mahalanobisDistance = mahalanobisDistance;
-exports.conformalPValue = conformalPValue;
+exports._conformalKindForDispatch = exports._CONFORMAL_EVALUATORS_FOR_TEST = exports.conformalPValue = exports.mahalanobisDistance = void 0;
 exports.lookupFamilyEParams = lookupFamilyEParams;
 exports.evaluateFamilyE = evaluateFamilyE;
 exports.freshConformalEValueState = freshConformalEValueState;
@@ -19,44 +17,15 @@ const types_1 = require("../types");
 const hotelling_1 = require("./hotelling");
 const schema_continuity_1 = require("../l0/schema-continuity");
 const _linalg_1 = require("./_linalg");
+// Pure math primitives live in a sibling leaf module (no cycle). They are
+// re-exported below so the public import surface of this file is unchanged.
+const _conformal_math_1 = require("./_conformal-math");
+var _conformal_math_2 = require("./_conformal-math");
+Object.defineProperty(exports, "mahalanobisDistance", { enumerable: true, get: function () { return _conformal_math_2.mahalanobisDistance; } });
+Object.defineProperty(exports, "conformalPValue", { enumerable: true, get: function () { return _conformal_math_2.conformalPValue; } });
+const _conformal_math_3 = require("./_conformal-math");
 // Default α_family_E = 10% of 1e-3 per handoff §4.1.c.
 const DEFAULT_ALPHA_E = 1e-4;
-/** Mahalanobis distance √(r^T Σ⁻¹ r). Returns null if Σ is not PD.
- *  Exported so the compiler can precompute calibration scores with the
- *  same scoring function the detector uses at query time. */
-function mahalanobisDistance(r, covariance) {
-    const L = (0, _linalg_1.cholesky)(covariance);
-    if (!L)
-        return null;
-    const y = (0, _linalg_1.forwardSolve)(L, r);
-    let sum = 0;
-    for (const v of y)
-        sum += v * v;
-    return Math.sqrt(sum);
-}
-/** Relative-deviation vector (x − μ) ./ μ, matching Family C's
- *  standardization. Falls back to additive (x − μ) when μ_i ≈ 0. */
-function relativeDeviation(x, mean) {
-    const p = mean.length;
-    const r = new Array(p);
-    for (let i = 0; i < p; i++) {
-        const m = mean[i];
-        r[i] = Math.abs(m) > 1e-12 ? (x[i] - m) / m : (x[i] - m);
-    }
-    return r;
-}
-/** Conformal p-value: (#{ s_c ≥ s_query } + 1) / (n_calibration + 1).
- *  `+1` in numerator and denominator makes this a valid (exchangeable)
- *  p-value even on exact ties. */
-function conformalPValue(queryScore, calibrationScores) {
-    if (calibrationScores.length === 0)
-        return 1.0;
-    let atLeast = 0;
-    for (const s of calibrationScores)
-        if (s >= queryScore)
-            atLeast++;
-    return (atLeast + 1) / (calibrationScores.length + 1);
-}
 /** Retrieve Family E calibration + matching Family C mean/covariance.
  *
  *  W5 §REPLY-16 Q2: Family E always consults `aggregate_fallback.family_E`
@@ -105,6 +74,67 @@ function lookupFamilyEParams(cfg, cell) {
     if (!famC)
         return null;
     return { params: fb.family_E, famC, source: 'aggregate' };
+}
+/** Collect the live joint vector in Family-C signal order. Returns null
+ *  (caller short-circuits to null) when any required signal is absent.
+ *  Extracted verbatim from evaluateFamilyE for the 100-line budget. */
+function collectFamilyEVector(cSignals, liveMetrics) {
+    const x = new Array(cSignals.length);
+    for (let i = 0; i < cSignals.length; i++) {
+        const v = liveMetrics[cSignals[i]];
+        if (v === undefined)
+            return null;
+        x[i] = v;
+    }
+    return x;
+}
+/** Bake-profile + traffic eligibility gates for Family E. Returns a
+ *  `suppressed` DetectorVerdict when a gate trips, else null (eligible).
+ *  (Signal-level bake profiles aren't per-signal here because the test
+ *  is multivariate; most-constrained across signals.) Extracted verbatim
+ *  from evaluateFamilyE for the 100-line budget. */
+function checkFamilyEGates(cfg, ctx, cSignals, alphaE) {
+    const bakeProfiles = cfg.bake_profiles ?? {};
+    let maxMinTicks = 0;
+    let maxMaxDays = Infinity;
+    let anyProfile = false;
+    for (const sig of cSignals) {
+        const p = bakeProfiles[sig];
+        if (!p)
+            continue;
+        anyProfile = true;
+        if (p.min_ticks_before_eligible > maxMinTicks)
+            maxMinTicks = p.min_ticks_before_eligible;
+        if (p.max_deploy_window_days < maxMaxDays)
+            maxMaxDays = p.max_deploy_window_days;
+    }
+    if (!anyProfile) {
+        maxMinTicks = 3;
+        maxMaxDays = 1;
+    }
+    if (ctx.ticksSinceDeploy < maxMinTicks) {
+        return {
+            verdict: 'suppressed', statistic: null, threshold: alphaE,
+            alpha_consumed: 0, alpha_spent: 0,
+            reason_code: 'bake_profile_not_met', family: 'E',
+        };
+    }
+    if (ctx.deployAgeDays > maxMaxDays) {
+        return {
+            verdict: 'suppressed', statistic: null, threshold: alphaE,
+            alpha_consumed: 0, alpha_spent: 0,
+            reason_code: 'bake_profile_not_met', family: 'E',
+        };
+    }
+    const trafficGate = cfg.traffic_pct_gate?.min_traffic_pct_for_fire ?? 0;
+    if (ctx.trafficPct < trafficGate) {
+        return {
+            verdict: 'suppressed', statistic: null, threshold: alphaE,
+            alpha_consumed: 0, alpha_spent: 0,
+            reason_code: 'traffic_pct_below_gate', family: 'E',
+        };
+    }
+    return null;
 }
 /** Evaluate Family E at one tick. Legacy unweighted/weighted paths are
  *  stateless (per-tick single-shot). Addition #22 `weighted_e_value`
@@ -158,59 +188,16 @@ function evaluateFamilyE(cfg, liveMetrics, ctx, state) {
     // R4-1: reads from cfg.family_c_signals when profile is active,
     // otherwise falls back to hardcoded.
     const cSignals = cfg.family_c_signals ?? hotelling_1.FAMILY_C_SIGNALS;
-    const x = new Array(cSignals.length);
-    for (let i = 0; i < cSignals.length; i++) {
-        const v = liveMetrics[cSignals[i]];
-        if (v === undefined)
-            return null;
-        x[i] = v;
-    }
+    const x = collectFamilyEVector(cSignals, liveMetrics);
+    if (x === null)
+        return null;
     // Same bake/traffic gates as Family C — Family E inherits joint-detector
     // eligibility since it's a nonconformity scorer over the same vector.
-    // (Signal-level bake profiles aren't per-signal here because the test
-    // is multivariate; most-constrained across signals.)
-    const bakeProfiles = cfg.bake_profiles ?? {};
-    let maxMinTicks = 0;
-    let maxMaxDays = Infinity;
-    let anyProfile = false;
-    for (const sig of cSignals) {
-        const p = bakeProfiles[sig];
-        if (!p)
-            continue;
-        anyProfile = true;
-        if (p.min_ticks_before_eligible > maxMinTicks)
-            maxMinTicks = p.min_ticks_before_eligible;
-        if (p.max_deploy_window_days < maxMaxDays)
-            maxMaxDays = p.max_deploy_window_days;
-    }
-    if (!anyProfile) {
-        maxMinTicks = 3;
-        maxMaxDays = 1;
-    }
-    if (ctx.ticksSinceDeploy < maxMinTicks) {
-        return {
-            verdict: 'suppressed', statistic: null, threshold: alphaE,
-            alpha_consumed: 0, alpha_spent: 0,
-            reason_code: 'bake_profile_not_met', family: 'E',
-        };
-    }
-    if (ctx.deployAgeDays > maxMaxDays) {
-        return {
-            verdict: 'suppressed', statistic: null, threshold: alphaE,
-            alpha_consumed: 0, alpha_spent: 0,
-            reason_code: 'bake_profile_not_met', family: 'E',
-        };
-    }
-    const trafficGate = cfg.traffic_pct_gate?.min_traffic_pct_for_fire ?? 0;
-    if (ctx.trafficPct < trafficGate) {
-        return {
-            verdict: 'suppressed', statistic: null, threshold: alphaE,
-            alpha_consumed: 0, alpha_spent: 0,
-            reason_code: 'traffic_pct_below_gate', family: 'E',
-        };
-    }
-    const r = relativeDeviation(x, famC.mean_vector);
-    const s = mahalanobisDistance(r, famC.covariance);
+    const gateVerdict = checkFamilyEGates(cfg, ctx, cSignals, alphaE);
+    if (gateVerdict)
+        return gateVerdict;
+    const r = (0, _conformal_math_1.relativeDeviation)(x, famC.mean_vector);
+    const s = (0, _conformal_math_3.mahalanobisDistance)(r, famC.covariance);
     if (s === null) {
         return {
             verdict: 'suppressed', statistic: null, threshold: alphaE,
@@ -238,7 +225,7 @@ function evaluateConformalUnweighted(ctx) {
     const { params, s, alphaE } = ctx;
     // Discriminator narrows — unweighted variant carries calibration_scores.
     const scores = params.calibration_scores;
-    const p = conformalPValue(s, scores);
+    const p = (0, _conformal_math_3.conformalPValue)(s, scores);
     if (p < alphaE) {
         return {
             verdict: 'fire', statistic: s, threshold: alphaE,
@@ -365,7 +352,7 @@ function freshConformalEValueState() {
  *  the martingale property under weighted exchangeability. */
 function evaluateConformalWeightedEValue(input, x_t, state) {
     const threshold = 1 / input.alpha;
-    const s_t = mahalanobisDistance(x_t, input.covariance);
+    const s_t = (0, _conformal_math_3.mahalanobisDistance)(x_t, input.covariance);
     if (s_t === null) {
         return {
             verdict: 'suppressed', statistic: state.M, threshold,

@@ -287,42 +287,20 @@ export function freshEMmdState(): EMmdState {
  *  Pattern mirrors `evaluateSequentialMMD` for cell lookup + guards;
  *  shares the same tier-aware `lookupFamilyCParams` and same
  *  pseudo-baseline pool generator. */
-export function evaluateEMmd(
+/** Schema-continuity + bake-profile + traffic-gate suppression guards for
+ *  the e-MMD detector. Returns a `suppressed` DetectorVerdict when any gate
+ *  trips, or `null` to continue evaluation. Block extracted verbatim from
+ *  `evaluateEMmd` — same order, same reason codes, same threshold. */
+function eMmdSuppressionGate(
   cfg: CompiledConfig,
-  liveMetrics: Record<string, number | undefined>,
-  states: Record<string, EMmdState | number[][] | unknown>,
   ctx: {
-    hourOfDay: number;
-    dayOfWeek?: number;
     ticksSinceDeploy: number;
     deployAgeDays: number;
     trafficPct: number;
     schemaContinuityClass?: SchemaContinuityRecord['schema_continuity'];
-    tenantId?: string;
   },
+  threshold: number,
 ): DetectorVerdict | null {
-  if (!cfg.baseline_cells) return null;
-  const tier = resolveTenantTier(cfg, ctx.tenantId);
-  const lookup = lookupFamilyCParams(cfg, {
-    hour_of_day: ctx.hourOfDay, day_of_week: ctx.dayOfWeek, tenant_tier: tier,
-  });
-  if (!lookup) return null;
-  const params = lookup.params;
-  const eMmd = params.e_mmd_params;
-  const mmd = params.mmd_params;
-  // Dormant-add backward-compat: pre-#20 cells (no e_mmd_params) or
-  // cells without mmd_params (bandwidth comes from there) return null.
-  if (!eMmd || !mmd) return null;
-  // Q67 SPEC § Q67.5 supersession — when a cell carries the canonical
-  // betting-e-process params (Q67 v2 compile output), the parallel
-  // evaluateFamilyCBettingEProcess call in health.ts owns this cell.
-  // Returning null here prevents double-fire on cells that coexist
-  // both Option-B (Addition #20) and Q67 v2 params during the
-  // Phase-3.d.B → .C transition.
-  if (params.betting_e_process_params) return null;
-
-  const threshold = 1 / eMmd.alpha;
-
   if (ctx.schemaContinuityClass && shouldSuppress(ctx.schemaContinuityClass, 'C')) {
     return {
       verdict: 'suppressed', statistic: null, threshold,
@@ -359,40 +337,19 @@ export function evaluateEMmd(
       signal: 'sequential_mmd_e_process',
     };
   }
+  return null;
+}
 
-  const v = liveVector(liveMetrics, params.mean_vector, cfg.family_c_signals ?? FAMILY_C_SIGNALS);
-  if (v === null) return null;
-
-  // Per-cell state key — one e-MMD state per (tier, hour, day) cell.
-  const stateKey = `__emmd_${tier ?? 'none'}_${ctx.hourOfDay}_${ctx.dayOfWeek ?? -1}`;
-  let state = states[stateKey] as EMmdState | undefined;
-  if (!state || typeof state.M !== 'number') {
-    state = freshEMmdState();
-    states[stateKey] = state;
-  }
-
-  // Baseline pool — reuse Sequential MMD's pseudo-sampling pattern. Cache
-  // by cell key so a single pool serves both MMD detectors. Seed uses
-  // same function so pools stay identical between 'bootstrap_null' and
-  // 'betting_e_process' variants (determinism under shadow-compare).
-  const poolKey = `__mmd_pool_${ctx.hourOfDay}_${ctx.dayOfWeek ?? -1}`;
-  let pool = states[poolKey] as number[][] | undefined;
-  if (!pool || pool.length === 0) {
-    pool = generateBaselinePool(
-      params, BASELINE_POOL_SIZE,
-      baselinePoolSeed({ hour_of_day: ctx.hourOfDay, day_of_week: ctx.dayOfWeek }),
-    );
-    states[poolKey] = pool;
-  }
-
-  // Kernel-distance scalar d_t² = k(x,x) − 2·(1/m)·Σ k(x, y_i) +
-  // kernel_baseline_mean_norm². For Gaussian RBF, k(x, x) = 1.
-  let crossSum = 0;
-  for (const y of pool) crossSum += rbf(v, y, mmd.bandwidth);
-  const crossMean = crossSum / pool.length;
-  const dSquared = 1 - 2 * crossMean + eMmd.kernel_baseline_mean_norm_squared;
-  const dT = Math.sqrt(Math.max(0, dSquared));
-
+/** Moment-update + warmup + GRAPA/ONS betting + wealth verdict for one
+ *  e-MMD tick. Mutates `state` (n, moments, M, bet, alphaConsumed) exactly
+ *  as the inlined block did and returns the warmup/fire/clean
+ *  DetectorVerdict. Block extracted verbatim from `evaluateEMmd`. */
+function eMmdBettingStep(
+  state: EMmdState,
+  dT: number,
+  eMmd: NonNullable<FamilyCPerCell['e_mmd_params']>,
+  threshold: number,
+): DetectorVerdict {
   // Update running moments of d_t (used for standardization AND as
   // pickBet's moment inputs per D3 literal; see semantic note above).
   state.n += 1;
@@ -442,4 +399,79 @@ export function evaluateEMmd(
     reason_code: 'below_threshold', family: 'C',
     signal: 'sequential_mmd_e_process',
   };
+}
+
+export function evaluateEMmd(
+  cfg: CompiledConfig,
+  liveMetrics: Record<string, number | undefined>,
+  states: Record<string, EMmdState | number[][] | unknown>,
+  ctx: {
+    hourOfDay: number;
+    dayOfWeek?: number;
+    ticksSinceDeploy: number;
+    deployAgeDays: number;
+    trafficPct: number;
+    schemaContinuityClass?: SchemaContinuityRecord['schema_continuity'];
+    tenantId?: string;
+  },
+): DetectorVerdict | null {
+  if (!cfg.baseline_cells) return null;
+  const tier = resolveTenantTier(cfg, ctx.tenantId);
+  const lookup = lookupFamilyCParams(cfg, {
+    hour_of_day: ctx.hourOfDay, day_of_week: ctx.dayOfWeek, tenant_tier: tier,
+  });
+  if (!lookup) return null;
+  const params = lookup.params;
+  const eMmd = params.e_mmd_params;
+  const mmd = params.mmd_params;
+  // Dormant-add backward-compat: pre-#20 cells (no e_mmd_params) or
+  // cells without mmd_params (bandwidth comes from there) return null.
+  if (!eMmd || !mmd) return null;
+  // Q67 SPEC § Q67.5 supersession — when a cell carries the canonical
+  // betting-e-process params (Q67 v2 compile output), the parallel
+  // evaluateFamilyCBettingEProcess call in health.ts owns this cell.
+  // Returning null here prevents double-fire on cells that coexist
+  // both Option-B (Addition #20) and Q67 v2 params during the
+  // Phase-3.d.B → .C transition.
+  if (params.betting_e_process_params) return null;
+
+  const threshold = 1 / eMmd.alpha;
+
+  const suppressed = eMmdSuppressionGate(cfg, ctx, threshold);
+  if (suppressed) return suppressed;
+
+  const v = liveVector(liveMetrics, params.mean_vector, cfg.family_c_signals ?? FAMILY_C_SIGNALS);
+  if (v === null) return null;
+
+  // Per-cell state key — one e-MMD state per (tier, hour, day) cell.
+  const stateKey = `__emmd_${tier ?? 'none'}_${ctx.hourOfDay}_${ctx.dayOfWeek ?? -1}`;
+  let state = states[stateKey] as EMmdState | undefined;
+  if (!state || typeof state.M !== 'number') {
+    state = freshEMmdState();
+    states[stateKey] = state;
+  }
+
+  // Baseline pool — reuse Sequential MMD's pseudo-sampling pattern. Cache
+  // by cell key so a single pool serves both MMD detectors. Seed uses
+  // same function so pools stay identical between 'bootstrap_null' and
+  // 'betting_e_process' variants (determinism under shadow-compare).
+  const poolKey = `__mmd_pool_${ctx.hourOfDay}_${ctx.dayOfWeek ?? -1}`;
+  let pool = states[poolKey] as number[][] | undefined;
+  if (!pool || pool.length === 0) {
+    pool = generateBaselinePool(
+      params, BASELINE_POOL_SIZE,
+      baselinePoolSeed({ hour_of_day: ctx.hourOfDay, day_of_week: ctx.dayOfWeek }),
+    );
+    states[poolKey] = pool;
+  }
+
+  // Kernel-distance scalar d_t² = k(x,x) − 2·(1/m)·Σ k(x, y_i) +
+  // kernel_baseline_mean_norm². For Gaussian RBF, k(x, x) = 1.
+  let crossSum = 0;
+  for (const y of pool) crossSum += rbf(v, y, mmd.bandwidth);
+  const crossMean = crossSum / pool.length;
+  const dSquared = 1 - 2 * crossMean + eMmd.kernel_baseline_mean_norm_squared;
+  const dT = Math.sqrt(Math.max(0, dSquared));
+
+  return eMmdBettingStep(state, dT, eMmd, threshold);
 }

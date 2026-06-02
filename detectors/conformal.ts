@@ -58,44 +58,15 @@ import type {
 import { isWeightedConformal, isWeightedEValueConformal, conformalSampleCount, resolveTenantTier } from '../types';
 import { FAMILY_C_SIGNALS } from './hotelling';
 import { shouldSuppress } from '../l0/schema-continuity';
-import { cholesky, forwardSolve, weightedQuantile, findFirstGE } from './_linalg';
+import { weightedQuantile, findFirstGE } from './_linalg';
+// Pure math primitives live in a sibling leaf module (no cycle). They are
+// re-exported below so the public import surface of this file is unchanged.
+import { relativeDeviation } from './_conformal-math';
+export { mahalanobisDistance, conformalPValue } from './_conformal-math';
+import { mahalanobisDistance, conformalPValue } from './_conformal-math';
 
 // Default α_family_E = 10% of 1e-3 per handoff §4.1.c.
 const DEFAULT_ALPHA_E = 1e-4;
-
-/** Mahalanobis distance √(r^T Σ⁻¹ r). Returns null if Σ is not PD.
- *  Exported so the compiler can precompute calibration scores with the
- *  same scoring function the detector uses at query time. */
-export function mahalanobisDistance(r: number[], covariance: number[][]): number | null {
-  const L = cholesky(covariance);
-  if (!L) return null;
-  const y = forwardSolve(L, r);
-  let sum = 0;
-  for (const v of y) sum += v * v;
-  return Math.sqrt(sum);
-}
-
-/** Relative-deviation vector (x − μ) ./ μ, matching Family C's
- *  standardization. Falls back to additive (x − μ) when μ_i ≈ 0. */
-function relativeDeviation(x: number[], mean: number[]): number[] {
-  const p = mean.length;
-  const r = new Array(p);
-  for (let i = 0; i < p; i++) {
-    const m = mean[i];
-    r[i] = Math.abs(m) > 1e-12 ? (x[i] - m) / m : (x[i] - m);
-  }
-  return r;
-}
-
-/** Conformal p-value: (#{ s_c ≥ s_query } + 1) / (n_calibration + 1).
- *  `+1` in numerator and denominator makes this a valid (exchangeable)
- *  p-value even on exact ties. */
-export function conformalPValue(queryScore: number, calibrationScores: number[]): number {
-  if (calibrationScores.length === 0) return 1.0;
-  let atLeast = 0;
-  for (const s of calibrationScores) if (s >= queryScore) atLeast++;
-  return (atLeast + 1) / (calibrationScores.length + 1);
-}
 
 /** Retrieve Family E calibration + matching Family C mean/covariance.
  *
@@ -143,6 +114,76 @@ export function lookupFamilyEParams(
   const famC = (match?.family_C) ?? fb.family_C;
   if (!famC) return null;
   return { params: fb.family_E, famC, source: 'aggregate' };
+}
+
+/** Collect the live joint vector in Family-C signal order. Returns null
+ *  (caller short-circuits to null) when any required signal is absent.
+ *  Extracted verbatim from evaluateFamilyE for the 100-line budget. */
+function collectFamilyEVector(
+  cSignals: readonly string[],
+  liveMetrics: Record<string, number | undefined>,
+): number[] | null {
+  const x: number[] = new Array(cSignals.length);
+  for (let i = 0; i < cSignals.length; i++) {
+    const v = liveMetrics[cSignals[i]];
+    if (v === undefined) return null;
+    x[i] = v;
+  }
+  return x;
+}
+
+/** Bake-profile + traffic eligibility gates for Family E. Returns a
+ *  `suppressed` DetectorVerdict when a gate trips, else null (eligible).
+ *  (Signal-level bake profiles aren't per-signal here because the test
+ *  is multivariate; most-constrained across signals.) Extracted verbatim
+ *  from evaluateFamilyE for the 100-line budget. */
+function checkFamilyEGates(
+  cfg: CompiledConfig,
+  ctx: {
+    ticksSinceDeploy: number;
+    deployAgeDays: number;
+    trafficPct: number;
+  },
+  cSignals: readonly string[],
+  alphaE: number,
+): DetectorVerdict | null {
+  const bakeProfiles = cfg.bake_profiles ?? {};
+  let maxMinTicks = 0;
+  let maxMaxDays = Infinity;
+  let anyProfile = false;
+  for (const sig of cSignals) {
+    const p = bakeProfiles[sig];
+    if (!p) continue;
+    anyProfile = true;
+    if (p.min_ticks_before_eligible > maxMinTicks) maxMinTicks = p.min_ticks_before_eligible;
+    if (p.max_deploy_window_days < maxMaxDays) maxMaxDays = p.max_deploy_window_days;
+  }
+  if (!anyProfile) { maxMinTicks = 3; maxMaxDays = 1; }
+
+  if (ctx.ticksSinceDeploy < maxMinTicks) {
+    return {
+      verdict: 'suppressed', statistic: null, threshold: alphaE,
+      alpha_consumed: 0, alpha_spent: 0,
+      reason_code: 'bake_profile_not_met', family: 'E',
+    };
+  }
+  if (ctx.deployAgeDays > maxMaxDays) {
+    return {
+      verdict: 'suppressed', statistic: null, threshold: alphaE,
+      alpha_consumed: 0, alpha_spent: 0,
+      reason_code: 'bake_profile_not_met', family: 'E',
+    };
+  }
+
+  const trafficGate = cfg.traffic_pct_gate?.min_traffic_pct_for_fire ?? 0;
+  if (ctx.trafficPct < trafficGate) {
+    return {
+      verdict: 'suppressed', statistic: null, threshold: alphaE,
+      alpha_consumed: 0, alpha_spent: 0,
+      reason_code: 'traffic_pct_below_gate', family: 'E',
+    };
+  }
+  return null;
 }
 
 /** Evaluate Family E at one tick. Legacy unweighted/weighted paths are
@@ -215,53 +256,13 @@ export function evaluateFamilyE(
   // R4-1: reads from cfg.family_c_signals when profile is active,
   // otherwise falls back to hardcoded.
   const cSignals = cfg.family_c_signals ?? FAMILY_C_SIGNALS;
-  const x: number[] = new Array(cSignals.length);
-  for (let i = 0; i < cSignals.length; i++) {
-    const v = liveMetrics[cSignals[i]];
-    if (v === undefined) return null;
-    x[i] = v;
-  }
+  const x = collectFamilyEVector(cSignals, liveMetrics);
+  if (x === null) return null;
 
   // Same bake/traffic gates as Family C — Family E inherits joint-detector
   // eligibility since it's a nonconformity scorer over the same vector.
-  // (Signal-level bake profiles aren't per-signal here because the test
-  // is multivariate; most-constrained across signals.)
-  const bakeProfiles = cfg.bake_profiles ?? {};
-  let maxMinTicks = 0;
-  let maxMaxDays = Infinity;
-  let anyProfile = false;
-  for (const sig of cSignals) {
-    const p = bakeProfiles[sig];
-    if (!p) continue;
-    anyProfile = true;
-    if (p.min_ticks_before_eligible > maxMinTicks) maxMinTicks = p.min_ticks_before_eligible;
-    if (p.max_deploy_window_days < maxMaxDays) maxMaxDays = p.max_deploy_window_days;
-  }
-  if (!anyProfile) { maxMinTicks = 3; maxMaxDays = 1; }
-
-  if (ctx.ticksSinceDeploy < maxMinTicks) {
-    return {
-      verdict: 'suppressed', statistic: null, threshold: alphaE,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'bake_profile_not_met', family: 'E',
-    };
-  }
-  if (ctx.deployAgeDays > maxMaxDays) {
-    return {
-      verdict: 'suppressed', statistic: null, threshold: alphaE,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'bake_profile_not_met', family: 'E',
-    };
-  }
-
-  const trafficGate = cfg.traffic_pct_gate?.min_traffic_pct_for_fire ?? 0;
-  if (ctx.trafficPct < trafficGate) {
-    return {
-      verdict: 'suppressed', statistic: null, threshold: alphaE,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'traffic_pct_below_gate', family: 'E',
-    };
-  }
+  const gateVerdict = checkFamilyEGates(cfg, ctx, cSignals, alphaE);
+  if (gateVerdict) return gateVerdict;
 
   const r = relativeDeviation(x, famC.mean_vector);
   const s = mahalanobisDistance(r, famC.covariance);

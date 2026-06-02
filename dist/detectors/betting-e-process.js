@@ -281,6 +281,91 @@ function buildMSPRTParamsLocal(cfg, cell, signal) {
     };
     return { params, perSig };
 }
+/** Schema-continuity suppression path for the betting shadow: emits one
+ *  `suppressed` verdict per Family A signal with the breaking/observability
+ *  reason code. Extracted verbatim from evaluateFamilyABettingShadow. */
+function bettingSchemaContinuitySuppressed(cfg, states, schemaContinuityClass) {
+    const reason = schemaContinuityClass === 'observability_stack'
+        ? 'observability_stack_deploy' : 'schema_continuity_breaking';
+    const out = [];
+    for (const signal of (cfg.family_a_signals ?? page_cusum_1.FAMILY_A_PRIMARY_SIGNALS)) {
+        const state = getOrCreateBetting(states, signal);
+        out.push({
+            verdict: 'suppressed',
+            statistic: state.M,
+            threshold: null,
+            alpha_consumed: state.alphaConsumed,
+            alpha_spent: 0,
+            reason_code: reason,
+            family: 'A',
+            signal,
+        });
+    }
+    return out;
+}
+/** Per-signal betting verdict for a single matched cell. Returns the
+ *  ignore-suppressed verdict, the live betting verdict, or `undefined` to
+ *  skip (no params/live/cellMean). Extracted verbatim from the per-signal
+ *  loop body of evaluateFamilyABettingShadow. */
+function evaluateBettingSignal(cfg, liveMetrics, states, match, trafficGate, ctx, signal) {
+    if (ctx.ignoredSignals?.has(signal)) {
+        const state = getOrCreateBetting(states, signal);
+        return {
+            verdict: 'suppressed',
+            statistic: state.M,
+            threshold: null,
+            alpha_consumed: state.alphaConsumed,
+            alpha_spent: 0,
+            reason_code: 'ignore_threshold',
+            family: 'A',
+            signal,
+            ignore_threshold_trigger_signal: signal,
+        };
+    }
+    const built = buildMSPRTParamsLocal(cfg, match, signal);
+    if (!built)
+        return undefined;
+    const { params, perSig } = built;
+    const live = liveMetrics[signal];
+    if (live === undefined)
+        return undefined;
+    // Q2.A — apply class-appropriate forward transform to live observation
+    // before mean-centering. cellMean is in TRANSFORMED space when the
+    // class is non-identity (logit / log / Anscombe), so live must be
+    // transformed first to be in the same space.
+    //
+    // Runtime resolution differs from compile-time resolution: at
+    // runtime we ONLY consult what the compiled config declared
+    // (perSig.signal_class first, then cfg.signal_classes), falling
+    // through to 'gaussian_like' (identity) when neither is present.
+    // Pre-Q2.A configs lack both fields and therefore preserve their
+    // pre-Q2.A raw-space calibration semantics byte-identically — they
+    // were calibrated WITHOUT a transform, so the runtime must NOT
+    // apply one. DEFAULT_SIGNAL_CLASSES is a COMPILE-TIME default for
+    // new compiles, not a runtime fallback.
+    const cls = perSig.signal_class
+        ?? cfg.signal_classes?.[signal]
+        ?? 'gaussian_like';
+    const liveTransformed = (0, signal_classes_1.transformForClass)(live, cls);
+    const cellMean = params.derivation?.mean;
+    if (cellMean === undefined)
+        return undefined;
+    const x = liveTransformed - cellMean; // matches Page-CUSUM's input convention
+    const state = getOrCreateBetting(states, signal);
+    // α for this detector is half the per-signal budget (D7). Falls
+    // back to the derived value when the compiled config predates #17.
+    const alphaBetting = perSig.betting_e_process_alpha
+        ?? (params.alpha * 0.5);
+    const v = evaluateBettingEProcess({
+        signal, params, state,
+        trafficPct: ctx.trafficPct,
+        trafficGate,
+        ticksSinceDeploy: ctx.ticksSinceDeploy,
+        deployAgeDays: ctx.deployAgeDays,
+        alphaBetting,
+    }, x);
+    return v;
+}
 /** Per-tick Family A betting shadow. Parallel to evaluateFamilyAShadow;
  *  reads the same cell params + bake profile + ignore/schema gates so
  *  downstream audit records emit two independent per-signal verdicts
@@ -290,23 +375,7 @@ function evaluateFamilyABettingShadow(cfg, liveMetrics, states, ctx) {
     if (!cfg.baseline_cells)
         return [];
     if (ctx.schemaContinuityClass && (0, schema_continuity_1.shouldSuppress)(ctx.schemaContinuityClass, 'A')) {
-        const reason = ctx.schemaContinuityClass === 'observability_stack'
-            ? 'observability_stack_deploy' : 'schema_continuity_breaking';
-        const out = [];
-        for (const signal of (cfg.family_a_signals ?? page_cusum_1.FAMILY_A_PRIMARY_SIGNALS)) {
-            const state = getOrCreateBetting(states, signal);
-            out.push({
-                verdict: 'suppressed',
-                statistic: state.M,
-                threshold: null,
-                alpha_consumed: state.alphaConsumed,
-                alpha_spent: 0,
-                reason_code: reason,
-                family: 'A',
-                signal,
-            });
-        }
-        return out;
+        return bettingSchemaContinuitySuppressed(cfg, states, ctx.schemaContinuityClass);
     }
     const trafficGate = (0, page_cusum_1.trafficGateMin)(cfg);
     const cell = { hour_of_day: ctx.hourOfDay };
@@ -319,64 +388,9 @@ function evaluateFamilyABettingShadow(cfg, liveMetrics, states, ctx) {
         return [];
     const out = [];
     for (const signal of page_cusum_1.FAMILY_A_PRIMARY_SIGNALS) {
-        if (ctx.ignoredSignals?.has(signal)) {
-            const state = getOrCreateBetting(states, signal);
-            out.push({
-                verdict: 'suppressed',
-                statistic: state.M,
-                threshold: null,
-                alpha_consumed: state.alphaConsumed,
-                alpha_spent: 0,
-                reason_code: 'ignore_threshold',
-                family: 'A',
-                signal,
-                ignore_threshold_trigger_signal: signal,
-            });
-            continue;
-        }
-        const built = buildMSPRTParamsLocal(cfg, match, signal);
-        if (!built)
-            continue;
-        const { params, perSig } = built;
-        const live = liveMetrics[signal];
-        if (live === undefined)
-            continue;
-        // Q2.A — apply class-appropriate forward transform to live observation
-        // before mean-centering. cellMean is in TRANSFORMED space when the
-        // class is non-identity (logit / log / Anscombe), so live must be
-        // transformed first to be in the same space.
-        //
-        // Runtime resolution differs from compile-time resolution: at
-        // runtime we ONLY consult what the compiled config declared
-        // (perSig.signal_class first, then cfg.signal_classes), falling
-        // through to 'gaussian_like' (identity) when neither is present.
-        // Pre-Q2.A configs lack both fields and therefore preserve their
-        // pre-Q2.A raw-space calibration semantics byte-identically — they
-        // were calibrated WITHOUT a transform, so the runtime must NOT
-        // apply one. DEFAULT_SIGNAL_CLASSES is a COMPILE-TIME default for
-        // new compiles, not a runtime fallback.
-        const cls = perSig.signal_class
-            ?? cfg.signal_classes?.[signal]
-            ?? 'gaussian_like';
-        const liveTransformed = (0, signal_classes_1.transformForClass)(live, cls);
-        const cellMean = params.derivation?.mean;
-        if (cellMean === undefined)
-            continue;
-        const x = liveTransformed - cellMean; // matches Page-CUSUM's input convention
-        const state = getOrCreateBetting(states, signal);
-        // α for this detector is half the per-signal budget (D7). Falls
-        // back to the derived value when the compiled config predates #17.
-        const alphaBetting = perSig.betting_e_process_alpha
-            ?? (params.alpha * 0.5);
-        const v = evaluateBettingEProcess({
-            signal, params, state,
-            trafficPct: ctx.trafficPct,
-            trafficGate,
-            ticksSinceDeploy: ctx.ticksSinceDeploy,
-            deployAgeDays: ctx.deployAgeDays,
-            alphaBetting,
-        }, x);
-        out.push(v);
+        const v = evaluateBettingSignal(cfg, liveMetrics, states, match, trafficGate, ctx, signal);
+        if (v !== undefined)
+            out.push(v);
     }
     return out;
 }

@@ -1,0 +1,1 @@
+{"version":3,"file":"_config-tenant.js","sourceRoot":"","sources":["../../types/_config-tenant.ts"],"names":[],"mappings":";AAAA,kFAAkF;AAClF,mFAAmF;AACnF,0FAA0F;;AA0D1F,8CAMC;AAXD;;;;kDAIkD;AAClD,SAAgB,iBAAiB,CAC/B,GAAwE,EACxE,QAAmC;IAEnC,IAAI,CAAC,QAAQ,IAAI,CAAC,GAAG,EAAE,eAAe;QAAE,OAAO,WAAW,CAAC;IAC3D,OAAO,GAAG,CAAC,eAAe,CAAC,QAAQ,CAAC,IAAI,WAAW,CAAC;AACtD,CAAC"}

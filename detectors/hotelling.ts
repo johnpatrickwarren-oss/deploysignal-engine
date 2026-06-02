@@ -28,6 +28,12 @@
 // Suppression: if the Cholesky factorization of Σ fails, the cell's
 // covariance is not positive-definite — detector returns
 // `suppressed/covariance_singular` rather than fabricating a verdict.
+//
+// God-file decomposition: the Hotelling T² core math, the variant
+// dispatch maps, and the safe-Hotelling e-process now live in sibling
+// `_hotelling-*.ts` modules. This file remains the public facade —
+// every name previously importable from `detectors/hotelling.ts` is
+// re-exported here, so the import surface is byte-for-byte unchanged.
 
 import type {
   CompiledConfig, DetectorVerdict, BaselineCellEntry, FamilyCPerCell,
@@ -35,8 +41,20 @@ import type {
 } from '../types';
 import { resolveTenantTier } from '../types';
 import { shouldSuppress } from '../l0/schema-continuity';
-import { cholesky, forwardSolve } from './_linalg';
 import { trafficGateMin } from './page-cusum';
+import { chiSquareQuantile, hotellingT2 } from './_hotelling-core';
+import {
+  HOTELLING_EVALUATORS, hotellingVariantForDispatch,
+} from './_hotelling-dispatch';
+import { freshSafeHotellingState, evaluateSafeHotelling } from './_hotelling-safe';
+
+// ── Re-exports preserving the public import surface ───────────────────
+export { chiSquareQuantile, hotellingT2 } from './_hotelling-core';
+export { freshSafeHotellingState, evaluateSafeHotelling } from './_hotelling-safe';
+
+/** Exposed for dispatch-map parity testing. */
+export const _HOTELLING_EVALUATORS_FOR_TEST = HOTELLING_EVALUATORS;
+export const _hotellingVariantForDispatch = hotellingVariantForDispatch;
 
 // Primary SLI vector for Family C — must agree with tools/calibrate.ts
 // FAMILY_C_SIGNALS order. The covariance matrix's row/column indices are
@@ -46,45 +64,6 @@ export const FAMILY_C_SIGNALS = [
   'downstream_err', 'mfu', 'hbm_spill', 'collective_ops',
   'corpus_delta', 'traffic_pct',
 ] as const;
-
-/** Rational approximation to Φ⁻¹ (inverse standard normal CDF). Beasley-
- *  Springer-Moro, 1995 — sufficient accuracy for our purposes (err
- *  < 1e-7 in the tails we care about). */
-function invStdNormalCDF(p: number): number {
-  if (p <= 0) return -Infinity;
-  if (p >= 1) return Infinity;
-  // Split at 0.5 to keep the approximation in one tail.
-  const q = p < 0.5 ? p : 1 - p;
-  const t = Math.sqrt(-2 * Math.log(q));
-  // Coefficients from Abramowitz & Stegun 26.2.23
-  const c0 = 2.515517, c1 = 0.802853, c2 = 0.010328;
-  const d1 = 1.432788, d2 = 0.189269, d3 = 0.001308;
-  const num = c0 + c1 * t + c2 * t * t;
-  const den = 1 + d1 * t + d2 * t * t + d3 * t * t * t;
-  const z = t - num / den;
-  return p < 0.5 ? -z : z;
-}
-
-/** Wilson-Hilferty χ² quantile: χ²(q, k) ≈ k·(1 − 2/(9k) + z·√(2/(9k)))³
- *  where z = Φ⁻¹(q). Good to ~1% in the right tail for k ≳ 5. */
-export function chiSquareQuantile(q: number, k: number): number {
-  const z = invStdNormalCDF(q);
-  const a = 1 - 2 / (9 * k);
-  const b = z * Math.sqrt(2 / (9 * k));
-  const root = a + b;
-  return k * root * root * root;
-}
-
-/** Compute T² = r^T Σ⁻¹ r via Cholesky. Returns null if Σ is not PSD. */
-export function hotellingT2(r: number[], covariance: number[][]): number | null {
-  const L = cholesky(covariance);
-  if (!L) return null;
-  // Σ⁻¹ = (L L^T)⁻¹ = L^-T L^-1 ; r^T Σ⁻¹ r = ||L⁻¹ r||².
-  const y = forwardSolve(L, r);
-  let sum = 0;
-  for (const v of y) sum += v * v;
-  return sum;
-}
 
 /** Retrieve the Family C params for the cell matching `cell`. Falls back
  *  to `aggregate_fallback.family_C` when the cell's confidence is
@@ -158,6 +137,73 @@ function familyCBakeProfile(cfg: CompiledConfig): { min_ticks: number; min_obs: 
   };
 }
 
+/** Schema-continuity + bake-profile + traffic suppression gate for
+ *  Family C. Returns a `suppressed` verdict when any gate trips, or
+ *  `null` to let `evaluateFamilyC` proceed to the multivariate test.
+ *  Extracted from `evaluateFamilyC` verbatim (god-function decomposition);
+ *  every branch and `reason_code` is unchanged. */
+function familyCSuppressionGate(
+  cfg: CompiledConfig,
+  ctx: {
+    ticksSinceDeploy: number;
+    deployAgeDays: number;
+    trafficPct: number;
+    schemaContinuityClass?: SchemaContinuityRecord['schema_continuity'];
+  },
+  threshold: number,
+): DetectorVerdict | null {
+  // Addition #8 runtime consumer (W5 §S6): per-cell covariance is only
+  // meaningful against the baseline's original schema. A breaking change
+  // invalidates Σ; suppress without evaluating.
+  if (ctx.schemaContinuityClass && shouldSuppress(ctx.schemaContinuityClass, 'C')) {
+    return {
+      verdict: 'suppressed', statistic: null, threshold,
+      alpha_consumed: 0, alpha_spent: 0,
+      reason_code: ctx.schemaContinuityClass === 'observability_stack'
+        ? 'observability_stack_deploy' : 'schema_continuity_breaking',
+      family: 'C',
+    };
+  }
+
+  // Bake-profile gate (joint; takes max of per-signal min_ticks_before_eligible).
+  const bake = familyCBakeProfile(cfg);
+  if (ctx.ticksSinceDeploy < bake.min_ticks) {
+    return {
+      verdict: 'suppressed', statistic: null, threshold,
+      alpha_consumed: 0, alpha_spent: 0,
+      reason_code: 'bake_profile_not_met', family: 'C',
+    };
+  }
+  // Addition #4 clause 2 — W4 §4.1.h lands the missing consumer. Family C
+  // is per-tick single-shot, so ticksSinceDeploy is the post-deploy
+  // sample count for this detector's purposes.
+  if (ctx.ticksSinceDeploy < bake.min_obs) {
+    return {
+      verdict: 'suppressed', statistic: null, threshold,
+      alpha_consumed: 0, alpha_spent: 0,
+      reason_code: 'bake_profile_not_met', family: 'C',
+    };
+  }
+  if (ctx.deployAgeDays > bake.max_days) {
+    return {
+      verdict: 'suppressed', statistic: null, threshold,
+      alpha_consumed: 0, alpha_spent: 0,
+      reason_code: 'bake_profile_not_met', family: 'C',
+    };
+  }
+
+  // Traffic gate.
+  if (ctx.trafficPct < trafficGateMin(cfg)) {
+    return {
+      verdict: 'suppressed', statistic: null, threshold,
+      alpha_consumed: 0, alpha_spent: 0,
+      reason_code: 'traffic_pct_below_gate', family: 'C',
+    };
+  }
+
+  return null;
+}
+
 /** One Family C evaluation at one tick. Legacy `chi_square` path is
  *  stateless (per-tick joint test); the Addition #20 `safe_test` dispatch
  *  branch (activated when `cell.hotelling_variant === 'safe_test'` and
@@ -205,18 +251,8 @@ export function evaluateFamilyC(
   const threshold = params.hotelling_sliding_buffer_threshold
     ?? chiSquareQuantile(1 - alphaHotelling, signalsForChi2.length);
 
-  // Addition #8 runtime consumer (W5 §S6): per-cell covariance is only
-  // meaningful against the baseline's original schema. A breaking change
-  // invalidates Σ; suppress without evaluating.
-  if (ctx.schemaContinuityClass && shouldSuppress(ctx.schemaContinuityClass, 'C')) {
-    return {
-      verdict: 'suppressed', statistic: null, threshold,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: ctx.schemaContinuityClass === 'observability_stack'
-        ? 'observability_stack_deploy' : 'schema_continuity_breaking',
-      family: 'C',
-    };
-  }
+  const suppressed = familyCSuppressionGate(cfg, ctx, threshold);
+  if (suppressed) return suppressed;
 
   // Addition #13 (per ARCHITECT-REPLY-31 correction): multivariate families
   // evaluate the full joint vector regardless of `ignore_thresholds` state.
@@ -238,42 +274,6 @@ export function evaluateFamilyC(
     const v = liveMetrics[cSignals[i]];
     if (v === undefined) return null;
     x[i] = v;
-  }
-
-  // Bake-profile gate (joint; takes max of per-signal min_ticks_before_eligible).
-  const bake = familyCBakeProfile(cfg);
-  if (ctx.ticksSinceDeploy < bake.min_ticks) {
-    return {
-      verdict: 'suppressed', statistic: null, threshold,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'bake_profile_not_met', family: 'C',
-    };
-  }
-  // Addition #4 clause 2 — W4 §4.1.h lands the missing consumer. Family C
-  // is per-tick single-shot, so ticksSinceDeploy is the post-deploy
-  // sample count for this detector's purposes.
-  if (ctx.ticksSinceDeploy < bake.min_obs) {
-    return {
-      verdict: 'suppressed', statistic: null, threshold,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'bake_profile_not_met', family: 'C',
-    };
-  }
-  if (ctx.deployAgeDays > bake.max_days) {
-    return {
-      verdict: 'suppressed', statistic: null, threshold,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'bake_profile_not_met', family: 'C',
-    };
-  }
-
-  // Traffic gate.
-  if (ctx.trafficPct < trafficGateMin(cfg)) {
-    return {
-      verdict: 'suppressed', statistic: null, threshold,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'traffic_pct_below_gate', family: 'C',
-    };
   }
 
   // Relative deviation vector r = (x − μ) ./ μ (element-wise), matching
@@ -307,226 +307,4 @@ export function evaluateFamilyC(
     params, r, alphaHotelling, threshold, states, tier,
     hourOfDay: ctx.hourOfDay, dayOfWeek: ctx.dayOfWeek,
   });
-}
-
-// ── D-54-2 — dispatch maps (ARCHITECT-REPLY-54 slice 2) ────────────
-
-/** Unified context the Record<HotellingVariant, Evaluator> receives.
- *  Each evaluator reads only the fields its variant needs. */
-interface HotellingDispatchCtx {
-  params: FamilyCPerCell;
-  r: number[];
-  alphaHotelling: number;
-  threshold: number;
-  states?: Record<string, SafeHotellingState>;
-  tier: TenantTier | null;
-  hourOfDay: number;
-  dayOfWeek?: number;
-}
-
-type HotellingVariant = 'chi_square' | 'safe_test';
-type HotellingEvaluator = (ctx: HotellingDispatchCtx) => DetectorVerdict;
-
-/** Chi-square (Wilson-Hilferty) per-tick T² test — the pre-#20 default.
- *  Stateless; statistic is (x − μ)ᵀ Σ⁻¹ (x − μ). */
-function evaluateHotellingChiSquare(ctx: HotellingDispatchCtx): DetectorVerdict {
-  const { params, r, alphaHotelling, threshold } = ctx;
-  const t2 = hotellingT2(r, params.covariance);
-  if (t2 === null) {
-    // Covariance not positive definite — shouldn't happen after Ledoit-
-    // Wolf shrinkage, but the compiler could hit a degenerate cell.
-    return {
-      verdict: 'suppressed', statistic: null, threshold,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'covariance_singular', family: 'C',
-    };
-  }
-  if (t2 >= threshold) {
-    return {
-      verdict: 'fire', statistic: t2, threshold,
-      alpha_consumed: alphaHotelling, alpha_spent: alphaHotelling,
-      reason_code: 'hotelling_exceeded_threshold', family: 'C',
-    };
-  }
-  return {
-    verdict: 'clean', statistic: t2, threshold,
-    alpha_consumed: 0, alpha_spent: 0,
-    reason_code: 'below_threshold', family: 'C',
-  };
-}
-
-/** Safe-Hotelling e-process wrapper for dispatch. Allocates per-cell
- *  state on first use; requires `safe_hotelling_params` on the cell. */
-function evaluateHotellingSafeTestDispatch(ctx: HotellingDispatchCtx): DetectorVerdict {
-  const { params, r, states, tier, hourOfDay, dayOfWeek } = ctx;
-  // The dispatch map only routes here when prereqs are present; reassert
-  // here for the type-narrow + throw defensively if someone added a
-  // caller that skips the guard.
-  if (!params.safe_hotelling_params || !states) {
-    throw new Error(
-      'evaluateHotellingSafeTestDispatch invoked without safe_hotelling_params or states — '
-      + 'dispatch map gate must enforce prereqs before routing.',
-    );
-  }
-  const cellKey = `__sh_${tier ?? 'none'}_${hourOfDay}_${dayOfWeek ?? -1}`;
-  let state = states[cellKey];
-  if (!state) {
-    state = freshSafeHotellingState();
-    states[cellKey] = state;
-  }
-  return evaluateSafeHotelling(
-    { cell: params, alpha: params.safe_hotelling_params.alpha },
-    r, state,
-  );
-}
-
-/** Variant→evaluator dispatch map. Adding a variant = adding a key. */
-const HOTELLING_EVALUATORS: Record<HotellingVariant, HotellingEvaluator> = {
-  'chi_square': evaluateHotellingChiSquare,
-  'safe_test': evaluateHotellingSafeTestDispatch,
-};
-
-/** Resolve a cell's declared variant to the effective dispatch key.
- *  Normalizes `undefined` → `'chi_square'` for backward-compat. Falls
- *  `safe_test` back to `chi_square` when compile-time params or
- *  runtime state is missing (preserves pre-D-54-2 semantics). Passes
- *  through any other value so the caller's Record lookup can throw
- *  on unknowns (feedback_no_skip_test_policy). */
-function hotellingVariantForDispatch(
-  raw: FamilyCPerCell['hotelling_variant'],
-  hasParams: boolean,
-  hasStates: boolean,
-): HotellingVariant {
-  if (raw === undefined || raw === 'chi_square') return 'chi_square';
-  if (raw === 'safe_test') {
-    return (hasParams && hasStates) ? 'safe_test' : 'chi_square';
-  }
-  // Unknown string — return as-is so the Record lookup throws.
-  return raw as HotellingVariant;
-}
-
-/** Exposed for dispatch-map parity testing. */
-export const _HOTELLING_EVALUATORS_FOR_TEST = HOTELLING_EVALUATORS;
-export const _hotellingVariantForDispatch = hotellingVariantForDispatch;
-
-// ── Addition #20 — safe-Hotelling e-process (ARCHITECT-REPLY-43) ──────
-//
-// Mixture-prior growth-optimal e-test for the composite-Gaussian-mean
-// null, per Grünwald-de Heide-Koolen 2024. Co-ships alongside the
-// legacy chi_square variant; selection by `cell.hotelling_variant`.
-// Wealth update `M_t = M_{t-1} · exp(z_t)` with z_t derived from the
-// log-likelihood ratio under μ ~ N(0, τ²I_p) prior on the alternative.
-// Anytime-valid under Ville's inequality: fire at `M_t ≥ 1/α`.
-
-/** Fresh wealth state for a new (deploy, cell) safe-Hotelling evaluation.
- *  `M₀ = 1` is the Ville-inequality convention (log-wealth starts at 0). */
-export function freshSafeHotellingState(): SafeHotellingState {
-  return { M: 1, n: 0, alphaConsumed: 0 };
-}
-
-/** Addition #20 (ARCHITECT-REPLY-43 D4) — safe-Hotelling per-tick
- *  evaluation against a cell with populated `safe_hotelling_params`.
- *  The caller owns the state object; this function mutates `state.M` /
- *  `state.n` / `state.alphaConsumed` in place.
- *
- *  Formula (z_t derived inline for future auditors):
- *    Multivariate-Gaussian log-density under null N(0, Σ):
- *      log p₀(x) = -(p/2) log(2π) - ½ log det(Σ) - ½ xᵀ Σ⁻¹ x
- *    Marginal under alternative prior μ ~ N(0, τ²I_p):
- *      p_A(x) = ∫ N(x | μ, Σ) · N(μ | 0, τ²I) dμ = N(x | 0, Σ + τ²I)
- *      log p_A(x) = -(p/2) log(2π) - ½ log det(Σ+τ²I) - ½ xᵀ (Σ+τ²I)⁻¹ x
- *    Log-likelihood ratio:
- *      z_t = log p_A(x) - log p₀(x)
- *          = -½ [log det(Σ+τ²I) - log det(Σ)]
- *            + ½ xᵀ Σ⁻¹ x
- *            - ½ xᵀ (Σ+τ²I)⁻¹ x
- *          = -precompiled_log_det_shrink + ½ xᵀ Σ⁻¹ x - ½ xᵀ (Σ+τ²I)⁻¹ x
- *    M_t = M_{t-1} · exp(z_t); fire when M_t ≥ 1/alpha.
- *
- *  Practice-5 anchors (healthy p=11 cell, τ²≈δ_min²/4):
- *    - Healthy x near zero:        z_t ≈ -0.055, M drifts ~0.946×/tick.
- *    - Drifted x = [3σ, 3σ, 0, …]: z_t ≈  0.445, M grows   ~1.56×/tick.
- *    - Fire horizon on moderate shift: ~log(1/α)/z_t ≈ 9.2/0.445 ≈ 20 ticks.
- */
-export function evaluateSafeHotelling(
-  input: {
-    cell: FamilyCPerCell;
-    alpha: number;
-  },
-  x: number[],
-  state: SafeHotellingState,
-): DetectorVerdict {
-  // Q2.B.6.2 — sliding-buffer-aware wealth threshold under joint AR(1) H₀.
-  // Stamped by the calibrator (safe_hotelling_params.sliding_buffer_threshold);
-  // pre-Q2.B.6.2 configs fall through to analytical 1/α (P3.7 backward-
-  // compat anchor).
-  const params = input.cell.safe_hotelling_params;
-  const threshold = params?.sliding_buffer_threshold ?? (1 / input.alpha);
-  if (!params) {
-    return {
-      verdict: 'suppressed', statistic: state.M, threshold,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'safe_hotelling_params_missing', family: 'C',
-      signal: 'hotelling_t2_safe',
-    };
-  }
-  // xᵀ Σ⁻¹ x = ||L⁻¹ x||², L from Cholesky of Σ.
-  const L = cholesky(input.cell.covariance);
-  if (!L) {
-    return {
-      verdict: 'suppressed', statistic: state.M, threshold,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'covariance_singular', family: 'C',
-      signal: 'hotelling_t2_safe',
-    };
-  }
-  // Build Σ+τ²I additively on the diagonal; PSD whenever Σ is PSD and
-  // τ² > 0. Defensive Cholesky still runs — if it fails, degenerate Σ
-  // slipped past REPLY-41's off-diag gate and surfaces as suppressed.
-  const p = input.cell.covariance.length;
-  const sigmaPlus: number[][] = new Array(p);
-  for (let i = 0; i < p; i++) {
-    sigmaPlus[i] = input.cell.covariance[i].slice();
-    sigmaPlus[i][i] += params.tau_squared;
-  }
-  const Lplus = cholesky(sigmaPlus);
-  if (!Lplus) {
-    return {
-      verdict: 'suppressed', statistic: state.M, threshold,
-      alpha_consumed: 0, alpha_spent: 0,
-      reason_code: 'covariance_plus_tau_singular', family: 'C',
-      signal: 'hotelling_t2_safe',
-    };
-  }
-  const y = forwardSolve(L, x);
-  const yPlus = forwardSolve(Lplus, x);
-  let xSigmaInvX = 0;
-  for (const v of y) xSigmaInvX += v * v;
-  let xSigmaPlusInvX = 0;
-  for (const v of yPlus) xSigmaPlusInvX += v * v;
-  const z_t = -params.precompiled_log_det_shrink
-    + 0.5 * xSigmaInvX
-    - 0.5 * xSigmaPlusInvX;
-  // Informational floor against denormal underflow on extremely long
-  // healthy runs (z_t negative ~60+ ticks of log(0.946) ≈ -0.056 sums
-  // to log(1e-300) ≈ -690 → M_t at ~12,300 ticks). E-process semantics
-  // preserved; floor is observability only.
-  state.M = Math.max(1e-300, state.M * Math.exp(z_t));
-  state.n += 1;
-  if (state.M >= threshold) {
-    const alphaSpent = Math.max(0, input.alpha - state.alphaConsumed);
-    state.alphaConsumed = input.alpha;
-    return {
-      verdict: 'fire', statistic: state.M, threshold,
-      alpha_consumed: alphaSpent, alpha_spent: alphaSpent,
-      reason_code: 'safe_hotelling_wealth_exceeded', family: 'C',
-      signal: 'hotelling_t2_safe',
-    };
-  }
-  return {
-    verdict: 'clean', statistic: state.M, threshold,
-    alpha_consumed: 0, alpha_spent: 0,
-    reason_code: 'below_threshold', family: 'C',
-    signal: 'hotelling_t2_safe',
-  };
 }

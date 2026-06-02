@@ -1,12 +1,5 @@
 import type { CompiledConfig, DetectorVerdict, BaselineCellEntry, ConformalParams, FamilyCPerCell, SchemaContinuityRecord, TenantTier, ConformalEValueState } from '../types';
-/** Mahalanobis distance √(r^T Σ⁻¹ r). Returns null if Σ is not PD.
- *  Exported so the compiler can precompute calibration scores with the
- *  same scoring function the detector uses at query time. */
-export declare function mahalanobisDistance(r: number[], covariance: number[][]): number | null;
-/** Conformal p-value: (#{ s_c ≥ s_query } + 1) / (n_calibration + 1).
- *  `+1` in numerator and denominator makes this a valid (exchangeable)
- *  p-value even on exact ties. */
-export declare function conformalPValue(queryScore: number, calibrationScores: number[]): number;
+export { mahalanobisDistance, conformalPValue } from './_conformal-math';
 /** Retrieve Family E calibration + matching Family C mean/covariance.
  *
  *  W5 §REPLY-16 Q2: Family E always consults `aggregate_fallback.family_E`
@@ -112,5 +105,4 @@ export declare function evaluateConformalWeightedEValue(input: {
     covariance: number[][];
     alpha: number;
 }, x_t: number[], state: ConformalEValueState): DetectorVerdict;
-export {};
 //# sourceMappingURL=conformal.d.ts.map

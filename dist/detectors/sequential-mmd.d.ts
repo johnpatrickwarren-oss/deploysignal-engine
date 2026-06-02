@@ -36,22 +36,6 @@ export declare function baselinePoolSeed(cellKey: {
 }): number;
 /** Initial wealth state for a new (deploy, cell) e-MMD evaluation. */
 export declare function freshEMmdState(): EMmdState;
-/** Evaluate the e-MMD betting e-process at one tick per REPLY-43 D3.
- *
- *  Semantic note on `pickBet` input moments (flagged for architect
- *  review at slice-2 landing): REPLY-43 D3 pseudo-code passes
- *  `(runningMean, runningSecondMoment)` — the moments of the raw
- *  kernel-distance scalar `d_t` — to `pickBet`. REPLY-34's primitives
- *  were designed for bounded z_t ∈ [−1, 1] with E[z] near 0 under H₀;
- *  feeding d-moments (E[d] > 0 under H₀) produces a different bet
- *  shape than the canonical bounded-z form. Implemented literally per
- *  brief; empirical fire horizons on canned demos are the ground
- *  truth in slice-2 integration tests. If those diverge, architect
- *  re-dispositions pickBet-input semantics.
- *
- *  Pattern mirrors `evaluateSequentialMMD` for cell lookup + guards;
- *  shares the same tier-aware `lookupFamilyCParams` and same
- *  pseudo-baseline pool generator. */
 export declare function evaluateEMmd(cfg: CompiledConfig, liveMetrics: Record<string, number | undefined>, states: Record<string, EMmdState | number[][] | unknown>, ctx: {
     hourOfDay: number;
     dayOfWeek?: number;

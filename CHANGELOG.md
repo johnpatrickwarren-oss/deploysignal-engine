@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.3.1-pre — 2026-05-28
+
+**Cluster-topology extension types** (PR #12). Adds optional
+`ClusterTopologyKind` + `ClusterEdgeRelationship` at
+`types/verdict-extensions/cluster-topology` (subpath import + barrel
+re-export) for consumers modeling NVL-class GPU fabrics, scale-out
+fabric tiers, and federated multi-cluster campuses.
+
+Strictly additive — no changes to existing `NodeKind`,
+`EdgeRelationship`, `TopologyNode`, `TopologyEdge`, or
+`TopologySnapshot`. Non-cluster consumers see zero schema-surface
+churn. Originally motivated by clustersynth
+(github.com/johnpatrickwarren-oss/clustersynth).
+
 ## v0.3.0-pre — 2026-05-26
 
 **Headline: Production-AR substrate calibrator + format.** Offline-fittable

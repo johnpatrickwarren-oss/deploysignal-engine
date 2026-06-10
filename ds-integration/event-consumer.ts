@@ -14,7 +14,9 @@
 
 import http from 'node:http';
 import { EventEmitter } from 'node:events';
+import { timingSafeEqual } from 'node:crypto';
 import {
+  DEPLOY_EVENT_CLASSES,
   DS_TO_TESSERA_EVENT_ENDPOINT,
   type DeployEventPayload,
   type DsToTesseraEventRequest,
@@ -37,13 +39,32 @@ export interface DsToTesseraAuthHeaders {
 
 /** Connection options for the consumer server. */
 export interface DsEventConsumerOpts {
-  /** Bind host; default '127.0.0.1'. */
+  /** Bind host; default '127.0.0.1'.
+   *
+   *  SECURITY: the loopback default is a load-bearing assumption — when no
+   *  `auth_token` is configured the only protection is that the server is
+   *  not reachable off-host. Set `auth_token` before binding to any
+   *  non-loopback host. */
   host?: string;
   /** Bind port; caller picks. Use 0 for kernel-assigned (recommended in tests). */
   port: number;
   /** Default 5000. */
   request_timeout_ms?: number;
+  /** Shared secret for bearer-token verification (remediation 2026-06-10
+   *  H2). When set, every request must carry `authorization: Bearer
+   *  <auth_token>` (compared via crypto.timingSafeEqual); mismatches are
+   *  rejected 401 before the body is read. When unset, only the header
+   *  shape is checked (legacy R66 behavior; acceptable only behind the
+   *  loopback default-bind documented on `host`). */
+  auth_token?: string;
+  /** Max accepted request-body size in bytes; default 1 MiB (remediation
+   *  2026-06-10 H2). Larger bodies are rejected 413 and the connection is
+   *  destroyed, bounding memory per request. */
+  max_body_bytes?: number;
 }
+
+/** Default request-body cap (1 MiB). */
+export const DEFAULT_MAX_BODY_BYTES = 1024 * 1024;
 
 /** Event names emitted by DsEventConsumer.
  *  - 'activate' — payload accepted; subscriber receives DeployEventPayload.
@@ -57,17 +78,29 @@ export interface DsEventConsumerEvents {
 /** Internal validation result for body / auth-header parsing. */
 type ParseResult<T> = { ok: true; value: T } | { ok: false; reason: string };
 
-const VALID_EVENT_CLASSES: ReadonlySet<DeployEventPayload['event_class']> = new Set([
-  'firmware_push',
-  'model_redeploy',
-  'env_change',
-  'config_change',
-  'capacity_change',
-]);
+// Derived from the contract's single source of truth so the runtime set can
+// never drift from the DeployEventPayload['event_class'] union again
+// (remediation 2026-06-10 H1: a hand-maintained copy here omitted
+// 'chaos_experiment', 400-rejecting valid Anvil chaos events).
+const VALID_EVENT_CLASSES: ReadonlySet<DeployEventPayload['event_class']> = new Set(
+  DEPLOY_EVENT_CLASSES,
+);
 
-/** Validate the DS→Tessera auth headers shape. */
+/** Constant-time bearer-token comparison. Hashless timingSafeEqual requires
+ *  equal lengths; length mismatch is an immediate (non-secret-dependent)
+ *  reject. */
+function tokenMatches(presented: string, expected: string): boolean {
+  const a = Buffer.from(presented, 'utf8');
+  const b = Buffer.from(expected, 'utf8');
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+/** Validate the DS→Tessera auth headers shape and (when a shared secret is
+ *  configured) verify the bearer token. */
 function validateAuthHeaders(
   headers: http.IncomingHttpHeaders,
+  authToken: string | undefined,
 ): ParseResult<DsToTesseraAuthHeaders> {
   const instId = headers['x-ds-instance-id'];
   const auth = headers['authorization'];
@@ -76,6 +109,9 @@ function validateAuthHeaders(
   }
   if (typeof auth !== 'string' || !auth.startsWith('Bearer ')) {
     return { ok: false, reason: 'missing or malformed authorization' };
+  }
+  if (authToken !== undefined && !tokenMatches(auth.slice('Bearer '.length), authToken)) {
+    return { ok: false, reason: 'invalid bearer token' };
   }
   return {
     ok: true,
@@ -170,6 +206,8 @@ export class DsEventConsumer extends EventEmitter {
   private readonly host: string;
   private readonly port: number;
   private readonly timeoutMs: number;
+  private readonly authToken: string | undefined;
+  private readonly maxBodyBytes: number;
   private server: http.Server | null = null;
   private boundPort: number | null = null;
 
@@ -178,6 +216,8 @@ export class DsEventConsumer extends EventEmitter {
     this.host = opts.host ?? '127.0.0.1';
     this.port = opts.port;
     this.timeoutMs = opts.request_timeout_ms ?? 5000;
+    this.authToken = opts.auth_token;
+    this.maxBodyBytes = opts.max_body_bytes ?? DEFAULT_MAX_BODY_BYTES;
   }
 
   /** Bound port after start(); null before start() / after stop(). */
@@ -224,7 +264,7 @@ export class DsEventConsumer extends EventEmitter {
       return;
     }
 
-    const authResult = validateAuthHeaders(req.headers);
+    const authResult = validateAuthHeaders(req.headers, this.authToken);
     if (!authResult.ok) {
       this.emit('parse_error', `auth: ${authResult.reason}`);
       this.writeResponse(res, 401, {
@@ -237,8 +277,30 @@ export class DsEventConsumer extends EventEmitter {
     }
 
     const chunks: Buffer[] = [];
-    req.on('data', (c: Buffer) => chunks.push(c));
+    let received = 0;
+    let overflowed = false;
+    req.on('data', (c: Buffer) => {
+      if (overflowed) return;
+      received += c.length;
+      if (received > this.maxBodyBytes) {
+        // Body cap (H2): reject and drop the connection so a hostile or
+        // looping client cannot buffer unbounded memory server-side.
+        overflowed = true;
+        chunks.length = 0;
+        this.emit('parse_error', 'request body too large');
+        this.writeResponse(res, 413, {
+          contract_version: 'v1',
+          status: 'rejected',
+          freeze_hook_activated: false,
+          reason: 'request body too large',
+        });
+        req.destroy();
+        return;
+      }
+      chunks.push(c);
+    });
     req.on('end', () => {
+      if (overflowed) return;
       const raw = Buffer.concat(chunks).toString('utf8');
       let parsed: unknown;
       try {
@@ -264,13 +326,18 @@ export class DsEventConsumer extends EventEmitter {
         });
         return;
       }
-      this.emit('activate', envelope.value.event);
+      // L4 (remediation 2026-06-10): only claim activation when an
+      // 'activate' subscriber actually received the event — emit() returns
+      // true iff at least one listener was invoked. The standalone adapter
+      // with no wired freeze hook previously asserted activation
+      // unconditionally.
+      const delivered = this.emit('activate', envelope.value.event);
       const nowSec = Math.floor(Date.now() / 1000);
       this.writeResponse(res, 202, {
         contract_version: 'v1',
         status: 'accepted',
-        freeze_hook_activated: true,
-        freeze_hook_activated_at_ts: nowSec,
+        freeze_hook_activated: delivered,
+        ...(delivered ? { freeze_hook_activated_at_ts: nowSec } : {}),
       });
     });
     req.setTimeout(this.timeoutMs, () => req.destroy(new Error('request timeout')));

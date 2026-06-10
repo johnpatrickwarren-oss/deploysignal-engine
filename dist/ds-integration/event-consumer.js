@@ -16,19 +16,31 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DsEventConsumer = void 0;
+exports.DsEventConsumer = exports.DEFAULT_MAX_BODY_BYTES = void 0;
 const node_http_1 = __importDefault(require("node:http"));
 const node_events_1 = require("node:events");
+const node_crypto_1 = require("node:crypto");
 const event_contract_1 = require("./event-contract");
-const VALID_EVENT_CLASSES = new Set([
-    'firmware_push',
-    'model_redeploy',
-    'env_change',
-    'config_change',
-    'capacity_change',
-]);
-/** Validate the DS→Tessera auth headers shape. */
-function validateAuthHeaders(headers) {
+/** Default request-body cap (1 MiB). */
+exports.DEFAULT_MAX_BODY_BYTES = 1024 * 1024;
+// Derived from the contract's single source of truth so the runtime set can
+// never drift from the DeployEventPayload['event_class'] union again
+// (remediation 2026-06-10 H1: a hand-maintained copy here omitted
+// 'chaos_experiment', 400-rejecting valid Anvil chaos events).
+const VALID_EVENT_CLASSES = new Set(event_contract_1.DEPLOY_EVENT_CLASSES);
+/** Constant-time bearer-token comparison. Hashless timingSafeEqual requires
+ *  equal lengths; length mismatch is an immediate (non-secret-dependent)
+ *  reject. */
+function tokenMatches(presented, expected) {
+    const a = Buffer.from(presented, 'utf8');
+    const b = Buffer.from(expected, 'utf8');
+    if (a.length !== b.length)
+        return false;
+    return (0, node_crypto_1.timingSafeEqual)(a, b);
+}
+/** Validate the DS→Tessera auth headers shape and (when a shared secret is
+ *  configured) verify the bearer token. */
+function validateAuthHeaders(headers, authToken) {
     const instId = headers['x-ds-instance-id'];
     const auth = headers['authorization'];
     if (typeof instId !== 'string' || instId.length === 0) {
@@ -36,6 +48,9 @@ function validateAuthHeaders(headers) {
     }
     if (typeof auth !== 'string' || !auth.startsWith('Bearer ')) {
         return { ok: false, reason: 'missing or malformed authorization' };
+    }
+    if (authToken !== undefined && !tokenMatches(auth.slice('Bearer '.length), authToken)) {
+        return { ok: false, reason: 'invalid bearer token' };
     }
     return {
         ok: true,
@@ -126,6 +141,8 @@ class DsEventConsumer extends node_events_1.EventEmitter {
         this.host = opts.host ?? '127.0.0.1';
         this.port = opts.port;
         this.timeoutMs = opts.request_timeout_ms ?? 5000;
+        this.authToken = opts.auth_token;
+        this.maxBodyBytes = opts.max_body_bytes ?? exports.DEFAULT_MAX_BODY_BYTES;
     }
     /** Bound port after start(); null before start() / after stop(). */
     get address() {
@@ -167,7 +184,7 @@ class DsEventConsumer extends node_events_1.EventEmitter {
             });
             return;
         }
-        const authResult = validateAuthHeaders(req.headers);
+        const authResult = validateAuthHeaders(req.headers, this.authToken);
         if (!authResult.ok) {
             this.emit('parse_error', `auth: ${authResult.reason}`);
             this.writeResponse(res, 401, {
@@ -179,8 +196,32 @@ class DsEventConsumer extends node_events_1.EventEmitter {
             return;
         }
         const chunks = [];
-        req.on('data', (c) => chunks.push(c));
+        let received = 0;
+        let overflowed = false;
+        req.on('data', (c) => {
+            if (overflowed)
+                return;
+            received += c.length;
+            if (received > this.maxBodyBytes) {
+                // Body cap (H2): reject and drop the connection so a hostile or
+                // looping client cannot buffer unbounded memory server-side.
+                overflowed = true;
+                chunks.length = 0;
+                this.emit('parse_error', 'request body too large');
+                this.writeResponse(res, 413, {
+                    contract_version: 'v1',
+                    status: 'rejected',
+                    freeze_hook_activated: false,
+                    reason: 'request body too large',
+                });
+                req.destroy();
+                return;
+            }
+            chunks.push(c);
+        });
         req.on('end', () => {
+            if (overflowed)
+                return;
             const raw = Buffer.concat(chunks).toString('utf8');
             let parsed;
             try {
@@ -207,13 +248,18 @@ class DsEventConsumer extends node_events_1.EventEmitter {
                 });
                 return;
             }
-            this.emit('activate', envelope.value.event);
+            // L4 (remediation 2026-06-10): only claim activation when an
+            // 'activate' subscriber actually received the event — emit() returns
+            // true iff at least one listener was invoked. The standalone adapter
+            // with no wired freeze hook previously asserted activation
+            // unconditionally.
+            const delivered = this.emit('activate', envelope.value.event);
             const nowSec = Math.floor(Date.now() / 1000);
             this.writeResponse(res, 202, {
                 contract_version: 'v1',
                 status: 'accepted',
-                freeze_hook_activated: true,
-                freeze_hook_activated_at_ts: nowSec,
+                freeze_hook_activated: delivered,
+                ...(delivered ? { freeze_hook_activated_at_ts: nowSec } : {}),
             });
         });
         req.setTimeout(this.timeoutMs, () => req.destroy(new Error('request timeout')));

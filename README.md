@@ -75,4 +75,4 @@ Canonical engine semantics live in the DeploySignal repository. Tessera-evolved 
 
 ## License
 
-Apache-2.0 — see [`../LICENSE`](../LICENSE) (Tessera root).
+Apache-2.0 — see [`LICENSE`](LICENSE).

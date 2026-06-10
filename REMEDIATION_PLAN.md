@@ -130,7 +130,7 @@ No committed secrets, no unsafe `eval`, no path-traversal sinks were found. `Mat
 - [x] **M2** Fix Slurm hostlist range padding to match Slurm semantics; add `[1-10]` / `[01-10]` expansion tests.
 - [x] **M3** Guard `actual_elapsed_seconds <= 0` in `transformPair`; return null-value sample; add tests.
 - [x] **M4** Make `pre_window_count` count distinct shards (or rename/redocument); add repeat-firing-shard test.
-- [ ] **M5** Add GitHub Actions CI (`npm ci && npm test` on ubuntu + macos; `git diff --exit-code dist/` after build).
+- [x] **M5** Add GitHub Actions CI (`npm ci && npm test` on ubuntu + macos; `git diff --exit-code dist/` after build).
 - [ ] **M6** Rewrite README Install/Build for the standalone repo; regenerate `package-lock.json` at `0.3.1-pre`; add the `v0.3.1-pre` CHANGELOG entry.
 - [ ] **M7** Validate parsed CSV values (`Number.isFinite`) and empty-file handling in both CSV parsers.
 - [ ] **L1** Fix the "5-event-class" comment in `events/event-feed.ts`.
@@ -141,4 +141,4 @@ No committed secrets, no unsafe `eval`, no path-traversal sinks were found. `Mat
 - [ ] **L6** Remove the upstream-abort listener after fetch; thread `FetchContext` through `TopologyEnricher.enrich`.
 - [ ] **L7** Exclude `dist/test/**` from the npm `files` globs.
 - [ ] **L8** Dedupe K8s node names in `parseNodeListToSnapshot`.
-- [ ] **L9** (covered by M5's dist-freshness CI step.)
+- [x] **L9** (covered by M5's dist-freshness CI step.)

@@ -1,0 +1,38 @@
+# CI — remediation 2026-06-10 (M5, L9).
+#
+# Runs tsc + the full node:test suite on ubuntu and macos (vendored history
+# shows Linux-vs-Darwin divergence caught real bugs; see
+# detectors/_q72-trace.ts), then enforces that the committed dist/ is
+# byte-identical to a fresh rebuild (`npm test` runs `tsc` first, so any
+# drift shows up in `git diff -- dist`).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check, build, and test
+        run: npm test
+
+      - name: Verify committed dist/ matches fresh rebuild (L9)
+        run: git diff --exit-code -- dist

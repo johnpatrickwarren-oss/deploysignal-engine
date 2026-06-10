@@ -122,8 +122,8 @@ No committed secrets, no unsafe `eval`, no path-traversal sinks were found. `Mat
 
 ## Prioritized remediation checklist
 
-- [ ] **H1** Add `chaos_experiment` to `VALID_EVENT_CLASSES` in `ds-integration/event-consumer.ts`; derive the runtime set and the type union from one shared constant; add a per-class consumer POST test.
-- [ ] **H2** Add real token verification (injected validator / `timingSafeEqual`) and a request-body size cap to `DsEventConsumer`.
+- [x] **H1** Add `chaos_experiment` to `VALID_EVENT_CLASSES` in `ds-integration/event-consumer.ts`; derive the runtime set and the type union from one shared constant; add a per-class consumer POST test.
+- [x] **H2** Add real token verification (injected validator / `timingSafeEqual`) and a request-body size cap to `DsEventConsumer`.
 - [ ] **H3** Add `#!/usr/bin/env node` shebangs to `tools/run-nab-validation.ts`, `tools/run-nab-per-dataset.ts`, `tools/fit-production-substrate.ts`; rebuild dist; verify via `npm pack` install.
 - [ ] **H4** Commit the Apache-2.0 LICENSE file; fix the README license link.
 - [ ] **M1** Resolve the `effectiveThreshold` strength-squared discount against the upstream pin; fix + pin with a unit test (ADR per vendoring policy).
@@ -136,7 +136,7 @@ No committed secrets, no unsafe `eval`, no path-traversal sinks were found. `Mat
 - [ ] **L1** Fix the "5-event-class" comment in `events/event-feed.ts`.
 - [ ] **L2** Reconcile `family_D_spectral` count/ids attribution and remove or implement the dead `signalFilter` parameter; guard the cell-key parse.
 - [ ] **L3** Align `summarizeWindow` / `TrendBuffer.get` degenerate-case `cv` defaults (or correct the comment).
-- [ ] **L4** Make the consumer's `freeze_hook_activated` response field truthful.
+- [x] **L4** Make the consumer's `freeze_hook_activated` response field truthful.
 - [ ] **L5** Throw on unknown flags in `fit-production-substrate` CLI.
 - [ ] **L6** Remove the upstream-abort listener after fetch; thread `FetchContext` through `TopologyEnricher.enrich`.
 - [ ] **L7** Exclude `dist/test/**` from the npm `files` globs.

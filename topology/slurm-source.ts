@@ -192,7 +192,14 @@ export function expandSlurmHostlist(hostlist: string): string[] {
       if (start > end) {
         throw new Error(`SLURM_TOPOLOGY_PARSE_ERROR: range start > end '${sub}' in hostlist '${hostlist}'`);
       }
-      const padWidth = Math.max(startStr.length, endStr.length);
+      // Slurm padding semantics (remediation 2026-06-10 M2): zero-pad only
+      // when the range spec is written with leading zeros (e.g. [01-10] →
+      // node01…node10, width from the start token). An unpadded spec like
+      // [1-10] expands to node1…node10. The previous
+      // max(startStr, endStr)-width padding produced node01…node10 for
+      // [1-10] — IDs matching no real hostname, silently dropped by
+      // attributeCommonMode (failure mode F4).
+      const padWidth = startStr.startsWith('0') && startStr.length > 1 ? startStr.length : 1;
       for (let i = start; i <= end; i++) {
         out.push(prefix + String(i).padStart(padWidth, '0') + suffix);
       }

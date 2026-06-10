@@ -1,6 +1,7 @@
 // engine/events/event-feed.ts — Tessera Phase 2 SLICE 4 (R34) WU-06 Surface 1.
 //
-// Closed-set 5-event-class deployment-event substrate. Producer-side contract:
+// Closed-set 6-event-class deployment-event substrate ('chaos_experiment'
+// added after the original 5 per DeploySignal Addition #29). Producer-side contract:
 // caller supplies a ClusterEvent list; EventFeed.fetchSince(ts) returns the
 // subset whose event_ts > ts. Mirrors inherited `flags`-input pattern at
 // cluster-event scope.
@@ -19,7 +20,7 @@ export interface ClusterEvent {
   /** Caller-supplied stable identifier; used as cluster_event_id downstream
    *  (identity threading; no separate mapping). */
   event_id: string;
-  /** Closed-set 5 event classes; see ClusterEventKind. */
+  /** Closed-set 6 event classes; see ClusterEventKind. */
   kind: ClusterEventKind;
   /** Epoch seconds when the event occurred (point-shaped) or began
    *  (interval-shaped; event_window_end_ts populated). */

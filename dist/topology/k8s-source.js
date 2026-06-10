@@ -55,10 +55,17 @@ function parseNodeListToSnapshot(nodeList, source_id, source_version, fetched_at
     const nodes = [];
     const edges = [];
     const zoneNodesByZone = new Map();
+    // Remediation 2026-06-10 L8: dedupe node names (duplicates are possible in
+    // hand-built fixtures) so duplicate host:/gpu: node IDs and shards are not
+    // emitted; first occurrence wins, mirroring the zone handling.
+    const seenNodeNames = new Set();
     for (const item of nodeList.items) {
         const name = item.metadata.name;
         if (typeof name !== 'string' || name.length === 0)
             continue;
+        if (seenNodeNames.has(name))
+            continue;
+        seenNodeNames.add(name);
         const labels = item.metadata.labels ?? {};
         const hostId = `host:${name}`;
         // Host node — always emitted when name is present.

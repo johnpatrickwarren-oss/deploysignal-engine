@@ -195,11 +195,16 @@ class OtelServiceGraphV1 {
         const timeoutMs = this.ref.fetch_timeout_ms ?? DEFAULT_FETCH_TIMEOUT_MS;
         const abort = new AbortController();
         const upstreamSignal = ctx?.signal;
+        // Remediation 2026-06-10 L6: keep a reference to the abort forwarder so
+        // it can be removed once the fetch settles — `{ once: true }` only fires
+        // listeners that abort; on a long-lived upstream signal the per-fetch
+        // listeners otherwise accumulate.
+        const onUpstreamAbort = () => abort.abort();
         if (upstreamSignal) {
             if (upstreamSignal.aborted)
                 abort.abort();
             else
-                upstreamSignal.addEventListener('abort', () => abort.abort(), { once: true });
+                upstreamSignal.addEventListener('abort', onUpstreamAbort, { once: true });
         }
         const timer = setTimeout(() => abort.abort(), timeoutMs);
         try {
@@ -222,6 +227,8 @@ class OtelServiceGraphV1 {
         }
         finally {
             clearTimeout(timer);
+            if (upstreamSignal)
+                upstreamSignal.removeEventListener('abort', onUpstreamAbort);
         }
     }
     snapshotHash(snapshot) {
@@ -252,11 +259,13 @@ class TopologyEnricher {
         this.resolver = opts.deployNodeResolver ?? exports.defaultDeployNodeResolver;
         this.now = opts.now ?? (() => Math.floor(Date.now() / 1000));
     }
-    async enrich(group, events = []) {
+    async enrich(group, events = [], ctx) {
         const enrichedAt = this.now();
         let snapshot;
         try {
-            snapshot = await this.source.fetchSnapshot();
+            // Optional FetchContext threaded through to the source (remediation
+            // 2026-06-10 L6) so callers can propagate cancellation.
+            snapshot = await this.source.fetchSnapshot(ctx);
         }
         catch (err) {
             return {

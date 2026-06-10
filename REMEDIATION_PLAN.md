@@ -133,12 +133,12 @@ No committed secrets, no unsafe `eval`, no path-traversal sinks were found. `Mat
 - [x] **M5** Add GitHub Actions CI (`npm ci && npm test` on ubuntu + macos; `git diff --exit-code dist/` after build).
 - [x] **M6** Rewrite README Install/Build for the standalone repo; regenerate `package-lock.json` at `0.3.1-pre`; add the `v0.3.1-pre` CHANGELOG entry.
 - [x] **M7** Validate parsed CSV values (`Number.isFinite`) and empty-file handling in both CSV parsers.
-- [ ] **L1** Fix the "5-event-class" comment in `events/event-feed.ts`.
-- [ ] **L2** Reconcile `family_D_spectral` count/ids attribution and remove or implement the dead `signalFilter` parameter; guard the cell-key parse.
+- [x] **L1** Fix the "5-event-class" comment in `events/event-feed.ts`.
+- [x] **L2** Reconcile `family_D_spectral` count/ids attribution and remove or implement the dead `signalFilter` parameter; guard the cell-key parse.
 - [x] **L3** Align `summarizeWindow` / `TrendBuffer.get` degenerate-case `cv` defaults (or correct the comment).
 - [x] **L4** Make the consumer's `freeze_hook_activated` response field truthful.
 - [x] **L5** Throw on unknown flags in `fit-production-substrate` CLI.
-- [ ] **L6** Remove the upstream-abort listener after fetch; thread `FetchContext` through `TopologyEnricher.enrich`.
-- [ ] **L7** Exclude `dist/test/**` from the npm `files` globs.
-- [ ] **L8** Dedupe K8s node names in `parseNodeListToSnapshot`.
+- [x] **L6** Remove the upstream-abort listener after fetch; thread `FetchContext` through `TopologyEnricher.enrich`.
+- [x] **L7** Exclude `dist/test/**` from the npm `files` globs.
+- [x] **L8** Dedupe K8s node names in `parseNodeListToSnapshot`.
 - [x] **L9** (covered by M5's dist-freshness CI step.)

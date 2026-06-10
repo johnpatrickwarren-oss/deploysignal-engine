@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 "use strict";
 // tools/run-nab-per-dataset.ts — per-dataset-calibrated NAB validation.
 //

@@ -124,7 +124,7 @@ No committed secrets, no unsafe `eval`, no path-traversal sinks were found. `Mat
 
 - [x] **H1** Add `chaos_experiment` to `VALID_EVENT_CLASSES` in `ds-integration/event-consumer.ts`; derive the runtime set and the type union from one shared constant; add a per-class consumer POST test.
 - [x] **H2** Add real token verification (injected validator / `timingSafeEqual`) and a request-body size cap to `DsEventConsumer`.
-- [ ] **H3** Add `#!/usr/bin/env node` shebangs to `tools/run-nab-validation.ts`, `tools/run-nab-per-dataset.ts`, `tools/fit-production-substrate.ts`; rebuild dist; verify via `npm pack` install.
+- [x] **H3** Add `#!/usr/bin/env node` shebangs to `tools/run-nab-validation.ts`, `tools/run-nab-per-dataset.ts`, `tools/fit-production-substrate.ts`; rebuild dist; verify via `npm pack` install.
 - [ ] **H4** Commit the Apache-2.0 LICENSE file; fix the README license link.
 - [ ] **M1** Resolve the `effectiveThreshold` strength-squared discount against the upstream pin; fix + pin with a unit test (ADR per vendoring policy).
 - [ ] **M2** Fix Slurm hostlist range padding to match Slurm semantics; add `[1-10]` / `[01-10]` expansion tests.

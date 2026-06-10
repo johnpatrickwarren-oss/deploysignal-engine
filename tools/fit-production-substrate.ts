@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // tools/fit-production-substrate.ts — Phase E SLICE 10 calibrator.
 //
 // Reads a CSV of production observations, fits AR(1) / AR(p) /

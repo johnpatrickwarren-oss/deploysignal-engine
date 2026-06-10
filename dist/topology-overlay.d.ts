@@ -78,7 +78,7 @@ export declare class TopologyEnricher {
     private readonly resolver;
     private readonly now;
     constructor(opts: TopologyEnrichOpts);
-    enrich(group: VerdictGroup, events?: TopologyCandidateEvent[]): Promise<VerdictGroupWithTopology>;
+    enrich(group: VerdictGroup, events?: TopologyCandidateEvent[], ctx?: FetchContext): Promise<VerdictGroupWithTopology>;
     /** BFS over the snapshot treating edges as bidirectional (topology
      *  correlation surfaces both upstream and downstream context).
      *  Returns hop distance per node up to `maxHop`; nodes beyond the

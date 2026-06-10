@@ -88,10 +88,16 @@ export function parseNodeListToSnapshot(
   const nodes: TopologyNode[] = [];
   const edges: TopologyEdge[] = [];
   const zoneNodesByZone = new Map<string, true>();
+  // Remediation 2026-06-10 L8: dedupe node names (duplicates are possible in
+  // hand-built fixtures) so duplicate host:/gpu: node IDs and shards are not
+  // emitted; first occurrence wins, mirroring the zone handling.
+  const seenNodeNames = new Set<string>();
 
   for (const item of nodeList.items) {
     const name = item.metadata.name;
     if (typeof name !== 'string' || name.length === 0) continue;
+    if (seenNodeNames.has(name)) continue;
+    seenNodeNames.add(name);
 
     const labels = item.metadata.labels ?? {};
     const hostId = `host:${name}`;

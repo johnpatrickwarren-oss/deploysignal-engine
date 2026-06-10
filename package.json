@@ -10,6 +10,7 @@
     "dist/**/*.d.ts",
     "dist/**/*.d.ts.map",
     "dist/**/*.js.map",
+    "!dist/test/**",
     "README.md",
     "package.json"
   ],

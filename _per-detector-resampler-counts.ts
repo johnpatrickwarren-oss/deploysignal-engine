@@ -43,31 +43,38 @@ function inflateFromCategory(
   family: DetectorFamily,
   mode: ResamplerMode,
   sourceCategory: string,
-  signalFilter?: (sig: string | undefined) => boolean,
 ): PerDetectorPoolFiringId[] {
+  // Remediation 2026-06-10 L2: the former optional `signalFilter` parameter
+  // was dead — when supplied, the only push was guarded by `if
+  // (!signalFilter)` so nothing was ever emitted. No call site supplied it;
+  // removed (behavior-identical). Per-cell breakdown doesn't capture
+  // per-event signal, so any signal filtering must happen at event level
+  // via firing_events_by_detector_id.
   const out: PerDetectorPoolFiringId[] = [];
   const perCell = perCellByCategory[sourceCategory] ?? {};
   for (const [cellKeyStr, n] of Object.entries(perCell)) {
+    // Cell keys are 'hour-dayOfWeek'; hour-only keys (no '-') occur in
+    // hour-granularity breakdowns. Guard the parse (remediation 2026-06-10
+    // L2): a missing/garbled component previously produced NaN; -1 is the
+    // documented "component unknown" sentinel for these best-effort stubs.
     const [hStr, dStr] = cellKeyStr.split('-');
-    const cellKey = { hour_of_day: parseInt(hStr, 10), day_of_week: parseInt(dStr, 10) };
+    const h = parseInt(hStr, 10);
+    const d = parseInt(dStr, 10);
+    const cellKey = {
+      hour_of_day: Number.isFinite(h) ? h : -1,
+      day_of_week: Number.isFinite(d) ? d : -1,
+    };
     for (let i = 0; i < n; i++) {
-      // Signal filter for family_D split (kv_cache vs other). When
-      // filter is unset, all events admitted; when set, only matching
-      // events admitted (best-effort: per-cell breakdown doesn't
-      // capture per-event signal, so signal filtering happens at
-      // event-level via firing_events_by_detector_id below).
-      if (!signalFilter) {
-        out.push({
-          cell_key: cellKey,
-          tick: null,
-          signal: undefined,
-          statistic_value: null,
-          threshold: null,
-          verdict: 'fire',
-          detector_family: family,
-          methodology_source: mode,
-        });
-      }
+      out.push({
+        cell_key: cellKey,
+        tick: null,
+        signal: undefined,
+        statistic_value: null,
+        threshold: null,
+        verdict: 'fire',
+        detector_family: family,
+        methodology_source: mode,
+      });
     }
   }
   return out;
@@ -116,8 +123,8 @@ export function extractPerDetectorCounts(
 
   let count = 0;
   const ids: PerDetectorPoolFiringId[] = [];
-  const inflate = (sourceCategory: string, signalFilter?: (sig: string | undefined) => boolean) =>
-    inflateFromCategory(perCellByCategory, family, mode, sourceCategory, signalFilter);
+  const inflate = (sourceCategory: string) =>
+    inflateFromCategory(perCellByCategory, family, mode, sourceCategory);
 
   switch (family) {
     case 'family_A_betting': {
@@ -154,6 +161,12 @@ export function extractPerDetectorCounts(
       count = countFamilyDSpectralEvents(events);
       // ids inflated from category-level (no per-signal cell breakdown
       // available); family-level cell_key is the available granularity.
+      // KNOWN UNIT MISMATCH (documented per remediation 2026-06-10 L2):
+      // `count` excludes kv_cache events but the per-cell breakdown covers
+      // the whole family_D category (kv_cache included), so `ids.length`
+      // can exceed `count`. Splitting the stubs would require per-signal
+      // cell data the sweep result does not carry; consumers must treat
+      // `count` as authoritative and `ids` as best-effort stubs.
       ids.push(...inflate('family_D'));
       break;
     }

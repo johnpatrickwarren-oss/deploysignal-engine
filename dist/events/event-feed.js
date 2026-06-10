@@ -1,7 +1,8 @@
 "use strict";
 // engine/events/event-feed.ts — Tessera Phase 2 SLICE 4 (R34) WU-06 Surface 1.
 //
-// Closed-set 5-event-class deployment-event substrate. Producer-side contract:
+// Closed-set 6-event-class deployment-event substrate ('chaos_experiment'
+// added after the original 5 per DeploySignal Addition #29). Producer-side contract:
 // caller supplies a ClusterEvent list; EventFeed.fetchSince(ts) returns the
 // subset whose event_ts > ts. Mirrors inherited `flags`-input pattern at
 // cluster-event scope.

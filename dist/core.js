@@ -100,8 +100,11 @@ TrendBufferImpl.prototype.reset = function () {
 exports.TrendBuffer = TrendBufferImpl;
 /** Compute a WindowSummary from a raw observation array. Matches the math in
  * TrendBuffer.get() for the same fields (mean, slopeNorm, cv, std) so a
- * snapshot's medium view agrees with get() bit-for-bit on those fields.
- * Empty/undefined input returns zeroes (n=0). */
+ * snapshot's medium view agrees with get() bit-for-bit on those fields —
+ * including the zero-mean degenerate default cv = 1 (remediation 2026-06-10
+ * L3; this previously returned cv = 0 for zero-mean windows, diverging from
+ * get()). Empty/undefined input returns zeroes (n=0, cv=0); get() has no
+ * comparable n=0 shape (it returns the insufficient-data snapshot instead). */
 function summarizeWindow(hist) {
     if (!hist || hist.length === 0) {
         return { n: 0, mean: 0, std: 0, slopeNorm: 0, cv: 0, trendStrength: 0 };
@@ -122,7 +125,7 @@ function summarizeWindow(hist) {
     for (let j = 0; j < n; j++)
         variance += Math.pow(hist[j] - mean, 2);
     const std = Math.sqrt(variance / n);
-    const cv = mean !== 0 ? std / Math.abs(mean) : 0;
+    const cv = mean !== 0 ? std / Math.abs(mean) : 1;
     // trendStrength toward whichever direction the slope points — a single scalar
     // summary of directional consistency. Matches the formula in trendStrength()
     // below; insufficient-data short-circuit uses n < 4 and stable/cv heuristics.
@@ -162,8 +165,12 @@ function effectiveThreshold(baseThreshold, trendDiscount, t, direction, rocBypas
     if (rocBypass != null && Math.abs(t.roc) >= rocBypass)
         return baseThreshold;
     const strength = trendStrength(t, direction || 'rise');
+    // Remediation 2026-06-10 M1 (mirrored in upstream DeploySignal
+    // engine/core.ts): the discount variable already folds in strength;
+    // the previous `baseThreshold - discount * strength` applied strength
+    // twice (trendDiscount · strength²), under-discounting moderate trends.
     const discount = trendDiscount * strength;
-    return baseThreshold - discount * strength;
+    return baseThreshold - discount;
 }
 // ── WARMUP_CONFIG ─────────────────────────────────────────────────
 exports.WARMUP_CONFIG = {

@@ -34,7 +34,8 @@ export interface RateSample {
     value: number | null;
     /** next.ts_seconds − prev.ts_seconds; always emitted (invariant 2). */
     actual_elapsed_seconds: number;
-    /** 'degraded' iff missed_scrape_inferred; 'normal' otherwise. */
+    /** 'degraded' iff missed_scrape_inferred or nonpositive_elapsed_detected;
+     *  'normal' otherwise. */
     slope_quality: 'normal' | 'degraded';
     /** true iff actual_elapsed_seconds > expected × (1 + jitter_tolerance). */
     missed_scrape_inferred: boolean;
@@ -42,6 +43,11 @@ export interface RateSample {
     wraparound_handled: boolean;
     /** true iff next < prev fell through to the reset path. value is null. */
     reset_detected: boolean;
+    /** Present (true) iff actual_elapsed_seconds <= 0 — duplicate or
+     *  out-of-order timestamps (remediation 2026-06-10 M3). value is null and
+     *  slope_quality is 'degraded'; a rate over non-positive elapsed time is
+     *  undefined and must not reach TrendBuffer/detector state. */
+    nonpositive_elapsed_detected?: boolean;
 }
 export declare const UINT32_MAX = 4294967295;
 export declare const UINT32_MOD = 4294967296;

@@ -76,7 +76,8 @@ export interface RateSample {
   value: number | null;
   /** next.ts_seconds − prev.ts_seconds; always emitted (invariant 2). */
   actual_elapsed_seconds: number;
-  /** 'degraded' iff missed_scrape_inferred; 'normal' otherwise. */
+  /** 'degraded' iff missed_scrape_inferred or nonpositive_elapsed_detected;
+   *  'normal' otherwise. */
   slope_quality: 'normal' | 'degraded';
   /** true iff actual_elapsed_seconds > expected × (1 + jitter_tolerance). */
   missed_scrape_inferred: boolean;
@@ -84,6 +85,11 @@ export interface RateSample {
   wraparound_handled: boolean;
   /** true iff next < prev fell through to the reset path. value is null. */
   reset_detected: boolean;
+  /** Present (true) iff actual_elapsed_seconds <= 0 — duplicate or
+   *  out-of-order timestamps (remediation 2026-06-10 M3). value is null and
+   *  slope_quality is 'degraded'; a rate over non-positive elapsed time is
+   *  undefined and must not reach TrendBuffer/detector state. */
+  nonpositive_elapsed_detected?: boolean;
 }
 
 export const UINT32_MAX = 4_294_967_295;
@@ -98,6 +104,25 @@ export function transformPair(
   opts: TransformOpts,
 ): RateSample {
   const actual_elapsed_seconds = next.ts_seconds - prev.ts_seconds;
+
+  // Pair-level timestamp invariant (remediation 2026-06-10 M3): a pair with
+  // non-positive elapsed (duplicate or out-of-order scrape timestamps) has no
+  // defined rate — previously this divided by 0/negative, emitting
+  // Infinity/NaN or negative rates flagged 'normal'. Mirrors the reset path:
+  // null value + quality flag; applies to all semantic types because the
+  // broken invariant is the timestamps, not the value semantics.
+  if (actual_elapsed_seconds <= 0) {
+    return {
+      value: null,
+      actual_elapsed_seconds,
+      slope_quality: 'degraded',
+      missed_scrape_inferred: false,
+      wraparound_handled: false,
+      reset_detected: false,
+      nonpositive_elapsed_detected: true,
+    };
+  }
+
   const jitter = opts.jitter_tolerance ?? DEFAULT_JITTER_TOLERANCE;
   const expected = opts.expected_scrape_interval_seconds;
   const missed_scrape_inferred = actual_elapsed_seconds > expected * (1 + jitter);

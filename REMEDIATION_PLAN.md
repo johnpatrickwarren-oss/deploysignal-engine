@@ -126,7 +126,7 @@ No committed secrets, no unsafe `eval`, no path-traversal sinks were found. `Mat
 - [x] **H2** Add real token verification (injected validator / `timingSafeEqual`) and a request-body size cap to `DsEventConsumer`.
 - [x] **H3** Add `#!/usr/bin/env node` shebangs to `tools/run-nab-validation.ts`, `tools/run-nab-per-dataset.ts`, `tools/fit-production-substrate.ts`; rebuild dist; verify via `npm pack` install.
 - [x] **H4** Commit the Apache-2.0 LICENSE file; fix the README license link.
-- [ ] **M1** Resolve the `effectiveThreshold` strength-squared discount against the upstream pin; fix + pin with a unit test (ADR per vendoring policy).
+- [x] **M1** Resolve the `effectiveThreshold` strength-squared discount against the upstream pin; fix + pin with a unit test (ADR per vendoring policy). [fixed identically to the upstream DeploySignal engine/core.ts fix; delta noted inline]
 - [ ] **M2** Fix Slurm hostlist range padding to match Slurm semantics; add `[1-10]` / `[01-10]` expansion tests.
 - [ ] **M3** Guard `actual_elapsed_seconds <= 0` in `transformPair`; return null-value sample; add tests.
 - [ ] **M4** Make `pre_window_count` count distinct shards (or rename/redocument); add repeat-firing-shard test.
@@ -135,7 +135,7 @@ No committed secrets, no unsafe `eval`, no path-traversal sinks were found. `Mat
 - [ ] **M7** Validate parsed CSV values (`Number.isFinite`) and empty-file handling in both CSV parsers.
 - [ ] **L1** Fix the "5-event-class" comment in `events/event-feed.ts`.
 - [ ] **L2** Reconcile `family_D_spectral` count/ids attribution and remove or implement the dead `signalFilter` parameter; guard the cell-key parse.
-- [ ] **L3** Align `summarizeWindow` / `TrendBuffer.get` degenerate-case `cv` defaults (or correct the comment).
+- [x] **L3** Align `summarizeWindow` / `TrendBuffer.get` degenerate-case `cv` defaults (or correct the comment).
 - [x] **L4** Make the consumer's `freeze_hook_activated` response field truthful.
 - [ ] **L5** Throw on unknown flags in `fit-production-substrate` CLI.
 - [ ] **L6** Remove the upstream-abort listener after fetch; thread `FetchContext` through `TopologyEnricher.enrich`.

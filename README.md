@@ -14,27 +14,30 @@ Statistical detector engine vendored from [DeploySignal](https://github.com/john
 - L0 contract (counter-rate transform, missed-scrape catchup, wraparound handling)
 - Per-shard runtime (Welford accumulator, warm-start, residual updates)
 
-## Install (R91+)
+## Install
 
-For first-cycle consumption (R91/R92), this package is consumed via git-dependency (no npm registry publish in R90 chain). Consumer's `package.json`:
+This package lives in its own repository and is consumed via git-dependency (no npm registry publish yet). Consumer's `package.json`:
 
 ```json
 {
   "dependencies": {
-    "@johnpatrickwarren-oss/deploysignal-engine": "git+ssh://git@github.com/johnpatrickwarren-oss/tessera.git#<commit-or-tag>"
+    "@johnpatrickwarren-oss/deploysignal-engine": "git+https://github.com/johnpatrickwarren-oss/deploysignal-engine.git#<commit-or-tag>"
   }
 }
 ```
 
-The `directory` field in this package's `repository` block points pnpm/npm at the `engine/` subdirectory inside the Tessera repository.
+Pin to a release tag (e.g. `#v0.3.1-pre`) rather than a branch.
 
 ## Build
 
 ```bash
-# from Tessera repo root:
-pnpm exec tsc            # emits engine/dist/
-cd engine && pnpm pack   # emits johnpatrickwarren-oss-deploysignal-engine-0.1.0-pre.tgz
+npm install
+npm run build   # tsc → emits dist/
+npm test        # tsc + node --test dist/test/*.test.js
+npm pack        # emits johnpatrickwarren-oss-deploysignal-engine-<version>.tgz
 ```
+
+The committed `dist/` is kept byte-identical to a fresh rebuild (enforced by CI).
 
 ## NAB validation tools
 

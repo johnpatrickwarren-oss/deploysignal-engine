@@ -13,7 +13,9 @@ export interface EventConditionalCandidate {
     member_shard_ids: readonly string[];
     /** Cached length of member_shard_ids. */
     member_count: number;
-    /** Count of fired shards within the pre-window. ITS baseline. */
+    /** Count of DISTINCT fired shards within the pre-window. ITS baseline;
+     *  same unit as post_window_count (distinct shards, remediation
+     *  2026-06-10 M4). */
     pre_window_count: number;
     /** Count of fired shards within the post-window correlated with this event
      *  (== member_count by construction). ITS post measurement. */

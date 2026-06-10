@@ -26,7 +26,9 @@ export interface EventConditionalCandidate {
   member_shard_ids: readonly string[];
   /** Cached length of member_shard_ids. */
   member_count: number;
-  /** Count of fired shards within the pre-window. ITS baseline. */
+  /** Count of DISTINCT fired shards within the pre-window. ITS baseline;
+   *  same unit as post_window_count (distinct shards, remediation
+   *  2026-06-10 M4). */
   pre_window_count: number;
   /** Count of fired shards within the post-window correlated with this event
    *  (== member_count by construction). ITS post measurement. */
@@ -100,10 +102,16 @@ export function attributeEventConditional(
 
     // Pre-window count (ITS baseline): (preStart, preEnd) — exclusive at T so fires
     // exactly at event_ts are classified as post-window, not pre-window.
-    let preCount = 0;
+    // Distinct shards (remediation 2026-06-10 M4): the post-window
+    // measurement counts distinct shards, so the pre-window baseline must
+    // use the same unit. Counting raw fired events here let one noisy shard
+    // repeat-firing pre-window suppress a genuine multi-shard post-event
+    // elevation via the (post - pre) surfacing filter.
+    const preShardSet = new Set<string>();
     for (const fe of fired_events) {
-      if (fe.event_ts > preStart && fe.event_ts < preEnd) preCount += 1;
+      if (fe.event_ts > preStart && fe.event_ts < preEnd) preShardSet.add(fe.shard_node_id);
     }
+    const preCount = preShardSet.size;
 
     // Post-window correlated subset (Cell 4 discriminator): [postStart, postEnd)
     const correlatedShardSet = new Set<string>();

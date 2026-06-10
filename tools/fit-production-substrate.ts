@@ -161,9 +161,19 @@ export function fitProductionSubstrate(
 
 // ── CLI ────────────────────────────────────────────────────────────
 
-function parseCsv(csvPath: string): { values: number[]; firstTs?: string; lastTs?: string } {
+/** Parse the calibration CSV. Exported for the unit-test surface.
+ *
+ *  Validation (remediation 2026-06-10 M7): a single malformed/short row used
+ *  to push NaN, silently poisoning mean/σ²/φ and serializing nulls into the
+ *  production-consumed substrate JSON; an empty file crashed with a
+ *  TypeError. This is an offline calibrator, so throwing with the offending
+ *  row number is the right failure mode. */
+export function parseCsv(csvPath: string): { values: number[]; firstTs?: string; lastTs?: string } {
   const data = fs.readFileSync(csvPath, 'utf8');
   const lines = data.split('\n').filter((l) => l.trim().length > 0);
+  if (lines.length === 0) {
+    throw new Error(`CSV ${csvPath} is empty`);
+  }
   const header = lines[0].split(',').map((s) => s.trim());
   const tsIdx = header.indexOf('timestamp');
   const valIdx = header.indexOf('value');
@@ -178,7 +188,13 @@ function parseCsv(csvPath: string): { values: number[]; firstTs?: string; lastTs
       if (firstTs === undefined) firstTs = ts;
       lastTs = ts;
     }
-    values.push(parseFloat(f[valIdx]));
+    const v = parseFloat(f[valIdx]);
+    if (!Number.isFinite(v)) {
+      throw new Error(
+        `CSV ${csvPath} row ${i + 1}: non-numeric 'value' ${JSON.stringify(f[valIdx])}`,
+      );
+    }
+    values.push(v);
   }
   return { values, firstTs, lastTs };
 }
@@ -196,7 +212,11 @@ interface CliArgs {
   fitSpectral?: boolean;
 }
 
-function parseArgs(argv: string[]): CliArgs {
+/** Parse CLI args. Exported for the unit-test surface (remediation
+ *  2026-06-10 L5: unknown `--flags` were silently ignored — a typo like
+ *  `--ar-p-max-orde` silently changed calibration behavior; now throws,
+ *  matching run-nab-validation.ts). */
+export function parseArgs(argv: string[]): CliArgs {
   const out: CliArgs = {};
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
@@ -214,6 +234,8 @@ function parseArgs(argv: string[]): CliArgs {
       case '--seasonal': out.fitSeasonalDecomposition = true; break;
       case '--seasonal-min-acf': out.seasonalMinAcf = parseFloat(v); i++; break;
       case '--spectral': out.fitSpectral = true; break;
+      default:
+        if (a.startsWith('--')) throw new Error(`Unknown flag: ${a}`);
     }
   }
   if (!out.csv || !out.out || !out.signalName) {

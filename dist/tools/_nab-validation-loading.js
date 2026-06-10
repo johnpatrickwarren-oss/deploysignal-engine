@@ -72,6 +72,11 @@ function discoverNABDatasets(nabRepoPath, subBenchmarks) {
 function parseNABDatasetCsv(absPath) {
     const data = fs.readFileSync(absPath, 'utf8');
     const lines = data.split('\n').filter((l) => l.trim().length > 0);
+    // Validation (remediation 2026-06-10 M7): malformed rows used to push NaN
+    // silently; empty files crashed with a TypeError on lines[0].
+    if (lines.length === 0) {
+        throw new Error(`NAB CSV ${path.basename(absPath)} is empty`);
+    }
     const header = lines[0].split(',').map((s) => s.trim());
     const tsIdx = header.indexOf('timestamp');
     const valIdx = header.indexOf('value');
@@ -83,8 +88,12 @@ function parseNABDatasetCsv(absPath) {
     const timestamps = [];
     for (let i = 1; i < lines.length; i++) {
         const f = lines[i].split(',');
+        const v = parseFloat(f[valIdx]);
+        if (!Number.isFinite(v)) {
+            throw new Error(`NAB CSV ${path.basename(absPath)} row ${i + 1}: non-numeric 'value' ${JSON.stringify(f[valIdx])}`);
+        }
         timestamps.push(f[tsIdx]);
-        values.push(parseFloat(f[valIdx]));
+        values.push(v);
     }
     return { values, timestamps };
 }

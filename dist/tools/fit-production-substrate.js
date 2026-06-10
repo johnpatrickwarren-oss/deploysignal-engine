@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 "use strict";
 // tools/fit-production-substrate.ts — Phase E SLICE 10 calibrator.
 //

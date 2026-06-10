@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // tools/run-nab-per-dataset.ts — per-dataset-calibrated NAB validation.
 //
 // Standard NAB benchmark practice (Lavin-Ahmad 2015): each detector gets

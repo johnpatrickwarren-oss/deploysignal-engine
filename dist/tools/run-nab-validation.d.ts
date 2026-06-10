@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 export type { NABDetectorFamily, NABSubBenchmark, DetectorFiringDecision, NABDatasetAnnotation, NABDatasetScore, NABValidationOpts, NABValidationReport, RunDetectorDispatchOpts, } from './_nab-validation-types';
 export { DEFAULT_CALIBRATION_SIGNAL } from './_nab-validation-types';
 export { prewhitenSeries, applyFireCooldown, applyAnomalyLikelihoodSmoothing, } from './_nab-validation-transforms';

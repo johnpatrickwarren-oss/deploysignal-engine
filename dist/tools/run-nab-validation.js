@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 "use strict";
 // tools/run-nab-validation.ts — Q64 SPEC-4 NAB validation standalone tool.
 //

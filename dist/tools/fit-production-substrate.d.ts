@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import type { ProductionArSubstrate } from '../types/production-ar-substrate';
 export interface FitSubstrateOpts {
     signalName: string;

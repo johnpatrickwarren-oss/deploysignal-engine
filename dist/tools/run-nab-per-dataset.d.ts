@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 export { DEFAULT_PROBATIONARY_FRACTION, hacInflationFactor, } from './nab-per-dataset/_nab-per-dataset-constants';
 export { buildPerDatasetConfig, calibrateSpectralBootstrapQuantile, } from './nab-per-dataset/_nab-per-dataset-config';
 export { scorePostProbationary, runPerDatasetNABValidation, } from './nab-per-dataset/_nab-per-dataset-eval';

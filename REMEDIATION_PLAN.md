@@ -129,7 +129,7 @@ No committed secrets, no unsafe `eval`, no path-traversal sinks were found. `Mat
 - [x] **M1** Resolve the `effectiveThreshold` strength-squared discount against the upstream pin; fix + pin with a unit test (ADR per vendoring policy). [fixed identically to the upstream DeploySignal engine/core.ts fix; delta noted inline]
 - [x] **M2** Fix Slurm hostlist range padding to match Slurm semantics; add `[1-10]` / `[01-10]` expansion tests.
 - [x] **M3** Guard `actual_elapsed_seconds <= 0` in `transformPair`; return null-value sample; add tests.
-- [ ] **M4** Make `pre_window_count` count distinct shards (or rename/redocument); add repeat-firing-shard test.
+- [x] **M4** Make `pre_window_count` count distinct shards (or rename/redocument); add repeat-firing-shard test.
 - [ ] **M5** Add GitHub Actions CI (`npm ci && npm test` on ubuntu + macos; `git diff --exit-code dist/` after build).
 - [ ] **M6** Rewrite README Install/Build for the standalone repo; regenerate `package-lock.json` at `0.3.1-pre`; add the `v0.3.1-pre` CHANGELOG entry.
 - [ ] **M7** Validate parsed CSV values (`Number.isFinite`) and empty-file handling in both CSV parsers.

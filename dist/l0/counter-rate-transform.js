@@ -46,6 +46,23 @@ exports.DEFAULT_JITTER_TOLERANCE = 0.5;
 exports.DEFAULT_WRAP_THRESHOLD_RATIO = 0.9;
 function transformPair(prev, next, meta, opts) {
     const actual_elapsed_seconds = next.ts_seconds - prev.ts_seconds;
+    // Pair-level timestamp invariant (remediation 2026-06-10 M3): a pair with
+    // non-positive elapsed (duplicate or out-of-order scrape timestamps) has no
+    // defined rate — previously this divided by 0/negative, emitting
+    // Infinity/NaN or negative rates flagged 'normal'. Mirrors the reset path:
+    // null value + quality flag; applies to all semantic types because the
+    // broken invariant is the timestamps, not the value semantics.
+    if (actual_elapsed_seconds <= 0) {
+        return {
+            value: null,
+            actual_elapsed_seconds,
+            slope_quality: 'degraded',
+            missed_scrape_inferred: false,
+            wraparound_handled: false,
+            reset_detected: false,
+            nonpositive_elapsed_detected: true,
+        };
+    }
     const jitter = opts.jitter_tolerance ?? exports.DEFAULT_JITTER_TOLERANCE;
     const expected = opts.expected_scrape_interval_seconds;
     const missed_scrape_inferred = actual_elapsed_seconds > expected * (1 + jitter);

@@ -42,7 +42,12 @@ function ar1Phi(xs: number[], mu: number): number {
   for (let i = 1; i < xs.length; i++) num += (xs[i] - mu) * (xs[i - 1] - mu);
   for (let i = 0; i < xs.length; i++) { const d = xs[i] - mu; den += d * d; }
   if (den <= 0) return 0;
-  return Math.max(-0.95, Math.min(0.95, num / den));
+  const phiOls = num / den;
+  // Kendall median-unbiased small-sample correction: OLS biases AR(1) phi low by
+  // ~(1+3*phi)/n, which under-whitens (leaving residual autocorrelation) at high
+  // phi / short baselines. Negligible at long baselines.
+  const phi = phiOls + (1 + 3 * phiOls) / xs.length;
+  return Math.max(-0.95, Math.min(0.95, phi));
 }
 
 // ── Spectral bootstrap (mirrored from run-nab-per-dataset.ts) ──────

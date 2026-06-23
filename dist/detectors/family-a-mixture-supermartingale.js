@@ -219,8 +219,8 @@ function evaluatePageCusumMixtureSupermartingale(input) {
  *  coefficient (bias toward unity for highly-positive-mean signals;
  *  see Q59 LS-2 architect-side capture). */
 function computePerSignalAr1Phi(values, baseline_mean) {
-    if (values.length < 2)
-        return 0;
+    if (values.length < 3)
+        return 0; // match tools/fit-production-substrate.ts:ar1Phi (cold-eye F2)
     // Centered residuals: x = raw_value − baseline_mean.
     // Lag-1 covariance: Σ x_t · x_{t-1} for t = 1..N-1.
     let lag1 = 0;
@@ -236,7 +236,11 @@ function computePerSignalAr1Phi(values, baseline_mean) {
     }
     if (variance < 1e-12)
         return 0;
-    const phi = lag1 / variance;
+    const phiOls = lag1 / variance;
+    // Kendall median-unbiased small-sample correction (matches tools/fit-production-
+    // substrate.ts:ar1Phi): OLS biases AR(1) phi low by ~(1+3*phi)/n, under-whitening
+    // at high phi / short baselines. Negligible at long baselines.
+    const phi = phiOls + (1 + 3 * phiOls) / values.length;
     return Math.max(-0.95, Math.min(0.95, phi));
 }
 /** Q66.1 — derive mixture_supermartingale_params from existing Family A

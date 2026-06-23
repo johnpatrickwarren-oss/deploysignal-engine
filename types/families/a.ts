@@ -25,6 +25,16 @@ export interface BettingEProcessState {
   runningMean: number;
   runningSecondMoment: number;
   onsFallbackCount: number;
+  /** Q66 follow-up — last centered observation (x − baseline_mean) for AR(1)
+   *  pre-whitening, mirroring MixtureSupermartingaleState.last_x_centered.
+   *  Persists across ticks within a window; initialized to 0 by
+   *  freshBettingState. When ar1_phi=0 (default / absent) the field is written
+   *  but never read, so M / bet / runningMean / runningSecondMoment are
+   *  computationally identical to the pre-whitening path (only this snapshot
+   *  field differs). A state deserialized from a snapshot persisted BEFORE this
+   *  field existed will lack it; updateBettingState reads it via `?? 0`, so such
+   *  states behave as phi=0 on their first post-upgrade tick. */
+  last_x_centered: number;
 }
 
 /** Per-signal Family A parameters within a cell. Replaces the Week-2
@@ -236,5 +246,13 @@ export interface MSPRTParams {
      *  pre-Q2.B.6.3 configs (and signals where the calibrator skipped
      *  bootstrap due to missing μ/σ²) fall through to 1/α_betting. */
     betting_sliding_buffer_threshold?: number;
+    /** Q66 follow-up — per-signal AR(1) coefficient for betting-path
+     *  pre-whitening, sourced from FamilyAPerSignalParams.ar1_phi. Consumed by
+     *  evaluateBettingEProcess → updateBettingState to whiten the centered
+     *  observation (x_pre_whitened = x_centered − phi·x_{t-1,centered}) before
+     *  standardization, restoring the Ville bound under autocorrelated H0 — the
+     *  same mechanism already used by family-a-mixture-supermartingale and
+     *  Page-CUSUM. Optional; absence ⇒ phi=0 ⇒ no whitening (backward-compat). */
+    ar1_phi?: number;
   };
 }

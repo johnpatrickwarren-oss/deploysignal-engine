@@ -24,7 +24,7 @@ export declare function pickBet(runningMean: number, runningSecondMoment: number
  *  mean/σ, pick the bet, advance wealth with the non-negativity guard,
  *  and update running moments. Per-tick α is accounted separately in
  *  `alphaConsumed` for audit symmetry with Page-CUSUM. */
-export declare function updateBettingState(state: BettingEProcessState, x: number, baselineMean: number, sigmaSquared: number, perTickAlpha: number): number;
+export declare function updateBettingState(state: BettingEProcessState, x: number, baselineMean: number, sigmaSquared: number, perTickAlpha: number, ar1Phi?: number): number;
 /** Per-tick betting e-process input mirroring CUSUMInput. */
 export interface BettingInput {
     signal: string;

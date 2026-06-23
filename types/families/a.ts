@@ -33,8 +33,12 @@ export interface BettingEProcessState {
    *  computationally identical to the pre-whitening path (only this snapshot
    *  field differs). A state deserialized from a snapshot persisted BEFORE this
    *  field existed will lack it; updateBettingState reads it via `?? 0`, so such
-   *  states behave as phi=0 on their first post-upgrade tick. */
-  last_x_centered: number;
+   *  states behave as phi=0 on their first post-upgrade tick.
+   *
+   *  OPTIONAL (additive) so consumers that build BettingEProcessState literals —
+   *  not only via freshBettingState — keep compiling across the upgrade.
+   *  freshBettingState always sets it to 0; the only reader coalesces undefined. */
+  last_x_centered?: number;
 }
 
 /** Per-signal Family A parameters within a cell. Replaces the Week-2

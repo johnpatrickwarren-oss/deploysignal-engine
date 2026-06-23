@@ -48,6 +48,7 @@ function freshBettingState() {
         runningMean: 0,
         runningSecondMoment: 0,
         onsFallbackCount: 0,
+        last_x_centered: 0,
     };
 }
 function getOrCreateBetting(states, signal) {
@@ -117,9 +118,23 @@ function boundedZ(x, mean, sigma) {
  *  mean/σ, pick the bet, advance wealth with the non-negativity guard,
  *  and update running moments. Per-tick α is accounted separately in
  *  `alphaConsumed` for audit symmetry with Page-CUSUM. */
-function updateBettingState(state, x, baselineMean, sigmaSquared, perTickAlpha) {
+function updateBettingState(state, x, baselineMean, sigmaSquared, perTickAlpha, ar1Phi = 0) {
     const sigma = Math.sqrt(Math.max(sigmaSquared, 0));
-    const z = boundedZ(x, baselineMean, sigma);
+    // Q66 follow-up — AR(1) pre-whitening, mirroring family-a-mixture-supermartingale.
+    // Whiten the CENTERED observation before standardization so the standardized
+    // z_t is a martingale difference under an AR(1) H0, restoring the Ville bound.
+    // Store the RAW centered value (before whitening) for the next tick — storing
+    // the whitened value would compound the correction. ar1Phi=0 ⇒ x_whitened ===
+    // x_centered ⇒ boundedZ(x_whitened, 0, sigma) === boundedZ(x, baselineMean,
+    // sigma): byte-identical to the pre-whitening path.
+    const xCentered = x - baselineMean;
+    // `?? 0` is defensive: a BettingEProcessState deserialized from a snapshot
+    // persisted BEFORE this field existed (types/metrics.ts bettingStates) would
+    // lack last_x_centered; without the coalesce, ar1Phi != 0 would propagate NaN.
+    const prevCentered = state.last_x_centered ?? 0;
+    const xWhitened = xCentered - ar1Phi * prevCentered;
+    state.last_x_centered = xCentered;
+    const z = boundedZ(xWhitened, 0, sigma);
     const picked = pickBet(state.runningMean, state.runningSecondMoment, state.bet);
     const factor = 1 + picked.bet * z;
     // Non-negativity guard (Waudby-Smith & Ramdas eq. 4.3). With BET_CLIP
@@ -161,7 +176,7 @@ function evaluateBettingEProcess(input, x) {
     if (sigmaSquared === undefined || baselineMean === undefined) {
         throw new Error(`betting: missing derivation.{mean, empirical_variance} for signal ${signal}`);
     }
-    updateBettingState(state, x + baselineMean, baselineMean, sigmaSquared, alphaBetting);
+    updateBettingState(state, x + baselineMean, baselineMean, sigmaSquared, alphaBetting, params.derivation?.ar1_phi ?? 0);
     // NOTE: the gates/health caller supplies `x` already mean-centered
     // (live − baseline mean, same convention as Page-CUSUM). updateBettingState
     // expects the raw `x` and re-centers internally; we restore by adding
@@ -277,6 +292,10 @@ function buildMSPRTParamsLocal(cfg, cell, signal) {
             // analytical 1/α_betting. Backward-compat: pre-Q2.B.6.3 configs
             // (and signals lacking the field) fall through.
             betting_sliding_buffer_threshold: perSig.betting_sliding_buffer_threshold,
+            // Q66 follow-up — propagate per-signal AR(1) phi so the betting path
+            // pre-whitens like the mixture-supermartingale / Page-CUSUM detectors.
+            // Absent ⇒ phi=0 ⇒ no whitening (backward-compat).
+            ar1_phi: perSig.ar1_phi,
         },
     };
     return { params, perSig };

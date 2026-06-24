@@ -1,6 +1,6 @@
 # Project state
 
-**Last updated:** 2026-06-22 · **by:** John Warren (with Claude)
+**Last updated:** 2026-06-24 · **by:** John Warren (with Claude)
 
 ## What this is
 `@johnpatrickwarren-oss/deploysignal-engine` — the statistical-detector engine (Family A/C/D/E
@@ -8,6 +8,20 @@ detectors, e-processes, hierarchical e-value combination, e-BH FDR, topology ada
 DeploySignal and Tessera as a pinned git dependency.
 
 ## Done
+- **ADR 0004 PR C — distributional-signature detectors** (`detectors/distributional-signature.ts`).
+  Promotes Tessera's Lever B SCORES (ADR 0016) — the FD-side complement to the BF e-value, covering its
+  same-variance blind spot. `distributionalSignature(values, cal, test)` → `{fRatio, trendT,
+  collapseSigma, hasSignature}`: innovation-variance ratio (SDC/bit-flip), trend t-stat on WHITENED
+  innovations (degradation), one-sided downward collapse (detachment). Promotes scores ONLY; the
+  benign/fault routing policy + event feed stay app-side (ADR 0004 Tier 3).
+  - **The load-bearing fix — trend whitening.** The trend t-stat MUST run on whitened innovations:
+    measured FP at threshold on AR(1) nulls — whitened holds ~0.2% at every φ, the naive raw t-stat
+    inflates to 15% (φ=.8) / 33% (.9) / 50% (.95) (~200–300× — the Tessera ADR 0016 finding). The test
+    pins this raw-vs-whitened separation as the valid null.
+  - Scores by type (400 trials): healthy/benign fRatio≈1, trendT≈0.8, collapseσ≈0 → 0% signature (a
+    benign mean step is correctly left to the BF); fault-variance fRatio 9.0, fault-trend trendT 11.8,
+    fault-collapse collapseσ 20.0 → 100% signature each. Honest limits documented: collapse one-sided
+    (downward), and the irreducible mean-only-fault (no signature; needs the consumer event channel).
 - **AR(1) pre-whitening on the betting e-process path.** The betting detector was the one Family A
   detector not consuming the `ar1_phi` field (the others — mixture-supermartingale, Page-CUSUM,
   ar-p, seasonal — already pre-whiten). Under autocorrelated H0 this left its Ville bound broken
@@ -18,16 +32,20 @@ DeploySignal and Tessera as a pinned git dependency.
   FPR collapse, power retained, iid sanity).
 
 ## In flight
-- Cold-eye review (independent fresh-context audit) of the betting-path change.
+- ADR 0004 promotion in flight: PR A (#21, valid BF e-value) + PR B (#22, contamination-robust
+  common-mode, stacked on A) both SHIP via cold-eye. PR C (this branch, off main) under cold-eye.
 
 ## Next
-- Tag a release (0.3.2-pre) so consumers can pin the betting-path fix.
-- Tessera then bumps its pinned engine dep and re-runs `pnpm calibration-envelope` to confirm the
-  betting path now whitens in-engine (rather than via Tessera's validation-only transform).
-- (Future) AR(p>1) / near-unit-root whitening; optional innovation-variance rescaling.
+- Land PRs A/B/C; then PR D (`per-shard/baseline-lifecycle.ts`, epoch-level drift-trigger) and PR E
+  (validity-envelope metadata across all e-values + relabel the plug-in betting/mixture as
+  conditionally-valid). PR D is independent (off main); PR E touches PR A's envelope pattern.
+- Tag an engine pre-release after the relevant PRs; Tessera bumps its pin and migrates its `tools/*`
+  to thin validation harnesses over the promoted APIs (ADR 0004 migration step 6).
 
 ## Pointers
-- Decisions: `decisions/` (ADR 0001)
-- Changed: `detectors/betting-e-process.ts`, `types/families/a.ts`,
-  `test/betting-eprocess-ar1-prewhitening.test.ts`
-- Validation evidence (consumer side): Tessera `coverage-matrices/calibration-envelope.md`
+- Decisions: `decisions/` (ADR 0004 scopes the promotion; ADR 0001 betting-path)
+- Added (PR C): `detectors/distributional-signature.ts`,
+  `test/adr-0004-pr-c-distributional-signature.test.ts`
+- Source of truth (Tessera): `tools/fault-discriminator.ts` (PR C, ADR 0016 — scores only, not the
+  classify/event policy)
+- NOTE: PRs A/B carry their own STATE Done-entries on their branches; reconcile this section at merge.

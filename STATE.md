@@ -8,6 +8,20 @@ detectors, e-processes, hierarchical e-value combination, e-BH FDR, topology ada
 DeploySignal and Tessera as a pinned git dependency.
 
 ## Done
+- **ADR 0004 PR E — validity envelopes as first-class + the FDR-path gate** ("the single most important
+  honesty fix"). `detectors/validity-envelope.ts`: shared `ValidityEnvelope` type +
+  `isValidForFdrPath`/`assertValidForFdrPath` gate. The plug-in betting + mixture e-values are labelled
+  `validUnderEstimatedBaseline: false` (E[e|H0] ≫ 1 under an estimated baseline — Tessera ADR 0008/0014
+  → ~1e8/~3e9; valid only with a true baseline or m≫n) and gated OUT of the FDR path unless their regime
+  is asserted; the nuisance-robust BF (PR A) is retrofitted onto the shared type as
+  `validUnderEstimatedBaseline: true`. `fleet/guarantee.ts`:
+  `assembleFleetGuaranteeConditions` surfaces the by-construction conditions for the verdict
+  (e-value-valid ∧ fault-fraction < ~20% breakdown ∧ scalar ∧ coupled common-mode), with the FD side
+  framed as a characterized power/MDE curve, never unconditional.
+  - **Vendoring respected:** the plug-in detectors' envelopes live in the NEW file, not the vendored
+    detector sources (verified byte-unchanged vs main); the `ar1-whitened` labels verified accurate
+    (both detectors consume ar1_phi). The gate is a HELPER the consumer calls at the e-BH boundary
+    (e-values reach e-BH as bare numbers with no attached envelope) — opt-in by design, not a rewire.
 - **ADR 0004 PR A — the missing VALID per-shard e-value** (`detectors/nuisance-robust-bf-e-value.ts`).
   Promotes the nuisance-robust two-sample Bayes-factor e-value validated in Tessera (ADR 0013) into
   the engine, generalized to arbitrary `(cal, test)` windows and consuming the engine's native
@@ -23,23 +37,26 @@ DeploySignal and Tessera as a pinned git dependency.
     ADR-0004-scoped variance-robust extension (future), not PR A.
   - Ships `NUISANCE_ROBUST_BF_ENVELOPE` metadata (baseline=unknown-mean-integrated, ar1-whitened,
     mean-shift null, variance=stable, minCalibration=100) per ADR 0004's validity-envelopes-first rule.
-- Full suite 141 pass / 0 fail (incl. 12 new PR-A tests: multi-scale validity in 3 regimes incl. the
-  floor, power, same-variance scope, window generalization + φ-override, an independent
-  numerical-integration formula check, the calibration-floor gate, finiteness guards).
+- Full suite 148 pass / 0 fail (PR A: 12 tests; PR E: 7 tests — envelope labels, the FDR-path gate both
+  ways, assertValidForFdrPath throw path, the assembler's AND logic per condition, input validation).
 
 ## In flight
-- Cold-eye verification re-review of the PR-A remediation (all 5 findings from the first pass).
+- ADR 0004 promotion COMPLETE through PR E. PRs A (#21), B (#22), C (#23), D (#24) SHIP via cold-eye;
+  PR E (this branch, stacked on A) under cold-eye. After PR E lands → step 6.
 
-## Next
-- Land PR A; then ADR 0004 PRs B–E (fleet common-mode + `robustLocation`; distributional-signature
-  detectors; baseline-lifecycle; validity-envelope metadata across all e-values + relabel the plug-in
-  betting/mixture as conditionally-valid).
-- Tag an engine pre-release after the relevant PRs; Tessera bumps its pin and migrates its `tools/*`
-  to thin validation harnesses over the promoted APIs (ADR 0004 migration step 6).
+## Next (ADR 0004 step 6 — release + Tessera pin bump)
+- Tag an engine pre-release once PRs A–E are merged to main.
+- Tessera bumps its pinned engine dep and migrates its `tools/*` to thin validation harnesses over the
+  promoted APIs: drop `tools/fleet-fdr.ts:eBH` (consume `eBenjaminiHochberg`); consume the promoted BF,
+  `contaminationRobustResiduals`, the distributional-signature scores, and the baseline-lifecycle; re-run
+  `tools/*` as cross-checks (reports must stay idempotent).
+- Merge order: A → {B, E} (both stacked on A) → then C, D (independent). E touches PR A's envelope, so
+  it lands after A.
 
 ## Pointers
 - Decisions: `decisions/` (ADR 0004 scopes the promotion; ADR 0001 betting-path)
-- Added (PR A): `detectors/nuisance-robust-bf-e-value.ts`,
-  `test/adr-0004-pr-a-nuisance-robust-bf-evalue.test.ts`
-- Source of truth (Tessera): `tools/nuisance-robust-evalue.ts` (fixed-window), `tools/bf-lifecycle.ts`
-  (`bfWin`, arbitrary windows)
+- Added (PR A): `detectors/nuisance-robust-bf-e-value.ts` (+ test)
+- Added (PR E): `detectors/validity-envelope.ts`, `fleet/guarantee.ts`,
+  `test/adr-0004-pr-e-validity-envelopes.test.ts`; retrofit on `nuisance-robust-bf-e-value.ts`
+- Source of truth (Tessera): `tools/nuisance-robust-evalue.ts` + `tools/bf-lifecycle.ts` (PR A);
+  ADR 0008/0014 (the plug-in invalidity PR E labels)

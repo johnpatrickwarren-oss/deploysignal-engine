@@ -63,6 +63,15 @@ exports.eBenjaminiHochberg = eBenjaminiHochberg;
  *
  *  See file header for the procedure definition and FDR-control guarantee.
  *
+ *  VALIDITY CONTRACT (ADR 0004 PR E): e-BH operates on bare e-value numbers and
+ *  CANNOT see their provenance, so it TRUSTS the caller to have passed only e-values
+ *  that are VALID under their baseline regime. FDR ≤ q holds only if E[e_i|H0] ≤ 1
+ *  for every input; a plug-in betting/mixture e-value under an estimated baseline has
+ *  E[e|H0] ≫ 1 and silently breaks the guarantee. Gate inputs with
+ *  detectors/validity-envelope.ts:assertValidForFdrPath before calling this, and use
+ *  fleet/guarantee.ts:assembleFleetGuaranteeConditions to surface the conditions in the
+ *  verdict. The contract is enforced at that verdict-assembly layer, not inside e-BH.
+ *
  *  Throws:
  *    - if perShardEValues.length === 0 (N=0 shards is structurally
  *      undefined; mirrors R11 combineProduct/combineAverage empty-input

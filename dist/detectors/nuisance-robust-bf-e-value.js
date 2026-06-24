@@ -61,6 +61,7 @@ exports.NUISANCE_ROBUST_BF_ENVELOPE = Object.freeze({
     autocorrelation: 'ar1-whitened',
     null: 'mean-shift',
     variance: 'stable',
+    validUnderEstimatedBaseline: true,
     minCalibration: exports.MIN_CALIBRATION_FOR_VALIDITY,
 });
 /** Default prior-variance multiple (Tessera ADR 0013 TAU_MULT). */

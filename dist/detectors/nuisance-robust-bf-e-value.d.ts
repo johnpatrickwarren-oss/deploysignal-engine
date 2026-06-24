@@ -26,6 +26,10 @@ export interface NuisanceRobustBFEnvelope {
     /** Validity assumes the SAME innovation variance in calibration and test. A variance change is out
      *  of scope (route to the distributional-signature detector, ADR 0004 Tier 2). */
     variance: 'stable';
+    /** TRUE: unlike the plug-in betting/mixture e-values, E[BF|H0] ≤ 1 holds even under an ESTIMATED
+     *  baseline (the mean is integrated out) — so this e-value is always admissible to the FDR path
+     *  (subject to `minCalibration`). This is the shared {@link ValidityEnvelope} honesty flag (PR E). */
+    validUnderEstimatedBaseline: true;
     /** Minimum calibration length for E[BF|H0] ≤ 1 to hold (the plug-in innovation variance reintroduces
      *  invalidity below it). Enforced by {@link nuisanceRobustBFEValue}, which throws for shorter windows. */
     minCalibration: number;

@@ -8,6 +8,22 @@ detectors, e-processes, hierarchical e-value combination, e-BH FDR, topology ada
 DeploySignal and Tessera as a pinned git dependency.
 
 ## Done
+- **Post-release research arc (ADRs 0005–0006) — read the actual e-betting literature, closed the gaps
+  that have known solutions.** A verified deep-dive of the 2021–2026 e-value / anytime-valid literature,
+  then primary-source reading (the summaries were ~40% wrong/misleading on guarantee-affecting points).
+  - **ADR 0005 — safe-t (right-Haar / GROW) e-value** (`detectors/safe-t-e-value.ts`). The principled
+    variance-nuisance fix: integrate σ out under the improper 1/σ prior (GROW-optimal; exactly
+    σ-invariant, valid at all cal with known φ). KEY FINDING: this REATTRIBUTES the calibration floor —
+    it is the AR(1) **φ plug-in**, not the variance (oracle φ is valid at all cal; estimated φ inflates
+    below ~100). MIN_CALIBRATION kept; integrating φ out is now the sharpest open item.
+  - **ADR 0006 — e-BH conditional-calibration boosting** (`fleet/e-bh-conditional-calibration.ts`).
+    Reading Blier-Wong–Wang showed the threshold-sharpening gives NOTHING under arbitrary dependence
+    (Prop 5) → DROPPED. Lee–Ren boosting ADOPTED via a self-contained CLOSED-FORM rule (our pivotal
+    e-values ⇒ known null ⇒ `FIRE ⟺ thrObs·P(ẽ_j≥e_j) ≤ E[ẽ_j]`), provably valid (subset of the exact-φ
+    firing ⇒ Lee-Ren Thm 1), deterministic superset (Thm 2), exact (no MC, no cliff). Doubles power
+    (0.35→0.70) at FDR ≤ q. Full suite **181 pass / 0 fail**.
+  - Process note: every guarantee-affecting step was taken from the primary theorem, not the survey;
+    the safe-t + boosting were independently re-derived and cold-eyed.
 - **ADR 0004 — the nuisance-robust evidence stack (PRs A–E), released v0.4.0-pre.** Promotes the
   Tessera-validated stack into the engine per the engine/consumer charter. The assembled pipeline
   `contaminationRobustResiduals → nuisanceRobustBFEValue → eBenjaminiHochberg` gives FP/FDR ≤ q

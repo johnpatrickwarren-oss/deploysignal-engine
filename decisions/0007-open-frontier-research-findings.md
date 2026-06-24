@@ -45,7 +45,10 @@ gain 1). On a **heterogeneous-loading** fleet (gain λ_i ~ U[0.2,1.8]) the scala
 The multi-factor extension is clearly the right generalisation (FDP 0.62 → 0.15, full power). It does not
 yet fully control FDP ≤ q (0.147 vs 0.10) — residual from estimating the loadings/factor scores — but that
 is a refinement (better robust factor estimation, possibly r > 1, account for loading-estimation error),
-not a dead-end. Status: APPROACH VALIDATED, refinement to FDP ≤ q is engineering; closest to productionising.
+not a dead-end. Status: **PRODUCTIONISED — see ADR 0008** (`fleet/multi-factor-common-mode.ts`): an
+alternating robust factor fit with FULL-series loadings drives heterogeneous-fleet FDP to 0.01 ≤ q at
+the design load; the earlier 0.15 was a calibration-only loading fit, fixed by fitting loadings against
+the amplified test-window factor.
 (Barigozzi–Trapani's (r+1)-eigenvalue spike is the companion signal for *choosing* r / detecting factor
 changes; not needed for the residualisation itself.)
 

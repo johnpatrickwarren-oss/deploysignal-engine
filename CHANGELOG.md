@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.4.0-pre — 2026-06-24
+
+**ADR 0004 — the nuisance-robust evidence stack** (PRs #21–#25). Promotes the
+Tessera-validated statistical primitives into the engine per the
+engine/consumer charter. Strictly additive — no changes to existing detector
+math; the vendored betting/mixture detectors are byte-unchanged.
+
+- **`detectors/nuisance-robust-bf-e-value.ts`** (PR A) — the missing *valid*
+  per-shard e-value: a two-sample Bayes factor on AR(1)-whitened residuals
+  (mean integrated out), `E[BF|H0] ≤ 1` by construction. Gated to
+  `cal.len ≥ MIN_CALIBRATION_FOR_VALIDITY` (100).
+- **`fleet/common-mode.ts`** (PR B) — `robustLocation` (redescending
+  Tukey-biweight M-estimator) + `contaminationRobustResiduals`: the
+  contamination-robust fleet common-mode. With PR A + e-BH this is the
+  FP/FDR-by-construction pipeline.
+- **`detectors/distributional-signature.ts`** (PR C) — variance/trend/collapse
+  scores (the BF's same-variance complement). The trend statistic runs on
+  whitened innovations (the load-bearing valid-null fix).
+- **`per-shard/baseline-lifecycle.ts`** (PR D) — the epoch-level drift-trigger
+  decision machine (`freshBaselineLifecycle` / `updateBaselineLifecycle`):
+  re-record on sustained alarm rate, not per-fire run-length.
+- **`detectors/validity-envelope.ts`** + **`fleet/guarantee.ts`** (PR E) — the
+  honesty layer: a shared `ValidityEnvelope`, the FDR-path gate
+  (`isValidForFdrPath` / `assertValidForFdrPath`) labelling the plug-in
+  betting/mixture e-values invalid-under-estimated-baselines, and
+  `assembleFleetGuaranteeConditions` surfacing the by-construction conditions.
+
+Each PR independently cold-eyed. Full suite 168 pass / 0 fail.
+
 ## v0.3.1-pre — 2026-05-28
 
 **Cluster-topology extension types** (PR #12). Adds optional

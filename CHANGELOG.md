@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **`detectors/universal-inference-e-value.ts`** (ADR 0010) — a split likelihood-ratio
+  (universal-inference) e-value for an AR(1) mean shift. `E[e|H0] ≤ 1` **by construction for any φ**
+  including near unit root, and BOUNDED (no `(ν+1)/2`-exponent catastrophe) — resolving the safe-t
+  φ-floor that ADR 0009 showed is fundamental for any deflation fix. Independently cold-eye-verified
+  (8M+ draws; worst `E[e|H0]` ≈ 0.27, max single e ≈ 800). Caveat: exact validity needs the Gaussian-AR(1)
+  model to contain the H0 truth (well-specification) — validate on the real substrate. Additive.
+- **ADR 0009** (docs) — the φ-adaptive deflation wall (four control mechanisms all fail near unit root;
+  corrects ADR 0007's tail-vs-mean conflation) and the #3 robust-e-process reconfirmation (median best;
+  MoM/clipping inert).
+
 ## v0.5.0-pre — 2026-06-24
 
 **Post-release research arc (ADRs 0005–0008) — read the primary e-betting

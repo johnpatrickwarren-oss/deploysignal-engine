@@ -45,9 +45,12 @@ is a TAIL statement, not the quantity the e-BH FDR path needs.** Re-derived from
   result. The only airtight-and-useful envelope found is **φ ≤ 0.5** — a narrow win not worth a new API.
 
 - **Decision.** Keep the shipped safe-t (`SAFE_T_ENVELOPE`, ADR 0005) and its **cal ≈ 100 φ-floor for
-  the FDR path**. Route genuine near-unit-root to a self-normalized fallback (the existing ADR 0003 path).
-  No engine change. Status: **#1 — validity at near-unit-root short-cal is fundamentally bounded, OPEN
-  only in the sense that a different, less exponent-fragile e-statistic might do better (see carry-forward).**
+  the FDR path**. The wall is specific to *re-weighting the safe-t's exponent-fragile statistic*; a
+  structurally different, less-fragile e-statistic CAN do better. **→ RESOLVED in ADR 0010: a split
+  likelihood-ratio (universal-inference) e-value drops the `(ν+1)/2` exponent entirely and gives
+  `E[e|H0] ≤ 1` BY CONSTRUCTION for any φ incl. near unit root (bounded; cold-eye SOUND).** Status: **#1
+  — the deflation approach is fundamentally bounded (this ADR); the guarantee is delivered by the
+  different construction in ADR 0010.**
 
 ## #3 — principled robust / contaminated e-process — STILL OPEN (reconfirmed)
 
@@ -72,9 +75,10 @@ default center Tukey→median is a small available simplification (deferred — 
 ## Recommendation / carry-forward
 
 - **#1** — do NOT productionise a φ-adaptive deflation; the near-unit-root mean is fundamentally
-  uncontrollable at short cal. Keep the cal≈100 floor + near-unit-root self-normalized fallback. The only
-  open avenue is a **structurally different, less exponent-fragile e-statistic** (e.g. a bounded/log-
-  regularised betting e-process rather than the safe-t BF) — genuine open research, not a tuning fix.
+  uncontrollable at short cal *for that approach*. The open avenue named here — a **structurally
+  different, less exponent-fragile e-statistic** — was then FOUND: **ADR 0010** ships a split
+  likelihood-ratio (universal-inference) e-value that gives the guarantee for any φ. Keep the safe-t for
+  the long-cal, well-whitened regime (higher power there).
 - **#3** — remains open research; keep the median/Tukey center. Optional shippable: Tukey→median default.
 
 Prototypes (h1/h3 harnesses + the four #1 control mechanisms) validated in the session scratchpad; this

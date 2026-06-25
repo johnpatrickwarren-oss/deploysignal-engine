@@ -8,6 +8,10 @@
   φ-floor that ADR 0009 showed is fundamental for any deflation fix. Independently cold-eye-verified
   (8M+ draws; worst `E[e|H0]` ≈ 0.27, max single e ≈ 800). Caveat: exact validity needs the Gaussian-AR(1)
   model to contain the H0 truth (well-specification) — validate on the real substrate. Additive.
+- **ADR 0011** (docs) — real-telemetry validation of the universal-inference e-value (47 NAB series):
+  robust to real heavy tails (excess kurtosis ≤ 1540 → still valid), but the constant-mean assumption is
+  load-bearing — raw telemetry violates `E[e|H0] ≤ 1` (16/46 series), baselined residuals do not (0/46).
+  ⇒ feed it the common-mode / baseline-lifecycle output, not raw series. Envelope notes strengthened.
 - **ADR 0009** (docs) — the φ-adaptive deflation wall (four control mechanisms all fail near unit root;
   corrects ADR 0007's tail-vs-mean conflation) and the #3 robust-e-process reconfirmation (median best;
   MoM/clipping inert).

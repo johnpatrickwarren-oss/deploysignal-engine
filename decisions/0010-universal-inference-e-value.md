@@ -61,5 +61,7 @@ cold-eye-verified LL-gap 0.000 vs a 4000-point grid).
 ## Recommendation
 Use `universalInferenceMeanShiftEValue` for the per-shard FDR path where the calibration window is short
 and/or the residual autocorrelation is non-negligible — it is the validity-by-construction option. Keep
-the safe-t for the long-calibration, well-whitened regime where its power is higher. Next: validate the
-well-specification envelope on real Tessera telemetry before wiring it into the fleet FDR pipeline.
+the safe-t for the long-calibration, well-whitened regime where its power is higher. **The
+well-specification envelope is now validated on real telemetry — ADR 0011: robust to real heavy tails,
+but REQUIRES baselined residuals (raw nonstationary telemetry violates); feed it the common-mode /
+baseline-lifecycle output, not raw series.**

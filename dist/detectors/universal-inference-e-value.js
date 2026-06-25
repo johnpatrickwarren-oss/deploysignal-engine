@@ -26,10 +26,12 @@
 // violations (the φ-grid search below secures it; cold-eye verified LL-gap 0.000 vs a 4000-point grid).
 //
 // ENVELOPE / CAVEATS.
-//   • Exact validity needs the Gaussian-AR(1) model to CONTAIN the H0 truth (well-specification). It is
-//     empirically robust to heavier (Student-t) innovation tails but that is NOT a guarantee — on real
-//     non-Gaussian telemetry this is the place a violation could hide (cf. the project's standing finding
-//     that model-based guarantees can fail on real data). Validate on the substrate before trusting it.
+//   • Exact validity needs the Gaussian-AR(1) model to CONTAIN the H0 truth (well-specification). Now
+//     validated on real telemetry (ADR 0011, 47 NAB series): ROBUST to heavy tails (excess kurtosis up
+//     to 1540 → still valid; heavy tails are NOT the problem), but the CONSTANT-MEAN assumption is
+//     load-bearing — raw nonstationary telemetry (slow drift) violates it (16/46 series), whereas on
+//     BASELINED residuals (slow baseline removed, as the common-mode / baseline-lifecycle layer provides)
+//     0/46 violate. ⇒ feed this BASELINED residuals, never raw telemetry.
 //   • Power at high φ (≳ 0.8) is genuinely low — the autocorrelation identifiability limit — but the
 //     e-value stays VALID there (it abstains, ≈ small), unlike the safe-t which was invalid. In the
 //     identifiable regime (φ ≤ 0.5) it is well-powered (and beats the safe-t).
@@ -49,9 +51,13 @@ exports.UI_MEAN_SHIFT_ENVELOPE = Object.freeze({
     notes: 'Split likelihood-ratio (universal inference) e-value for an AR(1) mean shift. E[e|H0] ≤ 1 BY '
         + 'CONSTRUCTION for ANY φ incl. near unit root — a ratio of fitted AR(1) likelihoods, NOT an '
         + 'exponent-amplified Bayes factor, so it is bounded (no catastrophe). Caveat: exact validity needs '
-        + 'the Gaussian-AR(1) model to contain the H0 truth (well-specification); empirically robust to '
-        + 'Student-t tails but not guaranteed — validate on the real substrate. Power at φ ≳ 0.8 is low '
-        + '(autocorrelation limit) but stays valid; well-powered for φ ≤ 0.5. ADR 0010.',
+        + 'the Gaussian-AR(1) model to contain the H0 truth (well-specification). Real-telemetry validation '
+        + '(ADR 0011, 47 NAB series): ROBUST to heavy tails (excess kurtosis ≤ 1540 → still valid), but the '
+        + 'CONSTANT-MEAN assumption is load-bearing — on RAW nonstationary telemetry 16/46 series violate '
+        + '(slow drift read as a shift), while on BASELINED residuals (slow baseline removed, as the '
+        + 'common-mode / baseline-lifecycle layer provides) 0/46 violate (worst E[e|H0] ≈ 0.5). REQUIRES '
+        + 'baselined input; do NOT apply to raw telemetry. Power at φ ≳ 0.8 is low (autocorrelation limit) '
+        + 'but stays valid; well-powered for φ ≤ 0.5. ADR 0010 (construction) + ADR 0011 (validation).',
 });
 /** Lowest φ on the null grid. */
 const PHI_GRID_LO = -0.98;

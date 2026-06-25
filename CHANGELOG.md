@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+- **`detectors/universal-inference-e-value.ts`** (ADR 0010) — a split likelihood-ratio
+  (universal-inference) e-value for an AR(1) mean shift. `E[e|H0] ≤ 1` **by construction for any φ**
+  including near unit root, and BOUNDED (no `(ν+1)/2`-exponent catastrophe) — resolving the safe-t
+  φ-floor that ADR 0009 showed is fundamental for any deflation fix. Independently cold-eye-verified
+  (8M+ draws; worst `E[e|H0]` ≈ 0.27, max single e ≈ 800). Caveat: exact validity needs the Gaussian-AR(1)
+  model to contain the H0 truth (well-specification) — validate on the real substrate. Additive.
+- **ADR 0012** (docs) — real **GWDG GPU** telemetry validation (Zenodo 19052367): per-shard `E[e|H0] ≤ 1`
+  is NOT achievable on real GPU telemetry even after baseline-lifecycle + common-mode (within-window
+  nonstationarity is irreducible) — refines ADR 0011, matches the project's per-shard finding. But the
+  **fleet-FDR** guarantee holds: multi-factor common-mode → UI → e-BH keeps fleet FDP ≤ q (1.1%), and the
+  UI's bounded tail is load-bearing (the safe-t's 1e64 tail blows fleet FDP to 21%). Deploy at the
+  fleet-FDR layer. Envelope notes corrected.
+- **ADR 0011** (docs) — real-telemetry validation of the universal-inference e-value (47 NAB series):
+  robust to real heavy tails (excess kurtosis ≤ 1540 → still valid), but the constant-mean assumption is
+  load-bearing — raw telemetry violates `E[e|H0] ≤ 1` (16/46 series), baselined residuals do not (0/46).
+  ⇒ feed it the common-mode / baseline-lifecycle output, not raw series. Envelope notes strengthened.
+- **ADR 0009** (docs) — the φ-adaptive deflation wall (four control mechanisms all fail near unit root;
+  corrects ADR 0007's tail-vs-mean conflation) and the #3 robust-e-process reconfirmation (median best;
+  MoM/clipping inert).
+
 ## v0.5.0-pre — 2026-06-24
 
 **Post-release research arc (ADRs 0005–0008) — read the primary e-betting

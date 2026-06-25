@@ -26,12 +26,14 @@
 // violations (the φ-grid search below secures it; cold-eye verified LL-gap 0.000 vs a 4000-point grid).
 //
 // ENVELOPE / CAVEATS.
-//   • Exact validity needs the Gaussian-AR(1) model to CONTAIN the H0 truth (well-specification). Now
-//     validated on real telemetry (ADR 0011, 47 NAB series): ROBUST to heavy tails (excess kurtosis up
-//     to 1540 → still valid; heavy tails are NOT the problem), but the CONSTANT-MEAN assumption is
-//     load-bearing — raw nonstationary telemetry (slow drift) violates it (16/46 series), whereas on
-//     BASELINED residuals (slow baseline removed, as the common-mode / baseline-lifecycle layer provides)
-//     0/46 violate. ⇒ feed this BASELINED residuals, never raw telemetry.
+//   • Exact validity needs the Gaussian-AR(1) model to CONTAIN the H0 truth (well-specification), incl. a
+//     constant mean. Validated on real telemetry: ROBUST to heavy tails (NAB kurtosis ≤ 1540 → valid, ADR
+//     0011). BUT per-shard validity is substrate-dependent — on slow NAB metrics baselining restores it,
+//     yet on real GWDG GPU telemetry (ADR 0012) per-shard E[e|H0] stays > 1 even after baseline-lifecycle
+//     + common-mode (real within-window nonstationarity is irreducible). So do NOT claim a per-shard
+//     guarantee on real data. The guarantee that SURVIVES is FLEET-FDR: multi-factor common-mode → UI →
+//     e-BH keeps fleet FDP ≤ q on real GWDG (1.1%), and the UI's BOUNDED tail is load-bearing there (the
+//     safe-t's 1e64 tail blows fleet FDP to 21%). Deploy at the fleet-FDR layer on baselined residuals.
 //   • Power at high φ (≳ 0.8) is genuinely low — the autocorrelation identifiability limit — but the
 //     e-value stays VALID there (it abstains, ≈ small), unlike the safe-t which was invalid. In the
 //     identifiable regime (φ ≤ 0.5) it is well-powered (and beats the safe-t).
@@ -51,13 +53,17 @@ exports.UI_MEAN_SHIFT_ENVELOPE = Object.freeze({
     notes: 'Split likelihood-ratio (universal inference) e-value for an AR(1) mean shift. E[e|H0] ≤ 1 BY '
         + 'CONSTRUCTION for ANY φ incl. near unit root — a ratio of fitted AR(1) likelihoods, NOT an '
         + 'exponent-amplified Bayes factor, so it is bounded (no catastrophe). Caveat: exact validity needs '
-        + 'the Gaussian-AR(1) model to contain the H0 truth (well-specification). Real-telemetry validation '
-        + '(ADR 0011, 47 NAB series): ROBUST to heavy tails (excess kurtosis ≤ 1540 → still valid), but the '
-        + 'CONSTANT-MEAN assumption is load-bearing — on RAW nonstationary telemetry 16/46 series violate '
-        + '(slow drift read as a shift), while on BASELINED residuals (slow baseline removed, as the '
-        + 'common-mode / baseline-lifecycle layer provides) 0/46 violate (worst E[e|H0] ≈ 0.5). REQUIRES '
-        + 'baselined input; do NOT apply to raw telemetry. Power at φ ≳ 0.8 is low (autocorrelation limit) '
-        + 'but stays valid; well-powered for φ ≤ 0.5. ADR 0010 (construction) + ADR 0011 (validation).',
+        + 'the Gaussian-AR(1) model to contain the H0 truth (well-specification), incl. a CONSTANT mean. '
+        + 'Real-telemetry validation: ROBUST to heavy tails (NAB excess kurtosis ≤ 1540 → still valid, ADR '
+        + '0011). But the constant-mean assumption is load-bearing and PER-SHARD validity is substrate-'
+        + 'dependent: on slow NAB metrics, baselining restores 0/46 violations, but on real GWDG GPU telemetry '
+        + '(ADR 0012) per-shard E[e|H0] stays > 1 even after baseline-lifecycle + common-mode — real '
+        + 'within-window nonstationarity is not removable. Do NOT claim a per-shard E[e|H0] ≤ 1 guarantee on '
+        + 'real telemetry. The guarantee that SURVIVES real data is FLEET-FDR: in the multi-factor common-mode '
+        + '→ UI → e-BH pipeline, fleet FDP stays ≤ q on real GWDG (1.1%) — and the UI\'s BOUNDED tail is what '
+        + 'makes that hold (the safe-t\'s 1e64 tail blows fleet FDP to 21%). Deploy at the fleet-FDR layer on '
+        + 'baselined residuals. Power at φ ≳ 0.8 is low (autocorrelation limit) but stays valid; well-powered '
+        + 'for φ ≤ 0.5. ADR 0010 (construction) + 0011/0012 (validation).',
 });
 /** Lowest φ on the null grid. */
 const PHI_GRID_LO = -0.98;

@@ -8,6 +8,12 @@
   φ-floor that ADR 0009 showed is fundamental for any deflation fix. Independently cold-eye-verified
   (8M+ draws; worst `E[e|H0]` ≈ 0.27, max single e ≈ 800). Caveat: exact validity needs the Gaussian-AR(1)
   model to contain the H0 truth (well-specification) — validate on the real substrate. Additive.
+- **ADR 0012** (docs) — real **GWDG GPU** telemetry validation (Zenodo 19052367): per-shard `E[e|H0] ≤ 1`
+  is NOT achievable on real GPU telemetry even after baseline-lifecycle + common-mode (within-window
+  nonstationarity is irreducible) — refines ADR 0011, matches the project's per-shard finding. But the
+  **fleet-FDR** guarantee holds: multi-factor common-mode → UI → e-BH keeps fleet FDP ≤ q (1.1%), and the
+  UI's bounded tail is load-bearing (the safe-t's 1e64 tail blows fleet FDP to 21%). Deploy at the
+  fleet-FDR layer. Envelope notes corrected.
 - **ADR 0011** (docs) — real-telemetry validation of the universal-inference e-value (47 NAB series):
   robust to real heavy tails (excess kurtosis ≤ 1540 → still valid), but the constant-mean assumption is
   load-bearing — raw telemetry violates `E[e|H0] ≤ 1` (16/46 series), baselined residuals do not (0/46).

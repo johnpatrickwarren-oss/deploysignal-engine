@@ -8,8 +8,8 @@ detectors, e-processes, hierarchical e-value combination, e-BH FDR, topology ada
 DeploySignal and Tessera as a pinned git dependency.
 
 ## Done
-- **Post-release research arc (ADRs 0005–0006) — read the actual e-betting literature, closed the gaps
-  that have known solutions.** A verified deep-dive of the 2021–2026 e-value / anytime-valid literature,
+- **Post-release research arc (ADRs 0005–0008) — read the actual e-betting literature, closed the gaps
+  that have known solutions; released v0.5.0-pre.** A verified deep-dive of the 2021–2026 e-value / anytime-valid literature,
   then primary-source reading (the summaries were ~40% wrong/misleading on guarantee-affecting points).
   - **ADR 0005 — safe-t (right-Haar / GROW) e-value** (`detectors/safe-t-e-value.ts`). The principled
     variance-nuisance fix: integrate σ out under the improper 1/σ prior (GROW-optimal; exactly
@@ -22,8 +22,17 @@ DeploySignal and Tessera as a pinned git dependency.
     e-values ⇒ known null ⇒ `FIRE ⟺ thrObs·P(ẽ_j≥e_j) ≤ E[ẽ_j]`), provably valid (subset of the exact-φ
     firing ⇒ Lee-Ren Thm 1), deterministic superset (Thm 2), exact (no MC, no cliff). Doubles power
     (0.35→0.70) at FDR ≤ q. Full suite **181 pass / 0 fail**.
+  - **ADR 0008 — contamination-robust multi-factor common-mode** (`fleet/multi-factor-common-mode.ts`,
+    #29). Frontier #2 SHIPPED: alternating robust factor fit; heterogeneous-fleet FDP **0.62 → 0.007**.
+    Cold-eye corrected 3 overclaims (fault-absorption magnitude, step-dependent power, r-conditionality);
+    ships a `factorDeflationEnergy` scree to pick the factor count r. This closes the "multi-factor
+    common-mode for heterogeneous loadings" item the ADR-0004 Next had flagged as future. Full suite
+    **186 pass / 0 fail**.
+  - **ADR 0007 — open-frontier findings** (docs, #27). #1 integrate φ out: validity SOLVED (HAC
+    effective-d.o.f., uniform over φ incl. near-unit-root), power-calibration partly fundamental and
+    OPEN. #3 robust e-process: median-of-means underperforms the existing center — no construction, OPEN.
   - Process note: every guarantee-affecting step was taken from the primary theorem, not the survey;
-    the safe-t + boosting were independently re-derived and cold-eyed.
+    the safe-t + boosting + multi-factor were independently re-derived and cold-eyed.
 - **ADR 0004 — the nuisance-robust evidence stack (PRs A–E), released v0.4.0-pre.** Promotes the
   Tessera-validated stack into the engine per the engine/consumer charter. The assembled pipeline
   `contaminationRobustResiduals → nuisanceRobustBFEValue → eBenjaminiHochberg` gives FP/FDR ≤ q
@@ -54,15 +63,15 @@ DeploySignal and Tessera as a pinned git dependency.
   consumes `ar1_phi`; mirrors the mixture-supermartingale pattern.
 
 ## In flight
-- **Step 6 — Tessera migration** (in the Tessera repo): bump the engine pin `#v0.3.4-pre → #v0.4.0-pre`
-  and migrate `tools/*` to thin validation harnesses over the promoted engine APIs.
+- (none) — v0.5.0-pre cut; ADR 0004 Step-6 Tessera migration merged (Tessera PR #27, pin `#v0.4.0-pre`).
 
 ## Next
-- Tessera consumes `eBenjaminiHochberg` (drop `tools/fleet-fdr.ts:eBH`), the promoted BF
-  (`nuisanceRobustBFEValue`), `contaminationRobustResiduals`/`robustLocation`, `distributionalSignature`,
-  and the baseline-lifecycle; `tools/*` re-run as cross-checks (reports stay idempotent).
-- (Future, ADR 0004-scoped) variance-robust BF (NIG/t mixture) to lift the calibration floor;
-  multi-factor common-mode for heterogeneous loadings.
+- **Tessera pin bump `#v0.4.0-pre → #v0.5.0-pre`** to pick up safe-t, e-BH boosting, and the
+  multi-factor common-mode; re-run `tools/*` cross-checks (reports stay idempotent).
+- (Open research, ADR 0007) **#1 φ HAC power-calibration** — validity is solved; the power tuning is
+  partly fundamental and remains open.
+- (Open research, ADR 0007) **#3 robust e-process** — no construction yet; median-of-means underperforms
+  the existing center.
 
 ## Pointers
 - Decisions: `decisions/` (ADR 0004 scopes the promotion; ADR 0001 betting-path)

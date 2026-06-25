@@ -1,6 +1,6 @@
 {
   "name": "@johnpatrickwarren-oss/deploysignal-engine",
-  "version": "0.4.0-pre",
+  "version": "0.5.0-pre",
   "description": "Statistical detector engine (Family A/C/D/E detectors, Ville-bounded e-processes, hierarchical pooling, topology BFS, e-BH FDR) — Tessera-evolved vendored snapshot from DeploySignal main@5a72371 with per-file deltas per Tessera VENDORING-MANIFEST.md",
   "license": "Apache-2.0",
   "main": "./dist/types/index.js",

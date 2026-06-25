@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.5.0-pre — 2026-06-24
+
+**Post-release research arc (ADRs 0005–0008) — read the primary e-betting
+literature and closed the gaps with known solutions.** Strictly additive on top
+of v0.4.0-pre; the vendored betting/mixture detectors are byte-unchanged. Full
+suite 186 pass / 0 fail. Every guarantee-affecting step taken from the primary
+theorem (not the survey) and independently cold-eyed.
+
+- **`detectors/safe-t-e-value.ts`** (ADR 0005, #26) — the safe-t
+  (right-Haar / GROW) e-value: integrates σ out under the improper `1/σ` prior,
+  exactly σ-invariant and GROW-optimal. KEY FINDING: this **reattributes the
+  calibration floor** — it is the AR(1) **φ plug-in**, not the variance (oracle
+  φ is valid at all `cal`; estimated φ inflates below ~100). `MIN_CALIBRATION`
+  retained; integrating φ out becomes the sharpest open item (ADR 0007 #1).
+- **`fleet/e-bh-conditional-calibration.ts`** (ADR 0006, #28) — Lee–Ren
+  conditional-calibration boosting via a self-contained **closed-form** rule for
+  our pivotal null (`FIRE ⟺ thrObs·P(ẽ_j≥e_j) ≤ E[ẽ_j]`): provably valid (subset
+  of the exact-φ firing), a deterministic superset, exact (no Monte Carlo, no
+  cliff). ~2× power (0.35→0.70) at FDR ≤ q under arbitrary dependence.
+  Threshold-sharpening **dropped** — Blier-Wong–Wang Prop 5 shows it gives
+  nothing under arbitrary dependence.
+- **ADR 0007 (#27, docs)** — open-frontier findings. #1 integrate φ out:
+  **validity solved** (HAC effective-d.o.f. gives uniform-over-φ validity incl.
+  near-unit-root), power-calibration partly fundamental and **open**. #3 robust
+  e-process: median-of-means underperforms the existing center — **no
+  construction, open**.
+- **`fleet/multi-factor-common-mode.ts`** (ADR 0008, frontier #2, #29) —
+  contamination-robust multi-factor common-mode via alternating robust factor
+  fit; heterogeneous-fleet FDP **0.62 → 0.007**. Cold-eye corrected 3 overclaims
+  (fault-absorption magnitude, step-dependent power, r-conditionality); ships a
+  `factorDeflationEnergy` scree to pick the factor count r.
+
 ## v0.4.0-pre — 2026-06-24
 
 **ADR 0004 — the nuisance-robust evidence stack** (PRs #21–#25). Promotes the

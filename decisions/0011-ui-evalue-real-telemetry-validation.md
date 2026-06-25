@@ -1,9 +1,10 @@
 # ADR 0011 — universal-inference e-value: real-telemetry validation of the well-specification envelope
 
 - **Date:** 2026-06-24
-- **Status:** Validation findings (no code change beyond strengthening the `UI_MEAN_SHIFT_ENVELOPE` notes
-  + this record). Closes the ADR 0010 carry-forward ("validate the well-specification envelope on real
-  telemetry before wiring into the fleet FDR pipeline").
+- **Status:** Validation findings (NAB single-series). **REFINED by ADR 0012:** the "baselined → 0/46
+  violate" result below reflects NAB's slow, cleanly-detrendable metrics and is TOO OPTIMISTIC about
+  *per-shard* validity in general — on real GWDG GPU telemetry per-shard `E[e|H0]` stays > 1 even fully
+  baselined. The guarantee that survives real data is FLEET-FDR, not per-shard (see ADR 0012).
 - **Validates:** ADR 0010 (`universalInferenceMeanShiftEValue`). Substrate: the 47 **real** NAB series
   (`~/concord/NAB/data/real*`: AWS CloudWatch, KnownCause, Traffic, AdExchange, Tweets) with their
   labelled anomaly windows; the anomaly-free regions (88% of 321k points) are the empirical H0.

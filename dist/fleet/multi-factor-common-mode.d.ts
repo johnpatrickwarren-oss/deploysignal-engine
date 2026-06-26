@@ -1,3 +1,9 @@
+/** Median of a sample (0 for empty). Exported for the detection-oriented common-mode (ADR 0017). */
+export declare function median(xs: ReadonlyArray<number>): number;
+/** Redescending (Tukey-biweight) robust regression slope through the origin: y_i ≈ b·x_i. IRLS from a
+ *  median-ratio start with a MAD scale; gross outliers (in either coordinate) get weight 0. Exported for the
+ *  detection-oriented common-mode (ADR 0017). */
+export declare function robustSlope(x: ReadonlyArray<number>, y: ReadonlyArray<number>, c?: number): number;
 /** Per-shard level ℓ̂_i = median over the healthy calibration window [0, calLen). */
 export declare function perShardLevel(X: ReadonlyArray<ReadonlyArray<number>>, calLen: number): number[];
 export interface MultiFactorOptions {

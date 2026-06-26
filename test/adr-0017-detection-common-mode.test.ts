@@ -1,0 +1,130 @@
+// test/adr-0017-detection-common-mode.test.ts — ADR 0017, the detection-oriented common-mode.
+//
+// The FDP-oriented multi-factor common-mode (ADR 0008) ABSORBS a single-shard test-window fault into that
+// shard's loading (it is collinear with the nonstationary factor), giving 0% detection (FAIR test, ADR 0016).
+// The detection-oriented common-mode removes the CROSSED-domain common-mode by backfitting with the loading
+// fit on the healthy REFERENCE window, so a test-window fault is PRESERVED. Properties asserted:
+//   1. On a crossed-domain, heterogeneous-loading, nonstationary fleet it REMOVES the common-mode on healthy
+//      shards (residual variance ≪ raw).
+//   2. It PRESERVES a single-shard test-window step in the residual, where the full-loading multi-factor
+//      common-mode ABSORBS it — the whole point.
+//   3. Guards.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import { detectionOrientedResiduals } from '../fleet/detection-common-mode';
+import { multiFactorRobustResiduals } from '../fleet/multi-factor-common-mode';
+
+function lcg(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => { s = ((s * 1664525) + 1013904223) >>> 0; return s / 0x100000000; };
+}
+function gaussian(rng: () => number): number {
+  const u1 = Math.max(rng(), 1e-12), u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+// 48 shards over TWO CROSSED partitions: cooling domain = i % 4, power domain = i % 3 (gcd=1 ⇒ genuinely
+// crossed). Each domain carries its own nonstationary factor (AR(1) + a ramp). Loadings are heterogeneous.
+const N = 48, REF = 160, NT = 120, T = REF + NT, FONSET = REF;
+const NCOOL = 4, NPOWER = 3, NOISE = 1, RHO = 0.6, STEP = 8;
+const coolOf = (i: number): number => i % NCOOL;
+const powerOf = (i: number): number => i % NPOWER;
+
+function genFleet(seed: number, victim: number): { X: number[][] } {
+  const rng = lcg(seed); const g = (): number => gaussian(rng);
+  // per-domain nonstationary factors: AR(1) innovations + a per-domain linear ramp.
+  const mkFactor = (rampPerT: number): number[] => {
+    const f = new Array(T).fill(0);
+    let p = g();
+    for (let tt = 0; tt < T; tt++) { p = RHO * p + Math.sqrt(1 - RHO * RHO) * g(); f[tt] = p + rampPerT * tt; }
+    return f;
+  };
+  const cool = Array.from({ length: NCOOL }, (_, d) => mkFactor(0.03 * (d + 1)));
+  const power = Array.from({ length: NPOWER }, (_, e) => mkFactor(-0.02 * (e + 1)));
+  const X: number[][] = [];
+  for (let i = 0; i < N; i++) {
+    const lvl = 5 * g();
+    const lamCool = 0.4 + 1.2 * rng();   // heterogeneous loadings
+    const lamPower = 0.4 + 1.2 * rng();
+    const fc = cool[coolOf(i)], fp = power[powerOf(i)];
+    const row = new Array(T);
+    for (let tt = 0; tt < T; tt++) {
+      row[tt] = lvl + lamCool * fc[tt] + lamPower * fp[tt] + NOISE * g()
+        + (i === victim && tt >= FONSET ? STEP : 0);
+    }
+    X[i] = row;
+  }
+  return { X };
+}
+
+const partitions = (): number[][] => {
+  const cool = Array.from({ length: N }, (_, i) => coolOf(i));
+  const power = Array.from({ length: N }, (_, i) => powerOf(i));
+  return [cool, power];
+};
+const mean = (r: ReadonlyArray<number>, a: number, b: number): number => {
+  let s = 0; for (let i = a; i < b; i++) s += r[i]; return s / (b - a);
+};
+const sd = (r: ReadonlyArray<number>, a: number, b: number): number => {
+  const m = mean(r, a, b); let s = 0; for (let i = a; i < b; i++) s += (r[i] - m) ** 2; return Math.sqrt(s / (b - a));
+};
+const median = (xs: number[]): number => { const s = [...xs].sort((p, q) => p - q); return s[s.length >> 1]; };
+const residShift = (r: ReadonlyArray<number>): number => mean(r, FONSET, T) - mean(r, 0, REF);
+
+test('detection common-mode: removes crossed-domain common-mode on healthy shards', () => {
+  const { X } = genFleet(7, -1); // no fault
+  const R = detectionOrientedResiduals(X, REF, partitions(), { iterations: 4, loadLen: REF });
+  // residual variance must be a small fraction of the raw (level-removed) variance — common-mode gone.
+  const ratios: number[] = [];
+  for (let i = 0; i < N; i++) {
+    const rawSd = sd(X[i], 0, T);          // raw includes the big common-mode swing
+    const resSd = sd(R[i], 0, T);
+    ratios.push(resSd / rawSd);
+  }
+  const medRatio = median(ratios);
+  assert.ok(medRatio < 0.5, `expected residual/raw sd ratio < 0.5 (common-mode removed); got ${medRatio.toFixed(3)}`);
+});
+
+test('detection common-mode: PRESERVES a single-shard fault that the FDP-oriented common-mode ABSORBS', () => {
+  const victim: number = 17;
+  let detPreserve = 0, mfPreserve = 0, healthyFp = 0, nSeeds = 0;
+  for (let seed = 1; seed <= 5; seed++) {
+    const { X } = genFleet(seed, victim);
+    const Rdet = detectionOrientedResiduals(X, REF, partitions(), { iterations: 4, loadLen: REF });
+    const Rmf = multiFactorRobustResiduals(X, REF, { factors: 2 }); // full-loading, FDP-oriented
+    detPreserve += residShift(Rdet[victim]);
+    mfPreserve += residShift(Rmf[victim]);
+    // a healthy shard's residual shift should stay small under the detection common-mode
+    healthyFp += Math.abs(residShift(Rdet[victim === 0 ? 1 : 0]));
+    nSeeds++;
+  }
+  detPreserve /= nSeeds; mfPreserve /= nSeeds; healthyFp /= nSeeds;
+
+  // 1. The detection common-mode keeps most of the STEP in the residual.
+  assert.ok(detPreserve > 0.55 * STEP,
+    `detection common-mode should preserve the fault (> ${(0.55 * STEP).toFixed(1)}); got ${detPreserve.toFixed(2)}`);
+  // 2. The full-loading common-mode absorbs most of it.
+  assert.ok(mfPreserve < 0.5 * STEP,
+    `full-loading common-mode should absorb the fault (< ${(0.5 * STEP).toFixed(1)}); got ${mfPreserve.toFixed(2)}`);
+  // 3. Detection-oriented preserves materially more signal than the FDP-oriented one (the whole point).
+  assert.ok(detPreserve > 2 * mfPreserve,
+    `detection should preserve ≫ FDP-oriented; det=${detPreserve.toFixed(2)} mf=${mfPreserve.toFixed(2)}`);
+  // 4. A healthy shard stays near zero (fault is localised, not smeared).
+  assert.ok(healthyFp < 0.4 * detPreserve,
+    `healthy shard residual shift should stay small; got ${healthyFp.toFixed(2)} vs victim ${detPreserve.toFixed(2)}`);
+});
+
+test('detection common-mode: guards', () => {
+  const X = genFleet(1, -1).X;
+  const P = partitions();
+  assert.throws(() => detectionOrientedResiduals([], REF, P), /at least one shard/);
+  assert.throws(() => detectionOrientedResiduals(X, 0, P), /calLen must be an integer/);
+  assert.throws(() => detectionOrientedResiduals(X, REF, P, { iterations: 0 }), /iterations must be a positive integer/);
+  assert.throws(() => detectionOrientedResiduals(X, REF, P, { loadLen: T + 1 }), /loadLen must be an integer/);
+  assert.throws(() => detectionOrientedResiduals(X, REF, []), /at least one factor partition/);
+  assert.throws(() => detectionOrientedResiduals(X, REF, [[0, 1, 2]]), /expected one label per shard/);
+  const ragged = X.map((r, i) => (i === 3 ? r.slice(0, T - 1) : r));
+  assert.throws(() => detectionOrientedResiduals(ragged, REF, P), /ragged matrix/);
+});

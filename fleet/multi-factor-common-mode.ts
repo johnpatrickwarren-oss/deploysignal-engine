@@ -42,8 +42,8 @@ const IRLS_MAX_ITER = 40;
 const IRLS_TOL = 1e-8;
 const ALT_PASSES = 6;
 
-/** Median of a sample (0 for empty). */
-function median(xs: ReadonlyArray<number>): number {
+/** Median of a sample (0 for empty). Exported for the detection-oriented common-mode (ADR 0017). */
+export function median(xs: ReadonlyArray<number>): number {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
   const n = s.length;
@@ -51,8 +51,9 @@ function median(xs: ReadonlyArray<number>): number {
 }
 
 /** Redescending (Tukey-biweight) robust regression slope through the origin: y_i ≈ b·x_i. IRLS from a
- *  median-ratio start with a MAD scale; gross outliers (in either coordinate) get weight 0. */
-function robustSlope(x: ReadonlyArray<number>, y: ReadonlyArray<number>, c = 4.685): number {
+ *  median-ratio start with a MAD scale; gross outliers (in either coordinate) get weight 0. Exported for the
+ *  detection-oriented common-mode (ADR 0017). */
+export function robustSlope(x: ReadonlyArray<number>, y: ReadonlyArray<number>, c = 4.685): number {
   const n = x.length;
   const ratios: number[] = [];
   for (let i = 0; i < n; i++) if (Math.abs(x[i]) > 1e-9) ratios.push(y[i] / x[i]);

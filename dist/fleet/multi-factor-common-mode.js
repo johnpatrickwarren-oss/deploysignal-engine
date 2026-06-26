@@ -37,6 +37,8 @@
 //     across cal/test (a CHANGE in it is the Barigozzi–Trapani regime, out of scope). In-sample fit
 //     (O(1/N) self-pull, conservative as PR B). Cost O(n·t·passes·IRLS) — heavier than the scalar center.
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.median = median;
+exports.robustSlope = robustSlope;
 exports.perShardLevel = perShardLevel;
 exports.multiFactorRobustResiduals = multiFactorRobustResiduals;
 exports.factorDeflationEnergy = factorDeflationEnergy;
@@ -44,7 +46,7 @@ const common_mode_1 = require("./common-mode");
 const IRLS_MAX_ITER = 40;
 const IRLS_TOL = 1e-8;
 const ALT_PASSES = 6;
-/** Median of a sample (0 for empty). */
+/** Median of a sample (0 for empty). Exported for the detection-oriented common-mode (ADR 0017). */
 function median(xs) {
     if (xs.length === 0)
         return 0;
@@ -53,7 +55,8 @@ function median(xs) {
     return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
 }
 /** Redescending (Tukey-biweight) robust regression slope through the origin: y_i ≈ b·x_i. IRLS from a
- *  median-ratio start with a MAD scale; gross outliers (in either coordinate) get weight 0. */
+ *  median-ratio start with a MAD scale; gross outliers (in either coordinate) get weight 0. Exported for the
+ *  detection-oriented common-mode (ADR 0017). */
 function robustSlope(x, y, c = 4.685) {
     const n = x.length;
     const ratios = [];

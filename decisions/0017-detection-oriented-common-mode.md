@@ -4,10 +4,13 @@
 - **Status:** **IMPLEMENTED (v2).** The v1 recommendation (RPCA) was prototyped and **falsified** on the FAIR
   substrate; a 16-experiment sweep found the best practical estimator is **topology-structured crossed-domain
   backfitting** (0%→40% over the engine, large gap to the oracle's 99% remains; results below). Shipped as
-  `fleet/detection-common-mode.ts` (`detectionOrientedResiduals`) + `test/adr-0017-detection-common-mode.test.ts`
-  (suite 196/196). Touches detection/localization, NOT the FDR theorem — it is a POWER tool with no FDR
-  guarantee on its data-dependent residual (see Scope). An adversarial cold-eye is still worthwhile on the
-  scale/other-counter/group-fault behavior before production wiring.
+  `fleet/detection-common-mode.ts` (`detectionOrientedResiduals`) + `fleet/localize.ts` (`localizeFaults`, the
+  end-to-end path) + tests. Cold-eyed (SOUND-WITH-CAVEATS); two fixes applied — (i) skip <2-member domains
+  (single-member self-absorption → false negative), (ii) guard a degenerate reference-window factor (the
+  divide-by-~0 λ̂ blow-up that manufactures finite-but-huge false fires). Group-blind-spot note added to the
+  header. The shipped `localizeFaults` re-validated on clustersynth: detection ≈ 49%, FPR ≈ 5.1% (72/rack),
+  matching the prototype. Suite 200/200. Touches detection/localization, NOT the FDR theorem — a POWER tool
+  with no FDR guarantee on its data-dependent residual (see Scope).
 - **Builds on:** ADR 0016 (the FAIR finding that motivates it), ADR 0008/0014 (the common-mode it replaces
   for the detection use case), ADR 0010 (the UI e-value it feeds). **Frontier item 6.**
 

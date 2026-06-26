@@ -120,6 +120,33 @@ const residShift = (r) => mean(r, FONSET, T) - mean(r, 0, REF);
     // 4. A healthy shard stays near zero (fault is localised, not smeared).
     strict_1.default.ok(healthyFp < 0.4 * detPreserve, `healthy shard residual shift should stay small; got ${healthyFp.toFixed(2)} vs victim ${detPreserve.toFixed(2)}`);
 });
+(0, node_test_1.test)('detection common-mode: a single-member domain does NOT self-absorb its own fault', () => {
+    // Regression for the <2-member guard: a shard alone in a domain has no shared factor — fitting a loading on
+    // its own series would subtract its own fault (self-absorption → false negative). 5 shards: 1..4 share a
+    // factor, shard 0 is alone; a fault on shard 0 must SURVIVE.
+    const n = 5, ref = 80, t = 160, fonset = 80, step = 10;
+    const rng = lcg(99), gg = () => gaussian(rng);
+    const F = new Array(t);
+    {
+        let p = gg();
+        for (let k = 0; k < t; k++) {
+            p = 0.6 * p + 0.8 * gg();
+            F[k] = p;
+        }
+    }
+    const X = [];
+    for (let i = 0; i < n; i++) {
+        const lam = i === 0 ? 0 : 0.5 + rng();
+        const row = new Array(t);
+        for (let k = 0; k < t; k++)
+            row[k] = (i === 0 ? gg() : lam * F[k] + gg()) + (i === 0 && k >= fonset ? step : 0);
+        X.push(row);
+    }
+    const part = [[0, 1, 1, 1, 1]]; // shard 0 alone in domain 0; shards 1..4 in domain 1
+    const R = (0, detection_common_mode_1.detectionOrientedResiduals)(X, ref, part, { iterations: 4, loadLen: ref });
+    const shift = mean(R[0], fonset, t) - mean(R[0], 0, ref);
+    strict_1.default.ok(shift > 0.5 * step, `sole-member shard must keep its fault (not self-absorb); got ${shift.toFixed(2)}`);
+});
 (0, node_test_1.test)('detection common-mode: guards', () => {
     const X = genFleet(1, -1).X;
     const P = partitions();

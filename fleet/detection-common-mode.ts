@@ -34,6 +34,9 @@
 //   • It does NOT lift the real-telemetry ceiling (ADR 0012). On real data the per-shard within-window
 //     nonstationarity is not removable common-mode, so even the oracle is unreachable; this estimator can
 //     only approach what a (removable) crossed-factor common-mode allows.
+//   • GROUP-LEVEL faults (a whole domain shifting together) are a BLIND SPOT: the shared shift is absorbed
+//     into the domain factor, so it is (partly) removed rather than flagged. Single-shard faults survive;
+//     non-sparse/group faults need a separate group-vs-fleet detector (ADR 0015 v2), not this path.
 //
 // Tessera-original (ADR 0017). Distinct OBJECT from the FDP-oriented common-mode — ship both.
 
@@ -137,13 +140,28 @@ export function detectionOrientedResiduals(
   for (let it = 0; it < iterations; it++) {
     for (const groups of partGroups) {
       for (const idxs of groups.values()) {
-        // Domain factor F_d[t] = robust location across the domain's members of the CURRENT residual.
+        // A domain needs ≥ 2 members to define a SHARED factor. With one member the "factor" IS that shard's
+        // own series, so fitting a loading on it would subtract the shard's own fault (self-absorption → a
+        // guaranteed false negative). Skip — the lone shard keeps its level-removed residual.
+        if (idxs.length < 2) continue;
+        // Domain factor F_d[t] = robust location across the domain's members of the CURRENT residual; also
+        // accumulate the factor's reference-window and full-window energy for the degeneracy guard below.
+        let refE = 0, fullE = 0;
         for (let j = 0; j < t; j++) {
           col.length = 0;
           for (const i of idxs) col.push(R[i][j]);
           F[j] = robustLocation(col);
+          const f2 = F[j] * F[j];
+          fullE += f2;
+          if (j < loadLen) { fRef[j] = F[j]; refE += f2; }
         }
-        for (let j = 0; j < loadLen; j++) fRef[j] = F[j];
+        // Degeneracy guard. After earlier sweeps remove the common-mode, a later sweep's factor can be ~0 in
+        // the (now-clean) reference window while a PRESERVED fault keeps F large in the test window. Fitting a
+        // loading then divides by ~0 and the slope explodes, injecting a huge spurious test-window excursion
+        // into every member — manufactured false fires that stay FINITE (so the input validator misses them).
+        // If the factor's reference-window energy is a negligible fraction of its full-window energy it is
+        // unidentifiable from the reference ⇒ do not project onto it (λ̂ = 0; skip this domain this sweep).
+        if (refE <= 1e-12 || refE < 1e-6 * fullE) continue;
         // Per-shard loading fit on the REFERENCE window only (so a test-window fault is not absorbed),
         // then deflate over ALL ticks.
         for (const i of idxs) {

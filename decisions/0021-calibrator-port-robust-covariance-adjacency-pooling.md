@@ -33,6 +33,15 @@ outliers rejected with the robust variance staying near truth while the contamin
 
 The consistency factor uses the Wilson-Hilferty approximation (matches the original engine and the canonical
 Croux–Haesbroeck value at p=11 ≈ 1.24; it diverges from the table for small p — a known WH limitation, and
-small-p cells route to Ledoit-Wolf anyway). The full multivariate per-cell baseline *compiler* (Family-C cells
-consuming `robustCovariance`) is the next L1 increment; this ADR ships the load-bearing estimator + pooling.
-Suite green.
+small-p cells route to Ledoit-Wolf anyway).
+
+## Multivariate per-cell compiler (now built)
+
+`baseline/multivariate-baseline.ts` — the Family-C analogue of the univariate seasonal baseline:
+`compileMultivariateBaseline(rows, context, opts)` builds a per-context-bin cell holding a joint signal-vector
+mean + robust covariance (via `robustCovariance`), with confidence tiers, adjacency pooling, and an aggregate
+fallback. `hotellingT2(x, cell)` scores a fresh vector by Mahalanobis² against its cell (a tiny ridge guards a
+degenerate cell). Validated: per-cell mean/correlation recovery under 12% contamination, and — the Family-C
+payoff — `hotellingT2` flags a correlation-structure anomaly (a point inside every marginal but off the joint
+ellipsoid) that per-signal thresholds miss. Suite green (225/225). This completes the L1 baseline kit; the
+remaining work is consumer-side (collapse Tessera's prototype `curate-baseline-*` onto the engine kit).

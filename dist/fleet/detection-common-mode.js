@@ -35,9 +35,12 @@
 //   • It does NOT lift the real-telemetry ceiling (ADR 0012). On real data the per-shard within-window
 //     nonstationarity is not removable common-mode, so even the oracle is unreachable; this estimator can
 //     only approach what a (removable) crossed-factor common-mode allows.
-//   • GROUP-LEVEL faults (a whole domain shifting together) are a BLIND SPOT: the shared shift is absorbed
-//     into the domain factor, so it is (partly) removed rather than flagged. Single-shard faults survive;
-//     non-sparse/group faults need a separate group-vs-fleet detector (ADR 0015 v2), not this path.
+//   • GROUP-LEVEL faults (a whole rack shifting together) are absorbed into the in-sample baseline — the
+//     absorption is a property of the baseline being estimated IN-SAMPLE (not of scale). The `leaveOutGroups`
+//     option excludes a shard's own group from its factor and DOES prevent the absorption (recovers oracle-
+//     level fault preservation), BUT it is NOT a localisation win: under heterogeneous loadings it injects a
+//     per-group (Δλ)·F trend bias that degrades rank-vs-fleet ranking (ADR 0017). It is OFF by default; the
+//     genuine fix for group localisation is true factor knowledge (oracle / a temporal model), not leave-out.
 //
 // Tessera-original (ADR 0017). Distinct OBJECT from the FDP-oriented common-mode — ship both.
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -45,7 +48,7 @@ exports.detectionOrientedResiduals = detectionOrientedResiduals;
 const common_mode_1 = require("./common-mode");
 const multi_factor_common_mode_1 = require("./multi-factor-common-mode");
 /** Validate the matrix + windows + partitions; returns `[n, t]`. */
-function validate(X, calLen, partitions, loadLen, iterations) {
+function validate(X, calLen, partitions, loadLen, iterations, leaveOutGroups) {
     const fn = 'detectionOrientedResiduals';
     const n = X.length;
     if (n === 0)
@@ -76,6 +79,9 @@ function validate(X, calLen, partitions, loadLen, iterations) {
             throw new RangeError(`${fn}: partition ${k} has length ${partitions[k].length}, expected one label per shard (${n})`);
         }
     }
+    if (leaveOutGroups !== undefined && leaveOutGroups.length !== n) {
+        throw new RangeError(`${fn}: leaveOutGroups has length ${leaveOutGroups.length}, expected one label per shard (${n})`);
+    }
     return [n, t];
 }
 /** Build `domain id → member shard indices` for one partition. A negative label means "not a member of any
@@ -105,14 +111,17 @@ function domainMembers(part, n) {
  *  @param partitions   the crossed factor structure: one entry per factor kind, each an array of length
  *                      `n_shards` giving the domain label of each shard for that kind (negative = not a
  *                      member). E.g. `[coolDomainOf, powerDomainOf, fabricDomainOf, jobDomainOf]`.
- *  @param opts         `iterations` (backfitting sweeps, default 4) and `loadLen` (loading-fit reference
- *                      window, default `calLen`).
+ *  @param opts         `iterations` (backfitting sweeps, default 4), `loadLen` (loading-fit reference window,
+ *                      default `calLen`), and `leaveOutGroups` (per-shard leave-out label, e.g. rack — when
+ *                      set, each domain factor excludes the shard's own group so a coherent GROUP fault is not
+ *                      absorbed into the baseline; see the option doc).
  *  @throws RangeError on an empty/ragged/non-finite matrix, `calLen`/`loadLen` out of `1..ticks`,
- *    non-positive `iterations`, no partitions, or a partition whose length ≠ shard count. */
+ *    non-positive `iterations`, no partitions, or a partition/leaveOutGroups whose length ≠ shard count. */
 function detectionOrientedResiduals(X, calLen, partitions, opts) {
     const iterations = opts?.iterations ?? 4;
     const loadLen = opts?.loadLen ?? calLen;
-    const [n, t] = validate(X, calLen, partitions, loadLen, iterations);
+    const lo = opts?.leaveOutGroups;
+    const [n, t] = validate(X, calLen, partitions, loadLen, iterations, lo);
     // Level-remove each shard against its healthy reference window.
     const R = X.map((row) => {
         const lvl = (0, multi_factor_common_mode_1.median)(row.slice(0, calLen));
@@ -121,44 +130,75 @@ function detectionOrientedResiduals(X, calLen, partitions, opts) {
     const partGroups = partitions.map((part) => domainMembers(part, n));
     const F = new Array(t);
     const col = [];
+    const refRow = new Array(loadLen);
     const fRef = new Array(loadLen);
+    /** Estimate the domain factor from `factorMembers`, then fit each `targetMember`'s loading on the reference
+     *  window and deflate it over all ticks. (factorMembers === targetMembers is the in-sample case; for
+     *  leave-group-out, factorMembers excludes the target group.) */
+    const deflate = (factorMembers, targetMembers) => {
+        if (factorMembers.length < 2)
+            return; // can't define a shared factor — leave residual as-is
+        // Factor F_d[t] = robust location across factorMembers of the CURRENT residual; accumulate its
+        // reference-window and full-window energy for the degeneracy guard.
+        let refE = 0, fullE = 0;
+        for (let j = 0; j < t; j++) {
+            col.length = 0;
+            for (const i of factorMembers)
+                col.push(R[i][j]);
+            F[j] = (0, common_mode_1.robustLocation)(col);
+            const f2 = F[j] * F[j];
+            fullE += f2;
+            if (j < loadLen) {
+                fRef[j] = F[j];
+                refE += f2;
+            }
+        }
+        // Degeneracy guard: after earlier sweeps clean the reference window, a later sweep's factor can be ~0 in
+        // the reference while a PRESERVED fault keeps F large in the test window; fitting a loading then divides
+        // by ~0 and λ̂ explodes, injecting a finite-but-huge spurious test-window excursion (false fires the
+        // validator misses). If the factor's reference energy is a negligible fraction of its full energy it is
+        // unidentifiable from the reference ⇒ do not project onto it.
+        if (refE <= 1e-12 || refE < 1e-6 * fullE)
+            return;
+        for (const i of targetMembers) {
+            for (let j = 0; j < loadLen; j++)
+                refRow[j] = R[i][j];
+            const lam = (0, multi_factor_common_mode_1.robustSlope)(fRef, refRow); // loading fit on the REFERENCE window only (fault not absorbed)
+            for (let j = 0; j < t; j++)
+                R[i][j] -= lam * F[j];
+        }
+    };
     for (let it = 0; it < iterations; it++) {
         for (const groups of partGroups) {
             for (const idxs of groups.values()) {
-                // A domain needs ≥ 2 members to define a SHARED factor. With one member the "factor" IS that shard's
-                // own series, so fitting a loading on it would subtract the shard's own fault (self-absorption → a
-                // guaranteed false negative). Skip — the lone shard keeps its level-removed residual.
+                // A domain needs ≥ 2 members to define a SHARED factor (a lone member's "factor" is its own series →
+                // self-absorbs its own fault).
                 if (idxs.length < 2)
                     continue;
-                // Domain factor F_d[t] = robust location across the domain's members of the CURRENT residual; also
-                // accumulate the factor's reference-window and full-window energy for the degeneracy guard below.
-                let refE = 0, fullE = 0;
-                for (let j = 0; j < t; j++) {
-                    col.length = 0;
-                    for (const i of idxs)
-                        col.push(R[i][j]);
-                    F[j] = (0, common_mode_1.robustLocation)(col);
-                    const f2 = F[j] * F[j];
-                    fullE += f2;
-                    if (j < loadLen) {
-                        fRef[j] = F[j];
-                        refE += f2;
-                    }
-                }
-                // Degeneracy guard. After earlier sweeps remove the common-mode, a later sweep's factor can be ~0 in
-                // the (now-clean) reference window while a PRESERVED fault keeps F large in the test window. Fitting a
-                // loading then divides by ~0 and the slope explodes, injecting a huge spurious test-window excursion
-                // into every member — manufactured false fires that stay FINITE (so the input validator misses them).
-                // If the factor's reference-window energy is a negligible fraction of its full-window energy it is
-                // unidentifiable from the reference ⇒ do not project onto it (λ̂ = 0; skip this domain this sweep).
-                if (refE <= 1e-12 || refE < 1e-6 * fullE)
+                if (!lo) {
+                    deflate(idxs, idxs); // in-sample factor
                     continue;
-                // Per-shard loading fit on the REFERENCE window only (so a test-window fault is not absorbed),
-                // then deflate over ALL ticks.
+                }
+                // LEAVE-GROUP-OUT: members are deflated against a factor that EXCLUDES their own leave-out group, so a
+                // coherent group fault cannot contaminate the baseline it is measured against. Members with no group
+                // (label < 0) are a negligible domain fraction and use the all-member factor.
+                const byG = new Map();
                 for (const i of idxs) {
-                    const lam = (0, multi_factor_common_mode_1.robustSlope)(fRef, R[i].slice(0, loadLen));
-                    for (let j = 0; j < t; j++)
-                        R[i][j] -= lam * F[j];
+                    const g = lo[i];
+                    const a = byG.get(g);
+                    if (a)
+                        a.push(i);
+                    else
+                        byG.set(g, [i]);
+                }
+                for (const [g, targets] of byG) {
+                    if (g < 0) {
+                        deflate(idxs, targets);
+                        continue;
+                    }
+                    const factorMembers = idxs.filter((i) => lo[i] !== g);
+                    // If excluding the group leaves too few members to estimate the factor, fall back to all members.
+                    deflate(factorMembers.length >= 2 ? factorMembers : idxs, targets);
                 }
             }
         }

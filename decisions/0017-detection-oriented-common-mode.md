@@ -171,6 +171,36 @@ output is the **ranking** (`perShardEValue`) — hand engineers a ranked shortli
 automated discovery set. (Earlier single-pod runs reported "5.1% FPR" — true, but FPR was the wrong metric;
 precision/FDP at sparse density is the operationally meaningful one, and it is poor.)
 
+## Is it the baseline, or scale? — leave-group-out diagnosis
+
+The absorption is the **baseline creation, not scale.** The common-mode is estimated **in-sample** (each
+domain factor is the robust center over members *including* the faulty ones), so a coherent fault contaminates
+the baseline it is measured against. Decisive test (faulted rack's residual shift preserved, 4-pod clustersynth):
+
+| fault | raw | in-sample baseline | leave-rack-out | oracle |
+|---|---|---|---|---|
+| delta=8 | 14.4 | **3.5** | 7.8 | 8.0 |
+| delta=15 | 21.4 | **7.8** | 14.8 | 15.0 |
+
+In-sample absorbs ~half; leave-rack-out recovers oracle-level preservation. So the diagnosis is confirmed,
+and `leaveOutGroups` is implemented (excludes a shard's own group from its factor).
+
+**But leave-group-out is NOT a localisation win** (implemented, OFF by default). End-to-end rack-vs-fleet
+*ranking* gets WORSE with it, not better:
+
+| rack delta | leave-out OFF (avg rank /40, top1) | leave-out ON |
+|---|---|---|
+| 8 | 9.4, 40% | 17.6, 20% |
+| 15 | 2.6, 60% | 28.0, 20% |
+
+Why: the diagnostic measured only the *faulted* group's shift, but ranking is *relative*. Estimating a
+group's factor from *other* groups, under **heterogeneous loadings**, leaves a per-group `(Δλ)·F` residual;
+since F is nonstationary that bias is a **trend** that does not cancel in the cal-vs-test e-value, so it
+inflates *every* group's score and defeats the ranking. It is the **same wall** once more: a group's
+common-mode can be estimated either *including* it (→ absorption) or *excluding* it (→ heterogeneous-loading
+trend bias) — both fail; only true loadings (oracle) are clean. Use `leaveOutGroups` only for
+near-homogeneous-loading groups (Δλ≈0).
+
 ## Carry-forward
 
 Item 6 confirmed the FAIR diagnosis (localization is a common-mode *estimation* problem) and bounded how far

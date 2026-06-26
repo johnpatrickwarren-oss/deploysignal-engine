@@ -82,7 +82,11 @@ export function localizeFaults(p: LocalizeParams): LocalizeResult {
     throw new RangeError(`localizeFaults: localizationGroups has length ${localizationGroups.length}, expected one label per shard (${n})`);
   }
 
-  // 1. detection-oriented common-mode (loading fit on the healthy reference window).
+  // 1. detection-oriented common-mode (loading fit on the healthy reference window). NOTE: leave-group-out is
+  //    NOT enabled by default. It prevents a coherent group fault from being absorbed into the in-sample
+  //    baseline, but under HETEROGENEOUS loadings it injects a per-group (Δλ)·F trend bias that does not cancel
+  //    in the cal-vs-test e-value and empirically DEGRADES rack-level ranking (ADR 0017). Pass it via
+  //    commonMode.leaveOutGroups only for near-homogeneous-loading groups.
   const R = detectionOrientedResiduals(X, referenceLen, factorPartitions, commonMode);
 
   // 2. per-shard UI e-value on each residual row.

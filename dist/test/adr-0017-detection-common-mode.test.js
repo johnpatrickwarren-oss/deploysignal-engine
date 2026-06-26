@@ -147,6 +147,45 @@ const residShift = (r) => mean(r, FONSET, T) - mean(r, 0, REF);
     const shift = mean(R[0], fonset, t) - mean(R[0], 0, ref);
     strict_1.default.ok(shift > 0.5 * step, `sole-member shard must keep its fault (not self-absorb); got ${shift.toFixed(2)}`);
 });
+(0, node_test_1.test)('detection common-mode: leaveOutGroups preserves a coherent GROUP fault that in-sample absorbs', () => {
+    // A coherent fault across a group that is a meaningful fraction of a domain is absorbed by the in-sample
+    // baseline (the group pulls the robust factor). leaveOutGroups excludes the group from its own factor, so
+    // the fault is preserved. 40 shards, ONE cool domain; group 0 = 12 shards (30%) all shift together.
+    const n = 40, ref = 120, t = 240, fonset = 120, delta = 8, gsize = 12;
+    const rng = lcg(7), gg = () => gaussian(rng);
+    const F = new Array(t);
+    {
+        let p = gg();
+        for (let k = 0; k < t; k++) {
+            p = 0.6 * p + 0.8 * gg() + 0.02 * k;
+            F[k] = p;
+        }
+    }
+    const X = [];
+    for (let i = 0; i < n; i++) {
+        const lam = 0.5 + rng();
+        const row = new Array(t);
+        for (let k = 0; k < t; k++)
+            row[k] = lam * F[k] + gg() + (i < gsize && k >= fonset ? delta : 0);
+        X.push(row);
+    }
+    const part = [Array.from({ length: n }, () => 0)]; // single cool domain
+    const groups = Array.from({ length: n }, (_, i) => (i < gsize ? 0 : 1)); // leave-out groups
+    const groupShift = (R) => {
+        let s = 0;
+        for (let i = 0; i < gsize; i++)
+            s += mean(R[i], fonset, t) - mean(R[i], 0, ref);
+        return s / gsize;
+    };
+    const sIn = groupShift((0, detection_common_mode_1.detectionOrientedResiduals)(X, ref, part, { iterations: 4, loadLen: ref }));
+    const sLo = groupShift((0, detection_common_mode_1.detectionOrientedResiduals)(X, ref, part, { iterations: 4, loadLen: ref, leaveOutGroups: groups }));
+    // leave-group-out preserves nearly the FULL group fault; in-sample absorbs some (the group pulls the
+    // in-sample factor). (On real crossed-domain topology the in-sample absorption compounds across domains and
+    // is far larger — ADR 0017 measures ~3.5/8; this single-domain unit fleet absorbs less but the direction is
+    // the same.)
+    strict_1.default.ok(sLo > 0.8 * delta, `leave-group-out should preserve ~the full group fault (> ${(0.8 * delta).toFixed(1)}); got ${sLo.toFixed(2)}`);
+    strict_1.default.ok(sLo > 1.2 * sIn, `leave-group-out should preserve more than in-sample; lo=${sLo.toFixed(2)} in=${sIn.toFixed(2)}`);
+});
 (0, node_test_1.test)('detection common-mode: guards', () => {
     const X = genFleet(1, -1).X;
     const P = partitions();
@@ -158,5 +197,6 @@ const residShift = (r) => mean(r, FONSET, T) - mean(r, 0, REF);
     strict_1.default.throws(() => (0, detection_common_mode_1.detectionOrientedResiduals)(X, REF, [[0, 1, 2]]), /expected one label per shard/);
     const ragged = X.map((r, i) => (i === 3 ? r.slice(0, T - 1) : r));
     strict_1.default.throws(() => (0, detection_common_mode_1.detectionOrientedResiduals)(ragged, REF, P), /ragged matrix/);
+    strict_1.default.throws(() => (0, detection_common_mode_1.detectionOrientedResiduals)(X, REF, P, { leaveOutGroups: [0, 1, 2] }), /leaveOutGroups has length/);
 });
 //# sourceMappingURL=adr-0017-detection-common-mode.test.js.map

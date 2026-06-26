@@ -74,6 +74,32 @@ function diurnalSeries(seed) {
     strict_1.default.equal(bl.bins[10].confidence, 'aggregate');
     strict_1.default.equal(bl.bins[10].mean, bl.aggregate.mean);
 });
+(0, node_test_1.test)('seasonal baseline: adjacency pooling borrows from neighbours before the aggregate', () => {
+    // bins 0-2 heavily populated at 10; bins 3,5,6,7 at 90; bin 4 has a single sample → sparse.
+    const values = [], context = [];
+    for (let h = 0; h <= 2; h++)
+        for (let k = 0; k < 100; k++) {
+            values.push(10 + gaussian(lcg(h * 100 + k)));
+            context.push(h);
+        }
+    for (const h of [3, 5, 6, 7])
+        for (let k = 0; k < 30; k++) {
+            values.push(90 + gaussian(lcg(h * 100 + k)));
+            context.push(h);
+        }
+    values.push(90);
+    context.push(4); // lone sample in bin 4
+    const opt = { nBins: 8, minStrict: 30, minPooled: 10 };
+    const noPool = (0, seasonal_baseline_1.compileSeasonalBaseline)(values, context, opt);
+    const pooled = (0, seasonal_baseline_1.compileSeasonalBaseline)(values, context, { ...opt, poolRadius: 1 });
+    // without pooling, bin 4 (1 sample) falls back to the global aggregate — the robust clean-null center of the
+    // majority (≈ 10; the 90s are the minority and get trimmed), NOT bin 4's true neighbourhood value (90).
+    strict_1.default.equal(noPool.bins[4].confidence, 'aggregate');
+    strict_1.default.ok(Math.abs(noPool.bins[4].mean - 10) < 3, `aggregate (robust majority) ≈ 10; got ${noPool.bins[4].mean.toFixed(1)}`);
+    // with poolRadius=1, bin 4 borrows neighbours 3 & 5 (both ≈ 90) → pooled ≈ 90, not the aggregate
+    strict_1.default.equal(pooled.bins[4].confidence, 'pooled');
+    strict_1.default.ok(Math.abs(pooled.bins[4].mean - 90) < 2, `adjacency-pooled ≈ 90; got ${pooled.bins[4].mean.toFixed(1)}`);
+});
 (0, node_test_1.test)('seasonal baseline: a fault in fresh data survives residualisation', () => {
     const { values, context } = diurnalSeries(3);
     const bl = (0, seasonal_baseline_1.compileSeasonalBaseline)(values, context, { nBins: NB, minStrict: 30, minPooled: 10 });

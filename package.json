@@ -150,6 +150,10 @@
       "types": "./dist/fleet/*.d.ts",
       "default": "./dist/fleet/*.js"
     },
+    "./baseline/*": {
+      "types": "./dist/baseline/*.d.ts",
+      "default": "./dist/baseline/*.js"
+    },
     "./l0/*": {
       "types": "./dist/l0/*.d.ts",
       "default": "./dist/l0/*.js"

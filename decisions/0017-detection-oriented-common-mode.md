@@ -146,6 +146,31 @@ residual" label until post-selection validity is worked out.
   0015 v2); restoring the provable per-shard guarantee (needs the nonstationarity-valid e-value, open).
 - **Depends on:** item 2 (rank selection) — RPCA's `r` is the same quantity.
 
+## Target regime + the honest FDP result (scope)
+
+This path is for **large fleets (10k+ GPUs)**, where manual triage is infeasible; small fleets are **out of
+scope** (DCGM per-GPU telemetry lets an engineer localise directly).
+
+**`localizeFaults` is a RANKING aid, NOT a discovery set.** Measured at scale (clustersynth, 4–8 pods /
+2.9k–5.8k GPUs, ~1% sparse faults, 72/rack, q=0.1, multi-seed):
+
+| metric | value | meaning |
+|---|---|---|
+| recall (detection) | ~41–49% | a faulty GPU is flagged ~half the time |
+| per-shard FPR | ~6% | a healthy GPU is flagged ~6% of the time |
+| **FDP** (false / selected) | **~92–94%** | the e-BH SELECTED set is mostly false positives |
+| precision | ~6–8% | … so the selection is NOT a clean fault list |
+
+The trap: **low FPR ≠ low FDP when faults are rare.** At ~1% fault density, 6% FPR on the 99% healthy majority
+swamps the true positives → FDP ~93%, far above q. The e-BH FDR theorem does **not** hold because the
+data-dependent common-mode residual breaks per-shard validity (leakage inflates healthy e-values). So
+`selected` is NOT trustworthy as "the faulty GPUs."
+
+What IS real and useful: victims are **enriched ~7× over healthy** (recall ~45% vs FPR ~6%). So the trustworthy
+output is the **ranking** (`perShardEValue`) — hand engineers a ranked shortlist of suspects to triage, not an
+automated discovery set. (Earlier single-pod runs reported "5.1% FPR" — true, but FPR was the wrong metric;
+precision/FDP at sparse density is the operationally meaningful one, and it is poor.)
+
 ## Carry-forward
 
 Item 6 confirmed the FAIR diagnosis (localization is a common-mode *estimation* problem) and bounded how far

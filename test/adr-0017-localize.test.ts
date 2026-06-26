@@ -30,10 +30,11 @@ function gaussian(rng: () => number): number {
 const RACKS = 10, PER_RACK = 16, N = RACKS * PER_RACK;
 const REF = 160, NT = 120, T = REF + NT, FONSET = REF;
 const NCOOL = 3, NPOWER = 4, NOISE = 1, RHO = 0.6, STEP = 12;
-// NOTE on scale: absolute FP control depends on the e-BH group size (threshold n/q must exceed typical
-// leakage e-values). This small-fleet unit test exercises the WIRING + the localisation SIGNAL; the shipped
-// function's absolute performance is validated on the large-rack clustersynth substrate in ADR 0016
-// (detection ≈ 49%, FPR ≈ 5.1% at 72 shards/rack). Small racks here leave a higher residual FP rate — expected.
+// NOTE. The trustworthy output is the RANKING (perShardEValue): victims are enriched ~7× over healthy. The
+// e-BH `selected` set is NOT a certified fault list — measured at scale (ADR 0016/0017, 2.9k–5.8k GPUs, ~1%
+// faults) FDP ≈ 93% (low FPR ≠ low FDP at rare-fault density; the data-dependent residual voids the e-BH
+// theorem). So this test asserts the localisation SIGNAL (victim selected ≫ a healthy shard) — NOT FDP/precision,
+// which is poor by design and validated separately. For large fleets only; small fleets → DCGM.
 const rackOf = (i: number): number => Math.floor(i / PER_RACK);
 const coolOf = (i: number): number => rackOf(i) % NCOOL;
 const powerOf = (i: number): number => rackOf(i) % NPOWER;

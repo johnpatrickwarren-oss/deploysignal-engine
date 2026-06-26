@@ -21,10 +21,13 @@ export interface LocalizeParams {
     commonMode?: DetectionCommonModeOptions;
 }
 export interface LocalizeResult {
-    /** Flagged shard indices (union over all groups), sorted ascending. */
-    selected: number[];
-    /** Per-shard UI e-value on the detection-common-mode residual (for ranking / diagnostics). */
+    /** The PRIMARY, trustworthy output: per-shard UI e-value on the detection-common-mode residual. RANK by
+     *  this for a triage shortlist (victims are enriched ~7× over healthy). */
     perShardEValue: number[];
+    /** The e-BH selected set (union over groups, sorted). CONVENIENCE ONLY — NOT a certified fault list: FDP is
+     *  not controlled on the data-dependent residual (measured ~93% at ~1% fault density). Prefer ranking by
+     *  `perShardEValue`. */
+    selected: number[];
     /** Per group: `groupLabel → selected shard indices in that group` (only groups with ≥1 selection). */
     byGroup: Map<number, number[]>;
 }

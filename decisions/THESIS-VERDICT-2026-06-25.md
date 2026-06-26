@@ -62,9 +62,13 @@ common-mode, labeled faults at topology locations) through the real engine pipel
    bigger faults); cal-only loading preserves it but leakage caps it at ~16–20% with degraded FDP. → **frontier
    item 6: a detection-oriented common-mode** (distinct from the FDP-oriented one). **Item 6 explored (ADR
    0017):** RPCA falsified (collinearity → absorption); the best practical estimator is **topology-structured
-   crossed-domain backfitting at ~40% detection / ~5% FPR** — a 4×+ gain over the engine, but a *large gap to
-   the oracle's 99%* remains, because estimating crossed/heterogeneous/nonstationary factors from one fleet
-   snapshot is hard. Closing more likely needs temporal/stateful per-shard loading models.
+   crossed-domain backfitting** — a 4×+ gain over the engine, but a *large gap to the oracle's 99%* remains,
+   because estimating crossed/heterogeneous/nonstationary factors from one fleet snapshot is hard. Closing more
+   likely needs temporal/stateful per-shard loading models. **End-to-end (`localizeFaults`, measured at 2.9k–5.8k
+   GPUs, ~1% sparse faults): recall ~45%, per-shard FPR ~6%, but FDP ~93% — the e-BH selection is mostly false
+   positives** (low FPR ≠ low FDP at rare-fault density; the data-dependent residual voids the e-BH theorem). So
+   the deliverable is a **RANKING shortlist** (victims enriched ~7× over healthy), NOT an FDR-controlled
+   discovery set. Honest localization = "rank suspects for an engineer," not "here are the faulty GPUs."
 3. **Two ceilings the FAIR test makes explicit.** (a) clustersynth's nonstationarity is *removable*
    common-mode, so the oracle's 100% is an **upper bound real data won't reach** — ADR 0012's irreducible
    per-shard nonstationarity caps real-telemetry localization, and clustersynth cannot measure that ceiling.

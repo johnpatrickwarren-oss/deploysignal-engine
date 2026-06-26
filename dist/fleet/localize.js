@@ -15,10 +15,16 @@
 // SEPARATELY per group and report per-group results. This is the honest middle: it localises and it controls
 // FDR WITHIN each group, but there is NO cross-group/global FDR statement.
 //
-// SCOPE / HONESTY (do NOT overstate — same caveats as ADR 0017).
-//   • This is RANKING / LOCALISATION, NOT an FDR guarantee. The common-mode residual is a data-dependent fit,
-//     so the per-shard e-value is POST-SELECTION and the per-group e-BH FDR control is not a clean theorem on
-//     it. Treat `selected` as a ranked localisation, not a certified discovery set.
+// SCOPE / HONESTY (do NOT overstate — measured, not assumed).
+//   • The trustworthy output is the RANKING (`perShardEValue`), NOT the selected set. Measured at scale
+//     (clustersynth, 2.9k–5.8k GPUs, ~1% sparse faults, 72/rack, q=0.1): recall ~45%, per-shard FPR ~6%, but
+//     **FDP ~93%** — the e-BH `selected` set is mostly false positives. Reason: the common-mode residual is a
+//     data-dependent fit, so per-shard validity is broken (leakage inflates healthy e-values) and the e-BH FDR
+//     theorem does NOT hold; and at ~1% fault density even a 6% FPR swamps the rare true positives.
+//   • So USE THIS AS A RANKED SHORTLIST: victims are enriched ~7× over healthy, so the top-ranked shards (by
+//     `perShardEValue`, fleet-wide or per group) are a good triage list for an engineer. Do NOT treat
+//     `selected` as a certified fault list — it is a convenience with NO FDR guarantee.
+//   • For large fleets (10k+) only; small fleets are out of scope (DCGM localises directly).
 //   • Real-telemetry ceiling (ADR 0012) is unchanged: irreducible per-shard nonstationarity is not removable
 //     common-mode, so localisation on real data is bounded well below the synthetic oracle.
 //   • GROUP-LEVEL faults (a whole domain shifting together) are ABSORBED by the common-mode and are a blind

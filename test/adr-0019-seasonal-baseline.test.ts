@@ -68,6 +68,24 @@ test('seasonal baseline: sparse bins fall back to aggregate', () => {
   assert.equal(bl.bins[10].mean, bl.aggregate.mean);
 });
 
+test('seasonal baseline: adjacency pooling borrows from neighbours before the aggregate', () => {
+  // bins 0-2 heavily populated at 10; bins 3,5,6,7 at 90; bin 4 has a single sample → sparse.
+  const values: number[] = [], context: number[] = [];
+  for (let h = 0; h <= 2; h++) for (let k = 0; k < 100; k++) { values.push(10 + gaussian(lcg(h * 100 + k))); context.push(h); }
+  for (const h of [3, 5, 6, 7]) for (let k = 0; k < 30; k++) { values.push(90 + gaussian(lcg(h * 100 + k))); context.push(h); }
+  values.push(90); context.push(4); // lone sample in bin 4
+  const opt = { nBins: 8, minStrict: 30, minPooled: 10 };
+  const noPool = compileSeasonalBaseline(values, context, opt);
+  const pooled = compileSeasonalBaseline(values, context, { ...opt, poolRadius: 1 });
+  // without pooling, bin 4 (1 sample) falls back to the global aggregate — the robust clean-null center of the
+  // majority (≈ 10; the 90s are the minority and get trimmed), NOT bin 4's true neighbourhood value (90).
+  assert.equal(noPool.bins[4].confidence, 'aggregate');
+  assert.ok(Math.abs(noPool.bins[4].mean - 10) < 3, `aggregate (robust majority) ≈ 10; got ${noPool.bins[4].mean.toFixed(1)}`);
+  // with poolRadius=1, bin 4 borrows neighbours 3 & 5 (both ≈ 90) → pooled ≈ 90, not the aggregate
+  assert.equal(pooled.bins[4].confidence, 'pooled');
+  assert.ok(Math.abs(pooled.bins[4].mean - 90) < 2, `adjacency-pooled ≈ 90; got ${pooled.bins[4].mean.toFixed(1)}`);
+});
+
 test('seasonal baseline: a fault in fresh data survives residualisation', () => {
   const { values, context } = diurnalSeries(3);
   const bl = compileSeasonalBaseline(values, context, { nBins: NB, minStrict: 30, minPooled: 10 });

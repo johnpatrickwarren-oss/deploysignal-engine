@@ -12,6 +12,13 @@ export interface SeasonalBaselineOptions {
     zCut?: number;
     /** Variance floor relative to mean² (guards underflow / degenerate constant bins). Default 1e-6. */
     varFloorRel?: number;
+    /** Adjacency pooling radius: a bin with too few clean samples pools the raw samples of bins within ±radius
+     *  (and recomputes the clean-null) before falling back to the global aggregate — so a sparse hour borrows
+     *  from adjacent hours rather than the whole-fleet mean. Default 0 (no adjacency pooling). */
+    poolRadius?: number;
+    /** Treat the context axis as cyclic for adjacency pooling (e.g. hour-of-day: bin 23 is adjacent to bin 0).
+     *  Default false. */
+    cyclic?: boolean;
 }
 export type BaselineConfidence = 'strict' | 'pooled' | 'aggregate' | 'none';
 export interface BaselineCell {

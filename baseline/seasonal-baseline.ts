@@ -35,6 +35,13 @@ export interface SeasonalBaselineOptions {
   zCut?: number;
   /** Variance floor relative to mean² (guards underflow / degenerate constant bins). Default 1e-6. */
   varFloorRel?: number;
+  /** Adjacency pooling radius: a bin with too few clean samples pools the raw samples of bins within ±radius
+   *  (and recomputes the clean-null) before falling back to the global aggregate — so a sparse hour borrows
+   *  from adjacent hours rather than the whole-fleet mean. Default 0 (no adjacency pooling). */
+  poolRadius?: number;
+  /** Treat the context axis as cyclic for adjacency pooling (e.g. hour-of-day: bin 23 is adjacent to bin 0).
+   *  Default false. */
+  cyclic?: boolean;
 }
 
 export type BaselineConfidence = 'strict' | 'pooled' | 'aggregate' | 'none';
@@ -96,6 +103,9 @@ export function compileSeasonalBaseline(
   const minPooled = opts.minPooled ?? 20;
   const zCut = opts.zCut ?? 3.0;
   const varFloorRel = opts.varFloorRel ?? 1e-6;
+  const poolRadius = opts.poolRadius ?? 0;
+  const cyclic = opts.cyclic ?? false;
+  if (!Number.isInteger(poolRadius) || poolRadius < 0) throw new RangeError(`${fn}: poolRadius must be a non-negative integer; got ${poolRadius}`);
   if (!(zCut > 0)) throw new RangeError(`${fn}: zCut must be > 0; got ${zCut}`);
   if (!(minPooled >= 1 && minStrict >= minPooled)) throw new RangeError(`${fn}: require 1 <= minPooled <= minStrict; got minPooled=${minPooled}, minStrict=${minStrict}`);
 
@@ -110,12 +120,27 @@ export function compileSeasonalBaseline(
   const agg = robustCleanNull(values as number[], zCut, varFloorRel);
   const aggregate: BaselineCell = { ...agg, confidence: 'aggregate' };
 
-  const bins: BaselineCell[] = buckets.map((b) => {
-    if (b.length === 0) return { ...aggregate }; // unseen bin ⇒ aggregate
-    const c = robustCleanNull(b, zCut, varFloorRel);
-    if (c.n >= minStrict) return { ...c, confidence: 'strict' };
-    if (c.n >= minPooled) return { ...c, confidence: 'pooled' };
-    return { n: aggregate.n, mean: aggregate.mean, variance: aggregate.variance, confidence: 'aggregate' };
+  const bins: BaselineCell[] = buckets.map((b, idx) => {
+    if (b.length > 0) {
+      const c = robustCleanNull(b, zCut, varFloorRel);
+      if (c.n >= minStrict) return { ...c, confidence: 'strict' as const };
+      if (c.n >= minPooled) return { ...c, confidence: 'pooled' as const };
+    }
+    // Too few clean samples: try adjacency pooling (borrow from neighbouring bins) before the aggregate.
+    if (poolRadius > 0) {
+      const pooled: number[] = [];
+      for (let d = -poolRadius; d <= poolRadius; d++) {
+        let bi = idx + d;
+        if (cyclic) bi = ((bi % nBins) + nBins) % nBins;
+        if (bi < 0 || bi >= nBins) continue;
+        for (const x of buckets[bi]) pooled.push(x);
+      }
+      if (pooled.length > 0) {
+        const c = robustCleanNull(pooled, zCut, varFloorRel);
+        if (c.n >= minPooled) return { ...c, confidence: 'pooled' as const };
+      }
+    }
+    return { n: aggregate.n, mean: aggregate.mean, variance: aggregate.variance, confidence: 'aggregate' as const };
   });
 
   return { bins, aggregate };

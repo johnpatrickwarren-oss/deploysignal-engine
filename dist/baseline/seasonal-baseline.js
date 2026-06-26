@@ -67,6 +67,10 @@ function compileSeasonalBaseline(values, context, opts) {
     const minPooled = opts.minPooled ?? 20;
     const zCut = opts.zCut ?? 3.0;
     const varFloorRel = opts.varFloorRel ?? 1e-6;
+    const poolRadius = opts.poolRadius ?? 0;
+    const cyclic = opts.cyclic ?? false;
+    if (!Number.isInteger(poolRadius) || poolRadius < 0)
+        throw new RangeError(`${fn}: poolRadius must be a non-negative integer; got ${poolRadius}`);
     if (!(zCut > 0))
         throw new RangeError(`${fn}: zCut must be > 0; got ${zCut}`);
     if (!(minPooled >= 1 && minStrict >= minPooled))
@@ -82,14 +86,32 @@ function compileSeasonalBaseline(values, context, opts) {
     }
     const agg = robustCleanNull(values, zCut, varFloorRel);
     const aggregate = { ...agg, confidence: 'aggregate' };
-    const bins = buckets.map((b) => {
-        if (b.length === 0)
-            return { ...aggregate }; // unseen bin ⇒ aggregate
-        const c = robustCleanNull(b, zCut, varFloorRel);
-        if (c.n >= minStrict)
-            return { ...c, confidence: 'strict' };
-        if (c.n >= minPooled)
-            return { ...c, confidence: 'pooled' };
+    const bins = buckets.map((b, idx) => {
+        if (b.length > 0) {
+            const c = robustCleanNull(b, zCut, varFloorRel);
+            if (c.n >= minStrict)
+                return { ...c, confidence: 'strict' };
+            if (c.n >= minPooled)
+                return { ...c, confidence: 'pooled' };
+        }
+        // Too few clean samples: try adjacency pooling (borrow from neighbouring bins) before the aggregate.
+        if (poolRadius > 0) {
+            const pooled = [];
+            for (let d = -poolRadius; d <= poolRadius; d++) {
+                let bi = idx + d;
+                if (cyclic)
+                    bi = ((bi % nBins) + nBins) % nBins;
+                if (bi < 0 || bi >= nBins)
+                    continue;
+                for (const x of buckets[bi])
+                    pooled.push(x);
+            }
+            if (pooled.length > 0) {
+                const c = robustCleanNull(pooled, zCut, varFloorRel);
+                if (c.n >= minPooled)
+                    return { ...c, confidence: 'pooled' };
+            }
+        }
         return { n: aggregate.n, mean: aggregate.mean, variance: aggregate.variance, confidence: 'aggregate' };
     });
     return { bins, aggregate };

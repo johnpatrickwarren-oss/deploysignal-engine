@@ -86,6 +86,51 @@ This corrects the earlier framing: the localisation failures were a **common-mod
 not a missing-seasonal-baseline problem. The baseline still belongs in the engine (consumers need it for the
 reasons above), but it is not the lever that fixes per-shard detection with the UI.
 
+## Detector bake-off against the baseline (validates the architecture)
+
+Running all detector families against the per-shard seasonal baseline (cal = healthy history, test = fresh
+window), detection@~5%FP, clustersynth 6-week hourly:
+
+| detector | mean(boundary) | persist | variance | drift |
+|---|---|---|---|---|
+| UI / safe-t / BF (mean) | 6 / 23 / 21% | **36–38%** | 0% | 19–28% |
+| distrib.fRatio (variance) | 0% | 4% | **100%** | 1% |
+| distrib.trendT (drift) | 100% | 1% | 100% | **100%** |
+| UI-adjacent (NO baseline) | 49% | **4%** | 100% | 34% |
+
+Findings: (1) **The baseline enables persistent/absolute-fault detection** — baseline-referenced mean detectors
+catch a persistent fault (36–38%) that adjacent-window detection is blind to (4% ≈ FP floor). This is the
+architecture's payoff. (2) Families specialise: `fRatio`=variance specialist; `trendT`=sensitive catch-all
+(fires on everything, no typing); mean e-values=mean/persist (safe-t/BF > the conservative UI). (3) Adjacent
+vs baseline are **complementary**: adjacent is stronger for a *recent boundary change* (no half-window
+dilution), baseline is essential for *persistent* faults — run both. (4) Power is capped at ~38% because the
+per-shard seasonal baseline removes seasonality/level but NOT the cross-shard common-mode (the ADR 0017/0018
+layer), which remains in the residual as a noise floor — common-mode removal is a separate, additive layer.
+
+## Capstone: the full pipeline (baseline + common-mode + detectors)
+
+Stacking instrumented common-mode removal (ADR 0018) on top of the baseline, then the detector families
+(detection@~5%FP, clustersynth 6-week hourly, true instrumented factors):
+
+| detector | mean | persist | var | drift  →  | mean | persist | var | drift |
+|---|---|---|---|---|---|---|---|---|
+| | **baseline only** | | | | **+ common-mode** | | | |
+| safe-t | 21% | 39% | 0% | 26% | **100%** | **100%** | 0% | **100%** |
+| BF | 24% | 38% | 23% | 29% | **100%** | 76% | **100%** | **100%** |
+| UI | 6% | 35% | 5% | 19% | 0% | **100%** | 0% | 0% |
+| fRatio | 0% | 4% | 100% | 1% | 100% | 5% | **100%** | 100% |
+| trendT | 100% | 1% | 24% | 100% | 100% | 8% | 100% | **100%** |
+
+**The layered architecture is validated end-to-end.** Common-mode removal lifts mean/persist/drift detection
+from ~20–40% to 76–100% (safe-t/BF): the common-mode was the power ceiling; strip it and detectors recover.
+Pipeline = baseline (strip seasonality/level) → instrumented common-mode (strip cross-shard correlation) →
+detector families. Roles: **safe-t** workhorse (mean/persist/drift); **BF** all-rounder (+variance); **UI**
+conservative floor (clean persistent shifts only — any-φ validity costs power, tests boundary-aligned shifts);
+**fRatio** variance specialist; **trendT** structured-change catch-all. **persist is caught only by the
+mean-shift family** (a constant offset has no variance/trend signature) — the "quietly-bad-for-a-while" case.
+Caveat: uses clean instrumented factors (≈ ADR 0018 oracle; degrades past ~30% factor noise) — achievable
+upper bound with good instrumentation.
+
 ## Scope note
 
 This is the charter + the first kit (per-cell Family-A-style seasonal clean-null). The full Family A/C/D/E

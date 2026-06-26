@@ -1,10 +1,13 @@
 # ADR 0018 — the per-shard loading model: instrumented common-mode (validated core)
 
 - **Date:** 2026-06-25
-- **Status:** **Proposed — validated core.** The construction's central claim is empirically validated on the
-  clustersynth crossed substrate (instrumented factors → rack localisation ≈ oracle at ≤10% measurement
-  noise; results below). Not yet implemented in the engine. Needs a cold-eye + the instrumented-telemetry
-  ingestion before production.
+- **Status:** **Proposed — validated core; engine primitive IMPLEMENTED.** The central claim is empirically
+  validated on the clustersynth crossed substrate (instrumented factors → rack localisation ≈ oracle at ≤10%
+  measurement noise; results below). The per-window primitive ships as
+  `fleet/instrumented-common-mode.ts` (`instrumentedCommonModeResiduals`) + `test/adr-0018-…` (suite 205/205:
+  removes common-mode, preserves the fault, localises ≈ oracle, robust to 10% factor noise, guards). Still
+  needs a cold-eye and the instrumented-telemetry ingestion (the data-plumbing lift) before production; the
+  loading-persistence (warm-start) layer is future work.
 - **Builds on / resolves:** ADR 0017 (localisation is a common-mode *estimation* problem; the wall is the
   in-sample baseline) and the per-shard layer (`per-shard/warm-start.ts` already keeps per-shard state over
   time, but only the *level/baseline*, never the *loadings*). This ADR adds the missing piece — per-shard

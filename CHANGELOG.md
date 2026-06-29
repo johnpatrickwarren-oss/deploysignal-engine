@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.6.1-pre — 2026-06-29
+
+- **Release hygiene only — no functional change.** Aligns the published tag with
+  the `package.json` `version` field. The `v0.6.0-pre` tag was cut without
+  bumping the field (it read `0.5.0-pre`), so consumers pinning a tag resolved a
+  package whose internal version disagreed. This release is tagged `v0.6.1-pre`
+  with the field set to `0.6.1-pre` so tag == version. Content is identical to
+  the `v0.6.0-pre` entry below.
+
 ## v0.6.0-pre — 2026-06-29
 
 - **L1 ingestion contract** (ADR 0020) + **calibrator port** (ADR 0021) — the

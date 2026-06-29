@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## v0.6.0-pre — 2026-06-29
+
+- **L1 ingestion contract** (ADR 0020) + **calibrator port** (ADR 0021) — the
+  ingestion-side kit that feeds the baseline compiler.
+- **Multivariate per-cell baseline compiler (Family-C)** — completes the L1 kit:
+  per-cell mean vectors + robust covariance for the joint-vector detectors.
+- **Seasonal clean-null baseline kit + charter** (ADR 0019) and the detector
+  bake-off capstone validating the full layered pipeline.
+- **Fleet frontier closeout** (ADRs 0013–0018) — detection-oriented common-mode,
+  the `localizeFaults` ranking path, `leaveOutGroups`, and the per-shard
+  instrumented common-mode loading model.
+- The universal-inference e-value and ADR 0009–0012 items below (previously
+  staged under "Unreleased") ship in this tag.
 
 - **`detectors/universal-inference-e-value.ts`** (ADR 0010) — a split likelihood-ratio
   (universal-inference) e-value for an AR(1) mean shift. `E[e|H0] ≤ 1` **by construction for any φ**

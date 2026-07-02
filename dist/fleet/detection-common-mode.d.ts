@@ -1,3 +1,7 @@
+/** ADR 0022 — domains with 2..LOO_MAX_MEMBERS members are deflated against leave-one-out factors
+ *  (one post-loop pass; see the file header). Domains above this size keep the all-members Tukey
+ *  factor, whose breakdown point already handles a 1-of-many outlier. */
+export declare const LOO_MAX_MEMBERS = 5;
 export interface DetectionCommonModeOptions {
     /** Backfitting sweeps over the crossed partitions. Default 4 (FAIR: residual φ converges by ~4 sweeps;
      *  more sweeps buy little). Must be a positive integer. */
@@ -24,6 +28,11 @@ export interface DetectionCommonModeOptions {
  *  fault in the test window — feed each row to a per-shard detector then a topology-PARTITIONED e-BH for
  *  localisation. This is a POWER tool, NOT an FDR guarantee on its (data-dependent) residual; keep
  *  `multiFactorRobustResiduals` for the guarantee path.
+ *
+ *  ADR 0022: domains with 2..LOO_MAX_MEMBERS members are deflated ONCE, after the sweeps, against
+ *  leave-one-out factors (shard i vs the robust location of the OTHER members) — no self-absorption; a
+ *  2-member domain becomes a pure pair contrast whose mirrored sibling excursion is intrinsic and documented
+ *  (file header). Larger domains keep the iterated all-members factor.
  *
  *  @param X            `[shard][tick]` counter matrix.
  *  @param calLen       healthy reference-window length for the per-shard level (median over `[0, calLen)`).

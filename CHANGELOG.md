@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.6.3-pre — 2026-07-02
+
+- **Calibrated group attribution (ADR 0022):** `attributeCommonMode` gains opt-in `per_shard_e_values`
+  / `fleet_fire_rate` / `coincidence_window_s`; candidates are annotated with `group_e_value`
+  (arithmetic mean over ALL group members — validity inherited from the inputs), `binom_tail`
+  (size-calibrated Binomial(g, α̂) co-firing tail — the raw ≥2-count rule false-candidates
+  quadratically in group size), and `group_size`; a temporal coincidence window replaces the
+  fires-days-apart clustering. Legacy calls byte-identical.
+- **Leave-one-out factors for small domains (ADR 0022):** domains with 2–5 members are deflated once,
+  post-sweeps, against per-member leave-one-out factors — no self-absorption (2-member faulty residual
+  carries ~7.9/8 of the step vs ~4.0/8 before); the ≤3-member sibling mirror is intrinsic and
+  documented (localize at pair granularity or route to a Mode-B contrast). Larger domains bit-for-bit
+  unchanged. 11 new tests; 237/237.
+
 ## v0.6.2-pre — 2026-07-02
 
 - **⚠️ Validity correction (2026-07-02 math audit — Tessera `research/2026-07-02-math-audit.md`):**

@@ -19,6 +19,34 @@
 // EVIDENCE.md. The hybrid Reviewer pair-review runs at WU-05 SLICE 3 close per
 // SCOPING-MEMO-v0.3 § 3 SLICE 3.C row.
 //
+// ── ADR 0022 — NULL-MODEL CALIBRATION (2026-07-02 math audit, F11) ────────────
+// The raw ≥ min_member_count rule has NO null model: under an (independent)
+// per-shard false-fire rate α, a g-member group falsely surfaces as a candidate
+// with probability ≈ C(g,2)·α² — QUADRATIC in group size, and the fleet-level
+// false-candidate count is then linear in the number of groups. A 72-shard rack
+// at α = 0.01 false-candidates at ≈ 0.15 per window; an absolute member-count
+// threshold therefore means CANDIDATE STRENGTH DEPENDS ON RACK SIZE, and a toy
+// sweep at small g cannot see the defect. Two optional, backward-compatible
+// annotations calibrate this (computed only when the caller supplies the inputs):
+//   • `binom_tail` — P(X ≥ k) for X ~ Binomial(g, α̂) with g = the node's FULL
+//     group size (all shard-kind nodes within max_hop_distance, fired or not)
+//     and k = the distinct counted fired members. Thresholding on binom_tail
+//     (instead of the raw count) makes the false-candidate rate per group
+//     ≈ the threshold, INVARIANT to group size. Assumes independent fires
+//     under the null; positive co-firing dependence under the null makes the
+//     tail ANTI-conservative (see ADR 0022 caveats).
+//   • `group_e_value` — the arithmetic mean of the member shards' e-values over
+//     ALL group members (fired or not). The mean of valid e-values is a valid
+//     e-value, so this is calibrated group-level evidence whose validity is
+//     INHERITED from the validity of the supplied per-shard e-values (engine
+//     convention: no new guarantee is minted here).
+//   • `coincidence_window_s` — a temporal coincidence requirement: only the
+//     largest subset of fires that fits inside a sliding window of this many
+//     seconds counts toward min_member_count (event_ts was previously only
+//     min/max-aggregated, so fires days apart still clustered).
+// All three are OPT-IN; calls without the new options produce byte-identical
+// results to the pre-ADR-0022 behavior.
+//
 // Tessera-original code (NOT vendored from DeploySignal). Extract target at
 // Phase 2 close: @johnpatrickwarren-oss/deploysignal-engine.
 
@@ -80,6 +108,28 @@ export interface CommonModeCandidate {
    *  contracts. NOT a boolean — the literal-type prevents any code
    *  path from setting this to `false`. */
   correlational_not_causal: true;
+  /** ADR 0022 — present iff `per_shard_e_values` or `fleet_fire_rate`
+   *  was supplied: the FULL group size g — every shard-kind node
+   *  (SHARD_MEMBER_KINDS) within max_hop_distance of the shared node,
+   *  fired or not (union-ed with the counted fired members so that
+   *  member_count ≤ group_size always holds). */
+  group_size?: number;
+  /** ADR 0022 — present iff `per_shard_e_values` was supplied and at
+   *  least one group member has an entry: the ARITHMETIC MEAN of the
+   *  group members' e-values over ALL members of the group (not just
+   *  fired ones). The mean of valid e-values is a valid e-value —
+   *  validity is INHERITED from the supplied inputs (this module mints
+   *  no guarantee of its own). Members missing from the map are
+   *  excluded from the mean (equivalent to averaging over the covered
+   *  sub-group — still a valid e-value if the supplied ones are). */
+  group_e_value?: number;
+  /** ADR 0022 — present iff `fleet_fire_rate` was supplied:
+   *  P(X ≥ member_count) for X ~ Binomial(group_size, α̂), the
+   *  size-calibrated co-firing score. Unlike the raw member count,
+   *  thresholding on this is invariant to rack/group size (see the
+   *  file-header null-model rationale). Computed with a log-space
+   *  sum (numerically stable for large groups / tiny tails). */
+  binom_tail?: number;
 }
 
 export interface CommonModeAttributionOpts {
@@ -93,6 +143,27 @@ export interface CommonModeAttributionOpts {
   candidate_node_kinds?: ReadonlyArray<TopologyNode['kind']>;
   /** Injected clock for deterministic tests. */
   now?: () => number;
+  /** ADR 0022 (optional) — per-shard e-values keyed by shard node id,
+   *  for ALL group members (not just fired ones). When supplied, each
+   *  candidate is annotated with `group_e_value` (arithmetic mean over
+   *  the group; validity inherited from the inputs). Values must be
+   *  finite and ≥ 0 (e-values are non-negative). */
+  per_shard_e_values?: ReadonlyMap<string, number>;
+  /** ADR 0022 (optional) — α̂, the expected HEALTHY per-shard fire rate
+   *  (e.g. the fleet-wide false-fire rate at the configured per-shard
+   *  threshold). Must be in (0, 1). When supplied, each candidate is
+   *  annotated with `binom_tail` = P(X ≥ k), X ~ Binomial(g, α̂). */
+  fleet_fire_rate?: number;
+  /** ADR 0022 (optional) — temporal coincidence window in seconds.
+   *  When supplied, only the LARGEST subset of a node's fires whose
+   *  event_ts values fit inside a sliding window of this length
+   *  (max ts − min ts ≤ window; sort + two-pointer, first maximal
+   *  window wins for determinism) counts toward min_member_count;
+   *  member_shard_ids / member_count / timestamps / hop aggregation
+   *  are computed over that counted subset only. Fires outside the
+   *  window do not form a candidate. Absent = current behavior
+   *  (no temporal requirement). Must be finite and ≥ 0. */
+  coincidence_window_s?: number;
 }
 
 export interface CommonModeAttributionInput {
@@ -116,6 +187,14 @@ export const DEFAULT_MAX_HOP_DISTANCE = 1;
 export const DEFAULT_MIN_MEMBER_COUNT = 2;
 export const DEFAULT_CANDIDATE_NODE_KINDS: ReadonlyArray<TopologyNode['kind']> = ['psu', 'rack', 'cooling_zone'];
 
+/** ADR 0022 — node kinds counted as GROUP MEMBERS when enumerating a
+ *  candidate node's full group (for `group_size` / `group_e_value` /
+ *  `binom_tail`): the compute-shard kinds. Infra kinds (psu / rack /
+ *  cooling_zone / service / …) are not group members. */
+export const SHARD_MEMBER_KINDS: ReadonlyArray<TopologyNode['kind']> = [
+  'gpu_shard', 'tpu_shard', 'trainium_chip', 'inferentia_chip',
+];
+
 /** Canonical ordering for candidate sort. Lower index = earlier in
  *  output list. Restricted to the three hardware-substrate kinds; any
  *  other kind is excluded by candidate_node_kinds default and would
@@ -138,6 +217,19 @@ export function attributeCommonMode(
   const candidateKinds = opts.candidate_node_kinds ?? DEFAULT_CANDIDATE_NODE_KINDS;
   const candidateKindsSet = new Set<TopologyNode['kind']>(candidateKinds);
   const now = opts.now ?? (() => Math.floor(Date.now() / 1000));
+
+  // ── ADR 0022 optional-input validation ────────────────────────────
+  const eValues = opts.per_shard_e_values;
+  const fireRate = opts.fleet_fire_rate;
+  const coincidenceS = opts.coincidence_window_s;
+  if (fireRate !== undefined && !(Number.isFinite(fireRate) && fireRate > 0 && fireRate < 1)) {
+    throw new RangeError(`attributeCommonMode: fleet_fire_rate must be in (0, 1); got ${fireRate}`);
+  }
+  if (coincidenceS !== undefined && !(Number.isFinite(coincidenceS) && coincidenceS >= 0)) {
+    throw new RangeError(`attributeCommonMode: coincidence_window_s must be finite and >= 0; got ${coincidenceS}`);
+  }
+  const wantGroup = eValues !== undefined || fireRate !== undefined;
+  const shardMemberKindsSet = new Set<TopologyNode['kind']>(SHARD_MEMBER_KINDS);
 
   // Build adjacency (bidirectional).
   const adjacency = new Map<string, Set<string>>();
@@ -173,7 +265,11 @@ export function attributeCommonMode(
 
   // Aggregate per candidate.
   const candidates: CommonModeCandidate[] = [];
-  for (const [sharedNodeId, touches] of touchesByNode) {
+  for (const [sharedNodeId, allTouches] of touchesByNode) {
+    // ADR 0022: temporal coincidence — when a window is configured, only the
+    // largest co-firing subset that fits inside it counts. Absent = all touches
+    // count (pre-ADR-0022 behavior, byte-identical).
+    const touches = coincidenceS === undefined ? allTouches : largestCoincidentSubset(allTouches, coincidenceS);
     // distinct member shard ids (sorted lex asc).
     const distinct = Array.from(new Set(touches.map((t) => t.member_shard_id))).sort();
     if (distinct.length < minMembers) continue;            // F2 / F9: singleton not surfaced
@@ -198,7 +294,7 @@ export function attributeCommonMode(
       if (shardEarliest < earliest) earliest = shardEarliest;
       if (shardLatest > latest) latest = shardLatest;
     }
-    candidates.push({
+    const candidate: CommonModeCandidate = {
       shared_node_id: sharedNodeId,
       shared_node_kind: kind,
       member_shard_ids: distinct,
@@ -207,7 +303,37 @@ export function attributeCommonMode(
       earliest_event_ts: earliest,
       latest_event_ts: latest,
       correlational_not_causal: true,
-    });
+    };
+    // ADR 0022 annotations — computed ONLY when the caller supplied the inputs,
+    // so legacy calls produce objects with no new keys (backward compatible).
+    if (wantGroup) {
+      // Full group = shard-kind nodes within maxHop of the shared node, fired
+      // or not, union-ed with the counted fired members (guarantees k ≤ g even
+      // on a topology whose fired nodes use a non-shard kind).
+      const group = new Set<string>(distinct);
+      for (const [nodeId, hop] of bfsBounded(adjacency, sharedNodeId, maxHop)) {
+        if (hop === 0) continue; // the shared node itself
+        const k2 = kindById.get(nodeId);
+        if (k2 !== undefined && shardMemberKindsSet.has(k2)) group.add(nodeId);
+      }
+      candidate.group_size = group.size;
+      if (fireRate !== undefined) {
+        candidate.binom_tail = binomialUpperTail(group.size, distinct.length, fireRate);
+      }
+      if (eValues !== undefined) {
+        let sum = 0, covered = 0;
+        for (const id of group) {
+          const e = eValues.get(id);
+          if (e === undefined) continue;
+          if (!(Number.isFinite(e) && e >= 0)) {
+            throw new RangeError(`attributeCommonMode: per_shard_e_values['${id}'] must be finite and >= 0; got ${e}`);
+          }
+          sum += e; covered++;
+        }
+        if (covered > 0) candidate.group_e_value = sum / covered;
+      }
+    }
+    candidates.push(candidate);
   }
 
   // Sort: (kind canonical-order, then shared_node_id lex asc).
@@ -223,6 +349,69 @@ export function attributeCommonMode(
     snapshot_hash: computeSnapshotHash(snapshot),
     attributed_at_ts: now(),
   };
+}
+
+// ── ADR 0022 helpers ──────────────────────────────────────────────────
+
+/** Largest co-firing subset (ADR 0022 coincidence window): sort the touches by
+ *  event_ts (shard id tiebreak for determinism) and slide a two-pointer window
+ *  of `windowS` seconds; return the touches of the FIRST window that maximizes
+ *  the DISTINCT member-shard count. The counted set therefore satisfies
+ *  max(ts) − min(ts) ≤ windowS. O(n log n). */
+function largestCoincidentSubset(
+  touches: ReadonlyArray<{ member_shard_id: string; hop: number; event_ts: number }>,
+  windowS: number,
+): Array<{ member_shard_id: string; hop: number; event_ts: number }> {
+  const sorted = [...touches].sort((a, b) =>
+    a.event_ts - b.event_ts
+    || (a.member_shard_id < b.member_shard_id ? -1 : a.member_shard_id > b.member_shard_id ? 1 : 0));
+  const counts = new Map<string, number>();
+  let distinct = 0, l = 0, bestCount = 0, bestL = 0, bestR = -1;
+  for (let r = 0; r < sorted.length; r++) {
+    const idR = sorted[r].member_shard_id;
+    const cR = (counts.get(idR) ?? 0) + 1;
+    counts.set(idR, cR);
+    if (cR === 1) distinct++;
+    while (sorted[r].event_ts - sorted[l].event_ts > windowS) {
+      const idL = sorted[l].member_shard_id;
+      const cL = counts.get(idL)! - 1;
+      counts.set(idL, cL);
+      if (cL === 0) distinct--;
+      l++;
+    }
+    if (distinct > bestCount) { bestCount = distinct; bestL = l; bestR = r; }
+  }
+  return sorted.slice(bestL, bestR + 1);
+}
+
+/** P(X ≥ k) for X ~ Binomial(g, alpha), computed as a log-space sum
+ *  (log-factorial table + logsumexp) — numerically stable for large g and
+ *  tiny tails; no external deps. Exported for direct cross-checking in
+ *  test/adr-0022-calibrated-group-attribution.test.ts. */
+export function binomialUpperTail(g: number, k: number, alpha: number): number {
+  if (!Number.isInteger(g) || g < 0) throw new RangeError(`binomialUpperTail: g must be a non-negative integer; got ${g}`);
+  if (!Number.isInteger(k)) throw new RangeError(`binomialUpperTail: k must be an integer; got ${k}`);
+  if (!(Number.isFinite(alpha) && alpha > 0 && alpha < 1)) {
+    throw new RangeError(`binomialUpperTail: alpha must be in (0, 1); got ${alpha}`);
+  }
+  if (k <= 0) return 1;
+  if (k > g) return 0;
+  const logA = Math.log(alpha);
+  const logB = Math.log1p(-alpha);
+  const lf = new Array<number>(g + 1);
+  lf[0] = 0;
+  for (let i = 1; i <= g; i++) lf[i] = lf[i - 1] + Math.log(i);
+  let maxLog = Number.NEGATIVE_INFINITY;
+  const logs: number[] = [];
+  for (let i = k; i <= g; i++) {
+    const l = lf[g] - lf[i] - lf[g - i] + i * logA + (g - i) * logB;
+    logs.push(l);
+    if (l > maxLog) maxLog = l;
+  }
+  let s = 0;
+  for (const l of logs) s += Math.exp(l - maxLog);
+  const v = Math.exp(maxLog) * s;
+  return v > 1 ? 1 : v;
 }
 
 // ── Private BFS ───────────────────────────────────────────────────────

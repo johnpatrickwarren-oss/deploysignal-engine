@@ -2,12 +2,12 @@
 
 Statistical detector engine vendored from [DeploySignal](https://github.com/johnpatrickwarren-oss/deploysignal) at SHA `5a72371`, with Tessera-evolved deltas.
 
-**Status:** Tessera Phase 5 SLICE 3 round 1 (R90) extraction — package boundary + types-barrel decoupling + verifiable tarball. Consumption migration (Tessera-internal + DS-side) lands in R91-R92. **Do not consume from external projects until R91/R92 close.**
+**Status:** extraction complete and consumption migration (R91/R92) closed — Tessera and DeploySignal both consume this package via git-dependency at a release tag. Current version: see [`CHANGELOG.md`](CHANGELOG.md) (prose copies of version numbers in this README have gone stale before; the changelog is the source of truth). Per-file vendoring provenance (which files match DeploySignal SHA `5a72371` vs carry Tessera-evolved deltas) is tracked in [`tessera/coordination/VENDORING-MANIFEST.md`](https://github.com/johnpatrickwarren-oss/tessera/blob/main/coordination/VENDORING-MANIFEST.md).
 
 ## What this package is
 
-- Family A/C/D/E statistical detectors (mixture-supermartingale, betting e-process, hotelling, page-cusum, conformal, sequential MMD, self-normalized fallback, spectral)
-- Ville-bounded any-time-valid hypothesis tests
+- Family A/C/D/E statistical detectors (mixture-supermartingale, betting e-process, hotelling, page-cusum, conformal, sequential MMD, spectral; the self-normalized fallback is **deprecated** — retained for tests only, see the caveat in `detectors/self-normalized-e-process-fallback.ts`)
+- Ville-bounded any-time-valid hypothesis tests, with an honest validity boundary: under *estimated* (plug-in) baselines the per-shard `E[e|H0] ≤ 1` requirement is not achievable on real telemetry, so the anytime-valid guarantee holds at the fleet e-BH/FDR layer, not per individual shard stream (ADRs 0011/0012)
 - Hierarchical per-shard / fleet e-value combination + e-BH FDR
 - Topology BFS-on-undirected attribution (Slurm, K8s, NVLink, Neuron, TPU adapters)
 - DeploySignal integration interface contract (`engine/ds-integration/`)
@@ -26,7 +26,7 @@ This package lives in its own repository and is consumed via git-dependency (no 
 }
 ```
 
-Pin to a release tag (e.g. `#v0.3.1-pre`) rather than a branch.
+Pin to the latest release tag from [`CHANGELOG.md`](CHANGELOG.md) rather than a branch (tag == `package.json` version as of `v0.6.1-pre`).
 
 ## Build
 

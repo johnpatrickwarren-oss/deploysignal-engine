@@ -1,11 +1,37 @@
 "use strict";
-// detectors/nuisance-robust-bf-e-value.ts — the missing VALID per-shard e-value.
+// detectors/nuisance-robust-bf-e-value.ts — the (intended) valid per-shard e-value. ⚠️ DEPRECATED.
+//
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// ⚠️ CORRECTION (2026-07-02 math audit — Tessera research/2026-07-02-math-audit.md F1):
+// **E[BF|H0] ≤ 1 is FALSE for this implementation, even in the ideal case.** The construction
+// recenters both whitened samples by the ESTIMATED calibration mean (see the `mc` recentering below)
+// before evaluating the proper-prior marginal likelihood — and a proper N(0, τ²) prior centered at 0
+// is NOT shift-invariant, so a data-dependent recentering destroys the Bayes-factor structure. It is
+// exactly a plug-in of the baseline mean through the back door — the sin this module was built to
+// avoid. Ideal-case exact null mean (iid, known φ and s², equal whitened counts n, x = n·tauMult):
+//
+//     E[BF|H0] = (1 + 2x) / √((1 + x)(1 + 3x))  →  2/√3 ≈ 1.1547  as x → ∞,
+//
+// i.e. ≈ 1.155 at EVERY calibration length with the default τ (MC-verified against this function:
+// x=1 → 1.0637 ± 0.0014 vs theory 1.0607). The original validation missed it because the statistic
+// is far sub-Ville in its tails (C ≈ 0.028 at default τ), so the mean excess lives in an extreme
+// tail that K=600 Monte-Carlo cannot sample — the measured "E[e]≈0.03" was the median-dominated
+// bulk, and the MIN_CALIBRATION_FOR_VALIDITY=100 rationale ("E ≤ 1 with margin from ~100 up") is an
+// MC artifact. (The cal<100 blow-ups from the plug-in s² are real and ADDITIONAL.)
+//
+// Practical severity is bounded — e-BH FDR inflates by at most ≈16% (FDR ≤ 1.155·q) — but the
+// "valid by construction" theorem claim was false, and the envelope no longer asserts it
+// (validUnderEstimatedBaseline: false). **Use `safeTwoSampleTEValue` (detectors/safe-t-e-value.ts,
+// ADR 0005) instead**: it integrates the location out by right-Haar INVARIANCE rather than
+// recentering, so E[BF|H0] = 1 holds exactly and uniformly over the composite null (same call
+// signature, same φ caveat). Tessera ADR 0013 carries the matching correction note.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
 //
 // Promoted per ADR 0004 (engine/consumer charter + nuisance-robust evidence stack); validated in
-// Tessera as tools/nuisance-robust-evalue.ts (Tessera ADR 0013, cold-eyed). This is the engine-native
-// generalization of Tessera's fixed-window (values, m, n) form to arbitrary (cal, test) windows
-// (cf. Tessera bf-lifecycle.ts:bfWin), consuming the engine's own Kendall-corrected AR(1) estimator
-// (computePerSignalAr1Phi) instead of Tessera's mirror.
+// Tessera as tools/nuisance-robust-evalue.ts (Tessera ADR 0013, cold-eyed — see the correction above).
+// This is the engine-native generalization of Tessera's fixed-window (values, m, n) form to arbitrary
+// (cal, test) windows (cf. Tessera bf-lifecycle.ts:bfWin), consuming the engine's own Kendall-corrected
+// AR(1) estimator (computePerSignalAr1Phi) instead of Tessera's mirror.
 //
 // WHY THIS EXISTS — the accuracy gap it closes. The engine's plug-in betting e-process
 // (detectors/betting-e-process.ts) and Gaussian mixture supermartingale
@@ -48,21 +74,27 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DEFAULT_TAU_MULT = exports.NUISANCE_ROBUST_BF_ENVELOPE = exports.MIN_CALIBRATION_FOR_VALIDITY = void 0;
 exports.nuisanceRobustBFEValue = nuisanceRobustBFEValue;
 const family_a_mixture_supermartingale_1 = require("./family-a-mixture-supermartingale");
-/** Minimum calibration length for the by-construction E[BF|H0] ≤ 1 property to hold empirically (the
- *  plug-in innovation variance s² reintroduces estimation-error invalidity below this — E[BF|H0] is
- *  ~6.7 at cal=50, ~2e9 at cal=20, ~7e252 at cal=5 on AR(1) nulls; ≤ 1 with margin from ~100 up).
- *  {@link nuisanceRobustBFEValue} throws for shorter calibration windows. */
+/** Minimum calibration length enforced by {@link nuisanceRobustBFEValue} (throws below it). The
+ *  plug-in innovation variance s² causes real blow-ups below this — E[BF|H0] is ~6.7 at cal=50,
+ *  ~2e9 at cal=20, ~7e252 at cal=5 on AR(1) nulls. ⚠️ The original "≤ 1 with margin from ~100 up"
+ *  half of the rationale was an MC artifact: the true null mean is ≈1.155 at EVERY calibration
+ *  length (2026-07-02 correction — see the file header). */
 exports.MIN_CALIBRATION_FOR_VALIDITY = 100;
-/** The nuisance-robust BF e-value's validity envelope (ADR 0004 Tier 1). E[BF|H0] ≤ 1 holds for the
- *  mean-shift null with stable innovation variance, on AR(1)-whitened residuals, under an unknown
- *  (integrated-out) baseline mean — AND for a calibration window of at least `minCalibration` samples. */
+/** The nuisance-robust BF e-value's validity envelope. ⚠️ CORRECTED (2026-07-02): E[BF|H0] ≈ 1.155
+ *  at every calibration length (the recentering breaks the proper-prior property — file header), so
+ *  `validUnderEstimatedBaseline` is FALSE and this e-value must not enter the FDR path as-is. The
+ *  theorem-valid substitute is {@link safeTwoSampleTEValue} (ADR 0005). */
 exports.NUISANCE_ROBUST_BF_ENVELOPE = Object.freeze({
     baseline: 'unknown-mean-integrated',
     autocorrelation: 'ar1-whitened',
     null: 'mean-shift',
     variance: 'stable',
-    validUnderEstimatedBaseline: true,
+    validUnderEstimatedBaseline: false,
     minCalibration: exports.MIN_CALIBRATION_FOR_VALIDITY,
+    notes: 'DEPRECATED (2026-07-02 audit): recentering by the estimated calibration mean breaks the '
+        + 'proper-prior Bayes-factor property — exact ideal-case E[BF|H0] = (1+2x)/√((1+x)(1+3x)) ≈ 1.155 '
+        + 'at every calibration length (bounded: FDR ≤ 1.155·q, not catastrophic — but not a theorem). '
+        + 'Use safeTwoSampleTEValue (right-Haar; location integrated out by INVARIANCE, not recentering).',
 });
 /** Default prior-variance multiple (Tessera ADR 0013 TAU_MULT). */
 exports.DEFAULT_TAU_MULT = 25;
@@ -73,9 +105,14 @@ function logMarginal(S, n, s2, tau2) {
     return (tau2 * S * S) / (2 * s2 * (s2 + n * tau2)) - 0.5 * Math.log(1 + (n * tau2) / s2);
 }
 /** Nuisance-robust two-sample Bayes-factor e-value over a calibration window and a test window of a
- *  single contiguous series `values`. Robust to the unknown baseline mean (integrated out under a
- *  proper N(0, τ²) prior) and to AR(1) autocorrelation (whitened by φ). Returns the Bayes factor —
- *  a VALID e-value: E[BF|H0] ≤ 1 by construction (see file header + {@link NUISANCE_ROBUST_BF_ENVELOPE}).
+ *  single contiguous series `values`, AR(1)-whitened by φ.
+ *
+ *  @deprecated 2026-07-02 — NOT a valid e-value: E[BF|H0] ≈ 1.155 at every calibration length (the
+ *  data-dependent recentering breaks the proper-prior property — see the file header for the exact
+ *  formula and why the original MC validation missed it). Bounded inflation (FDR ≤ 1.155·q), so
+ *  existing results are not catastrophically wrong, but do not feed this to e-BH as theorem-valid.
+ *  Use {@link safeTwoSampleTEValue} (detectors/safe-t-e-value.ts) — same call signature, the
+ *  location integrated out by right-Haar invariance, E[BF|H0] = 1 exactly.
  *
  *  Whitening uses each sample's immediate predecessor in `values`, so the calibration window drops its
  *  first sample (no predecessor inside the window) and the test window uses `values[test.start - 1]`
@@ -144,7 +181,10 @@ function nuisanceRobustBFEValue(values, cal, test, opts) {
     const mc = wc.reduce((a, b) => a + b, 0) / wc.length;
     const s2 = Math.max(wc.reduce((a, b) => a + (b - mc) ** 2, 0) / (wc.length - 1), 1e-9);
     const tau2 = tauMult * s2;
-    // Recenter both samples by the calibration mean (a common shift; the BF is invariant to it).
+    // Recenter both samples by the calibration mean. ⚠️ THIS is the defect (2026-07-02 audit): a proper
+    // prior centered at 0 is NOT shift-invariant, so recentering by a DATA-DEPENDENT shift destroys the
+    // Bayes-factor structure (the original comment claimed invariance — false). Kept for reproducibility
+    // of historical results; see the @deprecated note. E[BF|H0] ≈ 1.155 follows from exactly this line.
     const Sc = wc.reduce((a, b) => a + (b - mc), 0);
     const St = wt.reduce((a, b) => a + (b - mc), 0);
     return Math.exp(logMarginal(Sc, wc.length, s2, tau2)

@@ -2,8 +2,10 @@
 // fleet/guarantee.ts — the assembled FP/FDR-by-construction guarantee's CONDITIONS, surfaced for the
 // fleet verdict (ADR 0004 PR E: "surface the assembled guarantee's conditions in the fleet verdict").
 //
-// The pipeline contaminationRobustResiduals → nuisanceRobustBFEValue → eBenjaminiHochberg gives
-// FP/FDR ≤ q BY CONSTRUCTION, but the guarantee is CONDITIONAL and the conditions must travel with the
+// The pipeline contaminationRobustResiduals → safeTwoSampleTEValue → eBenjaminiHochberg gives
+// FP/FDR ≤ q BY CONSTRUCTION (the nuisance-robust BF formerly named here was corrected 2026-07-02:
+// E[BF|H0] ≈ 1.155, not ≤ 1 — see detectors/nuisance-robust-bf-e-value.ts; safe-t is the valid
+// substitute), but the guarantee is CONDITIONAL and the conditions must travel with the
 // verdict rather than be buried:
 //   - the per-shard e-value must be VALID for the FDR path (the validity envelope / gate);
 //   - the fault fraction must stay under the robust common-mode's breakdown (~20%, Tessera ADR 0015);

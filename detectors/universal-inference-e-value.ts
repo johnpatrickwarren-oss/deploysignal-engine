@@ -16,12 +16,22 @@
 //   • NULL params = the H0 MLE ON EVAL (a COMMON mean across both eval segments, free φ, σ).
 //   • e = exp( ℓ_alt(EVAL) − ℓ_null(EVAL) ).
 //
-// VALIDITY (E[e|H0] ≤ 1 for ANY φ). e = L(EVAL; θ̂_train) / sup_{θ∈H0} L(EVAL; θ). By the AR(1) Markov
-// property, given the predecessors EVAL ⟂ TRAIN, so θ̂_train (a function of TRAIN) is conditionally
-// independent of EVAL and L(EVAL; θ̂_train) is a proper conditional density (integrates to 1). The
-// denominator is the null SUP, hence ≥ L(EVAL; θ_0^true). Therefore
-//   E[e|H0] ≤ E[ L(EVAL; θ̂_train) / L(EVAL; θ_0^true) ] = 1.
-// No assumption on φ. The denominator MUST be a genuine sup — an under-optimised null fit re-introduces
+// VALIDITY (E[e|H0] ≤ 1 for ANY φ — ⚠️ EMPIRICALLY AUDITED, not fully theorem-proven; 2026-07-02).
+// e = L(EVAL; θ̂_train) / sup_{θ∈H0} L(EVAL; θ). The intended argument: given the predecessors,
+// EVAL ⟂ TRAIN, so θ̂_train (a function of TRAIN) is conditionally independent of EVAL,
+// L(EVAL; θ̂_train) is a proper conditional density (integrates to 1), and the null-SUP denominator
+// ≥ L(EVAL; θ_0^true) gives E[e|H0] ≤ 1.
+// ⚠️ PROOF GAP (Tessera research/2026-07-02-math-audit.md F6): the independence premise is FALSE for
+// the standard call pattern (test window after cal window in one series) — the cal-EVAL half
+// temporally PRECEDES the test-TRAIN half (the test-train's first predecessor IS the last cal-eval
+// point), so θ̂_train is not conditionally independent of cal-EVAL for φ ≠ 0 and the Fubini step
+// does not close. Wasserman–Ramdas–Balakrishnan's split-LRT needs the numerator parameters fit on a
+// fold independent of the scored fold; this interleaved variant satisfies that only at φ = 0.
+// EMPIRICALLY the bound holds with a large margin — MC (8k–20k reps, cal=test∈{20,60}): E[e|H0]
+// ≈ 0.13–0.17 at φ ∈ {0, 0.6, 0.9, 0.98, 0.999}, P(e≥10) ≤ 7e-4; the UI's structural
+// conservativeness (~6× slack) dominates the second-order leak. A sequential/predictable numerator
+// (fit on strictly-past data only) would close the gap BY construction — the known fix.
+// The denominator MUST be a genuine sup — an under-optimised null fit re-introduces
 // violations (the φ-grid search below secures it; cold-eye verified LL-gap 0.000 vs a 4000-point grid).
 //
 // ENVELOPE / CAVEATS.
@@ -51,13 +61,15 @@ interface Segment {
 /** Validity envelope for the universal-inference mean-shift e-value (ADR 0010). */
 export const UI_MEAN_SHIFT_ENVELOPE = Object.freeze({
   baseline: 'unknown-mean-mle' as const,
-  autocorrelation: 'ar1-any-phi' as const,        // valid for ANY φ by construction (incl. near unit root)
+  autocorrelation: 'ar1-any-phi' as const,        // any-φ validity incl. near unit root (see notes)
   null: 'mean-shift' as const,
   variance: 'unknown-mle' as const,
   validUnderEstimatedBaseline: true as const,
   minCalibration: 6,                              // needs ≥ 2 points per train/eval half-segment
-  notes: 'Split likelihood-ratio (universal inference) e-value for an AR(1) mean shift. E[e|H0] ≤ 1 BY '
-    + 'CONSTRUCTION for ANY φ incl. near unit root — a ratio of fitted AR(1) likelihoods, NOT an '
+  notes: 'Split likelihood-ratio (universal inference) e-value for an AR(1) mean shift. E[e|H0] ≤ 1 for '
+    + 'ANY φ incl. near unit root — EMPIRICALLY AUDITED with ~6x margin (2026-07-02: the by-construction '
+    + 'proof has a gap for the interleaved cal/test split at φ≠0; a predictable numerator would close it) '
+    + '— a ratio of fitted AR(1) likelihoods, NOT an '
     + 'exponent-amplified Bayes factor, so it is bounded (no catastrophe). Caveat: exact validity needs '
     + 'the Gaussian-AR(1) model to contain the H0 truth (well-specification), incl. a CONSTANT mean. '
     + 'Real-telemetry validation: ROBUST to heavy tails (NAB excess kurtosis ≤ 1540 → still valid, ADR '

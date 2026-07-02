@@ -6,7 +6,8 @@
 // of the FP/FDR-by-construction pipeline:
 //
 //     contaminationRobustResiduals(X)            // fleet common-mode removed, robustly  ← THIS FILE
-//       → nuisanceRobustBFEValue(per shard)       // valid per-shard e-value (ADR 0004 PR A)
+//       → safeTwoSampleTEValue(per shard)         // valid per-shard e-value (ADR 0005; the BF of
+//                                                  // ADR 0004 PR A was corrected 2026-07-02: E≈1.155)
 //       → eBenjaminiHochberg(e-values, q)         // FDR ≤ q by construction (fleet/e-bh.ts)
 //
 // WHY A ROBUST CENTER. Fleet-relative detection removes a shared cross-shard common-mode so a
@@ -100,7 +101,7 @@ function perShardLevel(X, calLen) {
 }
 /** Contamination-robust residual matrix: R[i][t] = X[i][t] − ℓ̂_i − c_t, where ℓ̂_i is the per-shard
  *  calibration level and c_t is the redescending (Tukey-biweight) common-mode of the level-adjusted
- *  cross-section at tick t. Feed each residual row to {@link nuisanceRobustBFEValue} then e-BH for the
+ *  cross-section at tick t. Feed each residual row to safe-t (safeTwoSampleTEValue) then e-BH for the
  *  FP/FDR-by-construction pipeline (see file header + envelope/conditions there).
  *
  *  `X` is a shards×ticks matrix (every row the same length, all values finite); `calLen` is the healthy

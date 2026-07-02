@@ -16,7 +16,7 @@ export declare function robustLocation(xs: ReadonlyArray<number>, c?: number): n
 export declare function perShardLevel(X: ReadonlyArray<ReadonlyArray<number>>, calLen: number): number[];
 /** Contamination-robust residual matrix: R[i][t] = X[i][t] − ℓ̂_i − c_t, where ℓ̂_i is the per-shard
  *  calibration level and c_t is the redescending (Tukey-biweight) common-mode of the level-adjusted
- *  cross-section at tick t. Feed each residual row to {@link nuisanceRobustBFEValue} then e-BH for the
+ *  cross-section at tick t. Feed each residual row to safe-t (safeTwoSampleTEValue) then e-BH for the
  *  FP/FDR-by-construction pipeline (see file header + envelope/conditions there).
  *
  *  `X` is a shards×ticks matrix (every row the same length, all values finite); `calLen` is the healthy

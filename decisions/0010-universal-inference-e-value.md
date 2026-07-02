@@ -4,6 +4,14 @@
 - **Status:** SHIPPED — `detectors/universal-inference-e-value.ts` (`universalInferenceMeanShiftEValue`),
   `test/adr-0010-universal-inference-e-value.test.ts`. Additive; no change to existing detectors.
 - **Resolves:** ADR 0009 #1 (the safe-t φ-floor that ADR 0009 showed is fundamental *for a deflation fix*).
+- **⚠️ WORDING CORRECTION (2026-07-02 math audit — Tessera `research/2026-07-02-math-audit.md` F6):**
+  the "E[e|H0] ≤ 1 BY CONSTRUCTION for ANY φ" claim has a **proof gap** for the standard interleaved
+  call pattern: the cal-EVAL half temporally precedes the test-TRAIN half, so the split-LRT
+  independence premise (numerator parameters ⟂ scored fold) fails for φ ≠ 0 and the Fubini step does
+  not close. The any-φ validity is **empirically audited** (MC 8k–20k reps: E[e|H0] ≈ 0.13–0.17 at φ
+  up to 0.999 — ~6× structural slack dominates the leak), not theorem-proven. A sequential/predictable
+  numerator (fit on strictly-past data) would close the gap by construction. Envelope + header
+  wording updated; all downstream empirical results stand.
 - **Process note:** the construction + its validity argument were independently cold-eye-attacked (a
   fresh-context reviewer told to REFUTE: 8M+ draws, independent RNG, unseen seed families, φ up to 1.0,
   plus a structural re-derivation). No `E[e|H0] > 1` found; the Markov-independence and null-sup claims

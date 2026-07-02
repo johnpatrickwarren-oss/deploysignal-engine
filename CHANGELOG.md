@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.6.2-pre — 2026-07-02
+
+- **⚠️ Validity correction (2026-07-02 math audit — Tessera `research/2026-07-02-math-audit.md`):**
+  the nuisance-robust BF (`nuisanceRobustBFEValue`, ADR 0004 PR A) is **not a valid e-value** —
+  recentering by the estimated calibration mean breaks the proper-prior property; exact ideal-case
+  E[BF|H0] = (1+2x)/√((1+x)(1+3x)) ≈ **1.155** at every calibration length (bounded: FDR ≤ 1.155·q).
+  The function is now `@deprecated`, its envelope reads `validUnderEstimatedBaseline: false` (so
+  `isValidForFdrPath`/`assertValidForFdrPath` no longer auto-admit it), and all pointers route to
+  **safe-t** (`safeTwoSampleTEValue`, ADR 0005) as the theorem-valid substitute. New regression test
+  demonstrates E[BF|H0] > 1 in an MC-sampleable regime (x=1 → ≈1.06, matching the exact formula).
+  **Behavioral change:** callers that fed the BF to the FDR gate must either switch to safe-t (same
+  call signature) or pass an explicit `FdrPathAssertions` regime assertion.
+- **UI e-value wording:** the "E[e|H0] ≤ 1 BY CONSTRUCTION for ANY φ" claim is corrected to
+  **empirically audited** — the split-LRT independence premise fails for the interleaved cal/test
+  pattern at φ ≠ 0 (proof gap; MC shows ~6× margin, no observed violation). Envelope notes + ADR 0010
+  updated; a sequential/predictable numerator is the known by-construction fix.
+- ADR 0004 + ADR 0010 carry the matching correction notes.
+
 ## v0.6.1-pre — 2026-06-29
 
 - **Release hygiene only — no functional change.** Aligns the published tag with

@@ -81,10 +81,14 @@ for (const [label, m, n, K] of [
   ['under-powered (m=300, n=680) — the plug-in failure regime', 300, 680, 600],
   ['at the validity floor (m=100, n=200) — non-empty tail, so the Ville bounds bind', 100, 200, 600],
 ] as const) {
-  test(`validity: E[BF|H0] ≤ 1 and P(BF≥k) ≤ 1/k at every scale — ${label}`, () => {
+  test(`validity (CORRECTED 2026-07-02): bounded E[BF|H0] + Ville tail bounds — ${label}`, () => {
     const { nulls } = sweep(m, n, K);
-    // E[BF|H0] ≤ 1 is the defining structural property (a proper-prior Bayes factor).
-    assert.ok(mean(nulls) <= 1, `E[BF|H0] = ${mean(nulls).toFixed(4)} must be ≤ 1`);
+    // ⚠️ 2026-07-02 correction: E[BF|H0] ≤ 1 is FALSE — the true mean is ≈1.155 at every cal length
+    // (the recentering defect; see the detector header). The MC bulk mean here undershoots 1 only
+    // because the excess lives in an extreme tail K=600 cannot sample — so this assertion documents
+    // the BOUNDED inflation (≤ ~1.2), NOT validity. The Ville tail bounds below remain genuinely true
+    // (the statistic is sub-Ville in its tails).
+    assert.ok(mean(nulls) <= 1.2, `E[BF|H0] = ${mean(nulls).toFixed(4)} should be ≤ ~1.2 (bounded inflation)`);
     // Ville/Markov: P(BF ≥ k) ≤ 1/k at every tested scale (small MC slack on the tail).
     for (const k of [10, 100, 1000]) {
       const r = rateAtLeast(nulls, k);
@@ -94,6 +98,28 @@ for (const [label, m, n, K] of [
     assert.ok(rateAtLeast(nulls, 1 / ALPHA) <= ALPHA + 0.005, 'P(fire) must be ≤ α');
   });
 }
+
+// ── 1b. The 2026-07-02 correction, demonstrated where MC can sample it. ──────────────────────────
+// At the default τ (x = n·tauMult ≫ 1) the mean excess hides in an extreme tail; at x = 1 it is
+// bulk-visible. Ideal-case theory (iid, known φ, equal whitened counts n): E[BF|H0] =
+// (1+2x)/√((1+x)(1+3x)) = 3/√8 ≈ 1.0607 at x = 1. Seeded MC on the SHIPPED function must land near
+// it — decisively ABOVE 1, refuting the old "valid by construction" claim.
+test('correction: E[BF|H0] > 1 (≈1.06 at x=1, per the exact formula) — the recentering defect', () => {
+  const n = 200, reps = 20000;
+  const es: number[] = [];
+  for (let r = 0; r < reps; r++) {
+    const rng = lcg(500_000 + r * 2654435761);
+    const v: number[] = [];
+    for (let t = 0; t < 2 * n + 1; t++) v.push(BASE + NOISE * gaussian(rng));
+    es.push(nuisanceRobustBFEValue(
+      v, { start: 0, len: n + 1 }, { start: n + 1, len: n },
+      { ar1Phi: 0, tauMult: 1 / n }, // x = n·tauMult = 1 → theory E[BF|H0] = 3/√8 ≈ 1.0607
+    ));
+  }
+  const m = mean(es);
+  assert.ok(m > 1.02, `E[BF|H0] = ${m.toFixed(4)} must be decisively > 1 (theory ≈ 1.0607)`);
+  assert.ok(m < 1.12, `E[BF|H0] = ${m.toFixed(4)} should be near the ≈1.0607 theory value`);
+});
 
 // ── 2. Power — detect a real mean shift. ──────────────────────────────────────────────────────────
 test('power: detects a mean shift (fire rate → 1.0 at threshold 1/α)', () => {

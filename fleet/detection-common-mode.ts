@@ -41,10 +41,47 @@
 //     per-group (Δλ)·F trend bias that degrades rank-vs-fleet ranking (ADR 0017). It is OFF by default; the
 //     genuine fix for group localisation is true factor knowledge (oracle / a temporal model), not leave-out.
 //
-// Tessera-original (ADR 0017). Distinct OBJECT from the FDP-oriented common-mode — ship both.
+// ── ADR 0022 — LEAVE-ONE-SHARD-OUT FACTORS FOR SMALL DOMAINS (audit F11) ───────────────────────────────────
+// DEFECT. The domain factor F_d[t] is a robust (Tukey) location over the CURRENT residuals of all members
+// INCLUDING the evaluated shard. Tukey's breakdown handles a 1-of-many outlier in a LARGE domain, but the
+// robust location of 2 points is their AVERAGE: in a 2-member domain a faulty member shifts its own factor by
+// step/2 at every fault tick, so the fault HALF-SELF-ABSORBS and the healthy sibling shows a mirrored −step/2
+// spurious excursion (measured: faulty ≈ 4.0/8, sibling ≈ −4.0/8).
+// FIX. Domains with 2..LOO_MAX_MEMBERS (= 5) members are deflated against LEAVE-ONE-OUT factors: shard i is
+// evaluated against F_d^{(−i)}, the robust location over the OTHER members only, so the evaluated shard cannot
+// move the reference it is compared against — NO self-absorption. For a 2-member domain F^{(−i)} is the
+// sibling alone, i.e. the deflation becomes a pure PAIR CONTRAST. Domains with > LOO_MAX_MEMBERS members keep
+// the all-members factor (the Tukey center's breakdown handles a 1-of-many outlier there; LOO costs O(members)
+// extra robust locations per evaluated shard and buys nothing measurable). Measured with LOO: 2-member faulty
+// residual carries ≈ 7.9/8 of the step (was ≈ 4.0/8); 3-member ≈ 7.9/8 (was ≈ 7.3/8).
+// TWO LOAD-BEARING CONSTRUCTION DETAILS (both measured, both locked by tests):
+//   (1) LOO deflation is applied EXACTLY ONCE, in a single pass AFTER the backfitting sweeps (small domains
+//       are skipped inside the iteration loop). Iterating LOO is ill-posed: after the first LOO projection the
+//       pair's residual noises are anti-correlated, the next sweep's reference-window slope fit finds λ̂ ≈ −1,
+//       and re-projection ANNIHILATES both the fault and the contrast (measured: faulty 8.0 → 0.2 over 8
+//       sweeps at high factor SNR). A pair contains exactly one contrast; it must be taken exactly once.
+//       Within the pass, all LOO factors and loadings of a domain are computed BEFORE any member is deflated
+//       (member-order independent).
+//   (2) HONESTY — the mirror on the healthy sibling is NOT removed; it is INTRINSIC to cross-sectional
+//       deflation of a tiny domain. Algebra: for members (a, b), r_a = a − λ̂_a·b and r_b = b − λ̂_b·a are the
+//       only two contrasts available, and r_b + λ̂_b·r_a ∝ b — any "repair" of the mirror reconstructs the
+//       undeflated series. So a fault in a lands in BOTH residuals: +step in r_a and ≈ −λ̂_b·step in r_b.
+//       LOO converts (half-absorbed faulty, half mirror) into (FULL-step faulty, ≈ λ̂·step mirror). Consumers
+//       MUST treat a ≤ 3-member domain's excursions as PAIR/DOMAIN-level localisation (or route the pair to a
+//       Mode-B-style concurrent contrast); do not read the sibling's mirrored excursion as an independent
+//       fault. For 4–5-member domains the LOO factor is a Tukey center over ≥ 3 points, which rejects a
+//       single faulty sibling, so healthy members stay clean there (measured |mirror| ≤ ~0.1·step at n = 5).
+//
+// Tessera-original (ADR 0017; small-domain LOO factors ADR 0022). Distinct OBJECT from the FDP-oriented
+// common-mode — ship both.
 
 import { robustLocation } from './common-mode';
 import { median, robustSlope } from './multi-factor-common-mode';
+
+/** ADR 0022 — domains with 2..LOO_MAX_MEMBERS members are deflated against leave-one-out factors
+ *  (one post-loop pass; see the file header). Domains above this size keep the all-members Tukey
+ *  factor, whose breakdown point already handles a 1-of-many outlier. */
+export const LOO_MAX_MEMBERS = 5;
 
 export interface DetectionCommonModeOptions {
   /** Backfitting sweeps over the crossed partitions. Default 4 (FAIR: residual φ converges by ~4 sweeps;
@@ -126,6 +163,11 @@ function domainMembers(part: ReadonlyArray<number>, n: number): Map<number, numb
  *  localisation. This is a POWER tool, NOT an FDR guarantee on its (data-dependent) residual; keep
  *  `multiFactorRobustResiduals` for the guarantee path.
  *
+ *  ADR 0022: domains with 2..LOO_MAX_MEMBERS members are deflated ONCE, after the sweeps, against
+ *  leave-one-out factors (shard i vs the robust location of the OTHER members) — no self-absorption; a
+ *  2-member domain becomes a pure pair contrast whose mirrored sibling excursion is intrinsic and documented
+ *  (file header). Larger domains keep the iterated all-members factor.
+ *
  *  @param X            `[shard][tick]` counter matrix.
  *  @param calLen       healthy reference-window length for the per-shard level (median over `[0, calLen)`).
  *  @param partitions   the crossed factor structure: one entry per factor kind, each an array of length
@@ -195,6 +237,10 @@ export function detectionOrientedResiduals(
         // A domain needs ≥ 2 members to define a SHARED factor (a lone member's "factor" is its own series →
         // self-absorbs its own fault).
         if (idxs.length < 2) continue;
+        // ADR 0022: small domains are NOT deflated inside the iterated backfitting — they get exactly ONE
+        // leave-one-out deflation in the post-loop pass below (iterating LOO annihilates the pair contrast;
+        // see the file header).
+        if (idxs.length <= LOO_MAX_MEMBERS) continue;
         if (!lo) {
           deflate(idxs, idxs); // in-sample factor
           continue;
@@ -210,6 +256,51 @@ export function detectionOrientedResiduals(
           // If excluding the group leaves too few members to estimate the factor, fall back to all members.
           deflate(factorMembers.length >= 2 ? factorMembers : idxs, targets);
         }
+      }
+    }
+  }
+
+  // ── ADR 0022: single leave-one-out pass over SMALL domains (2..LOO_MAX_MEMBERS members) ──────────────────
+  // Runs AFTER the backfitting sweeps so the small-domain factor and loading are identified on residuals with
+  // all large-domain common-mode already removed. Applied exactly ONCE: a small domain holds exactly one
+  // usable contrast per member, and re-projecting it (any second sweep) finds the anti-correlated transferred
+  // noise, fits λ̂ ≈ −1, and annihilates both the fault and the contrast (file header, detail (1)).
+  for (const groups of partGroups) {
+    for (const idxs of groups.values()) {
+      if (idxs.length < 2 || idxs.length > LOO_MAX_MEMBERS) continue;
+      // Compute EVERY member's LOO factor + loading from the residuals as they stand BEFORE this domain
+      // deflates anyone, then apply all subtractions — member-order independent, and each member's reference
+      // F^{(−i)} provably excludes its own series (no self-absorption).
+      const pending: Array<{ i: number; lam: number; Fi: number[] }> = [];
+      for (const i of idxs) {
+        let fm: number[];
+        if (lo && lo[i] >= 0) {
+          // leaveOutGroups: exclude the member's whole leave-out group (a superset of self-exclusion). If the
+          // domain is a single group, fall back to plain leave-one-shard-out (≥ 1 member is enough here — for
+          // a 2-member domain the factor IS the sibling: a pure pair contrast).
+          fm = idxs.filter((m) => lo[m] !== lo[i]);
+          if (fm.length === 0) fm = idxs.filter((m) => m !== i);
+        } else {
+          fm = idxs.filter((m) => m !== i);
+        }
+        const Fi = new Array<number>(t);
+        let refE = 0, fullE = 0;
+        for (let j = 0; j < t; j++) {
+          col.length = 0;
+          for (const m of fm) col.push(R[m][j]);
+          Fi[j] = robustLocation(col);
+          const f2 = Fi[j] * Fi[j];
+          fullE += f2;
+          if (j < loadLen) { fRef[j] = Fi[j]; refE += f2; }
+        }
+        // Same degeneracy guard as `deflate`: a factor with negligible reference energy is unidentifiable
+        // from the reference window — do not project onto it.
+        if (refE <= 1e-12 || refE < 1e-6 * fullE) continue;
+        for (let j = 0; j < loadLen; j++) refRow[j] = R[i][j];
+        pending.push({ i, lam: robustSlope(fRef, refRow), Fi });
+      }
+      for (const p of pending) {
+        for (let j = 0; j < t; j++) R[p.i][j] -= p.lam * p.Fi[j];
       }
     }
   }

@@ -108,7 +108,9 @@ const TST = (cl) => ({ start: cl, len: 200 });
     strict_1.default.equal(universal_inference_e_value_1.UI_MEAN_SHIFT_ENVELOPE.autocorrelation, 'ar1-any-phi');
     strict_1.default.equal(universal_inference_e_value_1.UI_MEAN_SHIFT_ENVELOPE.validUnderEstimatedBaseline, true);
     strict_1.default.equal(universal_inference_e_value_1.UI_MEAN_SHIFT_ENVELOPE.minCalibration, 6);
-    strict_1.default.match(universal_inference_e_value_1.UI_MEAN_SHIFT_ENVELOPE.notes, /BY CONSTRUCTION for ANY φ/);
+    // 2026-07-02 audit: the by-construction proof has a gap for the interleaved split at φ≠0; the
+    // any-φ validity claim is now labeled EMPIRICALLY AUDITED (with margin) in the envelope notes.
+    strict_1.default.match(universal_inference_e_value_1.UI_MEAN_SHIFT_ENVELOPE.notes, /ANY φ incl\. near unit root — EMPIRICALLY AUDITED/);
     strict_1.default.match(universal_inference_e_value_1.UI_MEAN_SHIFT_ENVELOPE.notes, /well-specification/);
 });
 //# sourceMappingURL=adr-0010-universal-inference-e-value.test.js.map

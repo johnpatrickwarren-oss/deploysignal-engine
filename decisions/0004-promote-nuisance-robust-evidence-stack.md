@@ -1,6 +1,16 @@
 # ADR 0004 — the engine/consumer charter + promoting the nuisance-robust evidence stack (accurate, conditional, by-construction FP/FDR)
 
 - **Date:** 2026-06-24
+- **⚠️ CORRECTED IN PART (2026-07-02 math audit — Tessera `research/2026-07-02-math-audit.md` F1):**
+  PR A's nuisance-robust BF is **NOT a valid e-value as implemented** — recentering both whitened
+  samples by the estimated calibration mean breaks the proper-prior Bayes-factor property (a proper
+  prior centered at 0 is not shift-invariant). Exact ideal-case null mean: E[BF|H0] =
+  (1+2x)/√((1+x)(1+3x)) → 2/√3 ≈ **1.155** at every calibration length; the original K=600 MC
+  validation missed it because the statistic is sub-Ville in its tails (the mean excess is
+  unsampleable at that K). Impact bounded (FDR ≤ 1.155·q). The envelope now carries
+  `validUnderEstimatedBaseline: false`, the function is `@deprecated`, and the FDR-path substitute is
+  **safe-t** (ADR 0005 — location integrated out by right-Haar invariance, not recentering). The rest
+  of this ADR (charter, envelopes-as-first-class, PR B/C/E) stands.
 - **Status:** Proposed (scoping handoff — authored from Tessera; not yet implemented here)
 - **Provenance:** validated in Tessera as `tools/{nuisance-robust-evalue,contamination-robust-fleet,fault-discriminator}.ts` (Tessera ADRs 0013/0015/0016), each cold-eyed. All are Tessera-original, marked `NOT vendored`, built to be promoted here once proven. This ADR scopes the promotion; it does not implement it.
 

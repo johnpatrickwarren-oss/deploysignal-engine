@@ -26,29 +26,41 @@ export interface NuisanceRobustBFEnvelope {
     /** Validity assumes the SAME innovation variance in calibration and test. A variance change is out
      *  of scope (route to the distributional-signature detector, ADR 0004 Tier 2). */
     variance: 'stable';
-    /** TRUE: unlike the plug-in betting/mixture e-values, E[BF|H0] ≤ 1 holds even under an ESTIMATED
-     *  baseline (the mean is integrated out) — so this e-value is always admissible to the FDR path
-     *  (subject to `minCalibration`). This is the shared {@link ValidityEnvelope} honesty flag (PR E). */
-    validUnderEstimatedBaseline: true;
-    /** Minimum calibration length for E[BF|H0] ≤ 1 to hold (the plug-in innovation variance reintroduces
-     *  invalidity below it). Enforced by {@link nuisanceRobustBFEValue}, which throws for shorter windows. */
+    /** FALSE (2026-07-02 correction — see the file header): the data-dependent recentering makes
+     *  E[BF|H0] ≈ 1.155 at EVERY calibration length, so this e-value is NOT admissible to the FDR path
+     *  as-is. Use {@link safeTwoSampleTEValue} instead. This is the shared {@link ValidityEnvelope}
+     *  honesty flag (PR E). */
+    validUnderEstimatedBaseline: false;
+    /** Minimum calibration length enforced by {@link nuisanceRobustBFEValue} (throws for shorter
+     *  windows). NB (2026-07-02): originally justified as "E[BF|H0] ≤ 1 with margin from ~100 up" —
+     *  an MC artifact (see the header); the true mean is ≈1.155 at every length. The plug-in-s²
+     *  blow-ups BELOW this floor are real and additional, so the floor is kept. */
     minCalibration: number;
+    /** Free-text regime detail (aligned with the shared {@link ValidityEnvelope} shape). */
+    notes: string;
 }
-/** Minimum calibration length for the by-construction E[BF|H0] ≤ 1 property to hold empirically (the
- *  plug-in innovation variance s² reintroduces estimation-error invalidity below this — E[BF|H0] is
- *  ~6.7 at cal=50, ~2e9 at cal=20, ~7e252 at cal=5 on AR(1) nulls; ≤ 1 with margin from ~100 up).
- *  {@link nuisanceRobustBFEValue} throws for shorter calibration windows. */
+/** Minimum calibration length enforced by {@link nuisanceRobustBFEValue} (throws below it). The
+ *  plug-in innovation variance s² causes real blow-ups below this — E[BF|H0] is ~6.7 at cal=50,
+ *  ~2e9 at cal=20, ~7e252 at cal=5 on AR(1) nulls. ⚠️ The original "≤ 1 with margin from ~100 up"
+ *  half of the rationale was an MC artifact: the true null mean is ≈1.155 at EVERY calibration
+ *  length (2026-07-02 correction — see the file header). */
 export declare const MIN_CALIBRATION_FOR_VALIDITY = 100;
-/** The nuisance-robust BF e-value's validity envelope (ADR 0004 Tier 1). E[BF|H0] ≤ 1 holds for the
- *  mean-shift null with stable innovation variance, on AR(1)-whitened residuals, under an unknown
- *  (integrated-out) baseline mean — AND for a calibration window of at least `minCalibration` samples. */
+/** The nuisance-robust BF e-value's validity envelope. ⚠️ CORRECTED (2026-07-02): E[BF|H0] ≈ 1.155
+ *  at every calibration length (the recentering breaks the proper-prior property — file header), so
+ *  `validUnderEstimatedBaseline` is FALSE and this e-value must not enter the FDR path as-is. The
+ *  theorem-valid substitute is {@link safeTwoSampleTEValue} (ADR 0005). */
 export declare const NUISANCE_ROBUST_BF_ENVELOPE: Readonly<NuisanceRobustBFEnvelope>;
 /** Default prior-variance multiple (Tessera ADR 0013 TAU_MULT). */
 export declare const DEFAULT_TAU_MULT = 25;
 /** Nuisance-robust two-sample Bayes-factor e-value over a calibration window and a test window of a
- *  single contiguous series `values`. Robust to the unknown baseline mean (integrated out under a
- *  proper N(0, τ²) prior) and to AR(1) autocorrelation (whitened by φ). Returns the Bayes factor —
- *  a VALID e-value: E[BF|H0] ≤ 1 by construction (see file header + {@link NUISANCE_ROBUST_BF_ENVELOPE}).
+ *  single contiguous series `values`, AR(1)-whitened by φ.
+ *
+ *  @deprecated 2026-07-02 — NOT a valid e-value: E[BF|H0] ≈ 1.155 at every calibration length (the
+ *  data-dependent recentering breaks the proper-prior property — see the file header for the exact
+ *  formula and why the original MC validation missed it). Bounded inflation (FDR ≤ 1.155·q), so
+ *  existing results are not catastrophically wrong, but do not feed this to e-BH as theorem-valid.
+ *  Use {@link safeTwoSampleTEValue} (detectors/safe-t-e-value.ts) — same call signature, the
+ *  location integrated out by right-Haar invariance, E[BF|H0] = 1 exactly.
  *
  *  Whitening uses each sample's immediate predecessor in `values`, so the calibration window drops its
  *  first sample (no predecessor inside the window) and the test window uses `values[test.start - 1]`

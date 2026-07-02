@@ -106,6 +106,8 @@ test('envelope: any-φ validity advertised, with the well-specification + power 
   assert.equal(UI_MEAN_SHIFT_ENVELOPE.autocorrelation, 'ar1-any-phi');
   assert.equal(UI_MEAN_SHIFT_ENVELOPE.validUnderEstimatedBaseline, true);
   assert.equal(UI_MEAN_SHIFT_ENVELOPE.minCalibration, 6);
-  assert.match(UI_MEAN_SHIFT_ENVELOPE.notes, /BY CONSTRUCTION for ANY φ/);
+  // 2026-07-02 audit: the by-construction proof has a gap for the interleaved split at φ≠0; the
+  // any-φ validity claim is now labeled EMPIRICALLY AUDITED (with margin) in the envelope notes.
+  assert.match(UI_MEAN_SHIFT_ENVELOPE.notes, /ANY φ incl\. near unit root — EMPIRICALLY AUDITED/);
   assert.match(UI_MEAN_SHIFT_ENVELOPE.notes, /well-specification/);
 });

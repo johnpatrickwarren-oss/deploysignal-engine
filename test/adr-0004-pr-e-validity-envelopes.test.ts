@@ -14,25 +14,31 @@ import {
   isValidForFdrPath,
   assertValidForFdrPath,
 } from '../detectors/validity-envelope';
+import { SAFE_T_ENVELOPE } from '../detectors/safe-t-e-value';
 import {
   assembleFleetGuaranteeConditions,
   ROBUST_COMMON_MODE_BREAKDOWN,
 } from '../fleet/guarantee';
 
-// ── Envelopes label the plug-in e-values invalid-under-estimated-baseline; the BF valid. ──────────
-test('envelopes: plug-in betting/mixture are invalid-under-estimated-baseline; the BF is valid', () => {
+// ── Envelopes label the plug-in e-values invalid-under-estimated-baseline; and since the 2026-07-02
+// correction the BF too (E[BF|H0] ≈ 1.155 at every cal length — the recentering defect). ──────────
+test('envelopes: plug-in betting/mixture AND the corrected BF are invalid-under-estimated-baseline', () => {
   assert.equal(BETTING_E_PROCESS_ENVELOPE.baseline, 'plug-in');
   assert.equal(BETTING_E_PROCESS_ENVELOPE.validUnderEstimatedBaseline, false);
   assert.equal(MIXTURE_SUPERMARTINGALE_ENVELOPE.baseline, 'plug-in');
   assert.equal(MIXTURE_SUPERMARTINGALE_ENVELOPE.validUnderEstimatedBaseline, false);
   assert.equal(NUISANCE_ROBUST_BF_ENVELOPE.baseline, 'unknown-mean-integrated');
-  assert.equal(NUISANCE_ROBUST_BF_ENVELOPE.validUnderEstimatedBaseline, true);
+  // 2026-07-02 correction: the BF's recentering breaks the proper-prior property (E ≈ 1.155).
+  assert.equal(NUISANCE_ROBUST_BF_ENVELOPE.validUnderEstimatedBaseline, false);
 });
 
 // ── The FDR-path gate. ────────────────────────────────────────────────────────────────────────────
-test('gate: the BF is always admissible to the FDR path', () => {
-  assert.equal(isValidForFdrPath(NUISANCE_ROBUST_BF_ENVELOPE), true);
-  assert.equal(isValidForFdrPath(NUISANCE_ROBUST_BF_ENVELOPE, {}), true);
+test('gate: the corrected BF is NO LONGER auto-admissible to the FDR path (2026-07-02)', () => {
+  assert.equal(isValidForFdrPath(NUISANCE_ROBUST_BF_ENVELOPE), false);
+  assert.equal(isValidForFdrPath(NUISANCE_ROBUST_BF_ENVELOPE, {}), false);
+  // Its inflation is bounded (≈1.155·q), so a caller may still admit it under an explicit regime
+  // assertion — but never silently.
+  assert.equal(isValidForFdrPath(NUISANCE_ROBUST_BF_ENVELOPE, { trueBaseline: true }), true);
 });
 
 test('gate: a plug-in e-value is gated OUT unless its validity regime is asserted', () => {
@@ -49,13 +55,17 @@ test('gate: assertValidForFdrPath throws for an unasserted plug-in e-value, pass
   assert.throws(() => assertValidForFdrPath(BETTING_E_PROCESS_ENVELOPE), /INVALID under an estimated baseline/);
   assert.throws(() => assertValidForFdrPath(MIXTURE_SUPERMARTINGALE_ENVELOPE), /INVALID/);
   assert.doesNotThrow(() => assertValidForFdrPath(BETTING_E_PROCESS_ENVELOPE, { trueBaseline: true }));
-  assert.doesNotThrow(() => assertValidForFdrPath(NUISANCE_ROBUST_BF_ENVELOPE));
+  // 2026-07-02 correction: the BF is no longer auto-admissible (E[BF|H0] ≈ 1.155); the safe-t /
+  // UI envelopes are the valid-under-estimated-baseline objects now.
+  assert.throws(() => assertValidForFdrPath(NUISANCE_ROBUST_BF_ENVELOPE), /INVALID/);
+  assert.doesNotThrow(() => assertValidForFdrPath(SAFE_T_ENVELOPE));
 });
 
 // ── The assembled fleet guarantee conditions. ─────────────────────────────────────────────────────
 test('guarantee: FP/FDR is by-construction only when ALL conditions hold (valid e-value, minority faults, scalar, coupled)', () => {
   const base = {
-    eValueEnvelope: NUISANCE_ROBUST_BF_ENVELOPE,
+    // 2026-07-02: safe-t replaces the corrected BF as the valid-under-estimated-baseline envelope.
+    eValueEnvelope: SAFE_T_ENVELOPE,
     faultFraction: 0.1,
     genuineCoupling: true,
     scalarCommonMode: true,

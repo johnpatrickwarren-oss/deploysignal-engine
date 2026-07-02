@@ -28,8 +28,11 @@ export declare const BETTING_E_PROCESS_ENVELOPE: Readonly<ValidityEnvelope>;
  *  in the null mean; shares the plug-in invalidity in the under-powered regime (Tessera ADR 0014:
  *  E[e|H0] → ~3e9 at large n). Pre-whitens AR(1) (ADR 0002). Valid only with a true baseline or m≫n. */
 export declare const MIXTURE_SUPERMARTINGALE_ENVELOPE: Readonly<ValidityEnvelope>;
-/** Re-export the nuisance-robust BF envelope (ADR 0004 PR A) — the VALID-under-estimated-baseline
- *  e-value, the FDR-path default in the estimated-baseline regime. */
+/** Re-export the nuisance-robust BF envelope (ADR 0004 PR A). ⚠️ CORRECTED (2026-07-02): NO LONGER
+ *  valid-under-estimated-baseline — E[BF|H0] ≈ 1.155 at every calibration length (the recentering
+ *  breaks the proper-prior property; see that file's header). The FDR-path defaults in the
+ *  estimated-baseline regime are safe-t (SAFE_T_ENVELOPE, ADR 0005) and the UI e-value
+ *  (UI_MEAN_SHIFT_ENVELOPE, ADR 0010). */
 export { NUISANCE_ROBUST_BF_ENVELOPE };
 /** Assertions a caller can make to admit a plug-in e-value to the FDR path within its validity regime. */
 export interface FdrPathAssertions {
@@ -40,9 +43,10 @@ export interface FdrPathAssertions {
     mMuchGreaterThanN?: boolean;
 }
 /** Is an e-value with this envelope admissible to the FDR (e-BH) path? A valid-under-estimated-baseline
- *  e-value (the nuisance-robust BF) always is. A plug-in e-value (betting / mixture) is admissible ONLY
- *  if the caller asserts its validity regime (a true baseline, or m≫n) — otherwise E[e|H0] ≫ 1 and
- *  feeding it to e-BH silently breaks the FDR guarantee (Tessera ADR 0008/0014). */
+ *  e-value (safe-t, the UI e-value) always is. Anything else — the plug-in betting / mixture e-values,
+ *  and since the 2026-07-02 correction the nuisance-robust BF too — is admissible ONLY if the caller
+ *  asserts its validity regime (a true baseline, or m≫n) — otherwise E[e|H0] > 1 and feeding it to
+ *  e-BH silently breaks the FDR guarantee (Tessera ADR 0008/0014; BF: ≈1.155 at every cal length). */
 export declare function isValidForFdrPath(env: ValidityEnvelope, assertions?: FdrPathAssertions): boolean;
 /** Throw if an e-value with this envelope would be fed to the FDR path OUTSIDE its validity regime.
  *  Call this at the e-BH boundary so an invalid plug-in e-value cannot silently degrade FDR control. */

@@ -52,8 +52,8 @@ export const BETTING_E_PROCESS_ENVELOPE: Readonly<ValidityEnvelope> = Object.fre
   variance: 'stable',
   validUnderEstimatedBaseline: false,
   notes: 'Plug-in point baseline μ̂; E[e|H0] ≫ 1 under an estimated baseline (Tessera ADR 0008 → ~1e8). '
-    + 'Valid only with a TRUE baseline or m≫n. Use detectors/nuisance-robust-bf-e-value.ts in the '
-    + 'estimated-baseline regime.',
+    + 'Valid only with a TRUE baseline or m≫n. Use detectors/safe-t-e-value.ts (or the UI e-value for '
+    + 'any-φ validity) in the estimated-baseline regime.',
 });
 
 /** Family-A Gaussian mixture supermartingale (`detectors/family-a-mixture-supermartingale.ts`). Plugs
@@ -69,8 +69,11 @@ export const MIXTURE_SUPERMARTINGALE_ENVELOPE: Readonly<ValidityEnvelope> = Obje
     + 'Valid only with a TRUE baseline or m≫n.',
 });
 
-/** Re-export the nuisance-robust BF envelope (ADR 0004 PR A) — the VALID-under-estimated-baseline
- *  e-value, the FDR-path default in the estimated-baseline regime. */
+/** Re-export the nuisance-robust BF envelope (ADR 0004 PR A). ⚠️ CORRECTED (2026-07-02): NO LONGER
+ *  valid-under-estimated-baseline — E[BF|H0] ≈ 1.155 at every calibration length (the recentering
+ *  breaks the proper-prior property; see that file's header). The FDR-path defaults in the
+ *  estimated-baseline regime are safe-t (SAFE_T_ENVELOPE, ADR 0005) and the UI e-value
+ *  (UI_MEAN_SHIFT_ENVELOPE, ADR 0010). */
 export { NUISANCE_ROBUST_BF_ENVELOPE };
 
 // Compile-time guarantee that the BF envelope (defined in its own file) satisfies the shared type.
@@ -89,9 +92,10 @@ export interface FdrPathAssertions {
 }
 
 /** Is an e-value with this envelope admissible to the FDR (e-BH) path? A valid-under-estimated-baseline
- *  e-value (the nuisance-robust BF) always is. A plug-in e-value (betting / mixture) is admissible ONLY
- *  if the caller asserts its validity regime (a true baseline, or m≫n) — otherwise E[e|H0] ≫ 1 and
- *  feeding it to e-BH silently breaks the FDR guarantee (Tessera ADR 0008/0014). */
+ *  e-value (safe-t, the UI e-value) always is. Anything else — the plug-in betting / mixture e-values,
+ *  and since the 2026-07-02 correction the nuisance-robust BF too — is admissible ONLY if the caller
+ *  asserts its validity regime (a true baseline, or m≫n) — otherwise E[e|H0] > 1 and feeding it to
+ *  e-BH silently breaks the FDR guarantee (Tessera ADR 0008/0014; BF: ≈1.155 at every cal length). */
 export function isValidForFdrPath(env: ValidityEnvelope, assertions: FdrPathAssertions = {}): boolean {
   if (env.validUnderEstimatedBaseline) return true;
   return Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN);
@@ -103,8 +107,8 @@ export function assertValidForFdrPath(env: ValidityEnvelope, assertions: FdrPath
   if (!isValidForFdrPath(env, assertions)) {
     throw new Error(
       `validity-envelope: a '${env.baseline}' e-value is INVALID under an estimated baseline `
-      + '(E[e|H0] ≫ 1) and must not enter the FDR path. Assert { trueBaseline } or '
-      + '{ mMuchGreaterThanN }, or use the nuisance-robust BF e-value instead.',
+      + '(E[e|H0] > 1) and must not enter the FDR path. Assert { trueBaseline } or '
+      + '{ mMuchGreaterThanN }, or use the safe-t / universal-inference e-value instead.',
     );
   }
 }

@@ -136,3 +136,34 @@ upper bound with good instrumentation.
 This is the charter + the first kit (per-cell Family-A-style seasonal clean-null). The full Family A/C/D/E
 calibrator port (incl. the MCD/MRCD/Ledoit-Wolf multivariate path and adjacency-aware pooling) is incremental
 per the migration plan.
+
+## Addendum (2026-07-16) — migration status and tool-residency disposition
+
+Recorded after an external review read this ADR's references to `tools/calibrate`,
+`tools/run-shadow-compare`, and `tools/curate-baseline-*` as engine gaps. Disposition, validated against
+both consumers:
+
+**The migration's statistical half is complete.** Step 1 (L1 kit, `baseline/…`) shipped with this ADR.
+Step 2 — the calibrator *numerics* (robust covariance MCD/MRCD/Ledoit-Wolf, multivariate per-cell
+compiler, adjacency pooling) — shipped via ADR 0020 (ingestion contract) + ADR 0021 (calibrator port) in
+v0.6.0-pre. Tessera completed its side of step 2: it bumped to v0.6.0-pre, **deleted** its vendored
+copies of the Family-C numerics, and rebuilt its baseline-compile path on the engine kit
+(`tessera/tools/compile-baseline.ts`; see the 2026-06-25 baseline-kit consolidation note in Tessera's
+VENDORING-MANIFEST).
+
+**The CLI orchestration layers stay product-resident — deliberately, not as unfinished migration.**
+DeploySignal's `tools/calibrate.ts` entrypoint (+ its `calibrators/`, `bundle-loader`, `profile-loader`
+scaffolding, ~7k non-test lines) and `tools/run-shadow-compare.ts` (+`_run-shadow-compare-*`, ~1.5k lines) encode
+DeploySignal's profiles, signal semantics, and calibration regimes — L2 by this ADR's own rule. Tessera
+has **no code dependency on any of them** (zero imports; `run-shadow-compare` is not referenced at all)
+and operates its own engine-backed toolchain (`compile-baseline.ts`, `curate-baseline*.ts` implementing
+D11–D13, `shadow-replay.ts`). Vendoring those CLIs would move product semantics into the engine and
+duplicate what each product already has.
+
+**Shared surface that remains:** the curation *decision types* (`types/_config-curation.ts`,
+D1–D13) are the cross-product contract — DeploySignal implements D1–D4 (its SLICE 1), Tessera
+contributed D11–D13. Type unions extend here; implementations live with the product that owns the
+semantics.
+
+Net: read this ADR's "Migration" section as **complete for L0/L1**; the referenced DeploySignal tools are
+L2 and are not, and will not be, vendored.

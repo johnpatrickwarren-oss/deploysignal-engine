@@ -4,7 +4,27 @@ Statistical detector engine vendored from [DeploySignal](https://github.com/john
 
 **Status:** extraction complete and consumption migration (R91/R92) closed — Tessera and DeploySignal both consume this package via git-dependency at a release tag. Current version: see [`CHANGELOG.md`](CHANGELOG.md) (prose copies of version numbers in this README have gone stale before; the changelog is the source of truth). Per-file vendoring provenance (which files match DeploySignal SHA `5a72371` vs carry Tessera-evolved deltas) is tracked in [`tessera/coordination/VENDORING-MANIFEST.md`](https://github.com/johnpatrickwarren-oss/tessera/blob/main/coordination/VENDORING-MANIFEST.md).
 
-## What this package is
+## What this package is — and is not
+
+**This is a shared statistical library, not DeploySignal's runtime or a deployment-verification
+service.** Two products consume it as a pinned git dependency: [DeploySignal](https://github.com/johnpatrickwarren-oss/deploysignal)
+(pre-promotion deploy gating) and [Tessera](https://github.com/johnpatrickwarren-oss/tessera)
+(steady-state cluster observation). The charter split (ADR 0019) is: **mechanism + schema live here;
+data, semantics, and policy live in the products.** Concretely, the following are product
+responsibilities by design and do not exist in this repo: telemetry ingestion, baseline *lifecycle*
+management (candidate creation, review/approval, promotion — this repo supplies only the re-record
+*timing trigger* in `per-shard/baseline-lifecycle.ts` and the event-driven freeze-hook), durable
+service state, and product-profile calibration orchestration (each product's profile and
+signal-semantics calibration regimes; the generic substrate-fitting CLI `fit-production-substrate`
+documented below *does* live here). Some ADRs here reference DeploySignal tools
+(`tools/calibrate`, `tools/run-shadow-compare`, `tools/curate-baseline-*`) — those live in the
+DeploySignal repo and are deliberately not vendored; see the 2026-07-16 addendum in
+[`decisions/0019`](decisions/0019-baseline-creation-belongs-in-the-engine.md). The `ds-integration/`
+directory is the *Tessera-side* implementation of the bidirectional DS↔Tessera contract (Tessera→DS
+verdict-group feed + DS→Tessera deploy-event consumer/freeze-hook), not a DeploySignal service
+surface.
+
+What ships here:
 
 - Family A/C/D/E statistical detectors (mixture-supermartingale, betting e-process, hotelling, page-cusum, conformal, sequential MMD, spectral; the self-normalized fallback is **deprecated** — retained for tests only, see the caveat in `detectors/self-normalized-e-process-fallback.ts`)
 - Ville-bounded any-time-valid hypothesis tests, with an honest validity boundary: under *estimated* (plug-in) baselines the per-shard `E[e|H0] ≤ 1` requirement is not achievable on real telemetry, so the anytime-valid guarantee holds at the fleet e-BH/FDR layer, not per individual shard stream (ADRs 0011/0012)

@@ -44,9 +44,15 @@ innovation σ̂. Zero covariates degrades exactly to the plain-AR(p) comparator,
 - Nonlinear/cross-metric structure: that is exactly the headroom question G2 exists to measure —
   if this module leaves <~10% one-step error on the table, no deep model enters (ADR 0024 G2's
   two-sided kill criterion).
-- Benchmark harness: product-side, on workload-driven substrates (clustersynth scenarios with
-  scheduler/workload-mix changes; the mini 1 Hz feed post-gate). GWDG incident windows overstate
-  covariate benefit and cannot serve null gates (ADR 0022 / Tessera ADR 0024 G3).
+- Benchmark harness: product-side. **Substrate correction (2026-07-28, same day):** clustersynth
+  is NOT a valid G2 substrate — `allocateJobs` runs once per scenario, so allocation is STATIC
+  over the horizon: job/partition covariates degenerate to per-shard intercepts, and the job
+  factor's time variation is calendar (the seasonal kit's job) plus a latent stochastic part no
+  admissible exogenous covariate predicts. A MASE bench there would read "≈0 headroom" as a
+  generator property, not a fleet fact. The right substrate is the mini intervention campaign
+  (post-gate ~2026-09-21): journaled interventions = strictly-exogenous scheduler-intent
+  covariates on real telemetry. GWDG incident windows overstate covariate benefit and cannot
+  serve null gates (ADR 0022 / Tessera ADR 0024 G3).
 
 ## Tests
 

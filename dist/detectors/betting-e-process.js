@@ -137,8 +137,16 @@ function updateBettingState(state, x, baselineMean, sigmaSquared, perTickAlpha, 
     // lack last_x_centered; without the coalesce, ar1Phi != 0 would propagate NaN.
     const prevCentered = state.last_x_centered ?? 0;
     const xWhitened = xCentered - ar1Phi * prevCentered;
-    state.last_x_centered = xCentered;
     const z = boundedZ(xWhitened, 0, sigma);
+    // ADR 0026 (cold-eye finding 1) — a NaN observation passes through both
+    // clip comparisons and would poison wealth, bets, AND moments absorbingly.
+    // A NaN tick carries no evidence: skip it entirely, before ANY state
+    // mutation (including last_x_centered — storing NaN would make the next
+    // whitened tick NaN too under ar1Phi ≠ 0). An infinite observation is NOT
+    // NaN here: boundedZ clips ±∞ to ±1, the pre-0026 behavior, and proceeds.
+    if (Number.isNaN(z))
+        return state.M;
+    state.last_x_centered = xCentered;
     const picked = pickBet(state.runningMean, state.runningSecondMoment, state.bet);
     const factor = 1 + picked.bet * z;
     // Non-negativity guard (Waudby-Smith & Ramdas eq. 4.3). With BET_CLIP
@@ -149,7 +157,7 @@ function updateBettingState(state, x, baselineMean, sigmaSquared, perTickAlpha, 
     // did); `M` is the Number.MAX_VALUE-saturating view, so a sustained
     // fault over ≳1100 growth ticks no longer overflows it to Infinity.
     const logM = (0, _wealth_1.healLogWealth)(state.log_M, state.M, LOG_WEALTH_FLOOR);
-    state.log_M = Math.max(LOG_WEALTH_FLOOR, logM + Math.log(Math.max(0, factor)));
+    state.log_M = (0, _wealth_1.advanceLogWealth)(logM, Math.log(Math.max(0, factor)), LOG_WEALTH_FLOOR);
     state.M = (0, _wealth_1.wealthView)(state.log_M);
     state.bet = picked.bet;
     if (picked.fellBack)

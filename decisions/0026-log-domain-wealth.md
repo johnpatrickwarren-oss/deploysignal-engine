@@ -55,19 +55,55 @@ field becomes a **materialized saturating view** `wealthView(log_M)` shared from
 **e-BH gains a log-input variant.** `eBenjaminiHochbergLog(perShardLogEValues, qLevel)`
 runs the identical procedure with the comparison `log k + logE_(k) ≥ log(N/q)` — so
 consumers that keep e-values in the log domain end-to-end (RNG's per-leaf path; this
-engine's own `combineAverage` output) never round-trip through `exp` at all. The linear
-`eBenjaminiHochberg` is unchanged and stays the primary surface for in-range callers.
+engine's own `combineAverage` output) never round-trip through `exp` at all. Equivalence
+with the linear procedure holds modulo final-ulp rounding of the boundary comparison
+(exact-threshold inputs are boundary-tested in both domains; a knife-edge input a
+fraction of an ulp from `N/q` could in principle be admitted by one domain and not the
+other). The linear `eBenjaminiHochberg` is unchanged and stays the primary surface for
+in-range callers.
+
+## Non-finite inputs (cold-eye round 1, findings 1–2 — folded)
+
+The first cut fixed the OVERFLOW pathway but left the **NaN pathway** open: a NaN
+observation (or an infinite observation into safe-Hotelling, where the two quadratic
+forms give ∞ − ∞ = NaN) still absorbed the wealth to NaN → JSON null — the exact
+ADR-0063 symptom by another route — and a `log_M` that went non-finite JSON-serialized
+to `null`, which the healing then treated as a number (`null + z_t` coerces to `z_t`,
+silently resetting wealth to ~1). Both are closed structurally:
+
+- `advanceLogWealth(log_M, increment, floor)` is now the single accumulation site:
+  a **NaN increment holds the wealth** (a corrupt tick carries no evidence); a
+  **+Infinity increment pins the books at the saturation point** — the view fires
+  exactly as the pre-0026 linear code did on an infinite observation, but stays finite,
+  JSON-safe, and non-absorbing; everything else takes the floor clamp exactly as the
+  linear `max(floor, M·factor)` did.
+- The betting detector **skips a NaN tick entirely, before any state mutation** — the
+  running moments, bet, `n`, and `last_x_centered` are otherwise poisoned absorbingly
+  (and a stored NaN `last_x_centered` would NaN every later whitened tick). Infinite
+  betting observations are unaffected: `boundedZ` clips ±∞ to ±1, the pre-0026 behavior.
+- `healLogWealth` accepts `null` (a JSON round-trip of any non-finite `log_M`) and NaN,
+  deriving from the linear view; persisted ±∞ pins to the saturation point / floor.
+
+`log_M` is therefore **permanently finite** after any update, and the JSON-null defect
+class is closed for both fields.
 
 ## What changes numerically, and what does not
 
-- **Decision semantics:** preserved. Fires, verdicts, thresholds, α-accounting identical
-  (parity-tested per detector: same fixture run, old-vs-new decision sequence equal).
+- **Decision semantics:** preserved up to final-ulp rounding. Fires, verdicts,
+  thresholds, α-accounting are equal on every tested fixture (parity-tested per
+  detector, old-vs-new decision sequence compared tick-by-tick); a run whose wealth
+  sits within ~1 ulp of its threshold at some tick could in principle flip that tick's
+  verdict versus v0.6.4-pre — measure-zero, disclosed rather than claimed away.
 - **In-range `M` values:** may differ from v0.6.4-pre in the final ulps — `exp(Σ z_t)` and
   `Π exp(z_t)` round differently. This is a versioned, deliberate break in byte-identity,
   taken with the release bump; consumers re-pin deliberately (the Tessera repos' pin-bump
   ADR pattern). Parity is asserted at relative tolerance 1e-9 over standard fixtures.
 - **Overflow-range `M` values:** were `Infinity` (defective), are now `Number.MAX_VALUE`
   (saturated view) with the exact value in `log_M`.
+- **Non-finite-input behavior** changes deliberately per the section above (the old
+  behavior was absorbing NaN corruption; there is no valid consumer of it). One knife-edge
+  case flips: a (nonsensical) `sliding_buffer_threshold = Infinity` config used to "fire"
+  at overflow (∞ ≥ ∞) and now never fires (MAX_VALUE < ∞) — recorded, not defended.
 
 ## Out of scope, with reasons
 
@@ -101,3 +137,26 @@ engine's own `combineAverage` output) never round-trip through `exp` at all. The
 - **AC-6 (deserialization healing):** an old-shape state (no `log_M`) updates without NaN
   and adopts `log(M)`; a defective persisted `M = Infinity` heals to the saturation point
   rather than poisoning subsequent ticks.
+- **AC-7 (cold-eye finding 1 — the NaN pathway):** NaN observations hold the wealth in
+  all three detectors (betting skips the tick before ANY mutation); an infinite
+  safe-Hotelling observation (z_t = ∞ − ∞ = NaN) holds; an infinite spectral peak fires
+  at the saturation point, finite and JSON-safe; no JSON `null` on any of these paths.
+- **AC-8 (cold-eye finding 2 — JSON-null log_M):** a round-tripped non-finite `log_M`
+  (serialized `null`) is healed from the linear view, never coerced to 0 in the addition
+  (the silent wealth-reset); every non-finite `log_M`/`M` shape is pinned in the helper.
+- **AC-9 (cold-eye findings 3–4 — the surviving mutants, killed):** the floor clamp is
+  bound directly on `advanceLogWealth` (its single home), and both e-BH variants are
+  bound on exact-threshold inputs (a `≥`→`>` mutant now fails).
+
+## Cold-eye round 1 — folded
+
+Fresh-context adversarial review of the first commit: MERGE-READY with two MAJOR
+findings, both folded above (the NaN pathway; the JSON-null `log_M` silent reset — the
+code's `!== undefined` check contradicted this ADR's own `??` healing spec). Also
+folded: floor-clamp and e-BH-boundary mutants survived the original suite (AC-9 now
+kills them); nine stale "pre-0024" comment references corrected to pre-0026; the first
+commit message's suite count ("261/261") was wrong — the correct commit-scoped count
+was 256 (248 pre-existing + 8 new); this follow-up's count is stated from a fresh run.
+The reviewer verified empirically that no pre-existing test broke, that the parity
+replays are faithful to the real implementations, and that the out-of-scope and
+precedent claims in this ADR are accurate.

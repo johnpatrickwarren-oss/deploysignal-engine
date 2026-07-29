@@ -1,12 +1,15 @@
 "use strict";
 // ADR 0026 — log-domain wealth for the multiplicative e-process detectors.
 //
-// The binding tests are the overflow cases (AC-1/2/4: behavior the pre-0024
+// The binding tests are the overflow cases (AC-1/2/4: behavior the pre-0026
 // linear accumulation gets WRONG, replayed in-test as the oracle) and the
 // parity cases (AC-3: in-range decision sequences and wealth books identical
 // to the linear replay at 1e-9 relative tolerance). AC-5 binds the log-input
 // e-BH variant against the linear procedure; AC-6 binds deserialization
-// healing including the poisoned persisted-Infinity case.
+// healing including the poisoned persisted-Infinity case. AC-7/8/9 fold the
+// cold-eye findings: the NaN pathway (finding 1), the JSON-null log_M
+// silent-reset (finding 2), the floor clamps and the e-BH >= boundary
+// (findings 3/4 — the surviving mutants, killed here).
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -53,7 +56,7 @@ function lcg(seed) {
     // δ=32-class observations: xᵀΣ⁻¹x = p·32² per tick ⇒ z_t ≈ 2048 — the
     // linear product is Infinity by tick 1's square; run 60 ticks anyway.
     const x = new Array(p).fill(32);
-    // Linear-replay oracle (the pre-0024 accumulation), alongside.
+    // Linear-replay oracle (the pre-0026 accumulation), alongside.
     let linearM = 1;
     for (let t = 0; t < 60; t++) {
         const params = cell.safe_hotelling_params;
@@ -63,7 +66,7 @@ function lcg(seed) {
         linearM = Math.max(1e-300, linearM * Math.exp(z));
         (0, hotelling_1.evaluateSafeHotelling)({ cell, alpha: 1e-4 }, [...x], state);
     }
-    strict_1.default.equal(linearM, Infinity, 'oracle: the pre-0024 linear accumulation overflows');
+    strict_1.default.equal(linearM, Infinity, 'oracle: the pre-0026 linear accumulation overflows');
     strict_1.default.equal(state.M, Number.MAX_VALUE, 'the view saturates finite');
     strict_1.default.ok(Number.isFinite(state.log_M), 'log books stay exact');
     strict_1.default.ok(state.log_M > _wealth_1.LOG_MAX_WEALTH, 'and are far above the saturation point');
@@ -94,7 +97,7 @@ function lcg(seed) {
     const calm = new Array(p).fill(0);
     for (let t = 0; t < healthyTicks; t++)
         step(calm);
-    strict_1.default.equal(linearM, Infinity, 'the pre-0024 linear wealth is ABSORBED at Infinity forever');
+    strict_1.default.equal(linearM, Infinity, 'the pre-0026 linear wealth is ABSORBED at Infinity forever');
     strict_1.default.ok(Number.isFinite(state.M) && state.M < Number.MAX_VALUE, `the log-domain view comes back down (M = ${state.M.toExponential(3)})`);
     strict_1.default.ok(Math.abs(Math.log(state.M) - state.log_M) < 1e-9, 'view ≡ exp(log books) once in range');
 });
@@ -123,7 +126,7 @@ function lcg(seed) {
 });
 (0, node_test_1.test)('AC-3b: betting in-range parity — wealth and fallback books match the linear replay', () => {
     const state = (0, betting_e_process_1.freshBettingState)();
-    // Linear replay re-implements the pre-0024 update exactly (GRAPA/ONS bets
+    // Linear replay re-implements the pre-0026 update exactly (GRAPA/ONS bets
     // recomputed from the same running moments — shared deterministic inputs).
     const rand = lcg(0xbe77);
     let linearM = 1;
@@ -240,8 +243,8 @@ function lcg(seed) {
     const linInf = (0, e_bh_1.eBenjaminiHochberg)(logEs.map(Math.exp), 0.05);
     strict_1.default.deepEqual(linInf.selected, [0, 1], 'documented: linear set-selection survives overflow; the record does not');
 });
-(0, node_test_1.test)('AC-6: deserialization healing — pre-0024 states adopt log(M); a poisoned persisted Infinity heals to the saturation point', () => {
-    // pre-0024 shape: no log_M field.
+(0, node_test_1.test)('AC-6: deserialization healing — pre-0026 states adopt log(M); a poisoned persisted Infinity heals to the saturation point', () => {
+    // pre-0026 shape: no log_M field.
     const old = { M: 123.5, n: 7, alphaConsumed: 0 };
     const cell = identityCell(2, 1e-4, 1);
     (0, hotelling_1.evaluateSafeHotelling)({ cell, alpha: 1e-4 }, [0, 0], old);
@@ -255,8 +258,84 @@ function lcg(seed) {
     strict_1.default.ok(Number.isFinite(poisoned.M), 'and the view is finite from the first post-upgrade tick');
     // direct helper checks
     strict_1.default.equal((0, _wealth_1.healLogWealth)(undefined, 0, -5), -5, 'nonpositive M heals to the floor');
-    strict_1.default.equal((0, _wealth_1.healLogWealth)(3.25, Infinity, -5), 3.25, 'present log_M always wins');
+    strict_1.default.equal((0, _wealth_1.healLogWealth)(3.25, Infinity, -5), 3.25, 'present finite log_M always wins');
     strict_1.default.equal((0, _wealth_1.wealthView)(_wealth_1.LOG_MAX_WEALTH + 1), Number.MAX_VALUE, 'view saturation');
     strict_1.default.ok(Math.abs((0, _wealth_1.wealthView)(1) - Math.E) < 1e-12, 'view identity in range');
+});
+(0, node_test_1.test)('AC-7 (cold-eye finding 1): the NaN pathway is closed — a NaN observation HOLDS wealth instead of absorbing to JSON null', () => {
+    // safe-Hotelling: NaN component → quadratic forms NaN → z_t NaN → hold.
+    const cell = identityCell(2, 1e-4, 1);
+    const sh = (0, hotelling_1.freshSafeHotellingState)();
+    (0, hotelling_1.evaluateSafeHotelling)({ cell, alpha: 1e-4 }, [1, 1], sh);
+    const before = { M: sh.M, log_M: sh.log_M };
+    (0, hotelling_1.evaluateSafeHotelling)({ cell, alpha: 1e-4 }, [NaN, 0], sh);
+    strict_1.default.equal(sh.log_M, before.log_M, 'NaN tick holds the books');
+    strict_1.default.equal(sh.M, before.M, 'and the view');
+    // an INFINITE observation makes z_t = ∞ − ∞ = NaN in safe-Hotelling: held too
+    // (the pre-0026 linear code absorbed to NaN → JSON null here).
+    (0, hotelling_1.evaluateSafeHotelling)({ cell, alpha: 1e-4 }, [Infinity, 0], sh);
+    strict_1.default.equal(sh.log_M, before.log_M, 'infinite observation (NaN z_t) holds');
+    strict_1.default.notEqual(JSON.parse(JSON.stringify(sh)).M, null, 'JSON carries no null');
+    // betting: NaN observation skips the tick BEFORE any mutation.
+    const bet = (0, betting_e_process_1.freshBettingState)();
+    (0, betting_e_process_1.updateBettingState)(bet, 1, 0, 1, 0.01);
+    const snap = JSON.stringify(bet);
+    (0, betting_e_process_1.updateBettingState)(bet, NaN, 0, 1, 0.01);
+    strict_1.default.equal(JSON.stringify(bet), snap, 'NaN tick mutates NOTHING (wealth, bets, moments, n, last_x_centered)');
+    // ±Infinity betting observations clip to z = ±1 (pre-0026 behavior) and proceed.
+    const M1 = (0, betting_e_process_1.updateBettingState)(bet, Infinity, 0, 1, 0.01);
+    strict_1.default.ok(Number.isFinite(M1), 'infinite observation clips, does not corrupt');
+    // spectral: NaN peak holds; an INFINITE peak pins at saturation (fires, as
+    // pre-0026 did) and stays JSON-safe and NON-absorbing.
+    const params = {
+        bootstrap_null_quantile: 0.9, min_peak_lag: 3, max_peak_lag: 10,
+        spectral_variant: 'e_detector', null_mean: 0.42, null_std: 0.05, betting_delta: 0.015,
+    };
+    const sp = (0, spectral_1.freshSpectralEDetectorState)();
+    (0, spectral_1.evaluateSpectralEDetector)({ params, alpha: 1e-4, signal: 's' }, 0.42, sp);
+    const spBefore = sp.log_M;
+    (0, spectral_1.evaluateSpectralEDetector)({ params, alpha: 1e-4, signal: 's' }, NaN, sp);
+    strict_1.default.equal(sp.log_M, spBefore, 'NaN peak holds');
+    const v = (0, spectral_1.evaluateSpectralEDetector)({ params, alpha: 1e-4, signal: 's' }, Infinity, sp);
+    strict_1.default.equal(v.verdict, 'fire', 'infinite peak fires (pre-0026 parity)');
+    strict_1.default.equal(sp.log_M, _wealth_1.LOG_MAX_WEALTH, 'pinned at the saturation point — finite, JSON-safe');
+    strict_1.default.equal(sp.M, Number.MAX_VALUE, 'view saturated, not Infinity');
+});
+(0, node_test_1.test)('AC-8 (cold-eye finding 2): a JSON-null log_M is healed, never silently reset to wealth 1', () => {
+    // a defect-era state whose log_M went non-finite serializes log_M to null.
+    const roundTripped = JSON.parse(JSON.stringify({ M: Number.MAX_VALUE, n: 5, alphaConsumed: 0, log_M: Infinity }));
+    strict_1.default.equal(roundTripped.log_M, null, 'precondition: JSON serializes Infinity to null');
+    const cell = identityCell(2, 1e-4, 1);
+    (0, hotelling_1.evaluateSafeHotelling)({ cell, alpha: 1e-4 }, [0, 0], roundTripped);
+    // null must route through healing (adopt log(M) = LOG_MAX_WEALTH), NOT
+    // coerce to 0 in `null + z_t` (which silently resets wealth to ~1).
+    const expected = _wealth_1.LOG_MAX_WEALTH - cell.safe_hotelling_params.precompiled_log_det_shrink;
+    strict_1.default.ok(Math.abs(roundTripped.log_M - expected) < 1e-9, `healed from the saturated view (${roundTripped.log_M}), not reset to ~0`);
+    // direct helper coverage of every non-finite log_M shape:
+    strict_1.default.equal((0, _wealth_1.healLogWealth)(null, 50, -5), Math.log(50), 'null → derive from M');
+    strict_1.default.equal((0, _wealth_1.healLogWealth)(NaN, 50, -5), Math.log(50), 'NaN → derive from M');
+    strict_1.default.equal((0, _wealth_1.healLogWealth)(Infinity, 1, -5), _wealth_1.LOG_MAX_WEALTH, '+∞ → saturation point');
+    strict_1.default.equal((0, _wealth_1.healLogWealth)(-Infinity, 1, -5), -5, '−∞ → floor');
+    strict_1.default.equal((0, _wealth_1.healLogWealth)(null, Infinity, -5), _wealth_1.LOG_MAX_WEALTH, 'null log with Infinity M → saturation point');
+    strict_1.default.equal((0, _wealth_1.healLogWealth)(null, NaN, -5), -5, 'fully-corrupt state → floor');
+});
+(0, node_test_1.test)('AC-9 (cold-eye findings 3+4): the floor clamp and the e-BH >= boundary are mutant-bound', () => {
+    // the floor clamp now lives in ONE place (advanceLogWealth) — bind it directly:
+    const floor = Math.log(1e-12);
+    strict_1.default.equal((0, _wealth_1.advanceLogWealth)(-5, -Infinity, floor), floor, 'log(0) factor lands on the floor, not -∞');
+    strict_1.default.equal((0, _wealth_1.advanceLogWealth)(-25, -10, floor), floor, 'finite decay below the floor clamps');
+    strict_1.default.equal((0, _wealth_1.advanceLogWealth)(-5, -10, floor), -15, 'in-range decay is exact');
+    strict_1.default.equal((0, _wealth_1.advanceLogWealth)(3, NaN, floor), 3, 'NaN increment holds');
+    strict_1.default.equal((0, _wealth_1.advanceLogWealth)(3, Infinity, floor), _wealth_1.LOG_MAX_WEALTH, '+∞ increment pins at saturation');
+    strict_1.default.ok(Number.isFinite((0, _wealth_1.advanceLogWealth)(_wealth_1.LOG_MAX_WEALTH, 500, floor)), 'huge finite stays exact-finite');
+    // e-BH boundary: k·e_(k) ≥ N/q must be INCLUSIVE. N=1, q=1, e=1 sits exactly
+    // on the threshold: 1·1 ≥ 1. A `>` mutant selects nothing here.
+    strict_1.default.equal((0, e_bh_1.eBenjaminiHochberg)([1], 1).K, 1, 'linear: exact-threshold input selects');
+    strict_1.default.equal((0, e_bh_1.eBenjaminiHochbergLog)([0], 1).K, 1, 'log: exact-threshold input selects');
+    // and one composite exact-boundary case: N=2, q=0.5 → N/q=4; e=(4,1) →
+    // k=2: 2·1 = 2 < 4 rejects; k=1: 1·4 ≥ 4 sits ON the boundary and selects
+    // exactly the first, in both domains.
+    strict_1.default.deepEqual((0, e_bh_1.eBenjaminiHochberg)([4, 1], 0.5).selected, [0]);
+    strict_1.default.deepEqual((0, e_bh_1.eBenjaminiHochbergLog)([Math.log(4), 0], 0.5).selected, [0]);
 });
 //# sourceMappingURL=adr-0026-log-domain-wealth.test.js.map

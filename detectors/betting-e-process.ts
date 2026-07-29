@@ -48,7 +48,7 @@ import { FAMILY_A_PRIMARY_SIGNALS, trafficGateMin } from './page-cusum';
 // gaussian_like default so pre-Q2.A configs retain byte-identical
 // runtime behavior. DEFAULT_SIGNAL_CLASSES is compile-time only.
 import { transformForClass } from '../signal-classes';
-import { wealthView, healLogWealth } from './_wealth';
+import { wealthView, healLogWealth, advanceLogWealth } from './_wealth';
 
 const DEFAULT_BAKE: BakeProfile = {
   min_ticks_before_eligible: 3,
@@ -176,8 +176,15 @@ export function updateBettingState(
   // lack last_x_centered; without the coalesce, ar1Phi != 0 would propagate NaN.
   const prevCentered = state.last_x_centered ?? 0;
   const xWhitened = xCentered - ar1Phi * prevCentered;
-  state.last_x_centered = xCentered;
   const z = boundedZ(xWhitened, 0, sigma);
+  // ADR 0026 (cold-eye finding 1) — a NaN observation passes through both
+  // clip comparisons and would poison wealth, bets, AND moments absorbingly.
+  // A NaN tick carries no evidence: skip it entirely, before ANY state
+  // mutation (including last_x_centered — storing NaN would make the next
+  // whitened tick NaN too under ar1Phi ≠ 0). An infinite observation is NOT
+  // NaN here: boundedZ clips ±∞ to ±1, the pre-0026 behavior, and proceeds.
+  if (Number.isNaN(z)) return state.M;
+  state.last_x_centered = xCentered;
   const picked = pickBet(state.runningMean, state.runningSecondMoment, state.bet);
   const factor = 1 + picked.bet * z;
   // Non-negativity guard (Waudby-Smith & Ramdas eq. 4.3). With BET_CLIP
@@ -188,7 +195,7 @@ export function updateBettingState(
   // did); `M` is the Number.MAX_VALUE-saturating view, so a sustained
   // fault over ≳1100 growth ticks no longer overflows it to Infinity.
   const logM = healLogWealth(state.log_M, state.M, LOG_WEALTH_FLOOR);
-  state.log_M = Math.max(LOG_WEALTH_FLOOR, logM + Math.log(Math.max(0, factor)));
+  state.log_M = advanceLogWealth(logM, Math.log(Math.max(0, factor)), LOG_WEALTH_FLOOR);
   state.M = wealthView(state.log_M);
   state.bet = picked.bet;
   if (picked.fellBack) state.onsFallbackCount += 1;

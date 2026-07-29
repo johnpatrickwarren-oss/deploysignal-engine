@@ -261,8 +261,11 @@ function evaluateSpectralEDetector(input, peak_t, state) {
     // ADR 0026 — log-domain accumulation (z_t IS the log-increment); `M` is
     // the Number.MAX_VALUE-saturating view, never Infinity. Same overflow
     // mechanism as safe-Hotelling: z_t is unbounded in the standardized peak.
+    // Non-finite z_t: NaN holds the wealth; an infinite peak pins the books at
+    // the saturation point (fires, as pre-0026 did, but JSON-safe and
+    // non-absorbing) — see advanceLogWealth.
     const logM = (0, _wealth_1.healLogWealth)(state.log_M, state.M, LOG_E_DETECTOR_WEALTH_FLOOR);
-    state.log_M = Math.max(LOG_E_DETECTOR_WEALTH_FLOOR, logM + z_t);
+    state.log_M = (0, _wealth_1.advanceLogWealth)(logM, z_t, LOG_E_DETECTOR_WEALTH_FLOOR);
     state.M = (0, _wealth_1.wealthView)(state.log_M);
     state.n += 1;
     if (state.M >= threshold) {

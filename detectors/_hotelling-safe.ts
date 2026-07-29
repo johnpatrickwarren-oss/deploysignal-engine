@@ -15,7 +15,7 @@
 
 import type { DetectorVerdict, FamilyCPerCell, SafeHotellingState } from '../types';
 import { cholesky, forwardSolve } from './_linalg';
-import { wealthView, healLogWealth } from './_wealth';
+import { wealthView, healLogWealth, advanceLogWealth } from './_wealth';
 
 /** ADR 0026 — log-domain observability floor, same value as the previous
  *  linear floor (1e-300). See the floor comment at the update site. */
@@ -112,14 +112,16 @@ export function evaluateSafeHotelling(
     - 0.5 * xSigmaPlusInvX;
   // ADR 0026 — log-domain accumulation: z_t IS the log-increment, so wealth
   // books are kept exactly in log_M and `M` is materialized as the
-  // Number.MAX_VALUE-saturating view (never Infinity; the pre-0024 linear
+  // Number.MAX_VALUE-saturating view (never Infinity; the pre-0026 linear
   // update overflowed inside the products' claimed shift bands and was
-  // absorbing once it did). The floor keeps its pre-0024 value and intent:
-  // informational only, against denormal underflow on extremely long healthy
-  // runs (z_t negative ~log(0.946) ≈ -0.056/tick sums to log(1e-300) ≈ -690
-  // at ~12,300 ticks). E-process semantics preserved.
+  // absorbing once it did). Non-finite z_t (a NaN observation, or ∞−∞
+  // between the two quadratic forms on an infinite observation) HOLDS the
+  // wealth — see advanceLogWealth. The floor keeps its pre-0026 value and
+  // intent: informational only, against denormal underflow on extremely long
+  // healthy runs (z_t negative ~log(0.946) ≈ -0.056/tick sums to
+  // log(1e-300) ≈ -690 at ~12,300 ticks). E-process semantics preserved.
   const logM = healLogWealth(state.log_M, state.M, LOG_SAFE_HOTELLING_FLOOR);
-  state.log_M = Math.max(LOG_SAFE_HOTELLING_FLOOR, logM + z_t);
+  state.log_M = advanceLogWealth(logM, z_t, LOG_SAFE_HOTELLING_FLOOR);
   state.M = wealthView(state.log_M);
   state.n += 1;
   if (state.M >= threshold) {

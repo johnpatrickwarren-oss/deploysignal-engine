@@ -16,13 +16,39 @@ export function wealthView(log_M: number): number {
   return log_M >= LOG_MAX_WEALTH ? Number.MAX_VALUE : Math.exp(log_M);
 }
 
-/** Heal a state deserialized from a snapshot persisted before `log_M` existed
- *  (the `last_x_centered` precedent): adopt log(M) when M is finite-positive;
- *  a defective persisted M = Infinity heals to the saturation point instead of
- *  poisoning subsequent ticks; nonpositive M (impossible under the floors, but
- *  defensive) heals to the caller's floor. */
-export function healLogWealth(log_M: number | undefined, M: number, logFloor: number): number {
-  if (log_M !== undefined) return log_M;
+/** Advance a log-wealth by one log-increment, keeping the books permanently
+ *  finite (cold-eye 0026 finding 1 — the NaN pathway was still an
+ *  audit-null):
+ *  - NaN increment (a NaN observation, or ∞−∞ inside a quadratic form)
+ *    carries no evidence — the wealth HOLDS at its last good value instead
+ *    of absorbing to NaN → JSON null.
+ *  - +Infinity increment (a literally infinite observation) pins the books
+ *    at the saturation point: the view fires exactly as the pre-0026 linear
+ *    code did (M = ∞ ≥ threshold), but stays JSON-safe and NON-absorbing —
+ *    later negative evidence brings it back down.
+ *  - Otherwise the caller's floor applies, exactly as the linear
+ *    `max(floor, M·factor)` did (−Infinity from log(0) lands here too). */
+export function advanceLogWealth(log_M: number, increment: number, logFloor: number): number {
+  const next = log_M + increment;
+  if (Number.isNaN(next)) return log_M;
+  if (next === Infinity) return LOG_MAX_WEALTH;
+  return Math.max(logFloor, next);
+}
+
+/** Heal a state's log-wealth on read. Covers (cold-eye 0026 finding 2):
+ *  - a snapshot persisted before `log_M` existed (field absent) — adopt
+ *    log(M), the `last_x_centered` precedent;
+ *  - a defect-era snapshot whose `M` was Infinity — heal to the saturation
+ *    point instead of poisoning subsequent ticks;
+ *  - a JSON round-trip of a non-finite `log_M` (serializes to null) — null
+ *    must NOT be treated as a number (null + z coerces to z, silently
+ *    resetting wealth to 1); non-finite log_M itself is pinned to the
+ *    matching bound. */
+export function healLogWealth(log_M: number | null | undefined, M: number, logFloor: number): number {
+  if (log_M != null && Number.isFinite(log_M)) return log_M;
+  if (log_M === Infinity) return LOG_MAX_WEALTH;
+  if (log_M === -Infinity) return logFloor;
+  // absent, JSON-null, or NaN: derive from the linear view.
   if (!(M > 0)) return logFloor;
   return Number.isFinite(M) ? Math.log(M) : LOG_MAX_WEALTH;
 }

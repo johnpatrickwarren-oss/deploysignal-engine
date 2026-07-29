@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.6.5-pre — 2026-07-29
+
+- **Log-domain wealth (ADR 0026):** the three multiplicative e-process detectors
+  (safe-Hotelling, betting, spectral e-detector) now keep exact log-wealth (`log_M`) as the
+  single source of truth; the linear `M` is a `Number.MAX_VALUE`-saturating view — per-leaf
+  e-values can no longer overflow to `Infinity` → JSON `null` inside a claimed shift band
+  (the Tessera-RNG ADR-0063 measured defect at δ=32), and overflow is no longer absorbing.
+  NaN observations hold wealth instead of poisoning it; JSON-null `log_M` heals instead of
+  silently resetting. `eBenjaminiHochbergLog` added for log-domain e-BH consumers.
+  ⚠️ In-range `M` may differ from v0.6.4-pre in final ulps (`exp(Σz)` vs `Π exp(z)`) —
+  decision semantics preserved up to ulp-boundary knife-edges; re-pin deliberately.
+- **Sequential (predictable-plug-in) UI e-process (ADR 0025):** `E_t` = predictable-numerator
+  conditional likelihood over the profiled composite null {Gaussian AR(1), any φ, any σ²} —
+  `E[E_τ] ≤ 1` at every stopping time including near-unit-root φ, no empirical crutch; audit
+  F6 closed by construction. Honest power recorded: parity with fixed-split UI at 2.5σ; the
+  free-φ composite null absorbs small steps.
+
+## v0.6.4-pre — 2026-07-28
+
+- **Covariate-augmented statistical residualizer (ADR 0023):** `fitCovariateResidualizer` /
+  `oneStepResiduals` — baseline-window fit, frozen weights, one-step-ahead innovations only,
+  strict-exogeneity lint. Tessera ADR 0024 G2's cheap arm.
+
 ## v0.6.3-pre — 2026-07-02
 
 - **Calibrated group attribution (ADR 0022):** `attributeCommonMode` gains opt-in `per_shard_e_values`

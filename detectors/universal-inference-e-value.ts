@@ -30,7 +30,10 @@
 // EMPIRICALLY the bound holds with a large margin — MC (8k–20k reps, cal=test∈{20,60}): E[e|H0]
 // ≈ 0.13–0.17 at φ ∈ {0, 0.6, 0.9, 0.98, 0.999}, P(e≥10) ≤ 7e-4; the UI's structural
 // conservativeness (~6× slack) dominates the second-order leak. A sequential/predictable numerator
-// (fit on strictly-past data only) would close the gap BY construction — the known fix.
+// (fit on strictly-past data only) closes the gap BY construction — the known fix, now BUILT:
+// detectors/sequential-ui.ts (ADR 0025), an anytime e-PROCESS with a gapless proof. Division of
+// labor: THIS fixed-split e-value keeps fixed-window terminal analyses (better small-shift power —
+// the sequential one spends ~(k/2)·log t on learning regret); anytime/monitoring use gets ADR 0025.
 // The denominator MUST be a genuine sup — an under-optimised null fit re-introduces
 // violations (the φ-grid search below secures it; cold-eye verified LL-gap 0.000 vs a 4000-point grid).
 //

@@ -17,10 +17,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.freshSafeHotellingState = freshSafeHotellingState;
 exports.evaluateSafeHotelling = evaluateSafeHotelling;
 const _linalg_1 = require("./_linalg");
+const _wealth_1 = require("./_wealth");
+/** ADR 0026 — log-domain observability floor, same value as the previous
+ *  linear floor (1e-300). See the floor comment at the update site. */
+const LOG_SAFE_HOTELLING_FLOOR = Math.log(1e-300);
 /** Fresh wealth state for a new (deploy, cell) safe-Hotelling evaluation.
  *  `M₀ = 1` is the Ville-inequality convention (log-wealth starts at 0). */
 function freshSafeHotellingState() {
-    return { M: 1, n: 0, alphaConsumed: 0 };
+    return { M: 1, n: 0, alphaConsumed: 0, log_M: 0 };
 }
 /** Addition #20 (ARCHITECT-REPLY-43 D4) — safe-Hotelling per-tick
  *  evaluation against a cell with populated `safe_hotelling_params`.
@@ -100,11 +104,19 @@ function evaluateSafeHotelling(input, x, state) {
     const z_t = -params.precompiled_log_det_shrink
         + 0.5 * xSigmaInvX
         - 0.5 * xSigmaPlusInvX;
-    // Informational floor against denormal underflow on extremely long
-    // healthy runs (z_t negative ~60+ ticks of log(0.946) ≈ -0.056 sums
-    // to log(1e-300) ≈ -690 → M_t at ~12,300 ticks). E-process semantics
-    // preserved; floor is observability only.
-    state.M = Math.max(1e-300, state.M * Math.exp(z_t));
+    // ADR 0026 — log-domain accumulation: z_t IS the log-increment, so wealth
+    // books are kept exactly in log_M and `M` is materialized as the
+    // Number.MAX_VALUE-saturating view (never Infinity; the pre-0026 linear
+    // update overflowed inside the products' claimed shift bands and was
+    // absorbing once it did). Non-finite z_t (a NaN observation, or ∞−∞
+    // between the two quadratic forms on an infinite observation) HOLDS the
+    // wealth — see advanceLogWealth. The floor keeps its pre-0026 value and
+    // intent: informational only, against denormal underflow on extremely long
+    // healthy runs (z_t negative ~log(0.946) ≈ -0.056/tick sums to
+    // log(1e-300) ≈ -690 at ~12,300 ticks). E-process semantics preserved.
+    const logM = (0, _wealth_1.healLogWealth)(state.log_M, state.M, LOG_SAFE_HOTELLING_FLOOR);
+    state.log_M = (0, _wealth_1.advanceLogWealth)(logM, z_t, LOG_SAFE_HOTELLING_FLOOR);
+    state.M = (0, _wealth_1.wealthView)(state.log_M);
     state.n += 1;
     if (state.M >= threshold) {
         const alphaSpent = Math.max(0, input.alpha - state.alphaConsumed);

@@ -314,11 +314,16 @@ export interface FamilyCBettingEProcessState {
 }
 /** Addition #20 — per-(deploy, cell) safe-Hotelling e-process state.
  *  Persisted across ticks; `M` is the wealth process (multiplicative),
- *  `alphaConsumed` tracks α spend across fires. */
+ *  `alphaConsumed` tracks α spend across fires. ADR 0026: `log_M` is the
+ *  exact log-wealth (single source of truth); `M` is its Number.MAX_VALUE-
+ *  saturating view (detectors/_wealth.ts). Optional (additive) so pre-0026
+ *  state literals and persisted snapshots keep working; absence is healed
+ *  on the next update. */
 export interface SafeHotellingState {
     M: number;
     n: number;
     alphaConsumed: number;
+    log_M?: number;
 }
 /** Addition #20 — per-(deploy, cell) e-MMD betting-e-process state.
  *  Parallel to BettingEProcessState (Family A, REPLY-34) but global

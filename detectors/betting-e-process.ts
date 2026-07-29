@@ -48,6 +48,7 @@ import { FAMILY_A_PRIMARY_SIGNALS, trafficGateMin } from './page-cusum';
 // gaussian_like default so pre-Q2.A configs retain byte-identical
 // runtime behavior. DEFAULT_SIGNAL_CLASSES is compile-time only.
 import { transformForClass } from '../signal-classes';
+import { wealthView, healLogWealth, advanceLogWealth } from './_wealth';
 
 const DEFAULT_BAKE: BakeProfile = {
   min_ticks_before_eligible: 3,
@@ -64,6 +65,9 @@ const BOUNDED_SCALE_B = 3;
  *  where (1 + λ·z) stays under 1 for many consecutive ticks. */
 const WEALTH_FLOOR = 1e-12;
 
+/** ADR 0026 — the same floor in the log domain, where wealth is accumulated. */
+const LOG_WEALTH_FLOOR = Math.log(WEALTH_FLOOR);
+
 /** GRAPA/ONS bet clip bound. Keeps (1 + λ·z) strictly positive when
  *  both factors hit their ±1 extremes. A tighter-than-1 clip gives a
  *  safety margin against numerical edge cases at the unit-ball boundary. */
@@ -79,6 +83,7 @@ export function freshBettingState(): BettingEProcessState {
     runningSecondMoment: 0,
     onsFallbackCount: 0,
     last_x_centered: 0,
+    log_M: 0,
   };
 }
 
@@ -171,14 +176,27 @@ export function updateBettingState(
   // lack last_x_centered; without the coalesce, ar1Phi != 0 would propagate NaN.
   const prevCentered = state.last_x_centered ?? 0;
   const xWhitened = xCentered - ar1Phi * prevCentered;
-  state.last_x_centered = xCentered;
   const z = boundedZ(xWhitened, 0, sigma);
+  // ADR 0026 (cold-eye finding 1) — a NaN observation passes through both
+  // clip comparisons and would poison wealth, bets, AND moments absorbingly.
+  // A NaN tick carries no evidence: skip it entirely, before ANY state
+  // mutation (including last_x_centered — storing NaN would make the next
+  // whitened tick NaN too under ar1Phi ≠ 0). An infinite observation is NOT
+  // NaN here: boundedZ clips ±∞ to ±1, the pre-0026 behavior, and proceeds.
+  if (Number.isNaN(z)) return state.M;
+  state.last_x_centered = xCentered;
   const picked = pickBet(state.runningMean, state.runningSecondMoment, state.bet);
   const factor = 1 + picked.bet * z;
   // Non-negativity guard (Waudby-Smith & Ramdas eq. 4.3). With BET_CLIP
   // strictly < 1 and |z| ≤ 1 the factor is already positive; guard is a
   // numerical safety net against floating-point rounding into zero.
-  state.M = Math.max(WEALTH_FLOOR, state.M * Math.max(0, factor));
+  // ADR 0026 — accumulate in the log domain (a nonpositive factor gives
+  // log(0) = -Infinity, caught by the floor exactly as the linear guard
+  // did); `M` is the Number.MAX_VALUE-saturating view, so a sustained
+  // fault over ≳1100 growth ticks no longer overflows it to Infinity.
+  const logM = healLogWealth(state.log_M, state.M, LOG_WEALTH_FLOOR);
+  state.log_M = advanceLogWealth(logM, Math.log(Math.max(0, factor)), LOG_WEALTH_FLOOR);
+  state.M = wealthView(state.log_M);
   state.bet = picked.bet;
   if (picked.fellBack) state.onsFallbackCount += 1;
   // Running first + second moments of z (for the next tick's bet).

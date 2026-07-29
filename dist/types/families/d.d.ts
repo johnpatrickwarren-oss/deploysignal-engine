@@ -70,6 +70,10 @@ export interface SpectralEDetectorState {
     M: number;
     n: number;
     alphaConsumed: number;
+    /** ADR 0026 — exact log-wealth; `M` is its Number.MAX_VALUE-saturating
+     *  view (detectors/_wealth.ts). Optional (additive); absence is healed on
+     *  the next update. */
+    log_M?: number;
 }
 /** Per-signal Family D ACF peak-detection state. Bootstrap null is built
  *  on baseline cells at compile time; the detector reads `window_length`

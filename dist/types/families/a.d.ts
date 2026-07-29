@@ -29,6 +29,11 @@ export interface BettingEProcessState {
      *  not only via freshBettingState — keep compiling across the upgrade.
      *  freshBettingState always sets it to 0; the only reader coalesces undefined. */
     last_x_centered?: number;
+    /** ADR 0026 — exact log-wealth; the single source of truth from which `M` is
+     *  materialized as a Number.MAX_VALUE-saturating view (detectors/_wealth.ts).
+     *  OPTIONAL (additive) for the same literal-construction reason as
+     *  last_x_centered; updateBettingState heals absence via healLogWealth. */
+    log_M?: number;
 }
 /** Per-signal Family A parameters within a cell. Replaces the Week-2
  *  `MSPRTParams.derivation.{mean, empirical_variance}` + `tau_squared` /

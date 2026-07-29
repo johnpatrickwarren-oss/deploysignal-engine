@@ -140,3 +140,51 @@ export function eBenjaminiHochberg(
   selected.sort((a, b) => a - b);
   return { selected, K: R };
 }
+
+/** ADR 0026 — run the e-BH procedure on LOG-space per-shard e-values.
+ *
+ *  Identical procedure to eBenjaminiHochberg with the selection condition
+ *  rewritten in the log domain: k · e_(k) ≥ N/q  ⇔  log k + logE_(k) ≥ log(N/q).
+ *  For in-range inputs the two agree (modulo final-ulp rounding of the
+ *  comparison, asserted by the equivalence test); for log e-values beyond
+ *  ~709.78 the linear procedure sees indistinguishable ties at Infinity while
+ *  this variant preserves the true ordering. Consumers that keep e-values in
+ *  the log domain end-to-end (combineAverage output; product-side per-leaf
+ *  log e-values) should call this and never round-trip through exp.
+ *
+ *  Same validity contract, throws, and input-invariance as eBenjaminiHochberg.
+ */
+export function eBenjaminiHochbergLog(
+  perShardLogEValues: ReadonlyArray<number>,
+  qLevel: number,
+): EBenjaminiHochbergOutput {
+  const N = perShardLogEValues.length;
+  if (N === 0) {
+    throw new Error('eBenjaminiHochbergLog: empty input array (N=0 shards is undefined)');
+  }
+  if (!(qLevel > 0 && qLevel <= 1)) {
+    throw new Error(`eBenjaminiHochbergLog: qLevel must be in (0, 1]; got ${qLevel}`);
+  }
+  const indexed: Array<{ logE: number; idx: number }> = [];
+  for (let i = 0; i < N; i++) {
+    indexed.push({ logE: perShardLogEValues[i], idx: i });
+  }
+  indexed.sort((a, b) => {
+    if (b.logE !== a.logE) return b.logE - a.logE;
+    return a.idx - b.idx;
+  });
+  const logNOverQ = Math.log(N / qLevel);
+  let R = 0;
+  for (let k = N; k >= 1; k--) {
+    if (Math.log(k) + indexed[k - 1].logE >= logNOverQ) {
+      R = k;
+      break;
+    }
+  }
+  const selected: number[] = [];
+  for (let r = 0; r < R; r++) {
+    selected.push(indexed[r].idx);
+  }
+  selected.sort((a, b) => a - b);
+  return { selected, K: R };
+}

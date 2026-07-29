@@ -13,6 +13,7 @@ exports.evaluateFamilyD = evaluateFamilyD;
 exports.freshSpectralEDetectorState = freshSpectralEDetectorState;
 exports.evaluateSpectralEDetector = evaluateSpectralEDetector;
 const schema_continuity_1 = require("../l0/schema-continuity");
+const _wealth_1 = require("./_wealth");
 const DEFAULT_ALPHA_D = 1e-4;
 exports.DEFAULT_ALPHA_D = DEFAULT_ALPHA_D;
 const DEFAULT_MIN_PEAK_LAG = 3;
@@ -203,10 +204,12 @@ exports.FAMILY_D_SIGNALS = [
 // log-likelihood ratio under μ ~ N(μ₀ + δ_D, σ₀²) on the peak|ACF|
 // statistic. Anytime-valid under Ville's inequality: fire at `M_t ≥ 1/α_D`.
 const E_DETECTOR_WEALTH_FLOOR = 1e-300;
+/** ADR 0026 — the same floor in the log domain, where wealth is accumulated. */
+const LOG_E_DETECTOR_WEALTH_FLOOR = Math.log(E_DETECTOR_WEALTH_FLOOR);
 /** Fresh wealth state for a new (deploy, signal) spectral-e-detector
  *  evaluation. `M₀ = 1` per Ville-inequality convention. */
 function freshSpectralEDetectorState() {
-    return { M: 1, n: 0, alphaConsumed: 0 };
+    return { M: 1, n: 0, alphaConsumed: 0, log_M: 0 };
 }
 /** Addition #21 (ARCHITECT-REPLY-45 D3) — spectral e-detector per-tick
  *  evaluation against a cell with populated `null_mean`, `null_std`, and
@@ -255,7 +258,15 @@ function evaluateSpectralEDetector(input, peak_t, state) {
     const r = delta / sigma0;
     const u = (peak_t - mu0) / sigma0;
     const z_t = r * u - 0.5 * r * r;
-    state.M = Math.max(E_DETECTOR_WEALTH_FLOOR, state.M * Math.exp(z_t));
+    // ADR 0026 — log-domain accumulation (z_t IS the log-increment); `M` is
+    // the Number.MAX_VALUE-saturating view, never Infinity. Same overflow
+    // mechanism as safe-Hotelling: z_t is unbounded in the standardized peak.
+    // Non-finite z_t: NaN holds the wealth; an infinite peak pins the books at
+    // the saturation point (fires, as pre-0026 did, but JSON-safe and
+    // non-absorbing) — see advanceLogWealth.
+    const logM = (0, _wealth_1.healLogWealth)(state.log_M, state.M, LOG_E_DETECTOR_WEALTH_FLOOR);
+    state.log_M = (0, _wealth_1.advanceLogWealth)(logM, z_t, LOG_E_DETECTOR_WEALTH_FLOOR);
+    state.M = (0, _wealth_1.wealthView)(state.log_M);
     state.n += 1;
     if (state.M >= threshold) {
         const alphaSpent = Math.max(0, input.alpha - state.alphaConsumed);

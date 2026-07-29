@@ -38,4 +38,18 @@ export interface EBenjaminiHochbergOutput {
  *  Per-input invariance: does NOT mutate perShardEValues. The sort and
  *  selection operate on an internal indexed copy. */
 export declare function eBenjaminiHochberg(perShardEValues: ReadonlyArray<number>, qLevel: number): EBenjaminiHochbergOutput;
+/** ADR 0026 — run the e-BH procedure on LOG-space per-shard e-values.
+ *
+ *  Identical procedure to eBenjaminiHochberg with the selection condition
+ *  rewritten in the log domain: k · e_(k) ≥ N/q  ⇔  log k + logE_(k) ≥ log(N/q).
+ *  For in-range inputs the two agree (modulo final-ulp rounding of the
+ *  comparison, asserted by the equivalence test); for log e-values beyond
+ *  ~709.78 the linear procedure sees indistinguishable ties at Infinity while
+ *  this variant preserves the true ordering. Consumers that keep e-values in
+ *  the log domain end-to-end (combineAverage output; product-side per-leaf
+ *  log e-values) should call this and never round-trip through exp.
+ *
+ *  Same validity contract, throws, and input-invariance as eBenjaminiHochberg.
+ */
+export declare function eBenjaminiHochbergLog(perShardLogEValues: ReadonlyArray<number>, qLevel: number): EBenjaminiHochbergOutput;
 //# sourceMappingURL=e-bh.d.ts.map

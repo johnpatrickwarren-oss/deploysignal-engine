@@ -34,6 +34,7 @@ import type {
   SchemaContinuityRecord, SpectralEDetectorState,
 } from '../types';
 import { shouldSuppress } from '../l0/schema-continuity';
+import { wealthView, healLogWealth } from './_wealth';
 
 const DEFAULT_ALPHA_D = 1e-4;
 const DEFAULT_MIN_PEAK_LAG = 3;
@@ -269,10 +270,13 @@ export { DEFAULT_ALPHA_D, DEFAULT_MIN_PEAK_LAG, DEFAULT_MAX_PEAK_LAG };
 
 const E_DETECTOR_WEALTH_FLOOR = 1e-300;
 
+/** ADR 0026 — the same floor in the log domain, where wealth is accumulated. */
+const LOG_E_DETECTOR_WEALTH_FLOOR = Math.log(E_DETECTOR_WEALTH_FLOOR);
+
 /** Fresh wealth state for a new (deploy, signal) spectral-e-detector
  *  evaluation. `M₀ = 1` per Ville-inequality convention. */
 export function freshSpectralEDetectorState(): SpectralEDetectorState {
-  return { M: 1, n: 0, alphaConsumed: 0 };
+  return { M: 1, n: 0, alphaConsumed: 0, log_M: 0 };
 }
 
 /** Addition #21 (ARCHITECT-REPLY-45 D3) — spectral e-detector per-tick
@@ -330,7 +334,12 @@ export function evaluateSpectralEDetector(
   const r = delta / sigma0;
   const u = (peak_t - mu0) / sigma0;
   const z_t = r * u - 0.5 * r * r;
-  state.M = Math.max(E_DETECTOR_WEALTH_FLOOR, state.M * Math.exp(z_t));
+  // ADR 0026 — log-domain accumulation (z_t IS the log-increment); `M` is
+  // the Number.MAX_VALUE-saturating view, never Infinity. Same overflow
+  // mechanism as safe-Hotelling: z_t is unbounded in the standardized peak.
+  const logM = healLogWealth(state.log_M, state.M, LOG_E_DETECTOR_WEALTH_FLOOR);
+  state.log_M = Math.max(LOG_E_DETECTOR_WEALTH_FLOOR, logM + z_t);
+  state.M = wealthView(state.log_M);
   state.n += 1;
   if (state.M >= threshold) {
     const alphaSpent = Math.max(0, input.alpha - state.alphaConsumed);

@@ -40,7 +40,16 @@ exports.DETECTOR_REGISTRY = {
         'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
         'output_len_drift', 'tool_call_degradation', 'quality_warning',
     ],
-    C: ['hotelling_t2_joint_vector', 'sequential_mmd', 'hotelling_t2_safe', 'sequential_mmd_e_process'],
+    C: [
+        'hotelling_t2_joint_vector', 'sequential_mmd', 'hotelling_t2_safe', 'sequential_mmd_e_process',
+        // Q67 v2 canonical Shekhar-Ramdas-2023 betting-e-process (Addition #20),
+        // emitted by detectors/family-c-betting-e-process.ts. Was previously
+        // unregistered — DeploySignal's engine/_audit-families.ts registry-
+        // membership check fell through to the legacy `sequential_mmd` id for
+        // its fires; see deploysignal/engine/guarantees.ts file header for the
+        // finding. Registered upstream 2026-07-18, here 2026-07-31.
+        'sequential_mmd_betting_e_process',
+    ],
     D: ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache'],
     E: ['mahalanobis_conformal_baseline'],
 };

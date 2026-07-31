@@ -27,7 +27,7 @@ export interface TrippedEntry {
 export declare const DETECTOR_REGISTRY: {
     readonly A: readonly ["mSPRT_p99_latency", "mSPRT_ttft", "mSPRT_eval_score", "mSPRT_tool_success_rate", "mSPRT_downstream_err", "mSPRT_cost_req", "page_cusum_p99_latency", "page_cusum_ttft", "page_cusum_eval_score", "page_cusum_tool_success_rate", "page_cusum_downstream_err", "page_cusum_cost_req", "betting_e_process_p99_latency", "betting_e_process_ttft", "betting_e_process_eval_score", "betting_e_process_tool_success_rate", "betting_e_process_downstream_err", "betting_e_process_cost_req"];
     readonly B: readonly ["kv_saturation", "hbm_elevation", "hbm_spill_roll", "mfu_collapse", "slowbleed", "collective", "capacity", "gpu_eff", "compound_lat", "tok_econ", "behavioral", "eval_quality_drop", "refusal_spike", "output_len_drift", "tool_call_degradation", "quality_warning"];
-    readonly C: readonly ["hotelling_t2_joint_vector", "sequential_mmd", "hotelling_t2_safe", "sequential_mmd_e_process"];
+    readonly C: readonly ["hotelling_t2_joint_vector", "sequential_mmd", "hotelling_t2_safe", "sequential_mmd_e_process", "sequential_mmd_betting_e_process"];
     readonly D: readonly ["spectral_peak_acf_kv_cache", "spectral_e_detector_kv_cache"];
     readonly E: readonly ["mahalanobis_conformal_baseline"];
 };

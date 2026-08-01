@@ -1,0 +1,135 @@
+// harness/run.mjs — runs the battery. Append-only; never overwrites a run.
+//
+//   node harness/run.mjs --mode live   [--n 2000] [--t 300]
+//   node harness/run.mjs --mode sim    (writes under results/sim/, git-ignored)
+//
+// PREREGISTRATION §10/§11: the mode chooses the path. There is no flag that
+// places a sim run under results/live/.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
+import { rng, gaussFrom, NULLS } from './nulls.mjs';
+import { DETECTORS, OUT_OF_SCOPE } from './detectors.mjs';
+
+const STUDY = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
+
+const MODE = arg('--mode', 'sim');
+const N = Number(arg('--n', 2000));
+const T = Number(arg('--t', 300));
+const ALPHAS = [0.05, 0.01];
+const SHIPPED_ALPHA = 1e-4;           // measured, scored by nothing (§4)
+const SEED = 20260801;
+
+const engineVersion = JSON.parse(
+  fs.readFileSync(path.join(STUDY, '..', '..', 'package.json'), 'utf8')).version;
+const gitSha = execSync('git rev-parse HEAD', { cwd: path.join(STUDY, '..', '..') }).toString().trim();
+
+/** One trajectory. `shift` injects a step of `shift` sigma at tick 100 (P2, §5);
+ *  0 is the null. Returns whether the detector fired, and when. */
+function trajectory(det, nullSpec, alpha, seed, shift = 0) {
+  const r = rng(seed);
+  const g = gaussFrom(r);
+  const src = nullSpec.gen(r);
+  const draw = () => (det.vector ? Array.from({ length: det.vector }, src) : src());
+
+  const cfg = { mu: 0, sigma: 1, phi: 0, alpha, windows: nullSpec.windows };
+
+  if (nullSpec.params === 'estimated') {
+    // Estimate from a finite calibration window — the deployed regime (N2/N4).
+    const cal = Array.from({ length: nullSpec.m }, src);
+    const mu = cal.reduce((a, b) => a + b, 0) / cal.length;
+    const sd = Math.sqrt(cal.reduce((a, b) => a + (b - mu) ** 2, 0) / cal.length) || 1;
+    Object.assign(cfg, { mu, sigma: sd });
+  }
+  if (det.calibrate) {
+    // A windowed statistic has its own null moments; calibrate on the same law.
+    Object.assign(cfg, det.calibrate(Array.from({ length: 3000 }, src), cfg));
+  }
+
+  const inst = det.make(cfg);
+  const ONSET = 100;
+  for (let t = 0; t < T; t++) {
+    let x = draw();
+    if (shift && t >= ONSET) x = det.vector ? x.map((v) => v + shift) : x + shift;
+    if (inst.step(x)) return { fired: true, tick: t, logM: inst.logM() };
+  }
+  return { fired: false, tick: -1, logM: inst.logM() };
+}
+
+function cell(det, nullSpec, alpha) {
+  let fires = 0;
+  const logMs = [];
+  for (let i = 0; i < N; i++) {
+    const res = trajectory(det, nullSpec, alpha, SEED + i * 7919);
+    if (res.fired) fires++;
+    logMs.push(res.logM);
+  }
+  const rate = fires / N;
+  // Exact-ish one-sided 95% lower bound (Wilson); P1 fails iff it exceeds alpha.
+  const z = 1.645;
+  const denom = 1 + z * z / N;
+  const centre = rate + z * z / (2 * N);
+  const half = z * Math.sqrt(rate * (1 - rate) / N + z * z / (4 * N * N));
+  const lower = Math.max(0, (centre - half) / denom);
+  return {
+    detector: det.id, family: det.family, null_id: nullSpec.id, null_label: nullSpec.label,
+    alpha, n: N, ticks: T, fires, fire_rate: rate, lower_95: lower,
+    verdict: lower > alpha ? 'FAIL' : 'not-refuted',
+    mean_logM: logMs.reduce((a, b) => a + b, 0) / logMs.length,
+    mode: MODE, engine_version: engineVersion, git_sha: gitSha,
+  };
+}
+
+const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+const runDir = path.join(STUDY, 'results', MODE === 'live' ? 'live' : 'sim', `run-${stamp}`);
+if (fs.existsSync(runDir)) { console.error(`refusing to reuse ${runDir}`); process.exit(1); }
+fs.mkdirSync(path.join(runDir, 'cells'), { recursive: true });
+
+const only = arg('--only', null);
+const cells = [];
+for (const det of DETECTORS) {
+  if (only && det.id !== only) continue;
+  for (const nullSpec of NULLS) {
+    for (const alpha of [...ALPHAS, SHIPPED_ALPHA]) {
+      const c = cell(det, nullSpec, alpha);
+      c.scored = alpha !== SHIPPED_ALPHA;      // §4: shipped alpha is descriptive
+      cells.push(c);
+      fs.writeFileSync(
+        path.join(runDir, 'cells', `${det.id}__${nullSpec.id}__a${alpha}.json`),
+        JSON.stringify(c, null, 2));
+      const tag = c.scored ? c.verdict : 'descriptive';
+      console.log(`${det.id.padEnd(36)} ${nullSpec.id.padEnd(12)} a=${String(alpha).padEnd(7)} ` +
+        `rate=${c.fire_rate.toFixed(4)} lower=${c.lower_95.toFixed(4)} ${tag}`);
+    }
+  }
+}
+
+// ---- P2, the vacuous-pass guard (§5): 3-sigma step at tick 100, detect within 200.
+const p2 = [];
+for (const det of DETECTORS) {
+  if (only && det.id !== only) continue;
+  const n1 = NULLS.find((n) => n.id === 'N1');
+  let detected = 0;
+  for (let i = 0; i < N; i++) {
+    const r = trajectory(det, n1, 0.05, SEED + i * 7919, 3);
+    if (r.fired && r.tick >= 100 && r.tick <= 300) detected++;
+  }
+  const rate = detected / N;
+  const rec = { detector: det.id, shift_sigma: 3, detection_rate: rate,
+    verdict: rate < 0.50 ? 'FAIL' : 'pass', mode: MODE,
+    engine_version: engineVersion, git_sha: gitSha };
+  p2.push(rec);
+  fs.writeFileSync(path.join(runDir, 'cells', `P2__${det.id}.json`), JSON.stringify(rec, null, 2));
+  console.log(`P2 ${det.id.padEnd(36)} detection=${rate.toFixed(4)} ${rec.verdict}`);
+}
+
+fs.writeFileSync(path.join(runDir, 'manifest.json'), JSON.stringify({
+  study: '2026-07-h0-battery', mode: MODE, engine_version: engineVersion, git_sha: gitSha,
+  registration_sha: '17cc3f8', node: process.version, seed: SEED, n: N, ticks: T,
+  alphas: ALPHAS, shipped_alpha: SHIPPED_ALPHA, generated_at: stamp,
+  out_of_scope: OUT_OF_SCOPE, argv: process.argv.slice(2),
+}, null, 2));
+console.log(`\n${cells.length} cells -> ${path.relative(STUDY, runDir)}`);

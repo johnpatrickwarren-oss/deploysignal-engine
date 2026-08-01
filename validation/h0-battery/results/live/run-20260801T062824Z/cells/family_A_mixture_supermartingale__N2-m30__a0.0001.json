@@ -1,0 +1,18 @@
+{
+  "detector": "family_A_mixture_supermartingale",
+  "family": "A",
+  "null_id": "N2-m30",
+  "null_label": "iid Gaussian, estimated params m=30",
+  "alpha": 0.0001,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 369,
+  "fire_rate": 0.1845,
+  "lower_95": 0.17066163647502372,
+  "verdict": "FAIL",
+  "mean_logM": 1.7430751443381591,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578",
+  "scored": false
+}

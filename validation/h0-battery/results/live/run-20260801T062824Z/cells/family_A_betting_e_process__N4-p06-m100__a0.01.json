@@ -1,0 +1,18 @@
+{
+  "detector": "family_A_betting_e_process",
+  "family": "A",
+  "null_id": "N4-p06-m100",
+  "null_label": "AR(1) phi=0.6, estimated m=100",
+  "alpha": 0.01,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 1201,
+  "fire_rate": 0.6005,
+  "lower_95": 0.5823595614862236,
+  "verdict": "FAIL",
+  "mean_logM": 2.431242688255635,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578",
+  "scored": true
+}

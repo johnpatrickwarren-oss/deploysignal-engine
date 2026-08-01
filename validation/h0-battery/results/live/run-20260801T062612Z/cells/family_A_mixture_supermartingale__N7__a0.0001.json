@@ -1,0 +1,18 @@
+{
+  "detector": "family_A_mixture_supermartingale",
+  "family": "A",
+  "null_id": "N7",
+  "null_label": "iid Gaussian, oracle params, ROLLING windows (shipped config)",
+  "alpha": 0.0001,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 1,
+  "fire_rate": 0.0005,
+  "lower_95": 0.00011154140419308663,
+  "verdict": "FAIL",
+  "mean_logM": -2.334536682945247,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578",
+  "scored": false
+}

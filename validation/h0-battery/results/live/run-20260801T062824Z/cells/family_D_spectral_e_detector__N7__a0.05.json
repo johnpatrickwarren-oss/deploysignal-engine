@@ -1,0 +1,18 @@
+{
+  "detector": "family_D_spectral_e_detector",
+  "family": "D",
+  "null_id": "N7",
+  "null_label": "iid Gaussian, oracle params, ROLLING windows (shipped config)",
+  "alpha": 0.05,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 1152,
+  "fire_rate": 0.576,
+  "lower_95": 0.5577313476650909,
+  "verdict": "FAIL",
+  "mean_logM": -8.989753767542926,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578",
+  "scored": true
+}

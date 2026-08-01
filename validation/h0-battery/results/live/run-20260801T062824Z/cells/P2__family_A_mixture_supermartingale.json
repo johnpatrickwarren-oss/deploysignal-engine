@@ -1,0 +1,9 @@
+{
+  "detector": "family_A_mixture_supermartingale",
+  "shift_sigma": 3,
+  "detection_rate": 0.982,
+  "verdict": "pass",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578"
+}

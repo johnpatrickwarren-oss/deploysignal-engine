@@ -1,0 +1,18 @@
+{
+  "detector": "family_A_betting_e_process",
+  "family": "A",
+  "null_id": "N2-m100",
+  "null_label": "iid Gaussian, estimated params m=100",
+  "alpha": 0.01,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 198,
+  "fire_rate": 0.099,
+  "lower_95": 0.08855010688187029,
+  "verdict": "FAIL",
+  "mean_logM": -0.997888069945044,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578",
+  "scored": true
+}

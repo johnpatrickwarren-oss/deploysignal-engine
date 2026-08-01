@@ -1,0 +1,18 @@
+{
+  "detector": "family_C_safe_hotelling",
+  "family": "C",
+  "null_id": "N5",
+  "null_label": "right-skewed lognormal, moment-matched, oracle",
+  "alpha": 0.05,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 750,
+  "fire_rate": 0.375,
+  "lower_95": 0.35737248396269083,
+  "verdict": "FAIL",
+  "mean_logM": -39.39599062352601,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578",
+  "scored": true
+}

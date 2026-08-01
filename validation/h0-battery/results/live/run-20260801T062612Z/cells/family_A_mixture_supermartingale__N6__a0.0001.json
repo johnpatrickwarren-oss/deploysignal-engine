@@ -1,0 +1,18 @@
+{
+  "detector": "family_A_mixture_supermartingale",
+  "family": "A",
+  "null_id": "N6",
+  "null_label": "heavy-tailed t3, moment-matched, oracle",
+  "alpha": 0.0001,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 15,
+  "fire_rate": 0.0075,
+  "lower_95": 0.004924977903675824,
+  "verdict": "FAIL",
+  "mean_logM": -2.246370043996123,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578",
+  "scored": false
+}

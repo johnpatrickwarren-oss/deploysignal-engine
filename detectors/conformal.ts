@@ -271,6 +271,10 @@ export function evaluateFamilyE(
       verdict: 'suppressed', statistic: null, threshold: alphaE,
       alpha_consumed: 0, alpha_spent: 0,
       reason_code: 'covariance_singular', family: 'E',
+      // The three Family E kinds share one registry id, so a suppressed fire is
+      // otherwise indistinguishable between them. Tag the anytime-valid kind so an
+      // audit record can tell which one abstained.
+      ...(isWeightedEValueConformal(params) ? { signal: 'weighted_conformal_e_value' as const } : {}),
     };
   }
 
@@ -463,6 +467,8 @@ export function evaluateConformalWeightedEValue(
       verdict: 'suppressed', statistic: state.M, threshold,
       alpha_consumed: 0, alpha_spent: 0,
       reason_code: 'covariance_singular', family: 'E',
+      // Unconditional here: this evaluator is the weighted-e-value kind.
+      signal: 'weighted_conformal_e_value',
     };
   }
   const { scores, cumulative_weights_above, total_weight } = input.params;

@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.6.6-pre — 2026-07-31
+
+Released without an entry at the time (`8b611aa`); reconstructed from
+`git log 0374677..8b611aa` on 2026-07-31. **No detector under Families A, C or D changed.**
+
+- **Family C registry gap closed (`2a36ff2`).** `sequential_mmd_betting_e_process` is now a
+  registered `DETECTOR_REGISTRY.C` id. Before this, the Q67 v2 canonical evaluator emitted that
+  signal name while no such id existed, so `_audit-families.ts`'s unrecognized-signal fallthrough
+  attributed those fires to the legacy `sequential_mmd` id instead of the evaluator that produced
+  them. Audit records now attribute canonical-evaluator fires correctly; `sequential_mmd` remains
+  registered as the fallback target.
+- **Conformal singular branches tagged (`01b1aae`)**, alongside a de-branding scrub.
+  `detectors/conformal.ts` is the only detector file touched in this release, and the change is
+  annotation rather than arithmetic.
+- **AR(1) short-baseline guard coverage (`0f0baee`)** — tests for `computePerSignalAr1Phi` on
+  short baselines. No production-path change.
+- Docs: point at the knowledge wiki as the single entry point (`2becdb6`).
+
+⚠️ **Interface note:** `2a36ff2` changes which id a Family C MMD fire is *attributed to* in audit
+records. Consumers that group or count by `sequential_mmd` will see those fires move to
+`sequential_mmd_betting_e_process`. Verdicts and α accounting are unaffected.
+
 ## v0.6.5-pre — 2026-07-29
 
 - **Log-domain wealth (ADR 0026):** the three multiplicative e-process detectors

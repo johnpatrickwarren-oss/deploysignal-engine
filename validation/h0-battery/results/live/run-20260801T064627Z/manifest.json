@@ -1,0 +1,51 @@
+{
+  "study": "2026-07-h0-battery",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+  "registration_sha": "17cc3f8",
+  "supersedes": {
+    "priorRun": "run-20260801T062824Z",
+    "defect": "oracle phi was never threaded into the detector config, so N3/N4 ran with AR(1) pre-whitening disabled; and the mixture adapter passed ar1_phi under params where that detector reads it off input, so it never received phi at all. The prior runs measure detectors unaware of phi, not the registered oracle-parameter cell"
+  },
+  "node": "v25.9.0",
+  "seed": 20260801,
+  "n": 2000,
+  "ticks": 300,
+  "alphas": [
+    0.05,
+    0.01
+  ],
+  "shipped_alpha": 0.0001,
+  "generated_at": "20260801T064627Z",
+  "out_of_scope": [
+    {
+      "id": "safe_t_e_value",
+      "reason": "Fixed-window terminal e-value, not a sequential wealth process. P1 is a sup-crossing endpoint and is undefined for it. Needs a separate terminal-E[e] study."
+    },
+    {
+      "id": "universal_inference_e_value",
+      "reason": "Same: fixed split, terminal e-value (engine ADR 0010)."
+    },
+    {
+      "id": "sequential_ui_e_process",
+      "reason": "Has a wealth process, but its interface consumes a whole prefix per tick (O(T^2)); driving it needs a different adapter shape. Deferred, not excluded on principle."
+    },
+    {
+      "id": "family_C_mmd_betting",
+      "reason": "Requires a compiled baseline pool (baseline_rff_mean or a synthesized P-side pool) that this harness does not build. The non-Gaussian-null cell registered in PREREGISTRATION §3 needs that pool and is deferred with it."
+    },
+    {
+      "id": "family_E_conformal",
+      "reason": "The default compiler path emits the `unweighted` kind, which has no wealth process. PREREGISTRATION §3 says report that rather than score it. The forced weighted_e_value kind needs a 20k-draw calibration bundle this harness does not build."
+    }
+  ],
+  "argv": [
+    "--mode",
+    "live",
+    "--n",
+    "2000",
+    "--t",
+    "300"
+  ]
+}

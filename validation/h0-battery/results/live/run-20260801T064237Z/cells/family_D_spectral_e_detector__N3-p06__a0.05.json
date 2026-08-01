@@ -1,0 +1,18 @@
+{
+  "detector": "family_D_spectral_e_detector",
+  "family": "D",
+  "null_id": "N3-p06",
+  "null_label": "AR(1) phi=0.6, oracle",
+  "alpha": 0.05,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 4,
+  "fire_rate": 0.002,
+  "lower_95": 0.0008981378132907848,
+  "verdict": "not-refuted",
+  "mean_logM": -0.3710850991728664,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+  "scored": true
+}

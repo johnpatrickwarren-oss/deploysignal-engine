@@ -1,0 +1,18 @@
+{
+  "detector": "family_A_betting_e_process",
+  "family": "A",
+  "null_id": "N7",
+  "null_label": "iid Gaussian, oracle params, ROLLING windows (shipped config)",
+  "alpha": 0.0001,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 0,
+  "fire_rate": 0,
+  "lower_95": 0,
+  "verdict": "not-refuted",
+  "mean_logM": -2.3419010550257044,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+  "scored": false
+}

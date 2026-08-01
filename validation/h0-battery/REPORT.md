@@ -1,14 +1,14 @@
 # REPORT — H0 battery: do the detectors produce e-values?
 
-Run: `run-20260801T062824Z`  ·  engine `0.6.6-pre`  ·  registration sha 17cc3f8
+Run: `run-20260801T064627Z`  ·  engine `0.6.6-pre`  ·  registration sha 17cc3f8
 
 **Verdict wording is fixed by PREREGISTRATION §2.** A detector that survives a null is
 "not refuted at these nulls". It is NOT evidence that the detector is an e-value.
 
 ## P1 — false-alarm rate against nominal
 
-P1: detector=family_A_betting_e_process verdict=FAIL failed_cells=16
-P1: detector=family_A_mixture_supermartingale verdict=FAIL failed_cells=17
+P1: detector=family_A_betting_e_process verdict=FAIL failed_cells=10
+P1: detector=family_A_mixture_supermartingale verdict=FAIL failed_cells=12
 P1: detector=family_C_safe_hotelling verdict=FAIL failed_cells=17
 P1: detector=family_D_spectral_e_detector verdict=FAIL failed_cells=2
 
@@ -21,8 +21,8 @@ P2: detector=family_D_spectral_e_detector detection_rate=0.0075 verdict=FAIL
 
 ## Secondary endpoints (§6) — subordinate, no verdict
 
-S1: mean_logM_under_N1=-15.3021 mean_logM_all_nulls=-12.0917 note=heavy-tailed, descriptive only per PREREGISTRATION §6
-S2: shipped_alpha=1e-4 cells=48 max_rate=0.8795 note=measured, scored by no endpoint per PREREGISTRATION §4
+S1: mean_logM_under_N1=-15.3021 mean_logM_all_nulls=-12.7492 note=heavy-tailed, descriptive only per PREREGISTRATION §6
+S2: shipped_alpha=1e-4 cells=48 max_rate=0.5540 note=measured, scored by no endpoint per PREREGISTRATION §4
 S3: not_measured_in_this_run=true note=threshold-vs-1/alpha ratio requires compiled configs, which this harness does not read; measured separately 2026-07-31 at median 2.4e4 and 3.6e76
 S4: not_measured_in_this_run=true note=integrated autocorrelation time of the per-tick increment was not instrumented in this harness
 
@@ -31,30 +31,30 @@ S4: not_measured_in_this_run=true note=integrated autocorrelation time of the pe
 family_A_betting_e_process N1 alpha=0.0001 rate=0.0000 lower95=0.0000 verdict=not-refuted (descriptive)
 family_A_betting_e_process N1 alpha=0.01 rate=0.0055 lower95=0.0034 verdict=not-refuted
 family_A_betting_e_process N1 alpha=0.05 rate=0.0310 lower95=0.0252 verdict=not-refuted
-family_A_betting_e_process N2-m100 alpha=0.0001 rate=0.0250 lower95=0.0199 verdict=FAIL (descriptive)
-family_A_betting_e_process N2-m100 alpha=0.01 rate=0.0990 lower95=0.0886 verdict=FAIL
-family_A_betting_e_process N2-m100 alpha=0.05 rate=0.1805 lower95=0.1668 verdict=FAIL
-family_A_betting_e_process N2-m30 alpha=0.0001 rate=0.1565 lower95=0.1436 verdict=FAIL (descriptive)
-family_A_betting_e_process N2-m30 alpha=0.01 rate=0.3030 lower95=0.2864 verdict=FAIL
-family_A_betting_e_process N2-m30 alpha=0.05 rate=0.3930 lower95=0.3752 verdict=FAIL
-family_A_betting_e_process N2-m500 alpha=0.0001 rate=0.0005 lower95=0.0001 verdict=FAIL (descriptive)
-family_A_betting_e_process N2-m500 alpha=0.01 rate=0.0160 lower95=0.0120 verdict=FAIL
-family_A_betting_e_process N2-m500 alpha=0.05 rate=0.0595 lower95=0.0514 verdict=FAIL
-family_A_betting_e_process N3-p03 alpha=0.0001 rate=0.0045 lower95=0.0026 verdict=FAIL (descriptive)
-family_A_betting_e_process N3-p03 alpha=0.01 rate=0.0770 lower95=0.0678 verdict=FAIL
-family_A_betting_e_process N3-p03 alpha=0.05 rate=0.1955 lower95=0.1813 verdict=FAIL
-family_A_betting_e_process N3-p06 alpha=0.0001 rate=0.0990 lower95=0.0886 verdict=FAIL (descriptive)
-family_A_betting_e_process N3-p06 alpha=0.01 rate=0.3820 lower95=0.3643 verdict=FAIL
-family_A_betting_e_process N3-p06 alpha=0.05 rate=0.5970 lower95=0.5788 verdict=FAIL
-family_A_betting_e_process N3-p09 alpha=0.0001 rate=0.7190 lower95=0.7022 verdict=FAIL (descriptive)
-family_A_betting_e_process N3-p09 alpha=0.01 rate=0.9435 lower95=0.9344 verdict=FAIL
-family_A_betting_e_process N3-p09 alpha=0.05 rate=0.9875 lower95=0.9827 verdict=FAIL
-family_A_betting_e_process N4-p06-m100 alpha=0.0001 rate=0.3390 lower95=0.3218 verdict=FAIL (descriptive)
-family_A_betting_e_process N4-p06-m100 alpha=0.01 rate=0.6005 lower95=0.5824 verdict=FAIL
-family_A_betting_e_process N4-p06-m100 alpha=0.05 rate=0.7475 lower95=0.7312 verdict=FAIL
-family_A_betting_e_process N4-p09-m100 alpha=0.0001 rate=0.8475 lower95=0.8338 verdict=FAIL (descriptive)
-family_A_betting_e_process N4-p09-m100 alpha=0.01 rate=0.9690 lower95=0.9620 verdict=FAIL
-family_A_betting_e_process N4-p09-m100 alpha=0.05 rate=0.9925 lower95=0.9886 verdict=FAIL
+family_A_betting_e_process N2-m100 alpha=0.0001 rate=0.0275 lower95=0.0221 verdict=FAIL (descriptive)
+family_A_betting_e_process N2-m100 alpha=0.01 rate=0.1050 lower95=0.0943 verdict=FAIL
+family_A_betting_e_process N2-m100 alpha=0.05 rate=0.1855 lower95=0.1716 verdict=FAIL
+family_A_betting_e_process N2-m30 alpha=0.0001 rate=0.1725 lower95=0.1590 verdict=FAIL (descriptive)
+family_A_betting_e_process N2-m30 alpha=0.01 rate=0.3125 lower95=0.2957 verdict=FAIL
+family_A_betting_e_process N2-m30 alpha=0.05 rate=0.4020 lower95=0.3841 verdict=FAIL
+family_A_betting_e_process N2-m500 alpha=0.0001 rate=0.0010 lower95=0.0003 verdict=FAIL (descriptive)
+family_A_betting_e_process N2-m500 alpha=0.01 rate=0.0170 lower95=0.0129 verdict=FAIL
+family_A_betting_e_process N2-m500 alpha=0.05 rate=0.0640 lower95=0.0556 verdict=FAIL
+family_A_betting_e_process N3-p03 alpha=0.0001 rate=0.0000 lower95=0.0000 verdict=not-refuted (descriptive)
+family_A_betting_e_process N3-p03 alpha=0.01 rate=0.0050 lower95=0.0030 verdict=not-refuted
+family_A_betting_e_process N3-p03 alpha=0.05 rate=0.0315 lower95=0.0257 verdict=not-refuted
+family_A_betting_e_process N3-p06 alpha=0.0001 rate=0.0000 lower95=0.0000 verdict=not-refuted (descriptive)
+family_A_betting_e_process N3-p06 alpha=0.01 rate=0.0045 lower95=0.0026 verdict=not-refuted
+family_A_betting_e_process N3-p06 alpha=0.05 rate=0.0310 lower95=0.0252 verdict=not-refuted
+family_A_betting_e_process N3-p09 alpha=0.0001 rate=0.0000 lower95=0.0000 verdict=not-refuted (descriptive)
+family_A_betting_e_process N3-p09 alpha=0.01 rate=0.0015 lower95=0.0006 verdict=not-refuted
+family_A_betting_e_process N3-p09 alpha=0.05 rate=0.0220 lower95=0.0172 verdict=not-refuted
+family_A_betting_e_process N4-p06-m100 alpha=0.0001 rate=0.0490 lower95=0.0417 verdict=FAIL (descriptive)
+family_A_betting_e_process N4-p06-m100 alpha=0.01 rate=0.1575 lower95=0.1446 verdict=FAIL
+family_A_betting_e_process N4-p06-m100 alpha=0.05 rate=0.2505 lower95=0.2349 verdict=FAIL
+family_A_betting_e_process N4-p09-m100 alpha=0.0001 rate=0.1225 lower95=0.1109 verdict=FAIL (descriptive)
+family_A_betting_e_process N4-p09-m100 alpha=0.01 rate=0.2870 lower95=0.2707 verdict=FAIL
+family_A_betting_e_process N4-p09-m100 alpha=0.05 rate=0.3965 lower95=0.3787 verdict=FAIL
 family_A_betting_e_process N5 alpha=0.0001 rate=0.0000 lower95=0.0000 verdict=not-refuted (descriptive)
 family_A_betting_e_process N5 alpha=0.01 rate=0.0100 lower95=0.0069 verdict=not-refuted
 family_A_betting_e_process N5 alpha=0.05 rate=0.0465 lower95=0.0393 verdict=not-refuted
@@ -67,30 +67,30 @@ family_A_betting_e_process N7 alpha=0.05 rate=0.0310 lower95=0.0252 verdict=not-
 family_A_mixture_supermartingale N1 alpha=0.0001 rate=0.0005 lower95=0.0001 verdict=FAIL (descriptive)
 family_A_mixture_supermartingale N1 alpha=0.01 rate=0.0035 lower95=0.0019 verdict=not-refuted
 family_A_mixture_supermartingale N1 alpha=0.05 rate=0.0195 lower95=0.0150 verdict=not-refuted
-family_A_mixture_supermartingale N2-m100 alpha=0.0001 rate=0.0260 lower95=0.0208 verdict=FAIL (descriptive)
-family_A_mixture_supermartingale N2-m100 alpha=0.01 rate=0.0960 lower95=0.0857 verdict=FAIL
-family_A_mixture_supermartingale N2-m100 alpha=0.05 rate=0.1625 lower95=0.1494 verdict=FAIL
-family_A_mixture_supermartingale N2-m30 alpha=0.0001 rate=0.1845 lower95=0.1707 verdict=FAIL (descriptive)
-family_A_mixture_supermartingale N2-m30 alpha=0.01 rate=0.3250 lower95=0.3080 verdict=FAIL
-family_A_mixture_supermartingale N2-m30 alpha=0.05 rate=0.4070 lower95=0.3891 verdict=FAIL
-family_A_mixture_supermartingale N2-m500 alpha=0.0001 rate=0.0000 lower95=0.0000 verdict=not-refuted (descriptive)
-family_A_mixture_supermartingale N2-m500 alpha=0.01 rate=0.0130 lower95=0.0094 verdict=not-refuted
-family_A_mixture_supermartingale N2-m500 alpha=0.05 rate=0.0495 lower95=0.0421 verdict=not-refuted
-family_A_mixture_supermartingale N3-p03 alpha=0.0001 rate=0.0040 lower95=0.0023 verdict=FAIL (descriptive)
-family_A_mixture_supermartingale N3-p03 alpha=0.01 rate=0.0780 lower95=0.0687 verdict=FAIL
-family_A_mixture_supermartingale N3-p03 alpha=0.05 rate=0.1870 lower95=0.1731 verdict=FAIL
-family_A_mixture_supermartingale N3-p06 alpha=0.0001 rate=0.1225 lower95=0.1109 verdict=FAIL (descriptive)
-family_A_mixture_supermartingale N3-p06 alpha=0.01 rate=0.3835 lower95=0.3658 verdict=FAIL
-family_A_mixture_supermartingale N3-p06 alpha=0.05 rate=0.5420 lower95=0.5236 verdict=FAIL
-family_A_mixture_supermartingale N3-p09 alpha=0.0001 rate=0.7105 lower95=0.6935 verdict=FAIL (descriptive)
-family_A_mixture_supermartingale N3-p09 alpha=0.01 rate=0.8810 lower95=0.8686 verdict=FAIL
-family_A_mixture_supermartingale N3-p09 alpha=0.05 rate=0.9365 lower95=0.9269 verdict=FAIL
-family_A_mixture_supermartingale N4-p06-m100 alpha=0.0001 rate=0.3860 lower95=0.3683 verdict=FAIL (descriptive)
-family_A_mixture_supermartingale N4-p06-m100 alpha=0.01 rate=0.6115 lower95=0.5934 verdict=FAIL
-family_A_mixture_supermartingale N4-p06-m100 alpha=0.05 rate=0.7345 lower95=0.7179 verdict=FAIL
-family_A_mixture_supermartingale N4-p09-m100 alpha=0.0001 rate=0.8795 lower95=0.8670 verdict=FAIL (descriptive)
-family_A_mixture_supermartingale N4-p09-m100 alpha=0.01 rate=0.9555 lower95=0.9473 verdict=FAIL
-family_A_mixture_supermartingale N4-p09-m100 alpha=0.05 rate=0.9725 lower95=0.9658 verdict=FAIL
+family_A_mixture_supermartingale N2-m100 alpha=0.0001 rate=0.0290 lower95=0.0234 verdict=FAIL (descriptive)
+family_A_mixture_supermartingale N2-m100 alpha=0.01 rate=0.0970 lower95=0.0867 verdict=FAIL
+family_A_mixture_supermartingale N2-m100 alpha=0.05 rate=0.1770 lower95=0.1634 verdict=FAIL
+family_A_mixture_supermartingale N2-m30 alpha=0.0001 rate=0.2025 lower95=0.1881 verdict=FAIL (descriptive)
+family_A_mixture_supermartingale N2-m30 alpha=0.01 rate=0.3325 lower95=0.3154 verdict=FAIL
+family_A_mixture_supermartingale N2-m30 alpha=0.05 rate=0.4270 lower95=0.4089 verdict=FAIL
+family_A_mixture_supermartingale N2-m500 alpha=0.0001 rate=0.0010 lower95=0.0003 verdict=FAIL (descriptive)
+family_A_mixture_supermartingale N2-m500 alpha=0.01 rate=0.0145 lower95=0.0107 verdict=FAIL
+family_A_mixture_supermartingale N2-m500 alpha=0.05 rate=0.0510 lower95=0.0435 verdict=not-refuted
+family_A_mixture_supermartingale N3-p03 alpha=0.0001 rate=0.0000 lower95=0.0000 verdict=not-refuted (descriptive)
+family_A_mixture_supermartingale N3-p03 alpha=0.01 rate=0.0020 lower95=0.0009 verdict=not-refuted
+family_A_mixture_supermartingale N3-p03 alpha=0.05 rate=0.0145 lower95=0.0107 verdict=not-refuted
+family_A_mixture_supermartingale N3-p06 alpha=0.0001 rate=0.0000 lower95=0.0000 verdict=not-refuted (descriptive)
+family_A_mixture_supermartingale N3-p06 alpha=0.01 rate=0.0005 lower95=0.0001 verdict=not-refuted
+family_A_mixture_supermartingale N3-p06 alpha=0.05 rate=0.0015 lower95=0.0006 verdict=not-refuted
+family_A_mixture_supermartingale N3-p09 alpha=0.0001 rate=0.0000 lower95=0.0000 verdict=not-refuted (descriptive)
+family_A_mixture_supermartingale N3-p09 alpha=0.01 rate=0.0000 lower95=0.0000 verdict=not-refuted
+family_A_mixture_supermartingale N3-p09 alpha=0.05 rate=0.0000 lower95=0.0000 verdict=not-refuted
+family_A_mixture_supermartingale N4-p06-m100 alpha=0.0001 rate=0.0240 lower95=0.0190 verdict=FAIL (descriptive)
+family_A_mixture_supermartingale N4-p06-m100 alpha=0.01 rate=0.0750 lower95=0.0659 verdict=FAIL
+family_A_mixture_supermartingale N4-p06-m100 alpha=0.05 rate=0.1275 lower95=0.1157 verdict=FAIL
+family_A_mixture_supermartingale N4-p09-m100 alpha=0.0001 rate=0.0340 lower95=0.0279 verdict=FAIL (descriptive)
+family_A_mixture_supermartingale N4-p09-m100 alpha=0.01 rate=0.0680 lower95=0.0593 verdict=FAIL
+family_A_mixture_supermartingale N4-p09-m100 alpha=0.05 rate=0.0960 lower95=0.0857 verdict=FAIL
 family_A_mixture_supermartingale N5 alpha=0.0001 rate=0.0065 lower95=0.0041 verdict=FAIL (descriptive)
 family_A_mixture_supermartingale N5 alpha=0.01 rate=0.0330 lower95=0.0270 verdict=FAIL
 family_A_mixture_supermartingale N5 alpha=0.05 rate=0.0625 lower95=0.0542 verdict=FAIL

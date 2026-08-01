@@ -99,6 +99,8 @@ export const DETECTORS = [
           const v = mixture.evaluatePageCusumMixtureSupermartingale({
             x_centered: x - cfg.mu, live_value: x, baseline_mean: cfg.mu,
             sigma_squared: cfg.sigma ** 2, params, state: st, alpha: cfg.alpha,
+            // reads input.ar1_phi, NOT params.ar1_phi — unlike betting-e-process.
+            ar1_phi: cfg.phi ?? 0,
           });
           return v.fire === true;
         },

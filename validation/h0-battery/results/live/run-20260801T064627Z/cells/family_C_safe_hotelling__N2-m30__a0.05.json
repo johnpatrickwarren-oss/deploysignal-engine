@@ -1,0 +1,18 @@
+{
+  "detector": "family_C_safe_hotelling",
+  "family": "C",
+  "null_id": "N2-m30",
+  "null_label": "iid Gaussian, estimated params m=30",
+  "alpha": 0.05,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 499,
+  "fire_rate": 0.2495,
+  "lower_95": 0.23392861651509453,
+  "verdict": "FAIL",
+  "mean_logM": -44.7469652931555,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+  "scored": true
+}

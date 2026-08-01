@@ -1,0 +1,9 @@
+{
+  "detector": "family_D_spectral_e_detector",
+  "shift_sigma": 3,
+  "detection_rate": 0.0075,
+  "verdict": "FAIL",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f"
+}

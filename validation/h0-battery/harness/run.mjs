@@ -35,14 +35,21 @@ function trajectory(det, nullSpec, alpha, seed, shift = 0) {
   const src = nullSpec.gen(r);
   const draw = () => (det.vector ? Array.from({ length: det.vector }, src) : src());
 
-  const cfg = { mu: 0, sigma: 1, phi: 0, alpha, windows: nullSpec.windows };
+  // ORACLE phi is part of "oracle parameters" (§3 N3). Withholding it disables the
+  // Q66 AR(1) pre-whitening — the defect that superseded run-20260801T062824Z.
+  const cfg = { mu: 0, sigma: 1, phi: nullSpec.params === 'oracle' ? (nullSpec.phi ?? 0) : 0,
+                alpha, windows: nullSpec.windows };
 
   if (nullSpec.params === 'estimated') {
+    // N4: phi is estimated too, from the same calibration window.
     // Estimate from a finite calibration window — the deployed regime (N2/N4).
     const cal = Array.from({ length: nullSpec.m }, src);
     const mu = cal.reduce((a, b) => a + b, 0) / cal.length;
     const sd = Math.sqrt(cal.reduce((a, b) => a + (b - mu) ** 2, 0) / cal.length) || 1;
-    Object.assign(cfg, { mu, sigma: sd });
+    let num = 0, den = 0;
+    for (let i = 1; i < cal.length; i++) { num += (cal[i] - mu) * (cal[i - 1] - mu); }
+    for (let i = 0; i < cal.length; i++) { den += (cal[i] - mu) ** 2; }
+    Object.assign(cfg, { mu, sigma: sd, phi: den > 0 ? Math.max(-0.95, Math.min(0.95, num / den)) : 0 });
   }
   if (det.calibrate) {
     // A windowed statistic has its own null moments; calibrate on the same law.
@@ -128,7 +135,9 @@ for (const det of DETECTORS) {
 
 fs.writeFileSync(path.join(runDir, 'manifest.json'), JSON.stringify({
   study: '2026-07-h0-battery', mode: MODE, engine_version: engineVersion, git_sha: gitSha,
-  registration_sha: '17cc3f8', node: process.version, seed: SEED, n: N, ticks: T,
+  registration_sha: '17cc3f8',
+  supersedes: { priorRun: 'run-20260801T062824Z', defect:
+    'oracle phi was never threaded into the detector config, so N3/N4 ran with AR(1) pre-whitening disabled; and the mixture adapter passed ar1_phi under params where that detector reads it off input, so it never received phi at all. The prior runs measure detectors unaware of phi, not the registered oracle-parameter cell' }, node: process.version, seed: SEED, n: N, ticks: T,
   alphas: ALPHAS, shipped_alpha: SHIPPED_ALPHA, generated_at: stamp,
   out_of_scope: OUT_OF_SCOPE, argv: process.argv.slice(2),
 }, null, 2));

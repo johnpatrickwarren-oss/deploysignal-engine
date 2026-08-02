@@ -42,6 +42,7 @@
 
 /** Conditional AR(1) Gaussian log-density of x given predecessor p, regime means (mx for x, mp
  *  for p): x − mx = φ(p − mp) + ε, ε ~ N(0, s2). */
+import type { ValidityEnvelope } from './validity-envelope';
 function condLogDensity(x: number, p: number, mx: number, mp: number, phi: number, s2: number): number {
   const r = x - mx - phi * (p - mp);
   return -0.5 * Math.log(2 * Math.PI * s2) - (r * r) / (2 * s2);
@@ -197,4 +198,4 @@ export const SEQUENTIAL_UI_ENVELOPE = Object.freeze({
     + 'level errors are profiled out). Needs the Gaussian-AR(1) class to contain the H0 truth — '
     + 'same well-specification envelope as ADR 0010, same heavy-tail disclosure (ADR 0011). '
     + 'O(T·grid) per full trajectory; the running null sup is recomputed per tick.',
-});
+}) satisfies ValidityEnvelope;

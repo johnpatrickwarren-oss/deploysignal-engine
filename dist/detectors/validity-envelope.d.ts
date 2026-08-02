@@ -1,9 +1,9 @@
 import { NUISANCE_ROBUST_BF_ENVELOPE } from './nuisance-robust-bf-e-value';
 /** How the baseline the e-value tests against is obtained. */
-export type BaselineKind = 'true' | 'plug-in' | 'unknown-mean-integrated';
-export type AutocorrelationKind = 'iid' | 'ar1-whitened';
+export type BaselineKind = 'true' | 'plug-in' | 'unknown-mean-integrated' | 'unknown-mean-mle';
+export type AutocorrelationKind = 'iid' | 'ar1-whitened' | 'ar1-any-phi';
 export type NullKind = 'mean-shift';
-export type VarianceKind = 'stable' | 'robust';
+export type VarianceKind = 'stable' | 'robust' | 'unknown-mle';
 /** The regime in which an e-value detector's E[e|H0] ≤ 1 validity holds. Ships as metadata so the
  *  engine never implies an FDR guarantee outside it (ADR 0004). */
 export interface ValidityEnvelope {

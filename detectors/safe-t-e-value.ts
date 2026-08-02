@@ -44,6 +44,7 @@
 // variance CHANGE is still out of scope (route to the distributional-signature detector, ADR 0004 Tier 2).
 
 import { computePerSignalAr1Phi } from './family-a-mixture-supermartingale';
+import type { ValidityEnvelope } from './validity-envelope';
 
 /** A contiguous index window [start, start+len) into the observation series. */
 export interface Window {
@@ -79,7 +80,7 @@ export const SAFE_T_ENVELOPE = Object.freeze({
     + 'among all e-statistics for the scale-invariant location-scale model). With the DEFAULT estimated AR(1) '
     + 'φ, short-calibration estimation error keeps E[e|H0] > 1 below cal ≈ 100 — the residual floor is the φ '
     + 'plug-in, not the variance (ADR 0005); supply a known φ via opts.ar1Phi to be valid at cal ≥ 3.',
-});
+}) satisfies ValidityEnvelope;
 
 /** Sample mean. */
 function mean(xs: ReadonlyArray<number>): number {

@@ -53,6 +53,7 @@
 //     on the split ratio, only power does.
 
 import type { Window } from './safe-t-e-value';
+import type { ValidityEnvelope } from './validity-envelope';
 
 /** A time segment scored by its conditional AR(1) likelihood: indices [i0, i1) with predecessor `pred`. */
 interface Segment {
@@ -85,7 +86,7 @@ export const UI_MEAN_SHIFT_ENVELOPE = Object.freeze({
     + 'makes that hold (the safe-t\'s 1e64 tail blows fleet FDP to 21%). Deploy at the fleet-FDR layer on '
     + 'baselined residuals. Power at φ ≳ 0.8 is low (autocorrelation limit) but stays valid; well-powered '
     + 'for φ ≤ 0.5. ADR 0010 (construction) + 0011/0012 (validation).',
-});
+}) satisfies ValidityEnvelope;
 
 /** Lowest φ on the null grid. */
 const PHI_GRID_LO = -0.98;

@@ -43,8 +43,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SEQUENTIAL_UI_ENVELOPE = void 0;
 exports.sequentialUiMeanShiftEProcess = sequentialUiMeanShiftEProcess;
-/** Conditional AR(1) Gaussian log-density of x given predecessor p, regime means (mx for x, mp
- *  for p): x − mx = φ(p − mp) + ε, ε ~ N(0, s2). */
 function condLogDensity(x, p, mx, mp, phi, s2) {
     const r = x - mx - phi * (p - mp);
     return -0.5 * Math.log(2 * Math.PI * s2) - (r * r) / (2 * s2);

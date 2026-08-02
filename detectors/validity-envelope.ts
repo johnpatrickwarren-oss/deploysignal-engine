@@ -19,11 +19,25 @@ import { NUISANCE_ROBUST_BF_ENVELOPE } from './nuisance-robust-bf-e-value';
 export type BaselineKind =
   | 'true'                    // a known, exact baseline (no estimation error)
   | 'plug-in'                 // a point estimate μ̂ frozen from a finite calibration window
-  | 'unknown-mean-integrated'; // the baseline mean is integrated out under a proper prior (the BF)
+  | 'unknown-mean-integrated' // the baseline mean is integrated out under a proper prior (right-Haar)
+  | 'unknown-mean-mle';       // the mean is profiled out by an MLE over the null (universal inference)
 
-export type AutocorrelationKind = 'iid' | 'ar1-whitened';
+export type AutocorrelationKind =
+  | 'iid'
+  | 'ar1-whitened'
+  | 'ar1-any-phi';            // valid for any φ without whitening (UI / sequential UI)
+
 export type NullKind = 'mean-shift';
-export type VarianceKind = 'stable' | 'robust';
+
+export type VarianceKind =
+  | 'stable'
+  | 'robust'
+  | 'unknown-mle';            // σ profiled out rather than plugged in
+
+// 2026-08-02: the last member of each union was absent, so UI_MEAN_SHIFT_ENVELOPE and
+// SEQUENTIAL_UI_ENVELOPE could not be passed to isValidForFdrPath at all (TS2345). They escaped
+// notice because they are `as const` object literals that were never annotated with this type.
+// Every envelope below is now annotated, so the next one that drifts fails at compile time.
 
 /** The regime in which an e-value detector's E[e|H0] ≤ 1 validity holds. Ships as metadata so the
  *  engine never implies an FDR guarantee outside it (ADR 0004). */

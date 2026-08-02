@@ -1,0 +1,8 @@
+{
+  "control": "power",
+  "detector": "safe_t",
+  "shift_sigma": 3,
+  "rate_e_ge_20": 0.967,
+  "verdict": "pass",
+  "mode": "sim"
+}

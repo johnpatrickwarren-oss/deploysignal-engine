@@ -1,0 +1,17 @@
+{
+  "detector": "nuisance_robust_bf_CONTROL",
+  "null_id": "N6",
+  "m": 100,
+  "alpha": 0.05,
+  "n": 300,
+  "exceedance": 0,
+  "lower_95": 0,
+  "verdict": "not-refuted",
+  "mean_e": 0.07711971019363424,
+  "p_e_ge_10": 0,
+  "p99_e": 0.8752515326095094,
+  "nan_count": 0,
+  "mode": "sim",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "f4e946aeec5bbc25e74180bfd7998ddb1076eee5"
+}

@@ -1,0 +1,15 @@
+{
+  "study": "2026-08-terminal-evalue",
+  "mode": "sim",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "f4e946aeec5bbc25e74180bfd7998ddb1076eee5",
+  "node": "v25.9.0",
+  "seed": 20260801,
+  "n": 200,
+  "n_test": 100,
+  "alphas": [
+    0.05,
+    0.01
+  ],
+  "generated_at": "20260802T041218Z"
+}

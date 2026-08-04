@@ -98,3 +98,31 @@ so that the correction is tested rather than asserted.
 2. The `k = 1.00, m = 1.00` cell must reproduce `stats/family-c-shipped-2026-08-04`'s `mcd` numbers
    at the reduced N. If it does not, stop.
 3. Predictions scored verbatim, including failures.
+
+---
+
+## 7. Addendum, registered 2026-08-04 after the main grid — the unbiased-covariance point
+
+The grid swept `k` as a multiple of `Σ̂_mcd`. But `Σ̂_mcd` is **itself biased**: `family-c-shipped`
+measured `trace(Σ̂)/trace(Σ_true)` at **1.2115** on `HC-mix-diag` and **1.2153** on `HC-mix-corr`. So
+the *unbiased* covariance is not `k = 1` — it is **`k = 1/1.2115 = 0.8254`** (diag) and
+**`0.8228`** (corr), which lands between the two lowest points measured (0.78 → 0.0020, 0.90 →
+0.0040).
+
+That matters for what the U-curve means. If the unbiased point sits in the trough, then **the 89.6%
+headline is caused by covariance bias, not by the Gaussian reference law** — and the fix is the
+estimator, which `stats/mcd-consistency-2026-08-04` already showed is correctable to 0.03%.
+
+**A-P1.** At `m = 1.00` and `k = k_unbiased`, the mixture crossing rate is **below 0.02** on both
+mixture arms — i.e. the detector does **not** false-alarm on healthy bimodal data once the covariance
+is right. Registered range 0.000–0.02.
+
+**A-P2.** The Gaussian controls at `k = k_unbiased` are **not** simultaneously at their minimum,
+because the main grid put their minimum at `k = 0.90` — a different point. So no single covariance
+scale minimises both, and I predict the Gaussian crossing at `k_unbiased` exceeds its `k = 0.90`
+value of ~0.001.
+
+**What this cannot show.** The mixture arms are **healthy** bimodal data, so a low rate here is
+correct behaviour, not blindness. Whether the detector can *detect* a bimodality fault — healthy
+Gaussian drifting to bimodal — is a **power** question no study in this repo has ever run, and it is
+the question that decides whether Family C is worth keeping.

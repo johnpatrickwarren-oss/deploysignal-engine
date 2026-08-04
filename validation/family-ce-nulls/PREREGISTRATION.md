@@ -206,3 +206,35 @@ reported.
 flag that places a sim run under `results/live/`. A run directory is never reused. The manifest
 stamps the engine version, both repos' git SHAs, the node version, the seed, the ESS-gate
 recomputation, the mixture constants, the per-arm shape diagnostics, and the provenance check.
+
+---
+
+## 11. Addendum, registered 2026-08-03 after the main run — the attribution arm
+
+**Written after seeing `run-20260804T054546Z` and registered before the arm it describes is run.**
+The main run refuted Family C on the Gaussian controls as well as the mixture arms, which P-C3
+allowed for. That makes one attribution question worth answering, and it does not change any
+endpoint above.
+
+The Gaussian-arm violation has two candidate causes, and they have different consequences:
+
+1. **Σ̂ estimation error** — the P-side pool is drawn from `N(0, Σ̂)` with Σ̂ the MCD estimate from
+   600 baseline rows, while the live law is `N(0, Σ_true)`. This shrinks with baseline size and is
+   an operator-side problem: compile on more history.
+2. **The 500-point pool itself** — `μ_P^φ` is a Monte Carlo mean over
+   `BASELINE_POOL_SIZE = 500` draws, so it misses `E[φ]` by `O(1/√500)` no matter how good Σ̂ is.
+   `BASELINE_POOL_SIZE` is a module constant in `sequential-mmd.ts` and
+   `FAMILY_C_BETTING_BASELINE_POOL_SIZE` in the calibrator. This does not shrink with more history
+   and is not operator-reachable.
+
+**Arm.** `HC-gauss-corr` and `HC-gauss-diag` recompiled at `--baseline-n 10000`, everything else
+identical, N = 2000 × T = 300. At n = 10,000 the Σ̂ error is ~4× smaller in sd than at n = 600.
+
+**Registered prediction (A1).** The violation **persists at substantially the same magnitude** —
+`E[exp(Δ log M)]` stays within ±0.002 of the n=600 figure and its one-sided lower bound stays above
+1. That would attribute it to cause 2, the fixed 500-point pool, and mean the Gaussian-arm result
+is a property of the detector rather than of my baseline size.
+
+**What would refute A1.** `E[exp(Δ log M)]` falling to within noise of 1. That would attribute the
+Gaussian-arm result to cause 1, make it a calibration-sample-size problem rather than a detector
+problem, and leave the mixture arms as the only detector-level finding.

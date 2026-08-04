@@ -126,3 +126,27 @@ value of ~0.001.
 correct behaviour, not blindness. Whether the detector can *detect* a bimodality fault — healthy
 Gaussian drifting to bimodal — is a **power** question no study in this repo has ever run, and it is
 the question that decides whether Family C is worth keeping.
+
+### A-P3 — the power arm, registered because §7 named it as the deciding question
+
+`nulls.mjs:55-58` states Gaussian and mixture cells at the same `sigma` are **moment-matched
+exactly**. So switching the live stream from `law:'gauss'` to `law:'mix'` at tick 100, holding
+`sigma`, is a **pure distributional-shape fault with identical first two moments** — precisely what
+`sequential-mmd.ts` names as the detector's purpose ("bimodality emergence, variance inflation
+without mean-shift").
+
+Baseline is Gaussian and healthy in both arms; only the live stream changes.
+
+- **A-P3.** At `k = k_unbiased` — the covariance corrected — **power against this fault is below
+  0.10**. Mechanism: if A-P1 holds, the witness is dominated by scale mismatch, and a fault that
+  changes only shape leaves the scale untouched. **This is the prediction that decides the detector's
+  fate**: a detector that does not false-alarm on healthy bimodality *because it cannot see
+  bimodality at all* has no purpose, since Hotelling already covers mean and scale.
+- **A-P4.** At `k = 1.00` (shipped, biased) power exceeds A-P3's value — but that is not evidence of
+  capability, because the same configuration false-alarms at 0.906 on healthy bimodal data. Any
+  apparent power there is the scale error firing, not shape detection. Registered so the comparison
+  cannot be misread as a point in the shipped configuration's favour.
+
+**If A-P1 and A-P3 both hold, the honest conclusion is that Family C's MMD witness measures
+covariance scale error and is blind to distributional shape** — the opposite of its stated purpose —
+and no reference-law fix addresses that.

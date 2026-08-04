@@ -179,7 +179,7 @@ export function evaluateFamilyD(
       + `Known: ${Object.keys(SPECTRAL_EVALUATORS).join(', ')}`,
     );
   }
-  return evaluator({ params, peak, lag, alphaD, signal, state });
+  return evaluator({ params, peak, lag, alphaD, signal, state, windowLen: recentSamples.length });
 }
 
 // ── D-54-2 — dispatch maps (ARCHITECT-REPLY-54 slice 2) ────────────
@@ -192,6 +192,8 @@ interface SpectralDispatchCtx {
   alphaD: number;
   signal: string;
   state?: SpectralEDetectorState;
+  /** Length of the window `peak` was computed over. Drives disjoint-window evaluation. */
+  windowLen?: number;
 }
 
 type SpectralVariant = 'bootstrap_null' | 'e_detector';
@@ -223,6 +225,28 @@ function evaluateSpectralEDetectorDispatch(ctx: SpectralDispatchCtx): DetectorVe
       'evaluateSpectralEDetectorDispatch invoked without state — '
       + 'dispatch map gate must enforce prereqs before routing.',
     );
+  }
+  // Disjoint-window evaluation (2026-08-03). `peak` is computed over a rolling window by the
+  // caller, so advancing the wealth every tick breaks the martingale-difference condition — see
+  // SpectralEDetectorState.ticksSinceEval. Advance once per window instead, which measures 0.0005
+  // against a nominal 0.05 where the rolling path measures 0.576.
+  //
+  // The cost is detection latency, and it is bounded: on injected oscillation the disjoint path
+  // detects a 2σ signal on 2000 of 2000 trials at a measured false-alarm rate of zero, where the
+  // rolling path reaches 0.61 at a 0.5475 false-alarm rate. Rolling is dominated on both axes.
+  // Sensitivity floor: reliable at ≥2σ, marginal at 1σ, blind below.
+  const windowLen = ctx.windowLen ?? 0;
+  if (windowLen > 1) {
+    const since = (state.ticksSinceEval ?? 0) + 1;
+    if (since < windowLen) {
+      state.ticksSinceEval = since;
+      return {
+        verdict: 'clean', statistic: state.M, threshold: 1 / alphaD,
+        alpha_consumed: 0, alpha_spent: 0,
+        reason_code: 'awaiting_disjoint_window', family: 'D', signal,
+      };
+    }
+    state.ticksSinceEval = 0;
   }
   return evaluateSpectralEDetector({ params, alpha: alphaD, signal }, peak, state);
 }

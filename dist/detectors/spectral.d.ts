@@ -42,6 +42,8 @@ interface SpectralDispatchCtx {
     alphaD: number;
     signal: string;
     state?: SpectralEDetectorState;
+    /** Length of the window `peak` was computed over. Drives disjoint-window evaluation. */
+    windowLen?: number;
 }
 type SpectralVariant = 'bootstrap_null' | 'e_detector';
 type SpectralEvaluator = (ctx: SpectralDispatchCtx) => DetectorVerdict;

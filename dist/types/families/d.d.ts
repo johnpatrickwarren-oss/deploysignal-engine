@@ -74,6 +74,15 @@ export interface SpectralEDetectorState {
      *  view (detectors/_wealth.ts). Optional (additive); absence is healed on
      *  the next update. */
     log_M?: number;
+    /** 2026-08-03 — ticks observed since the last wealth update.
+     *
+     *  The e-detector consumes `peak|ACF|` over a rolling window, so evaluating it every tick makes
+     *  successive increments share all but one sample: `u_t` is nearly `F_{t-1}`-measurable and the
+     *  martingale-difference condition fails. Measured false-alarm rate 0.576 against a nominal 0.05
+     *  with ORACLE parameters on iid Gaussian data; the same detector on DISJOINT windows measures
+     *  0.0005. Advancing the wealth once per window length restores it. Optional (additive); absence
+     *  is treated as 0. See knowledge/stats/h0-battery-2026-08-01. */
+    ticksSinceEval?: number;
 }
 /** Per-signal Family D ACF peak-detection state. Bootstrap null is built
  *  on baseline cells at compile time; the detector reads `window_length`

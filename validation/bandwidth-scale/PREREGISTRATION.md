@@ -150,3 +150,20 @@ Baseline is Gaussian and healthy in both arms; only the live stream changes.
 **If A-P1 and A-P3 both hold, the honest conclusion is that Family C's MMD witness measures
 covariance scale error and is blind to distributional shape** — the opposite of its stated purpose —
 and no reference-law fix addresses that.
+
+### A-P5 — the RFF dimension, the one repair not yet excluded
+
+A-P3 measured zero power against a matched-moment shape fault. That could be structural (the witness
+sees only scale) or a **resolution limit**: `RFF_DEFAULT_DIM = 256` random Fourier features may be too
+few to represent the kernel difference between a Gaussian and a moment-matched mixture. Registered
+before running, because retiring a detector on a tuning failure would be wrong.
+
+Sweep `rff_dim ∈ {256, 1024, 4096}` at `k = k_unbiased`, on the shape-fault arm and the healthy
+Gaussian arm.
+
+- **A-P5.** Power stays **below 0.05 at every `rff_dim`**, i.e. the blindness is structural rather
+  than a resolution limit. `family-c-rff.ts:50-52` flags 512/1024 as the escalation path, so this is
+  the escalation the code anticipated.
+- **What would overturn the retirement recommendation.** Power rising above ~0.3 at `rff_dim = 1024`
+  or `4096` while the healthy-arm crossing stays near zero. Then Family C is under-resolved, not
+  blind, and the fix is a dimension bump rather than removal.

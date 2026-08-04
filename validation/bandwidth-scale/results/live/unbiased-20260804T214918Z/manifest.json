@@ -1,0 +1,23 @@
+{
+ "study": "bandwidth-scale-unbiased-addendum",
+ "prereg": "../PREREGISTRATION.md §7",
+ "node": "v25.9.0",
+ "seed": 20260803,
+ "n": 2000,
+ "ticks": 300,
+ "bundles": 10,
+ "baseline_n": 600,
+ "pool_size": 500,
+ "fault_onset": 100,
+ "shared_modules_verified": [
+  "sequential-mmd",
+  "family-c-rff",
+  "conformal",
+  "family-c-betting-e-process",
+  "_family-c-betting-witness"
+ ],
+ "engine_version": "0.6.6-pre",
+ "git_sha": "51966dd2dd500609e07e85be255d021ed3614067",
+ "mode": "live",
+ "elapsed_s": 56.883
+}

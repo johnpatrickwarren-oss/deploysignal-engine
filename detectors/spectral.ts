@@ -334,7 +334,13 @@ export function evaluateSpectralEDetector(
   peak_t: number,
   state: SpectralEDetectorState,
 ): DetectorVerdict {
-  const threshold = 1 / input.alpha;
+  // c-deflation (2026-08-03). The detector is not an e-process — E[M_T|H0] measured at 1.064 (T=300)
+  // and 1.108 (T=900) under disjoint evaluation — but the violation is BOUNDED, and a bounded
+  // violation is priceable: firing at `c/α` is identical to running at α on `M/c`, and `E[M/c] ≤ 1`.
+  // Absent bound ⇒ threshold `1/α` ⇒ the inflation is real but unpriced, which is the pre-2026-08-03
+  // behaviour. `c` grows with horizon; see SpectralInflationBound.
+  const inflationBound = input.params.e_value_inflation_bound ?? 1;
+  const threshold = inflationBound / input.alpha;
   const { null_mean: mu0, null_std: sigma0, betting_delta: delta } = input.params;
   if (mu0 === undefined || sigma0 === undefined || delta === undefined) {
     return {

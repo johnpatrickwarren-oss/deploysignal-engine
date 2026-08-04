@@ -12,6 +12,10 @@ import type { SelfNormalizedEProcessFallback } from '../self-normalized-fallback
  *  threshold for ACF peak height; lag bounds constrain the peak search to
  *  oscillation periods ~3–10 ticks. */
 export interface FamilyDPerSignal {
+  /** Measured `E[M_T|H0] ≤ c` for the e-detector variant; raises the firing threshold to `c/α`,
+   *  recovering `FDR ≤ α` from `FDR ≤ c·α`. See {@link SpectralInflationBound} for the measurement,
+   *  the horizon-dependence, and why absence is not the same as `c = 1`. */
+  e_value_inflation_bound?: SpectralInflationBound;
   bootstrap_null_quantile: number;
   min_peak_lag: number;
   max_peak_lag: number;
@@ -79,6 +83,29 @@ export interface FamilyDPerSignal {
  *  Simpler than `EMmdState` — no betting running moments because the
  *  statistic is standardized against compile-time null moments (μ₀, σ₀)
  *  rather than runtime-adaptive ones. */
+/** Measured null-mean inflation `c` for the spectral e-detector, `E[M_T|H0] ≤ c`.
+ *
+ *  The detector is NOT an e-process: `peak|ACF|` is bounded in [0,1] and right-skewed where the
+ *  increment `z_t = r·u − ½r²` is exact only for `u ~ N(0,1)`. Measured 2026-08-03 under disjoint
+ *  evaluation on iid Gaussian H0 with `(μ̂₀, σ̂₀)` estimated from 400 windows:
+ *
+ *    E[M_300] = 1.0636 (95% lower 1.0257, 9 wealth updates)
+ *    E[M_900] = 1.1076 (95% lower 1.0244, 29 updates)
+ *
+ *  Decomposing as `c(n) = a·bⁿ` over those two points gives `a ≈ 1.0444` (a fixed calibration-error
+ *  overhead) and `b ≈ 1.00203` per wealth update. The per-update term corroborates an independent
+ *  measurement of ~1.0023 per draw taken at EXACT null moments, which is why the decomposition is
+ *  quoted at all — two points fitting two parameters is otherwise exact rather than evidence.
+ *
+ *  Supplying this bound raises the firing threshold to `c/α`, which is identical to running the
+ *  procedure at α on `M/c`. Since `E[M/c] ≤ 1`, that recovers exact control: `FDR ≤ α` rather than
+ *  `FDR ≤ c·α`. See knowledge/stats/e-value-validity-methods-ledger.
+ *
+ *  ABSENT means no deflation, which is the pre-2026-08-03 behaviour and leaves the inflation
+ *  unpriced. `c` GROWS with horizon, so a value supplied here must be measured for the longest
+ *  horizon the detector runs over, not a typical one. */
+export type SpectralInflationBound = number;
+
 export interface SpectralEDetectorState {
   M: number;
   n: number;

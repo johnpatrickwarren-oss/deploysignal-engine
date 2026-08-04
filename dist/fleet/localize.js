@@ -33,7 +33,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.localizeFaults = localizeFaults;
 const detection_common_mode_1 = require("./detection-common-mode");
 const universal_inference_e_value_1 = require("../detectors/universal-inference-e-value");
-const e_bh_1 = require("./e-bh");
+const e_bh_guarded_1 = require("./e-bh-guarded");
 /** Run the topology-localised fault-detection path (see the file header). Returns the flagged shards (a
  *  ranked localisation, NOT a certified FDR discovery set — see Scope).
  *
@@ -72,7 +72,13 @@ function localizeFaults(p) {
     const byGroup = new Map();
     for (const [g, idxs] of groups) {
         const sub = idxs.map((i) => perShardEValue[i]);
-        const localSel = (0, e_bh_1.eBenjaminiHochberg)(sub, qLevel).selected; // indices into `idxs`
+        // 2026-08-03 — migrated to the guarded entry point. The e-values above are built by
+        // universalInferenceMeanShiftEValue, so the detector id is known and its envelope is checked
+        // rather than assumed. NOTE the gate does NOT rescue this function: it verifies the inputs are
+        // e-values under an estimated baseline (UI is), and this path's measured failure is residual
+        // leakage from a data-dependent common-mode fit — FDP ~93%, see the header. Necessary, not
+        // sufficient.
+        const localSel = (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)(sub.map((eValue) => ({ detectorId: 'universal_inference_e_value', eValue })), qLevel).selected; // indices into `idxs`
         if (localSel.length === 0)
             continue;
         const globals = localSel.map((j) => idxs[j]).sort((a, b) => a - b);

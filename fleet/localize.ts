@@ -31,7 +31,7 @@
 
 import { detectionOrientedResiduals, DetectionCommonModeOptions } from './detection-common-mode';
 import { universalInferenceMeanShiftEValue } from '../detectors/universal-inference-e-value';
-import { eBenjaminiHochberg } from './e-bh';
+import { eBenjaminiHochbergGuarded } from './e-bh-guarded';
 import type { Window } from '../detectors/safe-t-e-value';
 
 export interface LocalizeParams {
@@ -103,7 +103,16 @@ export function localizeFaults(p: LocalizeParams): LocalizeResult {
   const byGroup = new Map<number, number[]>();
   for (const [g, idxs] of groups) {
     const sub = idxs.map((i) => perShardEValue[i]);
-    const localSel = eBenjaminiHochberg(sub, qLevel).selected; // indices into `idxs`
+    // 2026-08-03 — migrated to the guarded entry point. The e-values above are built by
+    // universalInferenceMeanShiftEValue, so the detector id is known and its envelope is checked
+    // rather than assumed. NOTE the gate does NOT rescue this function: it verifies the inputs are
+    // e-values under an estimated baseline (UI is), and this path's measured failure is residual
+    // leakage from a data-dependent common-mode fit — FDP ~93%, see the header. Necessary, not
+    // sufficient.
+    const localSel = eBenjaminiHochbergGuarded(
+      sub.map((eValue) => ({ detectorId: 'universal_inference_e_value', eValue })),
+      qLevel,
+    ).selected; // indices into `idxs`
     if (localSel.length === 0) continue;
     const globals = localSel.map((j) => idxs[j]).sort((a, b) => a - b);
     byGroup.set(g, globals);

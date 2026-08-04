@@ -1,0 +1,9 @@
+HC-gauss-corr   A2-recheck       inc=1.006732 [1.006626, 1.006837] fire@0.05=0.1320 trace(sigmahat)/trace(true)=1.1101 verdict=REFUTED
+HC-gauss-corr   X1-oracle-sigma  inc=1.002019 [1.001959, 1.002079] fire@0.05=0.0000 trace(sigmahat)/trace(true)=1.1101 verdict=REFUTED
+HC-gauss-diag   A2-recheck       inc=1.006659 [1.006560, 1.006758] fire@0.05=0.1125 trace(sigmahat)/trace(true)=1.1086 verdict=REFUTED
+HC-gauss-diag   X1-oracle-sigma  inc=1.001878 [1.001821, 1.001936] fire@0.05=0.0000 trace(sigmahat)/trace(true)=1.1086 verdict=REFUTED
+
+POST-HOC AND EXPLORATORY. Not in PREREGISTRATION.md. Run after the registered
+arms were scored and written, because all three registered hypotheses were
+dead. Not confirmatory. The oracle-Sigma result needs its own registration
+before it counts as evidence for the mechanism it suggests.

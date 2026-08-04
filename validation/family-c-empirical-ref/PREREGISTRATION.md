@@ -124,3 +124,28 @@ would mean I over-claimed the size of D-A.
 2. C-1 to C-3 run first; any failure stops the study.
 3. Predictions scored verbatim against §6, including failures.
 4. The code change ships on a branch and is not merged on the strength of this study alone.
+
+---
+
+## 10. Addendum, registered 2026-08-04 before the run — no repo change
+
+**`deploysignal`'s HEAD is `drift-regime-sweep`, not `main`.** Another session owns that tree (it is
+running the C11 drift-regime sweep). Under
+`knowledge/methodology/concurrent-session-convention`, a non-`main` HEAD means the tree is not mine
+to write to, so §2's three edits are **not being made**.
+
+They are not needed. The quantity under test is the stamped `baseline_rff_mean` vector, and
+`../family-c-pool/harness/run-pool.mjs` already established the pattern of **recomputing it in place
+on the compiled bundle** after the shipped calibrator has run — with a self-test showing the
+recomputation is bit-identical to the calibrator's when given the same inputs
+(`l2_from_shipped = 0`). B1 therefore overrides the vector with
+`mean over φ(relativeDeviations(rows, cell.mean_vector))` instead of editing the calibrator.
+
+**What this changes about the study: nothing measurable.** The compiled artifact reaching the
+detector is identical either way, because the calibrator's only output on this path is that vector.
+
+**What it changes about the conclusion:** check **C-1** (schema key set unchanged) becomes vacuous —
+no code is edited, so no field can appear or disappear — and it is withdrawn rather than reported as
+passed. **C-2** (engine `dist` byte-identical) still runs and still means what it meant. §9 rule 4
+already said the change would not be merged on this study's strength; it now additionally has not
+been written, and shipping it stays a separate task requiring `deploysignal` to be back on `main`.

@@ -1,0 +1,28 @@
+{
+ "study": "bandwidth-scale-rffdim",
+ "prereg": "../PREREGISTRATION.md §7 A-P5",
+ "dims": [
+  256,
+  1024,
+  4096
+ ],
+ "node": "v25.9.0",
+ "seed": 20260803,
+ "n": 1000,
+ "ticks": 300,
+ "bundles": 5,
+ "baseline_n": 600,
+ "pool_size": 500,
+ "fault_onset": 100,
+ "shared_modules_verified": [
+  "sequential-mmd",
+  "family-c-rff",
+  "conformal",
+  "family-c-betting-e-process",
+  "_family-c-betting-witness"
+ ],
+ "engine_version": "0.6.6-pre",
+ "git_sha": "9b27ea97d90601f18abea76a9f2ad010d072ae6a",
+ "mode": "live",
+ "elapsed_s": 148.911
+}

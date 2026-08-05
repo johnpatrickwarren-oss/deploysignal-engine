@@ -1,0 +1,13 @@
+{
+ "study": "shape-battery",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260805,
+ "n": 1000,
+ "ticks": 900,
+ "window": 30,
+ "alpha": 0.05,
+ "git_sha": "00006e28f939ea99684741929e0b56194b211e3d",
+ "mode": "live",
+ "elapsed_s": 6.432
+}

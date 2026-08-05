@@ -237,3 +237,32 @@ export function buildShapeKurtosisCalibration(
   scores.sort((a, b) => a - b);
   return { scores, sigma };
 }
+
+/** Build the calibration EMPIRICALLY, from real baseline windows.
+ *
+ *  REQUIRED, not optional. The synthesized-Gaussian builder above asserts
+ *  Gaussian kurtosis, and the N1–N7 battery measured what that costs when the
+ *  baseline is not Gaussian: `E[exp(Δ log M)]` of 1.947 with a crossing rate
+ *  of 1.0000 on healthy lognormal and healthy t₃ traffic — the detector reads
+ *  healthy non-Gaussian data as a shape fault. Rebuilding the same
+ *  distribution from the baseline's own windows takes those to 0.998 and
+ *  1.001, and takes AR(1) φ=0.9 from a crossing rate of 1.0000 to 0.0010.
+ *
+ *  The synthesized builder is retained only for the Gaussian-baseline case and
+ *  for tests; anything reaching production should use this.
+ *
+ *  `rows` are baseline observations in the same space the detector sees. */
+export function buildShapeKurtosisCalibrationEmpirical(
+  rows: ReadonlyArray<ReadonlyArray<number>>,
+  window: number,
+  sigma: ReadonlyArray<number>,
+  stride = 1,
+): number[] {
+  const scores: number[] = [];
+  for (let start = 0; start + window <= rows.length; start += stride) {
+    const k = shapeKurtosisScore(rows.slice(start, start + window), sigma);
+    if (k !== null) scores.push(k);
+  }
+  scores.sort((a, b) => a - b);
+  return scores;
+}

@@ -251,6 +251,15 @@ export function buildShapeKurtosisCalibration(
  *  The synthesized builder is retained only for the Gaussian-baseline case and
  *  for tests; anything reaching production should use this.
  *
+ *  TRIM FIRST. The contamination arm measured what an untrimmed empirical
+ *  calibration costs: at 10% and 20% shift contamination the detector loses
+ *  ALL power — 1.0000 to 0.0000 — because a contaminated baseline is itself
+ *  mildly bimodal, so its K distribution overlaps the fault's and the
+ *  reference has absorbed the shape it exists to detect. False alarms stay
+ *  low throughout, so the failure is silent. Passing MCD-retained rows only
+ *  restores power to 1.0000 at every contamination level tested while keeping
+ *  the false-alarm rate at 0.0030–0.0420 against α=0.05.
+ *
  *  `rows` are baseline observations in the same space the detector sees. */
 export function buildShapeKurtosisCalibrationEmpirical(
   rows: ReadonlyArray<ReadonlyArray<number>>,

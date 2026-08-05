@@ -1,0 +1,22 @@
+{
+ "study": "shape-contamination",
+ "prereg": "../CONTAMINATION-PREREG.md",
+ "seed": 20260805,
+ "n": 1000,
+ "ticks": 900,
+ "window": 30,
+ "alpha": 0.05,
+ "eps": [
+  0,
+  0.05,
+  0.1,
+  0.2
+ ],
+ "shapes": [
+  "shift",
+  "scatter"
+ ],
+ "git_sha": "63cf7a07a2b6fc0b6c5c3a55e6bd1b17c730d500",
+ "mode": "live",
+ "elapsed_s": 7.612
+}

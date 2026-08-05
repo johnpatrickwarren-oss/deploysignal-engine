@@ -1,0 +1,18 @@
+{
+ "study": "shape-comparator",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260805,
+ "reps": 400,
+ "ks": [
+  0.85,
+  1,
+  1.15
+ ],
+ "windows": [
+  120,
+  300
+ ],
+ "git_sha": "1e31dbdc2f154215d1430f64feae556368a6e1d5",
+ "mode": "live"
+}

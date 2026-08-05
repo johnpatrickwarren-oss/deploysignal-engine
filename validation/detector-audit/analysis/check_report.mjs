@@ -3,8 +3,11 @@ import fs from 'node:fs'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STUDY = path.dirname(HERE);
-const runDir = process.argv[2] ?? fs.readdirSync(path.join(STUDY, 'results', 'live'))
-  .filter((d) => d.startsWith('power-')).sort().pop();
+// Pinned by NAME, not "latest". results/ is append-only and holds the N=60
+// pilots alongside the decisive run; defaulting to the newest directory would
+// let a future pilot silently become the checked run.
+const DECISIVE = 'power-20260805T234415Z';
+const runDir = process.argv[2] ?? DECISIVE;
 const abs = path.isAbsolute(runDir) ? runDir : path.join(STUDY, 'results', 'live', runDir);
 const { cells } = JSON.parse(fs.readFileSync(path.join(abs, 'summary.json'), 'utf8'));
 const report = fs.readFileSync(path.join(STUDY, 'REPORT.md'), 'utf8');

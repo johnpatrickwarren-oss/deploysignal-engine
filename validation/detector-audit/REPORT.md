@@ -7,6 +7,10 @@ threshold was moved.
 Substrate: `h0-battery` N1–N7, unchanged. N=2000 × T=300, step at tick 100, α=0.05.
 **Adapter failures across all 42 cells: 0.**
 
+**Decisive run: `results/live/power-20260805T234415Z`.** `results/` is append-only and also holds the
+N=60 pilots from the smoke step; `analysis/check_report.mjs` pins the decisive run by name so a later
+pilot cannot silently become the checked one.
+
 ## The finding
 
 **`family_A_betting_e_process` is valid and completely inert at N5.** The validity arm scored it

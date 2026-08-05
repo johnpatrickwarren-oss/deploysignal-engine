@@ -82,6 +82,11 @@ for (const det of DETS) {
     const good = es.filter(Number.isFinite);
     const mean = good.reduce((a, b) => a + b, 0) / good.length;
     const sorted = [...good].sort((a, b) => a - b);
+    // Per-cell power, computed before the alpha loop so every emitted cell
+    // carries it. See ../POWER-PER-CELL-PREREG.md and WORKLIST C29.
+    const pc = ((det._powCell ?? {})[`${det.id}__${ns.id}`] ?? []).filter(Number.isFinite);
+    const pcRate = pc.length ? pc.filter((e) => e >= 20).length / pc.length : NaN;
+    const pcVerdict = Number.isNaN(pcRate) ? 'not-measured' : (pcRate >= 0.5 ? 'powered' : 'INERT');
     for (const alpha of ALPHAS) {
       const k = good.filter((e) => e >= 1 / alpha).length;
       const exc = k / good.length, lo = lower95(k, good.length);
@@ -89,20 +94,15 @@ for (const det of DETS) {
         exceedance: exc, lower_95: lo, verdict: lo > alpha ? 'FAIL' : 'not-refuted',
         mean_e: mean, p_e_ge_10: good.filter((e) => e >= 10).length / good.length,
         p99_e: sorted[Math.floor(0.99 * sorted.length)], nan_count: es.length - good.length,
+        power_this_cell: pcRate, power_verdict: pcVerdict,
         mode: MODE, engine_version: engineVersion, git_sha: gitSha };
       cells.push(c);
       fs.writeFileSync(path.join(runDir, 'cells', `${det.id}__${ns.id}__a${alpha}.json`),
         JSON.stringify(c, null, 2));
     }
-    const pc = ((det._powCell ?? {})[`${det.id}__${ns.id}`] ?? []).filter(Number.isFinite);
-    const pcRate = pc.length ? pc.filter((e) => e >= 20).length / pc.length : NaN;
-    c.power_this_cell = pcRate;
-    c.power_verdict = Number.isNaN(pcRate) ? 'not-measured' : (pcRate >= 0.5 ? 'powered' : 'INERT');
-    fs.writeFileSync(path.join(runDir, 'cells', `${det.id}__${ns.id}__a${alpha}.json`),
-      JSON.stringify(c, null, 2));
     console.log(`${det.id.padEnd(28)} ${ns.id.padEnd(9)} mean_e=${mean.toFixed(4)} ` +
       `exc@.05=${(good.filter((e) => e >= 20).length / good.length).toFixed(4)} ` +
-      `POWER=${Number.isNaN(pcRate) ? ' n/a ' : pcRate.toFixed(4)} ${c.power_verdict}`);
+      `POWER=${Number.isNaN(pcRate) ? ' n/a ' : pcRate.toFixed(4)} ${pcVerdict}`);
   }
 }
 for (const det of DETS) {

@@ -16,6 +16,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NUISANCE_ROBUST_BF_ENVELOPE = exports.MIXTURE_SUPERMARTINGALE_ENVELOPE = exports.BETTING_E_PROCESS_ENVELOPE = void 0;
 exports.isValidForFdrPath = isValidForFdrPath;
+exports.phiAdmissible = phiAdmissible;
 exports.assertValidForFdrPath = assertValidForFdrPath;
 const nuisance_robust_bf_e_value_1 = require("./nuisance-robust-bf-e-value");
 Object.defineProperty(exports, "NUISANCE_ROBUST_BF_ENVELOPE", { enumerable: true, get: function () { return nuisance_robust_bf_e_value_1.NUISANCE_ROBUST_BF_ENVELOPE; } });
@@ -55,13 +56,31 @@ void _bfEnvelopeSatisfiesShared;
  *  asserts its validity regime (a true baseline, or m≫n) — otherwise E[e|H0] > 1 and feeding it to
  *  e-BH silently breaks the FDR guarantee (Tessera ADR 0008/0014; BF: ≈1.155 at every cal length). */
 function isValidForFdrPath(env, assertions = {}) {
-    if (env.validUnderEstimatedBaseline)
+    return phiAdmissible(env, assertions)
+        && (env.validUnderEstimatedBaseline
+            || Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN));
+}
+/** φ side of the gate, separated so the failure can be reported distinctly from the baseline one.
+ *  An envelope with no `maxPhiValid` is unconstrained in φ. One WITH a bound refuses on an unknown
+ *  φ: silence is not evidence. */
+function phiAdmissible(env, assertions = {}) {
+    if (env.maxPhiValid === undefined)
         return true;
-    return Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN);
+    if (assertions.observedPhi === undefined)
+        return Boolean(assertions.phiUnmeasuredAccepted);
+    return Math.abs(assertions.observedPhi) <= env.maxPhiValid;
 }
 /** Throw if an e-value with this envelope would be fed to the FDR path OUTSIDE its validity regime.
  *  Call this at the e-BH boundary so an invalid plug-in e-value cannot silently degrade FDR control. */
 function assertValidForFdrPath(env, assertions = {}) {
+    if (!phiAdmissible(env, assertions)) {
+        throw new Error(`validity-envelope: this e-value holds only for |φ| ≤ ${env.maxPhiValid}; got `
+            + `${assertions.observedPhi === undefined ? 'an UNMEASURED φ' : `φ=${assertions.observedPhi}`}. `
+            + 'Above that bound E[e|H0] > 1 and the FDR guarantee does not hold — measured exceedance '
+            + '0.1420 against α=0.05 at φ=0.99. Supply { observedPhi } within the bound, assert '
+            + '{ phiUnmeasuredAccepted } if the regime is known far from a unit root by other means, or '
+            + 'route this regime to a detector whose envelope covers it. None does above 0.95.');
+    }
     if (!isValidForFdrPath(env, assertions)) {
         throw new Error(`validity-envelope: a '${env.baseline}' e-value is INVALID under an estimated baseline `
             + '(E[e|H0] > 1) and must not enter the FDR path. Assert { trueBaseline } or '

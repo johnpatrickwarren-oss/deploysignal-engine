@@ -63,6 +63,11 @@ exports.UI_MEAN_SHIFT_ENVELOPE = Object.freeze({
     variance: 'unknown-mle',
     validUnderEstimatedBaseline: true,
     minCalibration: 6, // needs ≥ 2 points per train/eval half-segment
+    // No maxPhiValid: validity held at EVERY φ measured — exceedance ≤ 0.0010 through φ=0.99
+    // (knowledge/stats/power-per-cell-2026-08-05). What collapses is POWER: 0.6270 at φ=0.6, 0.1810 at
+    // 0.8, 0.0270 at 0.9, 0.0000 at 0.99. Above the bound this detector is valid and INERT — it stops
+    // firing rather than starting to lie — so it is reported, not gated.
+    maxPhiPowered: 0.8,
     notes: 'Split likelihood-ratio (universal inference) e-value for an AR(1) mean shift. E[e|H0] ≤ 1 for '
         + 'ANY φ incl. near unit root — EMPIRICALLY AUDITED with ~6x margin (2026-07-02: the by-construction '
         + 'proof has a gap for the interleaved cal/test split at φ≠0; a predictable numerator would close it) '

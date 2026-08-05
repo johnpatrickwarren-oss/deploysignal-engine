@@ -24,6 +24,7 @@ export declare const SAFE_T_ENVELOPE: Readonly<{
     variance: "stable";
     validUnderEstimatedBaseline: true;
     minCalibration: 3;
+    maxPhiValid: 0.95;
     notes: string;
 }>;
 /** Safe (right-Haar / GROW) two-sample t-test e-value over a calibration window and a test window of a

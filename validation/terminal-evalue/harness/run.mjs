@@ -69,8 +69,14 @@ for (const det of DETS) {
       catch { es.push(NaN); }
       if (i < N) { // power control (§7.3): same series with a 3-sigma shift in the test window
         const shifted = vals.map((v, j) => (j >= ns.m ? v + 3 : v));
-        try { (det._pow ??= []).push(det.run(shifted, { start: 0, len: ns.m }, { start: ns.m, len: NTEST }, ns)); }
-        catch { /* counted as a miss */ }
+        // Recorded PER CELL as well as pooled. The pooled rate averages over
+        // every null, so a cell where the detector is inert is invisible in it
+        // -- see ../POWER-PER-CELL-PREREG.md and WORKLIST C29.
+        const key = `${det.id}__${ns.id}`;
+        try { const pv = det.run(shifted, { start: 0, len: ns.m }, { start: ns.m, len: NTEST }, ns);
+              (det._pow ??= []).push(pv);
+              ((det._powCell ??= {})[key] ??= []).push(pv); }
+        catch { ((det._powCell ??= {})[key] ??= []).push(NaN); }
       }
     }
     const good = es.filter(Number.isFinite);
@@ -88,9 +94,15 @@ for (const det of DETS) {
       fs.writeFileSync(path.join(runDir, 'cells', `${det.id}__${ns.id}__a${alpha}.json`),
         JSON.stringify(c, null, 2));
     }
+    const pc = ((det._powCell ?? {})[`${det.id}__${ns.id}`] ?? []).filter(Number.isFinite);
+    const pcRate = pc.length ? pc.filter((e) => e >= 20).length / pc.length : NaN;
+    c.power_this_cell = pcRate;
+    c.power_verdict = Number.isNaN(pcRate) ? 'not-measured' : (pcRate >= 0.5 ? 'powered' : 'INERT');
+    fs.writeFileSync(path.join(runDir, 'cells', `${det.id}__${ns.id}__a${alpha}.json`),
+      JSON.stringify(c, null, 2));
     console.log(`${det.id.padEnd(28)} ${ns.id.padEnd(9)} mean_e=${mean.toFixed(4)} ` +
-      `p99=${sorted[Math.floor(0.99 * sorted.length)].toFixed(2)} ` +
-      `exc@.05=${(good.filter((e) => e >= 20).length / good.length).toFixed(4)}`);
+      `exc@.05=${(good.filter((e) => e >= 20).length / good.length).toFixed(4)} ` +
+      `POWER=${Number.isNaN(pcRate) ? ' n/a ' : pcRate.toFixed(4)} ${c.power_verdict}`);
   }
 }
 for (const det of DETS) {

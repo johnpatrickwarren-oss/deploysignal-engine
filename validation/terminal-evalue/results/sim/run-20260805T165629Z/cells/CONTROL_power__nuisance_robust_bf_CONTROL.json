@@ -1,0 +1,8 @@
+{
+  "control": "power",
+  "detector": "nuisance_robust_bf_CONTROL",
+  "shift_sigma": 3,
+  "rate_e_ge_20": 0.9516788605446908,
+  "verdict": "pass",
+  "mode": "sim"
+}

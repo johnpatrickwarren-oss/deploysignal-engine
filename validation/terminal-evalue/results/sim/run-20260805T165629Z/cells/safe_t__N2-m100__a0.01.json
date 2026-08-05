@@ -1,0 +1,17 @@
+{
+  "detector": "safe_t",
+  "null_id": "N2-m100",
+  "m": 100,
+  "alpha": 0.01,
+  "n": 4000,
+  "exceedance": 0.00025,
+  "lower_95": 0.00005576872613389138,
+  "verdict": "not-refuted",
+  "mean_e": 0.13040370841138257,
+  "p_e_ge_10": 0.00075,
+  "p99_e": 1.0372325702776128,
+  "nan_count": 0,
+  "mode": "sim",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac"
+}

@@ -290,7 +290,10 @@ export { DEFAULT_ALPHA_D, DEFAULT_MIN_PEAK_LAG, DEFAULT_MAX_PEAK_LAG };
 // the legacy bootstrap-null path; selection by `cell.spectral_variant`.
 // Wealth update `M_t = M_{t-1} · exp(z_t)` with z_t derived from the
 // log-likelihood ratio under μ ~ N(μ₀ + δ_D, σ₀²) on the peak|ACF|
-// statistic. Anytime-valid under Ville's inequality: fire at `M_t ≥ 1/α_D`.
+// statistic. NOT an e-process as shipped (see guarantees.ts): the H0 battery measured
+// FAR 0.576 at oracle parameters on rolling windows (2026-08-01); disjoint windows fixed
+// the cadence (0.0005) but E[M_T|H0] still measures 1.0636-1.1076 — bounded, priced by the
+// optional `e_value_inflation_bound` (fire at c/α ⇒ FDR ≤ α). Unpriced when absent.
 
 const E_DETECTOR_WEALTH_FLOOR = 1e-300;
 

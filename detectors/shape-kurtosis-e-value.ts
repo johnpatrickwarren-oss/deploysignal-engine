@@ -28,12 +28,29 @@
 // M_t ≥ 1/α under Ville. Two-sided means α/2 per tail so P(indicator) = α
 // under H₀.
 //
-// NOT YET VALIDATED. knowledge/stats/shape-comparator-2026-08-05 chose this
-// construction on SEPARATION (d = 8.30 at W=120 against 0.004 for a degree-4
-// kernel, at 0.0% covariance sensitivity against 102–159%). Separation is not
-// validity: this file makes no e-value claim until the audit measures it, and
-// knowledge/stats/detector-audit-sequential-2026-08-05 gives the specific
-// expectation that the estimated-parameter regime is where it will break.
+// ─────────────────────────────────────────────────────────────────────────────
+// DO NOT WIRE. REFUTED ON INDEPENDENT TELEMETRY, 2026-08-05.
+//
+// This module is UNREACHABLE by design: no dispatch, no envelope in
+// fleet/e-bh-guarded.ts, no calibrator stamps its params. It is on `main` so
+// its study record and the wiki checks that cite it resolve — NOT because it
+// is a candidate to enable.
+//
+// knowledge/stats/shape-clustersynth-2026-08-05: it fires on 82% of HEALTHY
+// clustersynth shards (increment 1.417, lower bound 1.382). Turning
+// nonstationarity off does not help — 0.8250 against 0.8167 — so the
+// pre-registered stop condition fired and the cause is not drift. Two
+// candidates remain untested: the counters span tauIdio 0.5s to 120s at
+// dt_s=30, so per-coordinate serial dependence differs by two orders of
+// magnitude within one window; and the calibration used stride = 1, so its
+// ~571 windows overlap heavily.
+//
+// What DID hold, on synthetic nulls only: N1-N7 with an empirical calibration,
+// and the contamination arm once the calibration is MCD-trimmed. Those are
+// recorded in knowledge/stats/shape-battery-2026-08-05. They are evidence about
+// isolated departures; knowledge/WORKLIST C27 is why that is not evidence about
+// their combination.
+// ─────────────────────────────────────────────────────────────────────────────
 
 import type { DetectorVerdict } from '../types/verdict.js';
 

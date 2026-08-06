@@ -1,0 +1,85 @@
+{
+ "study": "family-c-empirical-ref",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260803,
+ "n": 2000,
+ "ticks": 300,
+ "bundles": 10,
+ "baseline_n": 600,
+ "nulls": [
+  "HC-gauss-corr",
+  "HC-mix-corr",
+  "HC-mix-diag",
+  "HC-gauss-diag"
+ ],
+ "shared_modules_verified": [
+  "sequential-mmd",
+  "family-c-rff",
+  "conformal",
+  "family-c-betting-e-process",
+  "_family-c-betting-witness"
+ ],
+ "arm_meta": [
+  {
+   "arm": "B0",
+   "null_id": "HC-gauss-corr",
+   "N_P": 500,
+   "l2_empirical_vs_synthetic": 0,
+   "key_set": "alpha,baseline_rff_mean,baseline_sample_size,betting_strategy,kernel_bandwidth_sigma,lambda_max,ons_initial_lambda,rff_dim,rff_seed"
+  },
+  {
+   "arm": "B0",
+   "null_id": "HC-mix-corr",
+   "N_P": 500,
+   "l2_empirical_vs_synthetic": 0,
+   "key_set": "alpha,baseline_rff_mean,baseline_sample_size,betting_strategy,kernel_bandwidth_sigma,lambda_max,ons_initial_lambda,rff_dim,rff_seed"
+  },
+  {
+   "arm": "B0",
+   "null_id": "HC-mix-diag",
+   "N_P": 500,
+   "l2_empirical_vs_synthetic": 0,
+   "key_set": "alpha,baseline_rff_mean,baseline_sample_size,betting_strategy,kernel_bandwidth_sigma,lambda_max,ons_initial_lambda,rff_dim,rff_seed"
+  },
+  {
+   "arm": "B0",
+   "null_id": "HC-gauss-diag",
+   "N_P": 500,
+   "l2_empirical_vs_synthetic": 0,
+   "key_set": "alpha,baseline_rff_mean,baseline_sample_size,betting_strategy,kernel_bandwidth_sigma,lambda_max,ons_initial_lambda,rff_dim,rff_seed"
+  },
+  {
+   "arm": "B1",
+   "null_id": "HC-gauss-corr",
+   "N_P": 600,
+   "l2_empirical_vs_synthetic": 0.03786895019209248,
+   "key_set": "alpha,baseline_rff_mean,baseline_sample_size,betting_strategy,kernel_bandwidth_sigma,lambda_max,ons_initial_lambda,rff_dim,rff_seed"
+  },
+  {
+   "arm": "B1",
+   "null_id": "HC-mix-corr",
+   "N_P": 600,
+   "l2_empirical_vs_synthetic": 0.05042975125809195,
+   "key_set": "alpha,baseline_rff_mean,baseline_sample_size,betting_strategy,kernel_bandwidth_sigma,lambda_max,ons_initial_lambda,rff_dim,rff_seed"
+  },
+  {
+   "arm": "B1",
+   "null_id": "HC-mix-diag",
+   "N_P": 600,
+   "l2_empirical_vs_synthetic": 0.048474423361624185,
+   "key_set": "alpha,baseline_rff_mean,baseline_sample_size,betting_strategy,kernel_bandwidth_sigma,lambda_max,ons_initial_lambda,rff_dim,rff_seed"
+  },
+  {
+   "arm": "B1",
+   "null_id": "HC-gauss-diag",
+   "N_P": 600,
+   "l2_empirical_vs_synthetic": 0.03780991294600029,
+   "key_set": "alpha,baseline_rff_mean,baseline_sample_size,betting_strategy,kernel_bandwidth_sigma,lambda_max,ons_initial_lambda,rff_dim,rff_seed"
+  }
+ ],
+ "engine_version": "0.6.6-pre",
+ "git_sha": "5815a94af2833e77da2dab181252af6028c02ab2",
+ "mode": "live",
+ "elapsed_s": 39.523
+}

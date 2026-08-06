@@ -1,0 +1,312 @@
+{
+ "cells": [
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N1",
+   "null_label": "iid Gaussian, oracle params, disjoint windows",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 110887505.92626455,
+    "sd": 231276473.09668013,
+    "se": 7313604.241961648,
+    "lower95_one_sided": 98856626.94823764,
+    "upper95_one_sided": 122918384.90429147
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.000027193545574633165,
+    "sd": 0.00004261219456229146,
+    "se": 0.0000013475159091508278,
+    "lower95_one_sided": 0.000024976881904080053,
+    "upper95_one_sided": 0.000029410209245186277
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N2-m30",
+   "null_label": "iid Gaussian, estimated params m=30",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 105053348.26946336,
+    "sd": 232825792.13863716,
+    "se": 7362598.01191019,
+    "lower95_one_sided": 92941874.5398711,
+    "upper95_one_sided": 117164821.99905562
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.00002634270313482878,
+    "sd": 0.00003974613033394736,
+    "se": 0.0000012568830003318249,
+    "lower95_one_sided": 0.000024275130599282928,
+    "upper95_one_sided": 0.00002841027567037463
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N2-m100",
+   "null_label": "iid Gaussian, estimated params m=100",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 106404240.88441502,
+    "sd": 389727261.5002425,
+    "se": 12324258.12600817,
+    "lower95_one_sided": 86130836.26713157,
+    "upper95_one_sided": 126677645.50169846
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.00002491841933458177,
+    "sd": 0.000040846756148518076,
+    "se": 0.0000012916878445880412,
+    "lower95_one_sided": 0.00002279359283023444,
+    "upper95_one_sided": 0.000027043245838929097
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N2-m500",
+   "null_label": "iid Gaussian, estimated params m=500",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 106404240.88441502,
+    "sd": 389727261.5002425,
+    "se": 12324258.12600817,
+    "lower95_one_sided": 86130836.26713157,
+    "upper95_one_sided": 126677645.50169846
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.00002491841933458177,
+    "sd": 0.000040846756148518076,
+    "se": 0.0000012916878445880412,
+    "lower95_one_sided": 0.00002279359283023444,
+    "upper95_one_sided": 0.000027043245838929097
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N3-p03",
+   "null_label": "AR(1) phi=0.3, oracle",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 98912803.51114717,
+    "sd": 232021215.3685384,
+    "se": 7337155.060450452,
+    "lower95_one_sided": 86843183.43670619,
+    "upper95_one_sided": 110982423.58558816
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.000035598288104784326,
+    "sd": 0.00004725571287706289,
+    "se": 0.0000014943568514646718,
+    "lower95_one_sided": 0.00003314007108412494,
+    "upper95_one_sided": 0.000038056505125443714
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N3-p06",
+   "null_label": "AR(1) phi=0.6, oracle",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 80970178.05953479,
+    "sd": 185397363.4436849,
+    "se": 5862779.4067208255,
+    "lower95_one_sided": 71325905.93547903,
+    "upper95_one_sided": 90614450.18359055
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.00006267871688088339,
+    "sd": 0.00006663843447021472,
+    "se": 0.0000021072923263375448,
+    "lower95_one_sided": 0.00005921222100405813,
+    "upper95_one_sided": 0.00006614521275770865
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N3-p09",
+   "null_label": "AR(1) phi=0.9, oracle",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 34292927.012766965,
+    "sd": 78494707.07433191,
+    "se": 2482220.5862262067,
+    "lower95_one_sided": 30209674.148424856,
+    "upper95_one_sided": 38376179.87710907
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.000028072523785263295,
+    "sd": 0.00005250293449885357,
+    "se": 0.0000016602885685900834,
+    "lower95_one_sided": 0.000025341349089932607,
+    "upper95_one_sided": 0.000030803698480593984
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N4-p06-m100",
+   "null_label": "AR(1) phi=0.6, estimated m=100",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 90497541.38411854,
+    "sd": 199467590.83493888,
+    "se": 6307719.064249342,
+    "lower95_one_sided": 80121343.52342838,
+    "upper95_one_sided": 100873739.2448087
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.00006192936555823472,
+    "sd": 0.00006780376750684046,
+    "se": 0.0000021441433926213226,
+    "lower95_one_sided": 0.00005840224967737264,
+    "upper95_one_sided": 0.00006545648143909679
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N4-p09-m100",
+   "null_label": "AR(1) phi=0.9, estimated m=100",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 34978786.54429797,
+    "sd": 76527296.92089918,
+    "se": 2420005.614460319,
+    "lower95_one_sided": 30997877.308510747,
+    "upper95_one_sided": 38959695.7800852
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.000027620287303018103,
+    "sd": 0.00004629019981722922,
+    "se": 0.0000014638246476675437,
+    "lower95_one_sided": 0.000025212295757604993,
+    "upper95_one_sided": 0.000030028278848431214
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N5",
+   "null_label": "right-skewed lognormal, moment-matched, oracle",
+   "n": 0,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 0,
+    "mean": null,
+    "sd": 0,
+    "se": null,
+    "lower95_one_sided": null,
+    "upper95_one_sided": null
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 1,
+    "sd": 0,
+    "se": 0,
+    "lower95_one_sided": 1,
+    "upper95_one_sided": 1
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "inconclusive",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  },
+  {
+   "detector": "sequential_ui_e_process",
+   "null_id": "N6",
+   "null_label": "heavy-tailed t3, moment-matched, oracle",
+   "n": 1000,
+   "ticks": 200,
+   "alpha": 0.05,
+   "increment_estimator": {
+    "n": 1000,
+    "mean": 96066045.54620005,
+    "sd": 311186854.17419213,
+    "se": 9840592.37093123,
+    "lower95_one_sided": 79878271.09601818,
+    "upper95_one_sided": 112253819.99638192
+   },
+   "terminal_mean": {
+    "n": 1000,
+    "mean": 0.0000061069890041081005,
+    "sd": 0.000020364982144222826,
+    "se": 6.439972808440379e-7,
+    "lower95_one_sided": 0.000005047613477119658,
+    "upper95_one_sided": 0.000007166364531096543
+   },
+   "crossing_rate": 0,
+   "increment_verdict": "REFUTED",
+   "terminal_flag": "below 1 (uninformative)",
+   "mode": "live"
+  }
+ ]
+}

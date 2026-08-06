@@ -1,0 +1,39 @@
+{
+ "study": "contamination-part-a",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260804,
+ "reps": 200,
+ "ps": [
+  5,
+  11
+ ],
+ "ns": [
+  600,
+  10000
+ ],
+ "eps": [
+  0,
+  0.05,
+  0.1,
+  0.2
+ ],
+ "shapes": [
+  "shift",
+  "scatter"
+ ],
+ "variants": [
+  "V0",
+  "V3",
+  "MRCD"
+ ],
+ "sd": 0.05,
+ "rho_target": 0.3,
+ "shift_mult": 4,
+ "scatter_mult": 9,
+ "mcd_alpha": 0.75,
+ "engine_version": "0.6.6-pre",
+ "git_sha": "865e07c5c0a347d3dd9cf721dde727633606a50c",
+ "mode": "live",
+ "elapsed_s": 4535.013
+}

@@ -1,0 +1,46 @@
+{
+ "cells": [
+  {
+   "arm": "C1-healthy",
+   "shards": 120,
+   "ticks": 1400,
+   "false_alarm": 0.8166666666666667,
+   "increment_estimator": {
+    "n": 120,
+    "mean": 1.416999999999999,
+    "se": 0.021496726348388017,
+    "lower95_one_sided": 1.3816378851569007,
+    "upper95_one_sided": 1.4523621148430972
+   },
+   "verdict": "REFUTED"
+  },
+  {
+   "arm": "C2-heavyTails-df5",
+   "shards": 120,
+   "ticks": 1400,
+   "false_alarm": 0.85,
+   "increment_estimator": {
+    "n": 120,
+    "mean": 1.4686666666666652,
+    "se": 0.019523358606530265,
+    "lower95_one_sided": 1.436550741758923,
+    "upper95_one_sided": 1.5007825915744075
+   },
+   "verdict": "REFUTED"
+  },
+  {
+   "arm": "C3-no-nonstationarity",
+   "shards": 120,
+   "ticks": 1400,
+   "false_alarm": 0.825,
+   "increment_estimator": {
+    "n": 120,
+    "mean": 1.2393333333333325,
+    "se": 0.010314204758224685,
+    "lower95_one_sided": 1.222366466506053,
+    "upper95_one_sided": 1.256300200160612
+   },
+   "verdict": "REFUTED"
+  }
+ ]
+}

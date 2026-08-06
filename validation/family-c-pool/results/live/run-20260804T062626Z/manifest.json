@@ -1,0 +1,230 @@
+{
+ "study": "family-c-pool",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260803,
+ "n": 2000,
+ "ticks": 300,
+ "bundles": 10,
+ "baseline_n": 600,
+ "arms": [
+  {
+   "id": "A0",
+   "pool": 500,
+   "label": "shipped FAMILY_C_BETTING_BASELINE_POOL_SIZE"
+  },
+  {
+   "id": "A1a",
+   "pool": 2000,
+   "label": "pool ×4"
+  },
+  {
+   "id": "A1b",
+   "pool": 8000,
+   "label": "pool ×16"
+  },
+  {
+   "id": "A1c",
+   "pool": 32000,
+   "label": "pool ×64"
+  },
+  {
+   "id": "A2",
+   "pool": null,
+   "label": "exact closed-form mean embedding"
+  }
+ ],
+ "nulls": [
+  "HC-gauss-corr",
+  "HC-gauss-diag"
+ ],
+ "shared_modules_verified": [
+  "sequential-mmd",
+  "family-c-rff",
+  "conformal",
+  "family-c-betting-e-process",
+  "_family-c-betting-witness"
+ ],
+ "engine_version": "0.6.6-pre",
+ "git_sha": "0a11380a38ce5eabc84184cebcb073172bceb09e",
+ "mode": "live",
+ "elapsed_s": 56.237,
+ "bundle_meta": [
+  {
+   "arm": "A0",
+   "null_id": "HC-gauss-corr",
+   "pool": 500,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22548267663002325,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0,
+   "l2_norm": 0.7333216800378932,
+   "l2_epsilon_vs_exact": 0.026184966117882714
+  },
+  {
+   "arm": "A0",
+   "null_id": "HC-gauss-diag",
+   "pool": 500,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22785569846764026,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0,
+   "l2_norm": 0.7356833346369052,
+   "l2_epsilon_vs_exact": 0.0257431525311362
+  },
+  {
+   "arm": "A1a",
+   "null_id": "HC-gauss-corr",
+   "pool": 2000,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22548267663002325,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0.022056105523670946,
+   "l2_norm": 0.7300261223195682,
+   "l2_epsilon_vs_exact": 0.014619369137365154
+  },
+  {
+   "arm": "A1a",
+   "null_id": "HC-gauss-diag",
+   "pool": 2000,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22785569846764026,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0.02201831248372316,
+   "l2_norm": 0.7311759933378849,
+   "l2_epsilon_vs_exact": 0.01494168067702076
+  },
+  {
+   "arm": "A1b",
+   "null_id": "HC-gauss-corr",
+   "pool": 8000,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22548267663002325,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0.025084548862452795,
+   "l2_norm": 0.7332774141598389,
+   "l2_epsilon_vs_exact": 0.00901223841356355
+  },
+  {
+   "arm": "A1b",
+   "null_id": "HC-gauss-diag",
+   "pool": 8000,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22785569846764026,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0.025910666597184707,
+   "l2_norm": 0.73448731807985,
+   "l2_epsilon_vs_exact": 0.00916392952469265
+  },
+  {
+   "arm": "A1c",
+   "null_id": "HC-gauss-corr",
+   "pool": 32000,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22548267663002325,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0.025289087117498152,
+   "l2_norm": 0.7338176825795372,
+   "l2_epsilon_vs_exact": 0.004486080860222072
+  },
+  {
+   "arm": "A1c",
+   "null_id": "HC-gauss-diag",
+   "pool": 32000,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22785569846764026,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0.025696909126018266,
+   "l2_norm": 0.7351341877594879,
+   "l2_epsilon_vs_exact": 0.0040557806743601
+  },
+  {
+   "arm": "A2",
+   "null_id": "HC-gauss-corr",
+   "pool": null,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22548267663002325,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0.026184966117882714,
+   "l2_norm": 0.7340311840375927,
+   "l2_epsilon_vs_exact": 0
+  },
+  {
+   "arm": "A2",
+   "null_id": "HC-gauss-diag",
+   "pool": null,
+   "bundle": 0,
+   "rff_dim": 256,
+   "bandwidth": 0.22785569846764026,
+   "covariance_method": "mcd",
+   "l2_from_shipped": 0.0257431525311362,
+   "l2_norm": 0.7357090793918128,
+   "l2_epsilon_vs_exact": 0
+  }
+ ],
+ "scaling_fit": {
+  "HC-gauss-corr": {
+   "n": 4,
+   "points": [
+    {
+     "pool": 500,
+     "excess": 0.006839803868235128
+    },
+    {
+     "pool": 2000,
+     "excess": 0.008085622281667204
+    },
+    {
+     "pool": 8000,
+     "excess": 0.006986997717287169
+    },
+    {
+     "pool": 32000,
+     "excess": 0.006770785657927547
+    }
+   ],
+   "slope": -0.012729063194020002,
+   "se": 0.031471275577680695,
+   "ci95": [
+    -0.07441276332627417,
+    0.04895463693823416
+   ]
+  },
+  "HC-gauss-diag": {
+   "n": 4,
+   "points": [
+    {
+     "pool": 500,
+     "excess": 0.006560691159368748
+    },
+    {
+     "pool": 2000,
+     "excess": 0.008212216912481196
+    },
+    {
+     "pool": 8000,
+     "excess": 0.007058025993795347
+    },
+    {
+     "pool": 32000,
+     "excess": 0.006819596852783993
+    }
+   ],
+   "slope": -0.0025495525419426384,
+   "se": 0.038787111693665034,
+   "ci95": [
+    -0.07857229146152611,
+    0.07347318637764083
+   ]
+  }
+ }
+}

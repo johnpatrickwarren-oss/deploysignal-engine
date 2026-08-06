@@ -1,0 +1,39 @@
+{
+ "study": "shipped-path-part1",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260803,
+ "n": 2000,
+ "ticks": 300,
+ "bundles": 10,
+ "methods": [
+  "mcd",
+  "mrcd",
+  "ledoit_wolf"
+ ],
+ "baseline_ns": [
+  120,
+  600
+ ],
+ "alphas": [
+  0.05,
+  0.01
+ ],
+ "nulls": [
+  "HC-gauss-corr",
+  "HC-mix-corr",
+  "HC-mix-diag",
+  "HC-gauss-diag"
+ ],
+ "shared_modules_verified": [
+  "sequential-mmd",
+  "family-c-rff",
+  "conformal",
+  "family-c-betting-e-process",
+  "_family-c-betting-witness"
+ ],
+ "engine_version": "0.6.6-pre",
+ "git_sha": "8c7969df64d3e49f4267a6b228b5c56c8f0dd3f0",
+ "mode": "live",
+ "elapsed_s": 123.879
+}

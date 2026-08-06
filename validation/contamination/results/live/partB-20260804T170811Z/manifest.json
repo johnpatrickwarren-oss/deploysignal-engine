@@ -1,0 +1,36 @@
+{
+ "study": "contamination-part-b",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260803,
+ "n": 2000,
+ "ticks": 300,
+ "bundles": 10,
+ "baseline_n": 600,
+ "eps": [
+  0,
+  0.05,
+  0.1,
+  0.2
+ ],
+ "arms": [
+  "B0",
+  "B1",
+  "B2"
+ ],
+ "null_id": "HC-gauss-corr",
+ "shift_mult": 4,
+ "fault_onset": 100,
+ "fault_inflate": 2,
+ "shared_modules_verified": [
+  "sequential-mmd",
+  "family-c-rff",
+  "conformal",
+  "family-c-betting-e-process",
+  "_family-c-betting-witness"
+ ],
+ "engine_version": "0.6.6-pre",
+ "git_sha": "f7b10d9f20f654f2fe2c3d9be18e6ec968d0da42",
+ "mode": "live",
+ "elapsed_s": 125.071
+}

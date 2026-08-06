@@ -1,0 +1,8 @@
+{
+  "control": "power",
+  "detector": "universal_inference",
+  "shift_sigma": 3,
+  "rate_e_ge_20": 0.70155,
+  "verdict": "pass",
+  "mode": "sim"
+}

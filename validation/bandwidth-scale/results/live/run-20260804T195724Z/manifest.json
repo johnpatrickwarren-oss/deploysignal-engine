@@ -1,0 +1,42 @@
+{
+ "study": "bandwidth-scale",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260803,
+ "n": 1000,
+ "ticks": 300,
+ "bundles": 5,
+ "baseline_n": 600,
+ "ks": [
+  0.7,
+  0.78,
+  0.9,
+  1,
+  1.15
+ ],
+ "ms": [
+  0.5,
+  0.71,
+  1,
+  1.41,
+  2
+ ],
+ "pool_size": 500,
+ "nulls": [
+  "HC-gauss-corr",
+  "HC-mix-corr",
+  "HC-mix-diag",
+  "HC-gauss-diag"
+ ],
+ "shared_modules_verified": [
+  "sequential-mmd",
+  "family-c-rff",
+  "conformal",
+  "family-c-betting-e-process",
+  "_family-c-betting-witness"
+ ],
+ "engine_version": "0.6.6-pre",
+ "git_sha": "60a218f4728c9d6b60da061349cabcb62224f819",
+ "mode": "live",
+ "elapsed_s": 193.839
+}

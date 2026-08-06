@@ -1,0 +1,32 @@
+{
+ "study": "mmd-retune",
+ "prereg": "../PREREGISTRATION.md",
+ "ms": [
+  0.1,
+  0.15,
+  0.22,
+  0.32,
+  0.46,
+  0.68,
+  1
+ ],
+ "node": "v25.9.0",
+ "seed": 20260803,
+ "n": 1000,
+ "ticks": 300,
+ "bundles": 5,
+ "baseline_n": 600,
+ "pool_size": 500,
+ "fault_onset": 100,
+ "shared_modules_verified": [
+  "sequential-mmd",
+  "family-c-rff",
+  "conformal",
+  "family-c-betting-e-process",
+  "_family-c-betting-witness"
+ ],
+ "engine_version": "0.6.6-pre",
+ "git_sha": "be3d48515952e2b18d340dfd0210bf7c2e02de8a",
+ "mode": "live",
+ "elapsed_s": 106.82
+}

@@ -1,0 +1,11 @@
+{
+ "study": "clustersynth-ui",
+ "prereg": "../CLUSTERSYNTH-UI-PREREG.md",
+ "alpha": 0.05,
+ "cal": 300,
+ "test": 100,
+ "shards": 120,
+ "git_sha": "7549b821df8d3a2d47e1289414cb117f32e7aaa0",
+ "mode": "live",
+ "elapsed_s": 6.941
+}

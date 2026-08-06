@@ -1,0 +1,18 @@
+[
+  {
+    "detector": "family_C_mmd_betting_e_process",
+    "alternative": "variance inflation ×2 at tick 100, no mean shift",
+    "alpha": 0.05,
+    "n": 500,
+    "detection_rate": 1,
+    "verdict": "pass"
+  },
+  {
+    "detector": "family_E_conformal_weighted_e_value",
+    "alternative": "mean shift +0.15 (3σ per coord) at tick 100",
+    "alpha": 0.05,
+    "n": 500,
+    "detection_rate": 1,
+    "verdict": "pass"
+  }
+]

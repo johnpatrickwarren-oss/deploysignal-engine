@@ -1,0 +1,41 @@
+{
+ "study": "detector-audit-power",
+ "prereg": "../POWER-PREREGISTRATION.md",
+ "closes": "WORKLIST C29 (sequential detectors)",
+ "node": "v25.9.0",
+ "engine_pin": "0.6.6-pre",
+ "git_sha": "3e85327f2bc05d5eafefba520d2d5ea63c19df52",
+ "substrate": "h0-battery N1-N7 (nulls.mjs + detectors.mjs)",
+ "substrate_sha256": "4b8042e57aa735bf2b4a27edb2c5d39bde6a0b727fe368150573a797788d73c3",
+ "seed_scheme": "SEED + 7919*i + (null.id.length*104729 + det.id.length + round(shift*1000))",
+ "seed": 20260805,
+ "n": 60,
+ "ticks": 300,
+ "onset": 100,
+ "alpha": 0.05,
+ "shifts": [
+  3,
+  0.75
+ ],
+ "detectors": [
+  "family_A_betting_e_process",
+  "family_A_mixture_supermartingale",
+  "family_D_spectral_e_detector"
+ ],
+ "nulls": [
+  "N1",
+  "N2-m30",
+  "N2-m100",
+  "N2-m500",
+  "N3-p03",
+  "N3-p06",
+  "N3-p09",
+  "N4-p06-m100",
+  "N4-p09-m100",
+  "N5",
+  "N6",
+  "N7"
+ ],
+ "saturation_not_executable": false,
+ "elapsed_s": 0.113
+}

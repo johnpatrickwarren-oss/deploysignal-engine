@@ -1,0 +1,19 @@
+{
+  "detector": "universal_inference",
+  "null_id": "N4-p09",
+  "m": 100,
+  "alpha": 0.01,
+  "n": 2000,
+  "exceedance": 0,
+  "lower_95": 0,
+  "verdict": "not-refuted",
+  "mean_e": 0.15999055223195602,
+  "p_e_ge_10": 0.001,
+  "p99_e": 1.924407280206712,
+  "nan_count": 0,
+  "power_this_cell": 0.0275,
+  "power_verdict": "INERT",
+  "mode": "sim",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "4b31a1206d85a6a36645f4b5715ee2efa55055ee"
+}

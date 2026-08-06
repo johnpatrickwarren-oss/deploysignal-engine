@@ -75,6 +75,11 @@ export const SAFE_T_ENVELOPE = Object.freeze({
   variance: 'stable' as const,           // equal variance cal/test, now INTEGRATED OUT (right-Haar 1/σ)
   validUnderEstimatedBaseline: true as const,
   minCalibration: 3,                     // math minimum; with ESTIMATED φ the e-BH floor is ~100 (φ-driven)
+  // Measured 2026-08-05 (knowledge/stats/power-per-cell-2026-08-05): exceedance against α=0.05 runs
+  // 0.0020 at φ=0.6, 0.0090 at 0.9, 0.0355 at 0.95, and 0.1420 at 0.99. Validity breaks between 0.95
+  // and 0.99, so the 'ar1-whitened' label understated the regime rather than describing it. Power is
+  // NOT the issue here — it stays 0.66–1.00 across the sweep.
+  maxPhiValid: 0.95,
   notes: 'Right-Haar / GROW safe two-sample t-test e-value: the VARIANCE is integrated out under the '
     + 'improper 1/σ prior, so E[e|H0] = 1 exactly and uniform over σ for iid/known-φ residuals (GROW-optimal '
     + 'among all e-statistics for the scale-invariant location-scale model). With the DEFAULT estimated AR(1) '

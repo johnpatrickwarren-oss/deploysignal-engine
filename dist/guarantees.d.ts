@@ -28,6 +28,7 @@ export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{
         variance: "stable";
         validUnderEstimatedBaseline: true;
         minCalibration: 3;
+        maxPhiValid: 0.95;
         notes: string;
     }>;
     universal_inference_e_value: Readonly<{
@@ -37,6 +38,7 @@ export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{
         variance: "unknown-mle";
         validUnderEstimatedBaseline: true;
         minCalibration: 6;
+        maxPhiPowered: 0.8;
         notes: string;
     }>;
     sequential_ui_e_process: Readonly<{

@@ -7,6 +7,7 @@ export declare const UI_MEAN_SHIFT_ENVELOPE: Readonly<{
     variance: "unknown-mle";
     validUnderEstimatedBaseline: true;
     minCalibration: 6;
+    maxPhiPowered: 0.8;
     notes: string;
 }>;
 /** Universal-inference (split likelihood-ratio) e-value for a MEAN shift between a calibration window and

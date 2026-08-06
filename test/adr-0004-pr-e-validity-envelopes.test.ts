@@ -58,14 +58,20 @@ test('gate: assertValidForFdrPath throws for an unasserted plug-in e-value, pass
   // 2026-07-02 correction: the BF is no longer auto-admissible (E[BF|H0] ≈ 1.155); the safe-t /
   // UI envelopes are the valid-under-estimated-baseline objects now.
   assert.throws(() => assertValidForFdrPath(NUISANCE_ROBUST_BF_ENVELOPE), /INVALID/);
-  assert.doesNotThrow(() => assertValidForFdrPath(SAFE_T_ENVELOPE));
+  // 2026-08-05: safe-t gained maxPhiValid = 0.95, so the gate now also asks about φ. The
+  // acknowledgement is explicit rather than a default — see knowledge/stats/power-per-cell-2026-08-05.
+  assert.doesNotThrow(() => assertValidForFdrPath(SAFE_T_ENVELOPE, { phiUnmeasuredAccepted: true }));
+  assert.throws(() => assertValidForFdrPath(SAFE_T_ENVELOPE, { observedPhi: 0.99 }), /φ=0.99/);
 });
 
 // ── The assembled fleet guarantee conditions. ─────────────────────────────────────────────────────
 test('guarantee: FP/FDR is by-construction only when ALL conditions hold (valid e-value, minority faults, scalar, coupled)', () => {
   const base = {
     // 2026-07-02: safe-t replaces the corrected BF as the valid-under-estimated-baseline envelope.
+    // 2026-08-05: and it now carries maxPhiValid = 0.95, so the fleet guarantee must STATE a φ.
+    // A guarantee assembled without one no longer claims FDR by construction — which is the point.
     eValueEnvelope: SAFE_T_ENVELOPE,
+    assertions: { observedPhi: 0.3 },
     faultFraction: 0.1,
     genuineCoupling: true,
     scalarCommonMode: true,

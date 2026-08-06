@@ -26,6 +26,11 @@ export type AutocorrelationKind =
   | 'iid'
   | 'ar1-whitened'
   | 'ar1-any-phi';            // valid for any φ without whitening (UI / sequential UI)
+//
+// 2026-08-05: 'ar1-any-phi' is a claim about VALIDITY only, and for safe-t it was measured FALSE at
+// the top of the range — exceedance 0.1420 against α=0.05 at φ=0.99
+// (knowledge/stats/power-per-cell-2026-08-05). Two numeric bounds below make the regime explicit
+// rather than leaving it to a union member's name.
 
 export type NullKind = 'mean-shift';
 
@@ -52,6 +57,21 @@ export interface ValidityEnvelope {
   validUnderEstimatedBaseline: boolean;
   /** Minimum calibration length for the by-construction validity to hold, if the detector has one. */
   minCalibration?: number;
+  /** Largest AR(1) φ at which E[e|H0] ≤ 1 still holds. Above it the detector is WRONG, not merely
+   *  weak, and `assertValidForFdrPath` refuses. Absent ⇒ no measured validity bound in φ.
+   *
+   *  safe-t: 0.95. Measured exceedance 0.0355 at φ=0.95 and 0.1420 at φ=0.99 against α=0.05
+   *  (knowledge/stats/power-per-cell-2026-08-05). */
+  maxPhiValid?: number;
+  /** Largest AR(1) φ at which the detector retains usable power. Above it it is VALID and INERT —
+   *  it stops firing rather than starting to lie — so this does NOT gate the FDR path. It is
+   *  reported, because a null battery cannot distinguish an inert detector from a working one
+   *  (knowledge/WORKLIST C29).
+   *
+   *  universal inference: 0.8. Power 0.6270 at φ=0.6, 0.1810 at 0.8, 0.0270 at 0.9, 0.0000 at 0.99.
+   *  The decay is smooth, which is an identifiability limit rather than a defect: as φ→1 an AR(1)
+   *  null absorbs a sustained mean shift. */
+  maxPhiPowered?: number;
   /** Free-text regime detail (the conditions, the failure mode, the valid-only-when). */
   notes?: string;
 }
@@ -103,6 +123,15 @@ export interface FdrPathAssertions {
   /** The calibration window vastly exceeds the test horizon (m≫n), where plug-in estimation error is
    *  negligible. */
   mMuchGreaterThanN?: boolean;
+  /** Observed or estimated AR(1) φ of the series this e-value was computed on. Checked against
+   *  `maxPhiValid`. Omitting it is NOT treated as φ=0 — an envelope carrying a φ bound refuses when
+   *  φ is unknown, because "we did not measure it" is not evidence that it is small. */
+  observedPhi?: number;
+  /** Explicit acknowledgement that φ was not measured and the caller is proceeding anyway. Same
+   *  shape as `trueBaseline` / `mMuchGreaterThanN`: an assertion the caller stands behind, greppable
+   *  at every site that makes it, rather than a silent default. Use it only where the regime is
+   *  known to be far from a unit root by other means. */
+  phiUnmeasuredAccepted?: boolean;
 }
 
 /** Is an e-value with this envelope admissible to the FDR (e-BH) path? A valid-under-estimated-baseline
@@ -111,13 +140,33 @@ export interface FdrPathAssertions {
  *  asserts its validity regime (a true baseline, or m≫n) — otherwise E[e|H0] > 1 and feeding it to
  *  e-BH silently breaks the FDR guarantee (Tessera ADR 0008/0014; BF: ≈1.155 at every cal length). */
 export function isValidForFdrPath(env: ValidityEnvelope, assertions: FdrPathAssertions = {}): boolean {
-  if (env.validUnderEstimatedBaseline) return true;
-  return Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN);
+  return phiAdmissible(env, assertions)
+    && (env.validUnderEstimatedBaseline
+      || Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN));
+}
+
+/** φ side of the gate, separated so the failure can be reported distinctly from the baseline one.
+ *  An envelope with no `maxPhiValid` is unconstrained in φ. One WITH a bound refuses on an unknown
+ *  φ: silence is not evidence. */
+export function phiAdmissible(env: ValidityEnvelope, assertions: FdrPathAssertions = {}): boolean {
+  if (env.maxPhiValid === undefined) return true;
+  if (assertions.observedPhi === undefined) return Boolean(assertions.phiUnmeasuredAccepted);
+  return Math.abs(assertions.observedPhi) <= env.maxPhiValid;
 }
 
 /** Throw if an e-value with this envelope would be fed to the FDR path OUTSIDE its validity regime.
  *  Call this at the e-BH boundary so an invalid plug-in e-value cannot silently degrade FDR control. */
 export function assertValidForFdrPath(env: ValidityEnvelope, assertions: FdrPathAssertions = {}): void {
+  if (!phiAdmissible(env, assertions)) {
+    throw new Error(
+      `validity-envelope: this e-value holds only for |φ| ≤ ${env.maxPhiValid}; got `
+      + `${assertions.observedPhi === undefined ? 'an UNMEASURED φ' : `φ=${assertions.observedPhi}`}. `
+      + 'Above that bound E[e|H0] > 1 and the FDR guarantee does not hold — measured exceedance '
+      + '0.1420 against α=0.05 at φ=0.99. Supply { observedPhi } within the bound, assert '
+      + '{ phiUnmeasuredAccepted } if the regime is known far from a unit root by other means, or '
+      + 'route this regime to a detector whose envelope covers it. None does above 0.95.',
+    );
+  }
   if (!isValidForFdrPath(env, assertions)) {
     throw new Error(
       `validity-envelope: a '${env.baseline}' e-value is INVALID under an estimated baseline `

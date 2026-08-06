@@ -1,0 +1,11 @@
+{
+ "study": "shape-clustersynth",
+ "prereg": "../CLUSTERSYNTH-PREREG.md",
+ "window": 30,
+ "alpha": 0.05,
+ "baseline": 600,
+ "shards": 120,
+ "git_sha": "57af4c608f91e63867fbb11fac7b702ad6b1e3b0",
+ "mode": "live",
+ "elapsed_s": 7.583
+}

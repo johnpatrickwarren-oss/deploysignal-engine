@@ -1,0 +1,31 @@
+{
+ "study": "detector-audit-sequential",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260804,
+ "n": 100,
+ "ticks": 100,
+ "alpha": 0.05,
+ "detectors": [
+  "family_A_betting_e_process",
+  "family_A_mixture_supermartingale",
+  "family_D_spectral_e_detector"
+ ],
+ "nulls": [
+  "N1",
+  "N2-m30",
+  "N2-m100",
+  "N2-m500",
+  "N3-p03",
+  "N3-p06",
+  "N3-p09",
+  "N4-p06-m100",
+  "N4-p09-m100",
+  "N5",
+  "N6",
+  "N7"
+ ],
+ "git_sha": "1eb79e8ae5eaeaad52b2ff7b4366d672fba77124",
+ "mode": "sim",
+ "elapsed_s": 0.111
+}

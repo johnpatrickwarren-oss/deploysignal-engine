@@ -1,0 +1,20 @@
+m      log-wealth at T=300 (mean over 60 traj):  healthy      fault      delta
+0.05       -0.0021     -0.0014     0.0007   (threshold=3.00)
+0.10        0.0057      0.0026    -0.0031   (threshold=3.00)
+0.15       -0.0048     -0.0088    -0.0040   (threshold=3.00)
+0.22        0.0063     -0.0004    -0.0067   (threshold=3.00)
+0.32        0.0979      0.1197     0.0217   (threshold=3.00)
+0.46        0.4070      0.4269     0.0199   (threshold=3.00)
+0.68        0.7523      0.7144    -0.0379   (threshold=3.00)
+1.00        0.6793      0.6431    -0.0361   (threshold=3.00)
+1.50        0.3684      0.3603    -0.0080   (threshold=3.00)
+
+EXPLORATORY DIAGNOSTIC, not the registered endpoint. Run because the registered
+crossing-rate endpoint is zero everywhere and a binary rate cannot distinguish
+"no signal" from "signal below threshold". 60 trajectories, one bundle.
+
+Reading: the witness DOES accumulate wealth (0.75 log-wealth at m=0.68), but the
+wealth is the same with and without the fault. The fault-minus-healthy delta stays
+within [-0.038, +0.022] against a crossing threshold of 3.00, across a 30x
+bandwidth range. So the wealth it accumulates is scale-mismatch drift, not
+detection.

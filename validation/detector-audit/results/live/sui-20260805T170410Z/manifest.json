@@ -1,0 +1,12 @@
+{
+ "study": "detector-audit-sequential-ui",
+ "prereg": "../PREREGISTRATION.md + WORKLIST C24",
+ "node": "v25.9.0",
+ "seed": 20260805,
+ "n": 1000,
+ "ticks": 200,
+ "alpha": 0.05,
+ "git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+ "mode": "live",
+ "elapsed_s": 2.742
+}

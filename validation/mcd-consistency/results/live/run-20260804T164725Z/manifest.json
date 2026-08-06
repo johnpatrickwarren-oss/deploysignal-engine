@@ -1,0 +1,25 @@
+{
+ "study": "mcd-consistency",
+ "prereg": "../PREREGISTRATION.md",
+ "node": "v25.9.0",
+ "seed": 20260804,
+ "reps": 200,
+ "ps": [
+  3,
+  5,
+  8,
+  11,
+  15
+ ],
+ "ns": [
+  600,
+  10000
+ ],
+ "sd": 0.05,
+ "rho": 0.3,
+ "mcd_alpha": 0.75,
+ "parity_max_abs_delta": 0,
+ "engine_version": "0.6.6-pre",
+ "git_sha": "3caa1bc937423f41f45b866c21fbeca73528e62b",
+ "mode": "live"
+}

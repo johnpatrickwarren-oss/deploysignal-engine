@@ -32,6 +32,23 @@ test('mean: a zero component pulls the mean down correctly', () => {
   assert.ok(Math.abs(got - 2) < 1e-9, `expected ~2, got ${got}`);
 });
 
+// Regression: the log/exp round trip through combineAverage degenerates when EVERY component is
+// exactly 0 (Math.log(0) = -Infinity for all inputs; the max-shift logSumExp then computes
+// exp(-Infinity - -Infinity) = exp(NaN) = NaN). Zero is a legal e-value and the mean of all-zeros
+// is 0, not NaN.
+test('mean: a single 0 component is 0 (not NaN)', () => {
+  assert.equal(groupAverageEValue([0]), 0);
+});
+
+test('mean: all-zero components average to 0 (not NaN)', () => {
+  assert.equal(groupAverageEValue([0, 0]), 0);
+});
+
+test('mean: a mixed [0, 4] still averages to 2 (regression guard alongside the all-zero fix)', () => {
+  const got = groupAverageEValue([0, 4]);
+  assert.ok(Math.abs(got - 2) < 1e-9, `expected ~2, got ${got}`);
+});
+
 test('guards: throws on empty input', () => {
   assert.throws(() => groupAverageEValue([]), Error);
 });

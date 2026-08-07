@@ -54,6 +54,13 @@ function groupAverageEValue(eValues) {
             throw new Error(`groupAverageEValue: every component must be a nonnegative number (not NaN); got ${e}`);
         }
     }
+    // Special-case all-zero input. Zero is a legal e-value (nonnegative), and the arithmetic mean of
+    // all-zeros is 0 -- but the log-space delegation below cannot represent it: Math.log(0) =
+    // -Infinity for every component, and combineAverage's max-shift logSumExp then computes
+    // exp(-Infinity - (-Infinity)) = exp(NaN) = NaN. Short-circuit before that degenerates.
+    if (eValues.every((e) => e === 0)) {
+        return 0;
+    }
     const logEValues = eValues.map((e) => Math.log(e));
     const { log_fleet_e } = (0, combine_1.combineAverage)(logEValues);
     return Math.exp(log_fleet_e);

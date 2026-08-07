@@ -50,3 +50,12 @@ test('guards apply: non-finite coverage cell is excluded, not counted', () => {
   const cov = coverageFor(card, [pcell({ non_finite_wealth: 12 })]);
   assert.equal(cov.K1.status, 'NO_EVIDENCE');
 });
+
+test('a guard-passing canonical cell with no finite power rate is excluded, named, and does not silently survive', () => {
+  const cov = coverageFor(card, [pcell({ detection_rate: null, rate_e_ge_20: undefined })]);
+  assert.equal(cov.K1.status, 'NO_EVIDENCE');
+  assert.equal(cov.K1.cells.length, 0);
+  assert.equal(cov.K1.excluded.length, 1);
+  assert.match(cov.K1.excluded[0].reason, /^no finite power rate recorded/);
+  assert.equal(cov.K1.excluded[0].suppressed_verdict, 'POWERED');
+});

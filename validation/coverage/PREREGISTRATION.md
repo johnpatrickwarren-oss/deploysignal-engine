@@ -281,3 +281,275 @@ authority page states. It does not build or register the named-not-built candida
 e-process on disjoint-window periodogram ordinates; K6's empirical-reference two-sample betting
 e-process); those remain scoped cards, not batteries, under this document. It registers only the
 six classes' injection batteries against the five detectors in section 7.
+
+## Amendment v1.1 — 2026-08-07, before any run
+
+Registered before any battery run under this study (no run exists at the time of this amendment).
+Sections 1–14 above stay intact; this amendment adds and, where stated, supersedes. Every
+supersession is named explicitly against the section it overrides. This amendment closes a prereg
+review verdicted NEEDS-AMENDMENT-BEFORE-RUN; each numbered item below answers one review finding.
+
+### A1. Healthy arms for the two new detectors (Critical 1)
+
+**Adds to §7; does not supersede.** `group_average_e_value` and `family_E_conformal_heldout` are
+class `terminal_e_value` (Task 6/7 card interfaces). Their own S2/S3 evidence — independent of the
+fault-class cells in §6's table — is registered here so their cards can reach S2/S3 through the
+standard pipeline (`isValidityCell`/`isPowerCell`, `validation/certification/lib/score.mjs:11-16`)
+rather than only ever carrying fault-class cells.
+
+**`group_average_e_value`, cell index 30, `CELL_SEED = 20260837`:**
+- *Healthy (S2) arm.* K=10 independent iid-Gaussian series (K matches K2's canonical K), no
+  injection. Series `k` of trajectory `i` seeded `seed(i) + 104729*k` (the per-series formula
+  registered in A5), `seed(i) = CELL_SEED + 7919*i`, `i = 0..1999`. Per trajectory: 10 per-series
+  terminal safe-t e-values over the §5 cal/test split (`{start:0,len:100}`/`{start:100,len:200}`),
+  arithmetic-meaned into one group e-value. Cell carries this class's own instruments
+  (`CLASS_INSTRUMENTS.terminal_e_value`, `constants.mjs:11`): `exceedance = k/n` where `k` is the
+  count with `e >= 1/alpha`, and `mean_e` = the mean group e-value across the N=2000 trajectories —
+  same two fields `run.mjs:101-104,113` computes, same names. `verdict`: `lower95(k,n) > alpha ?
+  'FAIL' : 'not-refuted'`, mirroring `run.mjs:115` exactly (the `VERDICT_MAP`,
+  `score.mjs:28`, reads either token).
+- *Power (S3) arm, `shift_sigma: 3`.* Same 10 series/seeds, with a constant `+3` (raw units,
+  sigma=1) added to indices `[100,300)` of every one of the 10 series — `injectUnison` at `eps=3`
+  (`inject.mjs:32-34`), i.e. the certification's registered shift (`run.mjs:89-90`'s
+  `CONTROL_power` construction: "same series with a 3-sigma shift in the test window") applied in
+  unison across all K components rather than to a single series. `detection_rate` = fraction of
+  N=2000 trajectories with the resulting group e-value `>= 1/alpha`; `verdict`:
+  `detection_rate >= 0.50 ? 'POWERED' : 'INERT'` (the study's own token, §Fallback/§9 vocabulary,
+  extended in A3).
+
+**`family_E_conformal_heldout`, cell index 31, `CELL_SEED = 20260838`:**
+- *Healthy (S2) arm.* Single iid-Gaussian series, `seed(i) = CELL_SEED + 7919*i`, `i = 0..1999`, no
+  injection, 1-D covariance (A2). `exceedance`/`mean_e`/`verdict` computed identically to the group-
+  average arm above, over the wealth process's terminal read (fires iff `M_T >= 1/alpha` anywhere
+  in the post-onset window, per A2's firing rule — for the healthy arm this is a pure false-alarm
+  measurement).
+- *Power (S3) arm, `shift_sigma: 3`.* Same series + `injectStep(delta=3)` (`inject.mjs:27-29`) —
+  the certification's registered sustained-step shift, `run.mjs:89-90`'s convention — **not** the
+  K4 battery's own point injection; this arm tests the hedged-indicator construction against an
+  ordinary sustained step as a basic sanity/power check independent of the point-outlier class it
+  is built for. `detection_rate`/`verdict` as above.
+- Held-out calibration for this arm's evaluator continues the same stream as the K4 held-out cells:
+  `HELDOUT_SEED = CELL_SEED + 500000 = 20261338`, `n=10000`, `seed(j) = HELDOUT_SEED + 7919*j`,
+  drawn from the healthy null (no injection) — per A7's tier finding, T1.
+
+### A2. K4 read, interface, and derived prediction (Critical 2)
+
+**Supersedes §13's K4 entry's *Expected/Falsifier* line for this battery's own construction; §13's
+text stays as the ratified page's original wording.**
+
+`family_E_conformal_heldout` is a per-tick wealth **process**, not a terminal read in the sense of
+§5's single cal/test split — corrected here. Interface, cited precisely
+(`detectors/conformal.ts:414-418,424-447,454-462`; state shape `types/families/e.ts:118-122`):
+
+```
+state = { M: 1, n: 0, alphaConsumed: 0 }                      // freshConformalEValueState, :416-418
+s_t = sqrt(x_t^T Σ^-1 x_t)                                     // live Mahalanobis distance, :428
+indicator = (den_raw < alpha_E * total_weight) ? 1 : 0         // rank against held-out calibration, :430-433
+e_t = 1 + indicator − alpha_E                                  // :434
+      indicator=0: e_t = 1 − alpha_E   (≈0.95 at alpha_E=0.05)
+      indicator=1: e_t = 2 − alpha_E   (≈1.95 at alpha_E=0.05)
+M_t = M_{t-1} * e_t                                             // :437
+fire iff M_t >= 1/alpha_E                                       // :438
+Ville: sup_t P(M_t >= 1/alpha_E | H0) <= alpha_E                // :447
+```
+
+This battery's K4 usage is **1-D**: `x_t = [v_t]` (a single scalar per tick, the injected series'
+own value) and `Σ = [[1]]` (unit variance, matching §3's `sigma=1`), so `s_t = |v_t|` exactly — a
+1×1 special case of the general multivariate `covariance: number[][]` parameter
+(`conformal.ts:457`). `alpha_E` is set to this battery's own registered `alpha = 0.05` (§3), not
+the module's own `DEFAULT_ALPHA_E = 1e-4` default.
+
+**Derived prediction, registered before any run.** `injectPoint` (`inject.mjs:44-46`) touches
+exactly one tick, `t === at`. Every other tick, pre- and post-onset, is an exact null draw. Let
+`M_{at-1}` be the wealth accumulated over the pre-injection null-only ticks: `E[M_{at-1}] = 1`
+exactly (pure H0 process), so by Markov/Ville, `P(M_{at-1} >= c) <= 1/c` for any `c`. At the single
+injected tick, wealth can multiply by **at most `2 - alpha_E ≈ 1.95`** — the indicator is binary,
+so this ceiling holds regardless of the injection's magnitude (3σ, 5σ, or 8σ): a larger point only
+raises `P(indicator=1)` at that one tick, it does not raise the multiplier past 1.95. This is the
+K4 severity grid's **zero-resolution property**, registered here: the grid can move the *probability*
+of firing at the injected tick but cannot move the *size* of the wealth jump if it fires. For
+`M_at` to reach the crossing threshold `1/alpha_E = 20`, `M_{at-1}` must be `>= 20/1.95 ≈ 10.26`,
+so `P(M_{at-1} >= 10.26) <= 1/10.26 ≈ 0.097`. Ticks after `at` are again pure null (the injection is
+a single point), contributing no further systematic crossing probability beyond the Ville bound a
+pure-null process already carries. **Registered prediction: `family_E_conformal_heldout` reads
+NOT_POWERED at every K4 severity, canonical included — derived ceiling ≈ 0.10, an order below
+`COVERAGE_FLOOR = 0.50`.** Falsifier: any K4 severity's cell (canonical or grid) reads a detection
+rate materially above ≈0.10 — that would mean either a construction/configuration defect or a gap
+in this derivation, and is reported as a surprise, not tuned away.
+
+This registered prediction **disagrees with** the ratified page's "*Expected YES at T2, real tier
+deferred*" for K4 (`~/concord/knowledge/methodology/pages/fault-class-coverage-matrix.md`, K4
+paragraph) — that expectation was written before this single-point wealth-bound was derived, and
+concerned the construction's general validity, not its power against a single-tick injection
+specifically. Per this document's own precedence rule (top of file), a disagreement between this
+document and the ratified page is **reported, not silently resolved**: flagged here for wiki
+write-back at Task 12, not corrected in the wiki by this document.
+
+The crossing endpoint itself (detection = the process ever satisfies `M_t >= 1/alpha_E` within the
+post-onset window) **stays** — the harder reading, unchanged from §5. Additionally, record as a
+**descriptive secondary, carrying no verdict**: the indicator-flag rate at the injected tick alone
+(`indicator=1` at `t=at`, independent of whether the running `M_t` ever crosses) — this isolates
+"did the tail-rank fire" from "did accumulated wealth cross," which the derivation above shows can
+diverge sharply.
+
+**Named-not-built K4 candidate, one sentence, registered, built in a later phase:** a per-point
+likelihood-ratio e-value with an unbounded increment (unlike the hedged-indicator's fixed ≈1.95×
+per-tick ceiling, a likelihood-ratio construction's increment can scale with the injected point's
+magnitude, which is what this derivation shows the current candidate structurally cannot do).
+
+### A3. Fallbacks completed (Critical 3)
+
+**Extends §9; does not contradict it.**
+
+(a) **Non-finite condition.** Any cell — fault-class or the A1 S2/S3 arms — with `non_finite_wealth
+> 0` carries that count in the cell. `applyGuards` (`validation/certification/lib/guards.mjs:12`,
+`if (cell.non_finite_wealth > 0) return { status: 'NON_FINITE', ... }`) governs: such a cell is
+excluded from scoring, named, counting toward neither COVERED nor NOT_POWERED — the same
+suppression rule §8 already applies to guard-excluded cells. **Field-name correction, registered
+here:** the compressed review language named this field `non_finite_count`; the actual field
+`applyGuards` reads is `non_finite_wealth` (`guards.mjs:12`, and the same name in
+`run-power.mjs`'s own power cells). This document registers `non_finite_wealth` as the emitted
+field name — using any other name would silently defeat the very guard this amendment registers,
+since `applyGuards` pattern-matches on the literal field.
+
+(b) **`NOT-EXECUTABLE`** joins the verdict vocabulary a cell's `verdict` field may carry, alongside
+`POWERED`/`INERT` (§9's existing fallback), with a `not_executable_reason` field naming the cause
+— mirroring `run-power.mjs:102-106`'s `verdict`/`not_executable_reason` pair exactly. Applies both
+to fault-class cells (§9's per-`(detector,cell)` scoping) and to the A1 S2/S3 arms.
+
+(c) **Vacuity.** A cell whose detector never produced a single finite e-value across its N=2000
+trajectories is `NOT-EXECUTABLE`, not `0.00` — a `0.00` detection rate asserts the detector ran and
+found nothing; a cell with zero finite reads asserts nothing, and reporting it as `0.00` would be a
+silent, false claim of measurement. The **denominator for `detection_rate` stays N=2000** even when
+some trajectories are excluded for non-finiteness (not the count of finite reads) — deliberately
+the stricter of the two choices, consistent with §10's harder-to-pass reading.
+
+### A4. Decision rule attribution and mechanical falsifiers (Important 2, 4)
+
+**Corrects §8's attribution; the floor value and canonical-only decision in §8 stand.**
+
+§8 states the USE-gate lives in `coverageFor`. It does not: `coverageFor` (`score.mjs`, Task 1)
+computes a class's `status` (`COVERED`/`NOT_POWERED`/`NO_EVIDENCE`) from the power cells alone,
+independent of the card's overall verdict. The USE-gate — "a class reads YES only if a card whose
+**overall verdict is USE** also has that class COVERED" — lives in `verdict.mjs`'s aggregation,
+specifically `classRow`'s filter `emitted.filter(o => o.overall.verdict === 'USE' &&
+o.coverage[classId].status === 'COVERED')` (`validation/certification/verdict.mjs:193-207`). This
+document's decision rule is therefore: **`coverageFor` decides COVERED/NOT_POWERED/NO_EVIDENCE
+per card from the canonical cell against `COVERAGE_FLOOR`; `verdict.mjs`'s aggregation additionally
+requires that card's overall verdict be USE before a class's coverage counts toward a portfolio
+YES.** Both gates apply; neither alone is "the" gate.
+
+Every class falsifier, restated in mechanical, canonical-cell-only form (grid and `-ar1` cells
+report context, never decide — §8, §10.1, reaffirmed here):
+
+- K1: falsified iff canonical-cell detection rate `< 0.50`.
+- K2: falsified iff `group_average_e_value`'s canonical-cell (idx 7) detection rate `< 0.50` **and**
+  no other detector's canonical K2 cell reads `>= 0.50`.
+- K3: falsified (i.e. the registered NO is wrong) iff any USE detector's canonical-cell (idx 15)
+  detection rate is `>= 0.50`.
+- K4: falsified iff any K4 severity cell's detection rate is materially above the A2-derived ≈0.10
+  ceiling (supersedes the ratified page's generic K4 falsifier for this battery, per A2).
+- K5: falsified iff canonical-cell (idx 23) detection rate `< 0.50` for **both** `safe_t` and
+  `universal_inference`.
+- K6: falsified (i.e. the registered NO is wrong) iff any USE detector's canonical-cell (idx 27)
+  detection rate is `>= 0.50`.
+
+### A5. Seeds completed (Important 5)
+
+**Extends §6; the seed table and formula in §6 stand.**
+
+- **K2 matrix streams.** Series `k` of trajectory `i`, for any K2 cell (fault-class idx 4–11 or the
+  A1 general arm, idx 30): `seed(i, k) = seed(i) + 104729*k = CELL_SEED + 7919*i + 104729*k`. The
+  constant `104729` reuses the prime already load-bearing in `run-power.mjs`'s own per-cell salt
+  (`spec.id.length * 104729 + ...`, `run-power.mjs:67`) rather than introducing a new one.
+- **K6 stream consumption, pinned from `inject.mjs:60-70` (`injectShapeMix`).** The baseline series
+  for a K6 trajectory is generated first, in full (T=300 iid draws via `gaussFrom(r)`, i.e. 600 raw
+  `r()` calls, using that cell's `seed(i)`); `injectShapeMix` is then called on it with the **same,
+  now-advanced** `r`. For `t < at`: the function returns the already-generated `v` unchanged and
+  draws nothing further (`inject.mjs:64`, the `if (t < at) return v;` branch). For `t >= at`: the
+  already-generated baseline value at that index is **discarded, not reused** — the function draws
+  3 fresh raw values from the same advanced stream per tick (1 for `b` via `r() < 0.5`, 2 more
+  inside `gaussFrom(r)` for `w`) to build the replacement `sigma*z` (`inject.mjs:65-69`). Net raw
+  `r()` draws consumed per K6 trajectory: `2*T + 3*(T-at) = 600 + 3*200 = 1200`.
+- **`family_D_spectral_e_detector` cfg, registered fully** (K3 canonical + ar1 cells, idx 15/17),
+  mirroring `run-power.mjs`'s own oracle-cfg construction for its `N1`/`N3-p06` cells
+  (`run-power.mjs:71-72`, the `: { mu: 0, sigma: 1, phi: spec.phi ?? 0, alpha: ALPHA, windows:
+  spec.windows }` branch, with `windows: 'disjoint'` per `nulls.mjs`'s `N1`/`N3-p06` entries):
+  `{ mu: 0, sigma: 1, phi: 0 (idx 15) or 0.6 (idx 17), alpha: 0.05, windows: 'disjoint' }`. Where
+  this contradicts any looser reading implied by §5/§7's prose, **this cfg block supersedes** —
+  §5/§7 did not previously pin `windows`, and `'disjoint'` is the binding value.
+
+### A6. `safe_t` added, measured for the record, on K2 and K4 (concern-2's harder-to-pass gap)
+
+**Extends §7's table; `universal_inference`'s row is unchanged (still K1, K3, K5, K6 only).**
+
+`safe_t` is added to K2 (series 0 of each unison matrix only — i.e. `safe_t` sees a single one of
+the K component series, the same series indexed `k=0` under A5's per-series seed formula, and is
+given no information about the other `K-1` series) and to K4 (the point-outlier series directly,
+scored via §5's ordinary terminal cal/test split — `safe_t` is a certified USE detector already
+scored on single series elsewhere in this battery, so this is the same call applied to the K4
+generator's output). Both are recorded per K2/K4 cell (idx 4–11, 18–21) as additional `safe_t` rows
+alongside `group_average_e_value`/`family_E_conformal_heldout`'s own rows for those cells — not a
+replacement. Because `safe_t` already carries a USE card verdict, a `safe_t` row that happens to
+clear `COVERAGE_FLOOR` on a K2 or K4 canonical cell **would independently cover that class** under
+A4's decision rule — this closes the gap where, absent this measurement, a K2 or K4 NO could rest
+entirely on the two unproven candidates' failure, with no certified-detector evidence checked at
+all. No prediction is registered for these two added rows beyond the general single-metric-versus-
+multivariate/point-outlier construction they measure; a surprise here is reported, not tuned away
+(global constraint, `docs/superpowers/plans/2026-08-07-coverage-matrix-v1.md:18`).
+
+### A7. K4 held-out substrate: clustersynth checked, found unfit, T1 fallback registered (Important 3)
+
+**Supersedes §14's silence on substrate tier for K4; §6's `HELDOUT_SEED` formula is unchanged —
+only the *source distribution* drawn under those seeds changes, from "this battery's own
+generator" (as §6 implicitly assumed) to the explicit finding below.**
+
+Checked before registering: `validation/shape-battery/harness/run-clustersynth.mjs` and
+`CLUSTERSYNTH-PREREG.md`, the only existing clustersynth-driving harness in this repo.
+`cs.realizeShard(...)` (`run-clustersynth.mjs`, `dist/index.js` from the sibling `clustersynth`
+repo) emits **multivariate per-shard telemetry** — a named-counter row per tick
+(`rec[names[0]]...rec[names[p-1]]`, `run-clustersynth.mjs`'s `rows.push(names.map(...))`) — built
+for a multivariate (Mahalanobis / MCD-covariance) detector, not a single scalar stream. This
+battery's K4 construction is deliberately 1-D (A2: `x_t=[v_t]`, `Σ=[[1]]`), matching
+`injectPoint`'s univariate series. **Finding, registered:** clustersynth's shipped output does not
+produce the 1-D scored stream this K4 held-out evaluator needs, and no existing harness in this
+repo reduces it to one; manufacturing a scalar reduction (e.g. picking one counter) would not be
+"clustersynth's own" data in the sense the ratified page's T2 expectation intends. **Fallback,
+registered:** K4's held-out calibration rows (§6, cells 18–21, and A1's cell 31) are drawn from
+this battery's own generator (`inject.mjs`'s `rng`/`gaussFrom`), as originally written in §6 — the
+seed formula there is unchanged. **Tier registered explicitly as T1**, not T2. This leaves the
+ratified page's "*Expected YES at T2*" **unmet by substrate**, not by construction — named here so
+it is not silently absorbed into the A2 NOT_POWERED prediction, which is a separate, independent
+finding.
+
+### A8. Minor corrections
+
+- **§5's "exactly the split" wording, corrected.** The terminal cal/test split in §5 uses
+  `run.mjs:86-87`'s `{start,len}` **mechanism**, not its exact lengths: `run.mjs` splits
+  `{start:0,len:ns.m}` / `{start:ns.m,len:NTEST=100}`; this battery splits `{start:0,len:100}` /
+  `{start:100,len:200}` — the same two-slice structure, this battery's own lengths substituted, as
+  §5 already parenthetically notes. "Exactly the split" in §5's lead sentence should be read as
+  "exactly the splitting mechanism," not "identical lengths." No numeric value changes.
+- **Manifest field list, registered** (binding on Task 8/9, extending §11's rule-6 mapping):
+  `study`, `git_sha`, `engine_pin`/`engine_version`, `node`, `seed_scheme` (the formulas in §6/A5,
+  quoted), `n` (2000), `ticks` (300), `onset` (100), `alpha` (0.05), `detectors` (§7/A6's list),
+  `classes` (K1–K6 with cell indices), `substrate_sha256`, `generated_at`, `prereg: 'PREREGISTRATION.md'`
+  — mirroring `run.mjs:155-162` and `run-power.mjs:134-145`'s manifest shape.
+- **Substrate sha256 mechanism, registered**, per `run-power.mjs:120-123`'s precedent (hashing the
+  module(s) actually driving the run): `sha256(validation/coverage/lib/inject.mjs)` — only that
+  file, since `inject.mjs`'s own header (`inject.mjs:5-13`) states its RNG is copied into the file
+  rather than imported from `h0-battery/harness/nulls.mjs`, so `nulls.mjs` does not drive this
+  battery's runtime and hashing it would misrepresent what actually executed.
+- **Emitted cell schema, registered:** every fault-class cell carries `fault_class`, `severity`,
+  `canonical` (bool), `phi` (0 or 0.6), `detection_rate`, `n`, `verdict`
+  (`POWERED`/`INERT`/`NOT-EXECUTABLE`, A3b), `not_executable_reason` (string or `null`, A3b),
+  `non_finite_wealth` (int, A3a — corrected field name). The A1 S2/S3 arms additionally carry
+  `exceedance`, `mean_e`, matching `run.mjs`'s terminal-evalue cell shape.
+
+### Amendment summary
+
+Superseded, with the section each override names explicitly in its own heading above: §5's "exactly
+the split" wording (A8); §7's detector table, extended not replaced (A1, A6); §8's `coverageFor`
+attribution (A4); §13's K4 *Expected/Falsifier* line, for this battery's own construction only —
+the ratified page's original wording stands and the disagreement is reported, not resolved (A2);
+§14's silence on K4's substrate tier (A7). Everything else in §1–14 stands as originally registered.

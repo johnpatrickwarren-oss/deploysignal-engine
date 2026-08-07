@@ -307,7 +307,7 @@ rather than only ever carrying fault-class cells.
   count with `e >= 1/alpha`, and `mean_e` = the mean group e-value across the N=2000 trajectories —
   same two fields `run.mjs:101-104,113` computes, same names. `verdict`: `lower95(k,n) > alpha ?
   'FAIL' : 'not-refuted'`, mirroring `run.mjs:115` exactly (the `VERDICT_MAP`,
-  `score.mjs:28`, reads either token).
+  `score.mjs:31`, reads either token).
 - *Power (S3) arm, `shift_sigma: 3`.* Same 10 series/seeds, with a constant `+3` (raw units,
   sigma=1) added to indices `[100,300)` of every one of the 10 series — `injectUnison` at `eps=3`
   (`inject.mjs:32-34`), i.e. the certification's registered shift (`run.mjs:89-90`'s
@@ -329,7 +329,7 @@ rather than only ever carrying fault-class cells.
   ordinary sustained step as a basic sanity/power check independent of the point-outlier class it
   is built for. `detection_rate`/`verdict` as above.
 - Held-out calibration for this arm's evaluator continues the same stream as the K4 held-out cells:
-  `HELDOUT_SEED = CELL_SEED + 500000 = 20261338`, `n=10000`, `seed(j) = HELDOUT_SEED + 7919*j`,
+  `HELDOUT_SEED = CELL_SEED + 500000 = 20760838`, `n=10000`, `seed(j) = HELDOUT_SEED + 7919*j`,
   drawn from the healthy null (no injection) — per A7's tier finding, T1.
 
 ### A2. K4 read, interface, and derived prediction (Critical 2)
@@ -369,13 +369,17 @@ raises `P(indicator=1)` at that one tick, it does not raise the multiplier past 
 K4 severity grid's **zero-resolution property**, registered here: the grid can move the *probability*
 of firing at the injected tick but cannot move the *size* of the wealth jump if it fires. For
 `M_at` to reach the crossing threshold `1/alpha_E = 20`, `M_{at-1}` must be `>= 20/1.95 ≈ 10.26`,
-so `P(M_{at-1} >= 10.26) <= 1/10.26 ≈ 0.097`. Ticks after `at` are again pure null (the injection is
-a single point), contributing no further systematic crossing probability beyond the Ville bound a
-pure-null process already carries. **Registered prediction: `family_E_conformal_heldout` reads
-NOT_POWERED at every K4 severity, canonical included — derived ceiling ≈ 0.10, an order below
-`COVERAGE_FLOOR = 0.50`.** Falsifier: any K4 severity's cell (canonical or grid) reads a detection
-rate materially above ≈0.10 — that would mean either a construction/configuration defect or a gap
-in this derivation, and is reported as a surprise, not tuned away.
+so `P(M_{at-1} >= 10.26) <= 1/10.26 ≈ 0.0975` (v1.2: this is `P(crossing AT the injected tick)`,
+not the whole-window bound — see v1.2 amendment). Ticks after `at` are again pure null (the
+injection is a single point); by the same maximal (Ville) inequality applied to that pure-null
+continuation starting from wealth `M_at`, the additional crossing probability contributed after the
+injected tick is bounded by `E[M_at]/20 <= (1.95 * 1)/20 ≈ 0.0975` (`E[M_at] <= 2-alpha_E` since the
+pre-injection wealth has mean 1 and the injected tick multiplies by at most `1.95`). **Registered
+prediction: `family_E_conformal_heldout` reads NOT_POWERED at every K4 severity, canonical
+included — derived ceiling `<= ~0.20` by union bound (`0.0975 + 0.0975`, rounded up), still far
+below `COVERAGE_FLOOR = 0.50`.** Falsifier: any K4 severity's cell (canonical or grid) reads a
+detection rate materially above ≈0.20 — that would mean either a construction/configuration defect
+or a gap in this derivation, and is reported as a surprise, not tuned away.
 
 This registered prediction **disagrees with** the ratified page's "*Expected YES at T2, real tier
 deferred*" for K4 (`~/concord/knowledge/methodology/pages/fault-class-coverage-matrix.md`, K4
@@ -447,7 +451,7 @@ report context, never decide — §8, §10.1, reaffirmed here):
   no other detector's canonical K2 cell reads `>= 0.50`.
 - K3: falsified (i.e. the registered NO is wrong) iff any USE detector's canonical-cell (idx 15)
   detection rate is `>= 0.50`.
-- K4: falsified iff any K4 severity cell's detection rate is materially above the A2-derived ≈0.10
+- K4: falsified iff any K4 severity cell's detection rate is materially above the A2-derived ≈0.20
   ceiling (supersedes the ratified page's generic K4 falsifier for this battery, per A2).
 - K5: falsified iff canonical-cell (idx 23) detection rate `< 0.50` for **both** `safe_t` and
   `universal_inference`.
@@ -553,3 +557,36 @@ the split" wording (A8); §7's detector table, extended not replaced (A1, A6); �
 attribution (A4); §13's K4 *Expected/Falsifier* line, for this battery's own construction only —
 the ratified page's original wording stands and the disagreement is reported, not resolved (A2);
 §14's silence on K4's substrate tier (A7). Everything else in §1–14 stands as originally registered.
+
+## Amendment v1.2 — 2026-08-07, corrections before any run
+
+Three mechanical corrections to v1.1, registered before any battery run. None touches an endpoint,
+floor, or falsifier's substance; each is applied in place at its erroring line (arithmetic and
+citation defects, not design re-readings) and named here per rule 7's requirement that a correction
+name the defect it fixes.
+
+1. **Seed arithmetic, A1's `family_E_conformal_heldout` held-out stream.** v1.1's line read
+   `HELDOUT_SEED = CELL_SEED + 500000 = 20261338` — the literal did not match the formula:
+   `20260838 + 500000 = 20760838`, not `20261338`. **Registered value: `HELDOUT_SEED = 20760838`.**
+   Corrected in place at A1; this is the only HELDOUT_SEED value that has ever been used to draw
+   data, since no run has occurred under either the wrong or the corrected literal.
+2. **Citation, A1's healthy-arm verdict-token paragraph.** `VERDICT_MAP` is defined at
+   `validation/certification/lib/score.mjs:31`, not `:28` as v1.1 cited (confirmed by direct read
+   of the file: `const VERDICT_MAP = { CLEARED: 'CLEARED', 'not-refuted': 'CLEARED', REFUTED:
+   'REFUTED', FAIL: 'REFUTED' };` at line 31). Corrected in place.
+3. **K4 ceiling bound, tightened.** A2's derivation asserted the post-injection continuation
+   contributes "no further systematic crossing probability beyond the Ville bound a pure-null
+   process already carries" — asserted, not derived. Corrected to an explicit maximal-inequality
+   bound: the continuation after the injected tick is itself a pure-null process started from
+   wealth `M_at`, so by the same Ville argument its own crossing probability is bounded by
+   `E[M_at]/20`, and `E[M_at] <= 2-alpha_E ≈ 1.95` (pre-injection wealth has mean 1, the injected
+   tick multiplies by at most `1.95`), giving `<= 1.95/20 ≈ 0.0975` for the continuation, added by
+   union bound to the `≈0.0975` at-the-injected-tick term from A2's first half. **Registered ceiling
+   is now `<= ~0.20`** (`0.0975 + 0.0975`, rounded up for the union bound's looseness), not `≈0.10`
+   — still an order below `COVERAGE_FLOOR = 0.50`. The registered prediction is unchanged:
+   `family_E_conformal_heldout` reads **NOT_POWERED at every K4 severity**. A4's mechanical K4
+   falsifier is updated to match: falsified iff a K4 cell's detection rate is materially above
+   `≈0.20` (was `≈0.10`).
+
+No other text in §1–14 or Amendment v1.1 changes. This amendment's three items are corrections to
+v1.1's own text, not new rulings — v1.1's design decisions (A1–A8) stand as registered.

@@ -36,11 +36,27 @@ test('healthy martingale cell passes', () => {
   assert.equal(applyGuards(seqCell(), 'test_martingale').status, 'OK');
 });
 
-test('internalConsistency flags an impossible increment/crossing pair', () => {
+// Round 3 finding 3: increment_estimator is only the CLASS's own scoring instrument for
+// test_martingale. On e_process cells (the sui shape) it's a foreign, descriptive-only
+// annotation -- a huge mean beside crossing_rate: 0 there is expected, not impossible.
+test('internalConsistency flags an impossible increment/crossing pair for test_martingale cells', () => {
   const bad = seqCell({ increment_estimator: { mean: 1.1e8, sd: 1, lower95_one_sided: 1.1e8 }, crossing_rate: 0 });
-  const flags = internalConsistency([bad]);
+  const flags = internalConsistency([bad], 'test_martingale');
   assert.equal(flags.length, 1);
-  assert.match(flags[0], /N1/);
+  assert.match(flags[0].reason, /N1/);
+  assert.equal(flags[0].__run, undefined);
+});
+
+test('internalConsistency does not flag the same shape on e_process cells: descriptive, not scored', () => {
+  const bad = seqCell({ increment_estimator: { mean: 1.1e8, sd: 1, lower95_one_sided: 1.1e8 }, crossing_rate: 0 });
+  const flags = internalConsistency([bad], 'e_process');
+  assert.equal(flags.length, 0);
+});
+
+test('internalConsistency carries __run so score.mjs can void by run', () => {
+  const bad = seqCell({ increment_estimator: { mean: 1.1e8, sd: 1, lower95_one_sided: 1.1e8 }, crossing_rate: 0, __run: 'run-1' });
+  const flags = internalConsistency([bad], 'test_martingale');
+  assert.equal(flags[0].__run, 'run-1');
 });
 
 test('e-process instrument on a terminal_e_value cell with the class instrument absent is VOID', () => {

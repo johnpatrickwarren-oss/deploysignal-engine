@@ -20,6 +20,22 @@ function fixture() {
   mk('shape-battery', 'sui-1', { study: 'clustersynth-ui', git_sha: 'bbb' },
     { cells: [{ detector: 'sequential_ui_e_process', null_id: 'CS1', verdict: 'CLEARED' }] });
 
+  // Wide-format csui cell shape (real 2026-08-07 clustersynth-ui data): no top-level
+  // `detector`, evidence for two detectors folded into one row via sui_/ui_ prefixes.
+  // Mixed into the same run: a cell that already carries `detector` (must pass through
+  // untouched) and a no-detector cell with no recognized prefix (must be skipped, not
+  // silently mis-tagged as evidence).
+  mk('shape-battery', 'wide-1', { study: 'clustersynth-wide-test', git_sha: 'www' },
+    { cells: [
+      {
+        arm: 'A', counter: 'x', n_sui: 5, n_ui: 5,
+        sui_crossing: 1, sui_stopped_mean: 0.5, sui_verdict: 'CLEARED',
+        ui_exceedance: 1, ui_mean_e: 2.3, ui_verdict: 'REFUTED',
+      },
+      { detector: 'already_tagged', null_id: 'N1', verdict: 'CLEARED' },
+      { arm: 'B', counter: 'y', mystery_field: 42 },
+    ] });
+
   // h0-battery-like: manifest.json + endpoints.json (dict-shaped {cells:[...]}), no summary.json.
   // A cells/ dir sits alongside it with the same data split into per-cell files; endpoints.json
   // must win so cells aren't double-counted.
@@ -80,7 +96,9 @@ function fixture() {
 
 test('loads dict-shaped and array-shaped summaries, annotates study/run/tier', () => {
   const ev = loadEvidence(fixture());
-  assert.equal(ev.cells.length, 10);
+  // 10 pre-existing + 3 from the wide-1 run's wide-format adapter (2 split + 1
+  // already-tagged passthrough; the unrecognized no-detector cell is skipped, not counted).
+  assert.equal(ev.cells.length, 13);
   const cs = ev.cells.find((c) => c.__study === 'clustersynth-ui');
   assert.equal(cs.__tier, 'T2');
   assert.equal(ev.cells.find((c) => c.__run === 'seq-1').__tier, 'T1');
@@ -128,6 +146,63 @@ test('loads one cell per file from cells/ when neither summary.json nor endpoint
   assert.equal(tevCells.length, 2);
   assert.ok(tevCells.every((c) => c.detector === 'safe_t'));
   assert.ok(tevCells.every((c) => c.__git_sha === 'ddd'));
+});
+
+// ---------------------------------------------------------------------------
+// Task 4 -- wide-format adapter (unlocks T2 evidence for sequential_ui_e_process and
+// universal_inference_e_value). csui summary.json cells carry no top-level `detector`;
+// evidence for both detectors is folded into one row via sui_/ui_ prefixes.
+// ---------------------------------------------------------------------------
+
+test('wide-format adapter: a prefixed cell with no detector field splits into one cell per prefix, fields renamed, non-prefixed fields shared', () => {
+  const ev = loadEvidence(fixture());
+  const wideCells = ev.cells.filter((c) => c.__run === 'wide-1');
+
+  const sui = wideCells.find((c) => c.detector === 'sequential_ui_e_process');
+  assert.ok(sui, 'sequential_ui_e_process cell must be produced');
+  assert.equal(sui.arm, 'A');
+  assert.equal(sui.counter, 'x');
+  assert.equal(sui.n_sui, 5);
+  assert.equal(sui.n_ui, 5);
+  assert.equal(sui.crossing_rate, 1);
+  assert.equal(sui.stopped_mean, 0.5);
+  assert.equal(sui.verdict, 'CLEARED');
+  assert.equal(sui.__tier, 'T2');
+  assert.ok(!('sui_crossing' in sui), 'prefixed field name must not survive');
+
+  const ui = wideCells.find((c) => c.detector === 'universal_inference_e_value');
+  assert.ok(ui, 'universal_inference_e_value cell must be produced');
+  assert.equal(ui.arm, 'A');
+  assert.equal(ui.counter, 'x');
+  assert.equal(ui.exceedance, 1);
+  assert.equal(ui.mean_e, 2.3);
+  assert.equal(ui.verdict, 'REFUTED');
+  assert.equal(ui.__tier, 'T2');
+  assert.ok(!('ui_exceedance' in ui), 'prefixed field name must not survive');
+});
+
+test('wide-format adapter: a cell that already carries `detector` is passed through untouched', () => {
+  const ev = loadEvidence(fixture());
+  const already = ev.cells.find((c) => c.__run === 'wide-1' && c.detector === 'already_tagged');
+  assert.ok(already);
+  assert.equal(already.null_id, 'N1');
+  assert.equal(already.verdict, 'CLEARED');
+});
+
+test('wide-format adapter: a no-detector cell with no recognized prefix is skipped (stderr), not counted', () => {
+  const root = fixture();
+  const originalWrite = process.stderr.write;
+  const chunks = [];
+  process.stderr.write = (chunk, ...rest) => { chunks.push(String(chunk)); return true; };
+  let ev;
+  try {
+    ev = loadEvidence(root);
+  } finally {
+    process.stderr.write = originalWrite;
+  }
+  assert.ok(!ev.cells.some((c) => c.__run === 'wide-1' && c.mystery_field === 42));
+  const skipped = chunks.join('').split('\n').filter((l) => l.startsWith('skipped:'));
+  assert.ok(skipped.some((l) => l.includes('wide-1')), 'must report the unrecognized cell as skipped');
 });
 
 // ---------------------------------------------------------------------------
@@ -212,7 +287,9 @@ test('unsupported run layouts are skipped (reported to stderr), not thrown, and 
     process.stderr.write = originalWrite;
   }
   const skippedLines = chunks.join('').split('\n').filter((l) => l.startsWith('skipped:'));
-  assert.equal(skippedLines.length, 1);
-  assert.ok(skippedLines[0].includes(join('mystery-study', 'results', 'live', 'run-x')));
+  // The unsupported run layout (mystery-study) plus the wide-1 run's unrecognized
+  // no-detector, no-prefix cell (Task 4 adapter) each produce one skipped: line.
+  assert.equal(skippedLines.length, 2);
+  assert.ok(skippedLines.some((l) => l.includes(join('mystery-study', 'results', 'live', 'run-x'))));
   assert.ok(!ev.runs.some((r) => r.study === 'mystery-study'));
 });

@@ -27,7 +27,8 @@
     "build": "tsc",
     "test": "tsc && node --test dist/test/*.test.js",
     "nab:validate": "node dist/tools/run-nab-validation.js",
-    "nab:per-dataset": "node dist/tools/run-nab-per-dataset.js"
+    "nab:per-dataset": "node dist/tools/run-nab-per-dataset.js",
+    "cert:verdict": "node validation/certification/verdict.mjs"
   },
   "typesVersions": {
     "*": {

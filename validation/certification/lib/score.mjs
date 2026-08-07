@@ -57,6 +57,17 @@ const tallySuppressed = (entries) => {
   return tally;
 };
 
+// Task 7 brief's "S1 note" specified this function but no task-7 commit ever
+// added it (checked lib/score.mjs and every test through 08ae73a: no
+// `scoreS1` anywhere). v1's honest floor: reachability has no machine-readable
+// runs yet for any card, so S1 is a declared/missing check against
+// prior_evidence, not a scored cell -- DECLARED when the card cites a stage
+// S1 entry (and points at a wiki page), MISSING otherwise. Upgrading S1 to
+// run-backed is a MISSING-CELLS item, not this function's job.
+export function scoreS1(card) {
+  return { status: card.prior_evidence.some((e) => e.stage === 'S1') ? 'DECLARED' : 'MISSING' };
+}
+
 export function scoreS2(card, cells) {
   const regime = card.guarantee.regime;
   const perCell = [];

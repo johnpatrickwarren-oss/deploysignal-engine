@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreS2, scoreS3, scoreS4, overallVerdict } from '../lib/score.mjs';
+import { scoreS1, scoreS2, scoreS3, scoreS4, overallVerdict } from '../lib/score.mjs';
 
 const card = {
   detector_id: 'd', aliases: [], class: 'test_martingale',
@@ -20,6 +20,26 @@ const pCell = (over = {}) => ({ detector: 'd', null_id: 'N1', phi: 0, m: null, s
 // of detection_rate.
 const rateCell = (over = {}) => ({ control: 'power', detector: 'd', shift_sigma: 3,
   rate_e_ge_20: 0.960975, verdict: 'pass', mode: 'live', __tier: 'T1', ...over });
+
+// Task 8 addition: scoreS1 was specified in the task-7 brief's interface note
+// ("S1 note") but never implemented in task-7's commits (checked: no
+// `scoreS1` anywhere in lib/score.mjs or any test as of 08ae73a). v1's honest
+// floor for S1 reachability -- no machine-readable runs exist for any card
+// yet -- is a declared/missing check against prior_evidence, not a scored cell.
+test('S1 is DECLARED when prior_evidence cites a stage S1 entry', () => {
+  const s1 = scoreS1(card);
+  assert.equal(s1.status, 'DECLARED');
+});
+
+test('S1 is MISSING when prior_evidence has no stage S1 entry', () => {
+  const s1 = scoreS1({ ...card, prior_evidence: [{ stage: 'S2', study: 'x', wiki: 'y' }] });
+  assert.equal(s1.status, 'MISSING');
+});
+
+test('S1 is MISSING when prior_evidence is empty', () => {
+  const s1 = scoreS1({ ...card, prior_evidence: [] });
+  assert.equal(s1.status, 'MISSING');
+});
 
 test('S2 takes the worst in-regime cell; out-of-regime REFUTED does not fail it', () => {
   const s2 = scoreS2(card, [vCell(), vCell({ null_id: 'N4', phi: 0.99, verdict: 'REFUTED' })]);

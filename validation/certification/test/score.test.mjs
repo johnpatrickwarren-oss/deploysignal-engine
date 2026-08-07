@@ -15,6 +15,11 @@ const vCell = (over = {}) => ({ detector: 'd', null_id: 'N1', phi: 0, m: null, v
   increment_estimator: { mean: 1.0, sd: 0.001, lower95_one_sided: 0.999 }, crossing_rate: 0, __tier: 'T1', ...over });
 const pCell = (over = {}) => ({ detector: 'd', null_id: 'N1', phi: 0, m: null, shift_sigma: 3,
   detection_rate: 1.0, verdict: 'POWERED', __tier: 'T1', ...over });
+// The CONTROL_power power-control shape from terminal-evalue runs (safe_t,
+// universal_inference): no null_id, records the power number as rate_e_ge_20 instead
+// of detection_rate.
+const rateCell = (over = {}) => ({ control: 'power', detector: 'd', shift_sigma: 3,
+  rate_e_ge_20: 0.960975, verdict: 'pass', mode: 'live', __tier: 'T1', ...over });
 
 test('S2 takes the worst in-regime cell; out-of-regime REFUTED does not fail it', () => {
   const s2 = scoreS2(card, [vCell(), vCell({ null_id: 'N4', phi: 0.99, verdict: 'REFUTED' })]);
@@ -114,6 +119,35 @@ test('S3 excludes non_finite_wealth cells from the floor determination', () => {
 test('S3 flags inert below the floor', () => {
   const s3 = scoreS3(card, [pCell({ detection_rate: 0.05, verdict: 'INERT' })]);
   assert.equal(s3.status, 'INERT');
+});
+
+// Fix round 2: rate_e_ge_20 is a vocabulary gap, not an evidence gap. The terminal-evalue
+// CONTROL_power cells (safe_t, universal_inference) carry live power evidence at the
+// registered shift, recorded as an e>=20 detection rate rather than detection_rate.
+test('S3(a) a rate_e_ge_20 cell at 0.96/shift 3 counts as powered', () => {
+  const s3 = scoreS3(card, [rateCell({ rate_e_ge_20: 0.960975 })]);
+  assert.equal(s3.status, 'PASS');
+  assert.equal(s3.perCell.length, 1);
+  assert.equal(s3.perCell[0].detection_rate, 0.960975);
+});
+
+test('S3(b) a rate_e_ge_20 cell at 0.05 counts as inert', () => {
+  const s3 = scoreS3(card, [rateCell({ rate_e_ge_20: 0.05 })]);
+  assert.equal(s3.status, 'INERT');
+  assert.equal(s3.perCell[0].detection_rate, 0.05);
+});
+
+test('S3(c) a rate_e_ge_20 cell off the registered shift is excluded', () => {
+  const s3 = scoreS3(card, [rateCell({ shift_sigma: 0.75 })]);
+  assert.equal(s3.status, 'MISSING');
+  assert.equal(s3.perCell.length, 0);
+});
+
+test('S3 detection_rate cells are unaffected by the rate_e_ge_20 extension', () => {
+  const s3 = scoreS3(card, [pCell()]);
+  assert.equal(s3.status, 'PASS');
+  assert.equal(s3.perCell[0].detection_rate, 1.0);
+  assert.equal('rate_e_ge_20' in s3.perCell[0], false);
 });
 
 test('S4 refuses a participating p-value path', () => {

@@ -1,28 +1,61 @@
 {
   "protocol_version": 1,
   "detector_id": "family_D_spectral_e_detector",
-  "aliases": ["family_D_spectral", "spectral_e_detector"],
+  "aliases": [
+    "family_D_spectral",
+    "spectral_e_detector"
+  ],
   "family": "D",
   "class": "test_martingale",
-  "engine_pin": { "version": "v0.6.6-pre", "sha": null },
+  "engine_pin": {
+    "version": "0.6.6-pre",
+    "sha": "7dc473b63e6e03cec1ee7b2719c63b74b14a87d6"
+  },
   "source_files": [
-    { "path": "detectors/spectral.ts", "sha256": null }
+    {
+      "path": "detectors/spectral.ts",
+      "sha256": "3295dc3e50e91ad134b140fcdf7ad732bb801dedc8c38d9f457d9e2bc88b5def"
+    }
   ],
   "guarantee": {
     "sentence": "Shin-Ramdas-Rinaldo e-detector on spectral peak; construction refuted at N1 on the current disjoint-window evaluation (increment 1.0012, crossing 1.0 at N7 in the 2026-08-05 sequential audit); the rolling-window martingale-difference violation is the historical mechanism, superseded 2026-08-03; heuristic as shipped, priced c-bound optional (c = 1.064 at T=300, 1.108 at T=900, grows with horizon)",
     "quantifiers": [],
-    "regime": { "phi_max": null, "m_min": null, "baseline": "any", "nulls": "none claimed" }
+    "regime": {
+      "phi_max": null,
+      "m_min": null,
+      "baseline": "any",
+      "nulls": "none claimed"
+    }
   },
   "shipped_path": {
     "kind": "wealth process on peak|ACF| (spectral autocorrelation statistic), disjoint-window evaluation, analytical 1/alpha threshold (no bootstrap substitution)",
     "estimator": null,
     "notes": ""
   },
-  "budget": { "participating": false, "alpha_booked": 0, "resolution_claim": "bootstrap resolves 2e-3 at N=500; do not book finer (1/500 bootstrap, ville-guarantee-is-empirical)" },
+  "budget": {
+    "participating": false,
+    "alpha_booked": 0,
+    "resolution_claim": "bootstrap resolves 2e-3 at N=500; do not book finer (1/500 bootstrap, ville-guarantee-is-empirical)"
+  },
   "falsifier": "already fired: increment lower95 1.0011 at N1 (2026-08-05 sequential audit)",
   "prior_evidence": [
-    { "stage": "S2", "study": "detector-audit", "runs": "detector-audit/results/live/seq-*", "wiki": "stats/detector-audit-sequential-2026-08-05" },
-    { "stage": "S3", "study": "detector-audit-power", "runs": "detector-audit/results/live/power-*", "wiki": "stats/detector-audit-power-2026-08-05" },
-    { "stage": "S4", "study": "bootstrap-overshoot", "runs": null, "wiki": "stats/ville-guarantee-is-empirical" }
+    {
+      "stage": "S2",
+      "study": "detector-audit",
+      "runs": "detector-audit/results/live/seq-*",
+      "wiki": "stats/detector-audit-sequential-2026-08-05"
+    },
+    {
+      "stage": "S3",
+      "study": "detector-audit-power",
+      "runs": "detector-audit/results/live/power-*",
+      "wiki": "stats/detector-audit-power-2026-08-05"
+    },
+    {
+      "stage": "S4",
+      "study": "bootstrap-overshoot",
+      "runs": null,
+      "wiki": "stats/ville-guarantee-is-empirical"
+    }
   ]
 }

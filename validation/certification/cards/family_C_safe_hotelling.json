@@ -1,29 +1,61 @@
 {
   "protocol_version": 1,
   "detector_id": "family_C_safe_hotelling",
-  "aliases": ["safe_hotelling", "hotelling_safe_test"],
+  "aliases": [
+    "safe_hotelling",
+    "hotelling_safe_test"
+  ],
   "family": "C",
   "class": "test_martingale",
-  "engine_pin": { "version": "v0.6.6-pre", "sha": null },
+  "engine_pin": {
+    "version": "0.6.6-pre",
+    "sha": "7dc473b63e6e03cec1ee7b2719c63b74b14a87d6"
+  },
   "source_files": [
-    { "path": "detectors/_hotelling-safe.ts", "sha256": null }
+    {
+      "path": "detectors/_hotelling-safe.ts",
+      "sha256": "c5cc555982e09fce449f06cc96e5cda57bf017ea6c7f48f2cc4f450ff964185e"
+    }
   ],
   "guarantee": {
     "sentence": "Gruenwald GROW safe test on Hotelling T^2: E[e_t|F_{t-1}] <= 1 under H0 given the compiled (mu, Sigma) as truth",
     "quantifiers": [
-      { "text": "per tick", "tag": "empirical", "proof_artifact": null }
+      {
+        "text": "per tick",
+        "tag": "empirical",
+        "proof_artifact": null
+      }
     ],
-    "regime": { "phi_max": null, "m_min": null, "baseline": "oracle-compiled", "nulls": "multivariate gaussian" }
+    "regime": {
+      "phi_max": null,
+      "m_min": null,
+      "baseline": "oracle-compiled",
+      "nulls": "multivariate gaussian"
+    }
   },
   "shipped_path": {
     "kind": "wealth process, bootstrap threshold substitution ~3.6e76x over 1/alpha",
     "estimator": null,
     "notes": ""
   },
-  "budget": { "participating": true, "alpha_booked": null, "resolution_claim": null },
+  "budget": {
+    "participating": true,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
   "falsifier": "increment lower95 > 1.0005 on the compiled-oracle null",
   "prior_evidence": [
-    { "stage": "S2", "study": "h0-battery", "runs": "h0-battery/results/live/run-*", "wiki": "stats/h0-battery-2026-08-01" },
-    { "stage": "S4", "study": "bootstrap-overshoot", "runs": null, "wiki": "stats/ville-guarantee-is-empirical" }
+    {
+      "stage": "S2",
+      "study": "h0-battery",
+      "runs": "h0-battery/results/live/run-*",
+      "wiki": "stats/h0-battery-2026-08-01"
+    },
+    {
+      "stage": "S4",
+      "study": "bootstrap-overshoot",
+      "runs": null,
+      "wiki": "stats/ville-guarantee-is-empirical"
+    }
   ]
 }

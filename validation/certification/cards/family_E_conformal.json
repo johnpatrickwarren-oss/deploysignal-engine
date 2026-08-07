@@ -19,13 +19,12 @@
   "shipped_path": {
     "kind": "p-value (kind: unweighted)",
     "estimator": null,
-    "notes": ""
+    "notes": "~12.5% of participating budget as a classical path — S4.1 adjudicates this"
   },
   "budget": {
     "participating": true,
     "alpha_booked": 1.0e-4,
-    "resolution_claim": null,
-    "notes": "~12.5% of participating budget as a classical path — S4.1 adjudicates this"
+    "resolution_claim": null
   },
   "falsifier": "the ESS gate passing on a shipped config would falsify the unreachability claim",
   "prior_evidence": [

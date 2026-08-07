@@ -2,7 +2,7 @@
   "protocol_version": 1,
   "detector_id": "safe_t_e_value",
   "aliases": ["safe-t", "safe_t"],
-  "family": "-",
+  "family": null,
   "class": "terminal_e_value",
   "engine_pin": { "version": "v0.6.6-pre", "sha": null },
   "source_files": [
@@ -22,7 +22,7 @@
     "notes": ""
   },
   "budget": { "participating": true, "alpha_booked": null, "resolution_claim": null },
-  "falsifier": "exceedance > alpha or mean(e) materially > 1 in a cell with phi <= 0.95",
+  "falsifier": "exceedance > alpha (0.05), or one-sided 95% lower bound of mean(e) > 1, in a cell with phi <= 0.95",
   "prior_evidence": [
     { "stage": "S2", "study": "terminal-evalue", "runs": "terminal-evalue/results/live/run-*", "wiki": "stats/terminal-evalue-2026-08-02" },
     { "stage": "S2+S3", "study": "power-per-cell", "runs": "terminal-evalue/results/live/*", "wiki": "stats/power-per-cell-2026-08-05" }

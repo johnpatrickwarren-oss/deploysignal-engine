@@ -18,8 +18,17 @@ test('NaN increment is NON_FINITE', () => {
   assert.equal(g.status, 'NON_FINITE');
 });
 
-test('increment instrument on an e_process cell is VOID', () => {
+// Finding 4: the class's own instrument (crossing_rate, for e_process) is present on this
+// cell alongside the foreign increment_estimator -- this is the real sui shape. Foreign
+// fields alongside a present class instrument are an annotation, not a veto.
+test('increment instrument alongside the e_process class instrument (crossing_rate) is OK, not VOID', () => {
   const g = applyGuards(seqCell(), 'e_process');
+  assert.equal(g.status, 'OK');
+  assert.match(g.reason, /increment_estimator/);
+});
+
+test('increment instrument on an e_process cell with the class instrument absent is VOID', () => {
+  const g = applyGuards({ detector: 'x', null_id: 'N1', increment_estimator: seqCell().increment_estimator }, 'e_process');
   assert.equal(g.status, 'VOID');
 });
 
@@ -34,14 +43,26 @@ test('internalConsistency flags an impossible increment/crossing pair', () => {
   assert.match(flags[0], /N1/);
 });
 
-test('e-process instrument on a terminal_e_value cell is VOID', () => {
-  const g = applyGuards({detector: 'x', null_id: 'N1', stopped_mean: 2.5e-5, crossing_rate: 0}, 'terminal_e_value');
+test('e-process instrument on a terminal_e_value cell with the class instrument absent is VOID', () => {
+  const g = applyGuards({ detector: 'x', null_id: 'N1', stopped_mean: 2.5e-5, crossing_rate: 0 }, 'terminal_e_value');
   assert.equal(g.status, 'VOID');
 });
 
-test('terminal instrument on an e_process cell is VOID', () => {
-  const g = applyGuards({detector: 'x', null_id: 'N1', exceedance: 0.01}, 'e_process');
+test('stopped_mean alongside the terminal_e_value class instrument (exceedance) is OK, not VOID', () => {
+  const g = applyGuards({ detector: 'x', null_id: 'N1', exceedance: 0.01, stopped_mean: 2.5e-5 }, 'terminal_e_value');
+  assert.equal(g.status, 'OK');
+  assert.match(g.reason, /stopped_mean/);
+});
+
+test('terminal instrument on an e_process cell with the class instrument absent is VOID', () => {
+  const g = applyGuards({ detector: 'x', null_id: 'N1', exceedance: 0.01 }, 'e_process');
   assert.equal(g.status, 'VOID');
+});
+
+test('exceedance alongside the e_process class instrument (crossing_rate) is OK, not VOID', () => {
+  const g = applyGuards({ detector: 'x', null_id: 'N1', crossing_rate: 0.02, exceedance: 0.01 }, 'e_process');
+  assert.equal(g.status, 'OK');
+  assert.match(g.reason, /exceedance/);
 });
 
 test('power cell with non_finite_wealth > 0 is NON_FINITE', () => {

@@ -54,6 +54,46 @@ function scanCellsDirExtras(cellsDir, seenKeys) {
   return extras;
 }
 
+// Wide-format adapter (Task 4) -- unlocks T2 evidence for sequential_ui_e_process and
+// universal_inference_e_value. clustersynth-ui's summary.json cells fold both detectors'
+// evidence into one row, no top-level `detector`: {arm, counter, n_sui, n_ui, sui_crossing,
+// sui_stopped_mean, sui_verdict, ui_exceedance, ui_mean_e, ui_verdict, ...}. `sui_` fields
+// become a sequential_ui_e_process cell, `ui_` fields a universal_inference_e_value cell;
+// fields with neither prefix (arm, counter, n_sui, n_ui, ...) are copied onto each. Most
+// prefixed fields are a plain strip (sui_stopped_mean -> stopped_mean, ui_exceedance ->
+// exceedance); sui_crossing is the one recorded exception, renamed to crossing_rate since
+// the value is a rate, not a boolean.
+const WIDE_PREFIXES = [
+  { prefix: 'sui_', detector: 'sequential_ui_e_process', renames: { sui_crossing: 'crossing_rate' } },
+  { prefix: 'ui_', detector: 'universal_inference_e_value', renames: {} },
+];
+
+// Splits a wide-format cell (no top-level `detector`) into one cell per recognized
+// prefix present. Returns null when neither prefix is found, so the caller can report
+// the cell as skipped instead of silently dropping it or mis-tagging it as evidence.
+// A cell that already carries `detector` is returned as a single-element array, untouched.
+function expandWideCell(cell) {
+  if ('detector' in cell) return [cell];
+
+  const shared = {};
+  for (const k of Object.keys(cell)) {
+    if (!WIDE_PREFIXES.some(({ prefix }) => k.startsWith(prefix))) shared[k] = cell[k];
+  }
+
+  const out = [];
+  for (const { prefix, detector, renames } of WIDE_PREFIXES) {
+    const fields = {};
+    let found = false;
+    for (const [k, v] of Object.entries(cell)) {
+      if (!k.startsWith(prefix)) continue;
+      found = true;
+      fields[renames[k] ?? k.slice(prefix.length)] = v;
+    }
+    if (found) out.push({ ...shared, detector, ...fields });
+  }
+  return out.length ? out : null;
+}
+
 // A run directory's cells can live in one of three supported layouts:
 //   1. summary.json     -- {cells: [...]} or a bare array of cells
 //   2. endpoints.json    -- same two shapes as summary.json (h0-battery)
@@ -112,7 +152,14 @@ export function loadEvidence(validationRoot) {
       const tier = tierOfStudy(studyName, manifest.tier ?? null);
       runs.push({ study: studyName, run: run.name, git_sha: gitSha, tier });
       for (const c of rawCells) {
-        cells.push(annotatePhi({ ...c, __study: studyName, __run: run.name, __git_sha: gitSha, __tier: tier }));
+        const expanded = expandWideCell(c);
+        if (expanded === null) {
+          process.stderr.write(`skipped: ${dir} (unrecognized cell shape, no detector/sui_/ui_ fields)\n`);
+          continue;
+        }
+        for (const ec of expanded) {
+          cells.push(annotatePhi({ ...ec, __study: studyName, __run: run.name, __git_sha: gitSha, __tier: tier }));
+        }
       }
     }
   }

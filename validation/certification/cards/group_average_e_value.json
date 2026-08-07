@@ -1,0 +1,59 @@
+{
+  "protocol_version": 1,
+  "detector_id": "group_average_e_value",
+  "aliases": [
+    "group_average"
+  ],
+  "family": null,
+  "class": "terminal_e_value",
+  "engine_pin": {
+    "version": null,
+    "sha": null
+  },
+  "source_files": [
+    {
+      "path": "detectors/group-average-e-value.ts",
+      "sha256": null
+    },
+    {
+      "path": "detectors/safe-t-e-value.ts",
+      "sha256": null
+    }
+  ],
+  "guarantee": {
+    "sentence": "arithmetic mean of component e-values is an e-value under arbitrary dependence of the components; validity inherits from component validity (safe-t: known-phi <= 0.95, estimated baseline)",
+    "quantifiers": [
+      {
+        "text": "under arbitrary dependence",
+        "tag": "proof",
+        "proof_artifact": "e-value merging (average), stats/e-value combination rules; unit test asserts mean"
+      }
+    ],
+    "regime": {
+      "phi_max": 0.95,
+      "m_min": null,
+      "baseline": "estimated",
+      "nulls": "iid-gaussian, ar1 phi<=0.95",
+      "phi_known": true
+    }
+  },
+  "shipped_path": {
+    "kind": "terminal e-value, arithmetic mean of K component safe-t reads",
+    "estimator": null,
+    "notes": ""
+  },
+  "budget": {
+    "participating": true,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
+  "falsifier": "exceedance of the group e-value > alpha on a healthy unison-null battery cell",
+  "prior_evidence": [
+    {
+      "stage": "S2",
+      "study": "coverage",
+      "runs": "coverage/results/live/*",
+      "wiki": "methodology/fault-class-coverage-matrix"
+    }
+  ]
+}

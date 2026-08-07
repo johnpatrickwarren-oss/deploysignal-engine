@@ -45,10 +45,28 @@ written is ever edited or deleted by a later run.
 
 ### Which run is current
 
-**Current: `results/run-20260807T215155Z`.** Run directories are named `run-<UTC basic>`, so
+**Current: `results/run-20260807T220905Z`.** Run directories are named `run-<UTC basic>`, so
 lexicographic order is chronological and the greatest name is the current run — there is no
 pointer file, because a pointer would be the one file in an append-only tree that every run
 rewrote.
+
+`results/run-20260807T215155Z` is **preserved and superseded**. It is the last run scored
+against the pre-fix scorer, which had two verdict-integrity defects the live power study
+found (see `.superpowers/sdd/2026-08-06-detector-certification-v1/study-power-live-report.md`
+§5): the mean rule (`lib/guards.mjs`) preferred a recorded `mean_e_lower_95` over the
+point-estimate `mean_e` outright, so `safe_t` `N4-p09`'s 2026-08-07 cells (mean_e 9,710,
+bound clamped to 0.0000) cleared in that run even though its 2026-08-02 cells with the
+identical mean_e and no recorded bound refuted; and `'FAIL'` — the terminal-evalue harness's
+own refutation token (`run.mjs:115`) — was absent from `VERDICT_MAP`, so `safe_t`'s one
+recorded T1 refutation (φ = 0.99, out of regime either way) scored as missing evidence. Both
+are fixed: the mean rule now takes the strongest of the two signals and never clears, and
+`FAIL` maps to `REFUTED`. **No overall verdict or tier moved on any of the nine cards** —
+verified by diffing every `<detector_id>.card.json`'s `overall.{verdict,tier}` between the
+two runs. `safe_t_e_value`'s `s2.mean_rule_overrides` grows from 3 to 7 (the 2026-08-07
+`N4-p09` pair now refutes instead of clearing) and its suppressed tally changes from
+`FAIL x1, not-refuted x3` to `not-refuted x7` (`FAIL` cells no longer get suppressed — they
+map straight to `REFUTED` and score normally). All are out of safe-t's published
+estimated-φ-excluded regime, so `s2.status` itself does not move.
 
 `results/run-20260807T202419Z` is **preserved and superseded**. It is the first run scored
 against the two live terminal-evalue runs of 2026-08-07
@@ -78,9 +96,9 @@ protocol version, which stays 1. Format 1 has no S1 column and no caveat footer;
 has both. `test/report-consistency.test.mjs` reads that field so a preserved run is checked
 against the shape it was written under.
 
-### Card pins, and why the sha moved three times
+### Card pins, and why the sha moved four times
 
-The nine cards have been frozen three times. Each freeze restamped `engine_pin.sha` and
+The nine cards have been frozen four times. Each freeze restamped `engine_pin.sha` and
 recomputed `source_files[].sha256`:
 
 | freeze | pin | what changed in the cards |
@@ -88,8 +106,9 @@ recomputed `source_files[].sha256`:
 | `959d622` | `7dc473b` | the original freeze of the nine claim cards |
 | `095dd81` | `017599f` | corrected detector **aliases**, so evidence keyed under a detector's other names could be matched; no endpoint moved |
 | `6eef189` | `45ce230` | added `detectors/validity-envelope.ts`, `lib/score.mjs` and `verdict.mjs` to every card's expiry surface, and `regime.phi_known: true` to safe-t (the machine form of its own frozen guarantee sentence) |
+| (this freeze) | `77067e6` | `lib/score.mjs`'s pinned sha256 moved: the mean-rule strongest-signal fix and the `FAIL` → `REFUTED` vocabulary fix (see "Which run is current" above). `verdict.mjs`'s sha256 is unchanged — it wasn't touched. No card content changed; only the pin. |
 
-**Every detector source file is byte-identical across all three pins.** The restamp records
+**Every detector source file is byte-identical across all four pins.** The restamp records
 when a card was frozen, not a change in the detector it describes. Verifiable directly:
 
 ```

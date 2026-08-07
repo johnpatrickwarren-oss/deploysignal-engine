@@ -52,3 +52,13 @@ export function assertVerdict(verdict) {
   }
   return verdict;
 }
+
+export const COVERAGE_FLOOR = 0.50;
+export const FAULT_CLASSES = Object.freeze({
+  K1: { name: 'per-metric step shift',      canonical: '1.5sigma',        grid: ['0.75sigma', '1.5sigma', '3sigma'] },
+  K2: { name: 'group-in-unison',            canonical: 'K10-e0.5sigma',   grid: ['K5-e0.25sigma', 'K5-e0.5sigma', 'K10-e0.25sigma', 'K10-e0.5sigma', 'K10-e0.75sigma', 'K20-e0.25sigma', 'K20-e0.5sigma'] },
+  K3: { name: 'sub-threshold oscillation',  canonical: 'A0.75sigma-f0.05', grid: ['A0.5sigma-f0.02', 'A0.5sigma-f0.05', 'A0.75sigma-f0.02', 'A0.75sigma-f0.05', 'A0.75sigma-f0.1'] },
+  K4: { name: 'far-outside-norm point',     canonical: '5sigma-point',    grid: ['3sigma-point', '5sigma-point', '8sigma-point'] },
+  K5: { name: 'slow drift',                 canonical: 'slope1e-4',       grid: ['slope5e-5', 'slope1e-4', 'slope5e-4'] },
+  K6: { name: 'distributional shape change', canonical: 'mix-d1.5',       grid: ['mix-d1.0', 'mix-d1.5', 'mix-d2.0'] },
+});

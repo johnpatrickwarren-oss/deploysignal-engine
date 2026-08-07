@@ -1,5 +1,5 @@
 import { applyGuards, internalConsistency, meanRule } from './guards.mjs';
-import { INERTNESS_FLOOR, INERTNESS_SHIFT_SIGMA, TIERS, assertVerdict } from './constants.mjs';
+import { COVERAGE_FLOOR, FAULT_CLASSES, INERTNESS_FLOOR, INERTNESS_SHIFT_SIGMA, TIERS, assertVerdict } from './constants.mjs';
 import { effectivePhi, phiIsEstimated } from './nulls.mjs';
 import { isWired } from './envelope.mjs';
 
@@ -346,6 +346,51 @@ export function scoreS3(card, cells) {
   }
 
   return { status, perCell, excluded, missing, suppressed_verdicts };
+}
+
+// coverageFor -- fault-class coverage, a grouping layer over the same power evidence S3
+// scores, not a replacement for it. Cells opt into a fault class via `fault_class`; cells
+// without it (the pre-existing 3sigma shift power cells) are invisible here by
+// construction (filtered on `fault_class === classId`) and S3's own scoring of them is
+// untouched. Same guard/suppression house pattern as S3: excluded cells are named with
+// their reason and suppressed verdict token, never silently dropped, and never counted
+// either way toward a class's status.
+export function coverageFor(card, cells) {
+  const coverage = {};
+  for (const classId of Object.keys(FAULT_CLASSES)) {
+    const classCells = cells.filter((c) => c.fault_class === classId);
+    const excluded = [];
+    const survivors = [];
+
+    for (const cell of classCells) {
+      const guard = applyGuards(cell, card.class);
+      const rawVerdict = cell.verdict;
+      if (guard.status === 'VOID' || guard.status === 'NON_FINITE') {
+        excluded.push(withSuppression({ detector: cell.detector, null_id: cell.null_id ?? null, reason: guard.reason }, rawVerdict));
+        continue;
+      }
+      if (guard.status === 'VACUOUS') {
+        excluded.push(withSuppression({ detector: cell.detector, null_id: cell.null_id ?? null, reason: 'vacuous: wealth never moved' }, rawVerdict));
+        continue;
+      }
+      survivors.push(cell);
+    }
+
+    const suppressed_verdicts = tallySuppressed(excluded);
+
+    if (survivors.length === 0) {
+      coverage[classId] = { status: 'NO_EVIDENCE', cells: survivors, canonical: null, excluded, suppressed_verdicts };
+      continue;
+    }
+
+    const canonicalCells = survivors.filter((c) => c.canonical === true);
+    const covering = canonicalCells.find((c) => powerRate(c) >= COVERAGE_FLOOR);
+    const canonicalCell = covering ?? canonicalCells[0] ?? null;
+    const canonical = canonicalCell ? { severity: canonicalCell.severity, rate: powerRate(canonicalCell) } : null;
+
+    coverage[classId] = { status: covering ? 'COVERED' : 'NOT_POWERED', cells: survivors, canonical, excluded, suppressed_verdicts };
+  }
+  return coverage;
 }
 
 // I3 -- the two free-text shipped-path checks, anchored.

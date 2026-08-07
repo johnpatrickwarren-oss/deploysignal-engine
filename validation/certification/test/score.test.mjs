@@ -408,6 +408,40 @@ test('S2 mean rule does not apply to test_martingale or e_process cells', () => 
   assert.equal(s2.status, 'PASS');
 });
 
+// FIX 1 (live power study, 2026-08-07 report §5.1) -- the exact regression: two cells at
+// the same detector/null, one from the 2026-08-02 run (mean_e 9709.99, no recorded bound)
+// and one from the 2026-08-07 run (identical mean_e, recorded bound clamped to 0.0000).
+// Before the fix these scored REFUTED and CLEARED respectively -- the same violation
+// reading opposite verdicts depending only on which run happened to record the bound.
+// Both must now map REFUTED, with the reason on each naming which signal fired.
+test('S2 mean rule regression: no-bound and zero-bound cells of the same N4-p09 both map REFUTED', () => {
+  const s2 = scoreS2(tCard, [
+    tCell({ null_id: 'N4-p09', mean_e: 9709.99, exceedance: 0.016, lower_95: 0.013, __run: 'run-20260802' }),
+    tCell({ null_id: 'N4-p09', mean_e: 9709.99, mean_e_lower_95: 0.0, exceedance: 0.016, lower_95: 0.013, __run: 'run-20260807' }),
+  ]);
+  assert.equal(s2.perCell.length, 2);
+  for (const c of s2.perCell) {
+    assert.equal(c.mapped, 'REFUTED');
+    assert.equal(c.mean_rule_applied, true);
+  }
+  const [noBoundCell, zeroBoundCell] = s2.perCell;
+  assert.match(noBoundCell.mean_rule_reason, /no interval on the mean is recorded/);
+  assert.match(zeroBoundCell.mean_rule_reason, /uninformative, not exculpatory/);
+  assert.equal(s2.status, 'REFUTED');
+});
+
+// FIX 2 -- 'FAIL' is the terminal harness's own refutation token (run.mjs:115: `verdict:
+// lo > alpha ? 'FAIL' : 'not-refuted'`), and every other h0-battery-family harness uses the
+// same token for the same purpose. Before this fix it was absent from VERDICT_MAP, so the
+// harness's own recorded refutation scored as missing evidence (fail-open in regime).
+test('S2 maps the harness refutation token FAIL to REFUTED', () => {
+  const s2 = scoreS2(tCard, [tCell({ verdict: 'FAIL', null_id: 'N1' })]);
+  assert.equal(s2.perCell.length, 1);
+  assert.equal(s2.perCell[0].mapped, 'REFUTED');
+  assert.equal(s2.status, 'REFUTED');
+  assert.equal(s2.missing.length, 0, 'FAIL must not be routed to missing[] as an unmapped token');
+});
+
 // ===========================================================================
 // C2 -- fail-closed phi and the known-phi regime.
 // ===========================================================================

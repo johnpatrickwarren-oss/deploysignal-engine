@@ -21,7 +21,14 @@ const powerRate = (c) => (c.detection_rate ?? c.rate_e_ge_20);
 // cell.verdict straight through silently discarded it and no card could ever PASS.
 // Any token outside this table is not a known clearance/refutation result -- it is
 // missing evidence, and must be named, never dropped.
-const VERDICT_MAP = { CLEARED: 'CLEARED', 'not-refuted': 'CLEARED', REFUTED: 'REFUTED' };
+//
+// FIX 2 (live power study, 2026-08-07 report §5.2): 'FAIL' is every h0-battery-family
+// harness's own refutation token (terminal-evalue/harness/run.mjs:115: `verdict: lo > alpha
+// ? 'FAIL' : 'not-refuted'`; the same pattern recurs in h0-battery, family-ce-nulls and
+// family-c-pool). Before this fix it was absent from the map, so a harness's own recorded
+// refutation (safe_t at phi=0.99, exceedance 0.1420 > alpha) scored as missing evidence
+// instead of REFUTED -- fail-open in regime, had the cell been in regime.
+const VERDICT_MAP = { CLEARED: 'CLEARED', 'not-refuted': 'CLEARED', REFUTED: 'REFUTED', FAIL: 'REFUTED' };
 
 // Round 3 finding 1: for test_martingale-class cells, when the top-level verdict field is
 // absent, supermartingale_verdict carries the same information under a different name

@@ -117,14 +117,48 @@ test('meanRule is silent when no mean is recorded at all', () => {
   assert.equal(meanRule({ exceedance: 0.5 }, 'terminal_e_value'), null);
 });
 
-// The card's own falsifier form ("one-sided 95% lower bound of mean(e) > 1"). No run in
-// the corpus records it, but if one ever does it takes precedence over the point estimate.
-test('meanRule prefers a recorded one-sided lower bound on the mean when the field exists', () => {
+// The card's own falsifier form ("one-sided 95% lower bound of mean(e) > 1"). When the
+// recorded bound itself exceeds 1, it fires on its own and names itself as the signal.
+test('meanRule fires on a recorded one-sided lower bound above 1, naming the bound as the signal', () => {
   const fired = meanRule({ mean_e: 0.5, mean_e_lower_95: 1.4 }, 'terminal_e_value');
   assert.ok(fired);
   assert.match(fired.reason, /lower bound on mean\(e\) 1\.4 > 1/);
-  // and a recorded bound below 1 wins over a point estimate above 1
-  assert.equal(meanRule({ mean_e: 9709.99, mean_e_lower_95: 0.4 }, 'terminal_e_value'), null);
+});
+
+// FIX 1 (live power study, 2026-08-07 report §5.1): the mean rule is refusal-only and
+// takes the STRONGEST refuting signal. [[stats/terminal-mean-is-not-measurable]]: the mean
+// instrument carries evidence only ABOVE 1 -- a low or zero-clamped bound is uninformative,
+// never exculpatory. The live run recorded exactly this collision at safe_t N4-p09: the
+// 2026-08-02 cells carry mean_e 9709.99 with no bound (point-estimate fallback refutes);
+// the 2026-08-07 cells carry the IDENTICAL mean_e with a bound that clamps to 0.0000
+// (s/sqrt(n) exceeds the mean itself for a heavy-tailed e). Before this fix the recorded
+// 0.0000 bound overrode and CLEARED the cell -- the same violation read REFUTED from one
+// run and CLEARED from the other. Neither reading may ever clear; the bound only ever adds
+// a second way to refute.
+test('meanRule: a recorded bound at or below 1 never overrides a point-estimate refutation', () => {
+  const noBound = meanRule({ mean_e: 9709.99 }, 'terminal_e_value');
+  const zeroBound = meanRule({ mean_e: 9709.99, mean_e_lower_95: 0.0 }, 'terminal_e_value');
+  assert.ok(noBound, 'point estimate alone must refute');
+  assert.ok(zeroBound, 'a recorded 0 bound must not clear what the point estimate refutes');
+  assert.match(noBound.reason, /mean_e 9709\.99 > registered bound 1/);
+  assert.match(zeroBound.reason, /mean_e 9709\.99 > registered bound 1/);
+  // The reason names which signal fired: the point estimate, and (when a bound was
+  // recorded) that the bound was uninformative rather than exculpatory.
+  assert.match(zeroBound.reason, /recorded lower bound 0 <= 1 is uninformative, not exculpatory/);
+});
+
+// The exact regression from the report: two cells, same detector/null, one carrying no
+// bound and one carrying a bound clamped to 0.0000 -- both must refute, and the reason on
+// each must name which signal fired.
+test('meanRule regression: N4-p09 shape -- no-bound cell and zero-bound cell both refute, reasons name their signal', () => {
+  const noBoundCell = { detector: 'safe_t', null_id: 'N4-p09', mean_e: 9709.99, exceedance: 0.016, lower_95: 0.013 };
+  const zeroBoundCell = { detector: 'safe_t', null_id: 'N4-p09', mean_e: 9709.99, mean_e_lower_95: 0.0, exceedance: 0.016, lower_95: 0.013 };
+  const r1 = meanRule(noBoundCell, 'terminal_e_value');
+  const r2 = meanRule(zeroBoundCell, 'terminal_e_value');
+  assert.ok(r1, 'the 2026-08-02 shape (no bound) must refute');
+  assert.ok(r2, 'the 2026-08-07 shape (bound clamped to 0) must refute, not clear');
+  assert.match(r1.reason, /no interval on the mean is recorded/, 'names the point estimate as the only signal available');
+  assert.match(r2.reason, /uninformative, not exculpatory/, 'names the point estimate as the signal that fired despite a recorded bound');
 });
 
 test('mean_e is a recognized terminal instrument, so a mean-only cell is not VOID', () => {

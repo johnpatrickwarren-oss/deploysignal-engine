@@ -48,28 +48,40 @@ export function applyGuards(cell, cls) {
 // So this rule only ever refutes; it never clears, and it never rescues a REFUTED cell.
 //
 // WHICH FIELD IS THE BOUND TESTED ON. safe-t's frozen card falsifier asks for a "one-sided
-// 95% lower bound of mean(e) > 1". No run in the corpus records such a bound: the
-// terminal-evalue harness records `lower_95` as the one-sided binomial lower bound on the
-// EXCEEDANCE, compared against alpha (harness/run.mjs:94), and the mean's own interval is a
-// registered-but-unrecorded secondary (PREREGISTRATION section 4, T2). So:
-//   - if a run ever records `mean_e_lower_95`, that is the card's falsifier and it wins;
-//   - otherwise the point estimate `mean_e` is tested against the bound, which is the
-//     protocol's own wording ("whose mean exceeds its registered bound") and is sound in
-//     this direction only because of the downward bias above.
+// 95% lower bound of mean(e) > 1". The terminal-evalue harness records `lower_95` as the
+// one-sided binomial lower bound on the EXCEEDANCE, compared against alpha
+// (harness/run.mjs:115), not on the mean; the mean's own interval, when recorded, lives in
+// `mean_e_lower_95` (POWER-PER-CELL-ADDENDUM-2026-08-07.md change (a)). So:
+//   - a recorded `mean_e_lower_95` above the bound is the card's own falsifier, literally,
+//     and fires on its own;
+//   - the point estimate `mean_e` above the bound is the protocol's own wording ("whose
+//     mean exceeds its registered bound") and is sound in this direction only because of
+//     the downward bias above.
 // Testing `lower_95 > 1` literally would compare an exceedance rate against a mean bound
 // and could never fire (safe-t's worst cell: lower_95 0.013 beside mean_e 9,710).
+//
+// FIX 1 (live power study, 2026-08-07 report §5.1). STRONGEST SIGNAL, NOT PRECEDENCE.
+// The rule used to prefer a recorded bound over the point estimate outright, so a recorded
+// bound at the 0 clamp -- which [[stats/terminal-mean-is-not-measurable]] says is
+// UNINFORMATIVE, not exculpatory, because s/sqrt(n) grows faster than a heavy-tailed mean --
+// silently cleared a cell the point estimate refuted. The live run recorded exactly that
+// collision: safe_t N4-p09's 2026-08-02 cells (no bound, mean_e 9,710) scored REFUTED; its
+// 2026-08-07 cells (identical mean_e, bound clamped to 0.0000) scored CLEARED. Both signals
+// are now tested independently and either can refute; neither, and nothing on this path,
+// ever clears.
 export function meanRule(cell, cls) {
   if (cls !== 'terminal_e_value') return null;
   const recorded = cell.mean_e_lower_95;
-  if (Number.isFinite(recorded)) {
-    return recorded > TERMINAL_MEAN_BOUND
-      ? { reason: `mean rule: exceedance verdict overridden (one-sided 95% lower bound on mean(e) ${recorded} > ${TERMINAL_MEAN_BOUND})` }
-      : null;
+  const recordedFinite = Number.isFinite(recorded);
+  if (recordedFinite && recorded > TERMINAL_MEAN_BOUND) {
+    return { reason: `mean rule: exceedance verdict overridden (one-sided 95% lower bound on mean(e) ${recorded} > ${TERMINAL_MEAN_BOUND})` };
   }
   if (Number.isFinite(cell.mean_e) && cell.mean_e > TERMINAL_MEAN_BOUND) {
+    const boundNote = recordedFinite
+      ? `recorded lower bound ${recorded} <= ${TERMINAL_MEAN_BOUND} is uninformative, not exculpatory (stats/terminal-mean-is-not-measurable) — point estimate governs`
+      : `no interval on the mean is recorded — lower_95 ${cell.lower_95} bounds the exceedance, not the mean`;
     return {
-      reason: `mean rule: exceedance verdict overridden (mean_e ${cell.mean_e} > registered bound ${TERMINAL_MEAN_BOUND}; `
-        + `no interval on the mean is recorded — lower_95 ${cell.lower_95} bounds the exceedance, not the mean)`,
+      reason: `mean rule: exceedance verdict overridden (mean_e ${cell.mean_e} > registered bound ${TERMINAL_MEAN_BOUND}; ${boundNote})`,
     };
   }
   return null;

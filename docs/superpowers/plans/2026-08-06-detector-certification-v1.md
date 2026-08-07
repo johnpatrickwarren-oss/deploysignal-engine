@@ -10,6 +10,54 @@
 
 **Authority:** The protocol page `~/concord/knowledge/methodology/pages/detector-certification-protocol.md` (RATIFIED 2026-08-06) governs. Where this plan and that page disagree, the page wins and the disagreement is a plan bug to report.
 
+---
+
+## Correction note — 2026-08-07, after the whole-branch review
+
+**This plan is superseded by the shipped code where the two disagree. Read
+`validation/certification/README.md` and the module comments for current behaviour.** The
+sections below are kept as the record of what was planned, not as a description of what runs.
+Five places where the plan misdescribes shipped code:
+
+1. **`meanRule` now exists.** The Task 5 file map lists `meanRule` in `guards.mjs`, but no
+   task-5 step specified it and no commit through `5d40800` added it — the protocol's S2
+   mean rule was unimplemented for the whole of the first official run. It is implemented
+   now, in `lib/guards.mjs`, and it refutes on the mean only (a mean below 1 carries no
+   evidence). Its bound, `TERMINAL_MEAN_BOUND = 1`, is a registered constant.
+
+2. **The terminal instrument field is `mean_e`, not `mean_above_1`.** Task 1's constants
+   table named a field that exists in no cell in any run. Reconciled in
+   `lib/constants.mjs`'s `CLASS_INSTRUMENTS` and in `isValidityCell`.
+
+3. **VOID semantics are generalised and per-run, not per-class-pair.** Task 5's guard block
+   describes VOID as "an `increment_estimator` present on an `e_process` cell, or a
+   `test_martingale` carrying only exceedance fields", and its code sketch voids any cell
+   whose class is `e_process`/`terminal_e_value` if an increment estimator is present at all.
+   Shipped behaviour: a cell VOIDs when its **own class's** instrument is ABSENT and a
+   foreign instrument is present — a foreign field *alongside* the class instrument is
+   annotation, not a veto (the real `sequential_ui` shape carries `increment_estimator` next
+   to its own `crossing_rate` and must score). A VOID voids every cell sharing that cell's
+   `__run`, and the stage is VOID only when every in-regime candidate came from a voided run.
+   `internalConsistency` is class-scoped to `test_martingale` and carries `__run` for the
+   same mechanism.
+
+4. **Regime checking is fail-closed on φ, with a derivation step in front of it.** Task 7
+   specifies "a cell is in-regime when `cell.phi == null || cell.phi <= regime.phi_max`" —
+   that reading admits every phi-less cell (over 1,600 of them) into every claimed φ bound
+   for free. Shipped: `lib/nulls.mjs` derives φ from the registered null-id grammar first,
+   and a validity cell whose φ is still unknown is refused and recorded. `regime.phi_known`
+   puts estimated-φ cells outside a known-φ regime, narrowing it rather than failing it.
+
+5. **`overallVerdict` takes `s1`, and S3/S4 have more outcomes than the plan lists.**
+   Signature is `overallVerdict(card, s1, s2, s3, s4)`; a not-run-backed S1 appends a
+   reason and blocks nothing. Some-inert shrinks the regime instead of forcing ADVISORY
+   (ADVISORY needs *every* claimed cell inert), regime narrowing lands structurally in
+   `overall.regime.excluded_cells`, and S4 can return PASS while carrying recorded findings
+   (`no envelope wiring`, `alpha resolution unverifiable`).
+
+The verdicts this plan's Task 10 recorded are also superseded: see the README's "Which run
+is current" for what changed and why the earlier run is preserved rather than corrected.
+
 ## Global Constraints
 
 - Repo: `~/concord/deploysignal-engine`. It is PR-gated: **never commit to `main`**. All work on branch `cert/protocol-v1` (create from `main` at start; use a worktree via superpowers:using-git-worktrees so the main checkout stays free for other sessions).

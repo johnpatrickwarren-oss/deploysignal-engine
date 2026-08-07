@@ -36,3 +36,25 @@ jobs:
 
       - name: Verify committed dist/ matches fresh rebuild (L9)
         run: git diff --exit-code -- dist
+
+      # The certification harness is plain .mjs outside dist/, so `npm test` (which runs
+      # the compiled dist/test suite) never touched it. A scorer whose own tests only run
+      # by hand is a scorer that drifts. Gating.
+      - name: Certification harness tests
+        run: npm run test:cert
+
+      # Expiry is the protocol's answer to a claim that outlives the code it describes:
+      # drift in any hash a card pins flips that card to EXPIRED, and CI is where it has
+      # to be seen, because the drift arrives with somebody else's commit.
+      #
+      # NOT gating, and the reason is a limitation rather than a preference: family_E's
+      # card pins a file in a SIBLING repo (../deploysignal/tools/calibrators/family-e.ts),
+      # a runner checks out this repo only, and expiry-check.mjs reports a file it cannot
+      # read as drift -- it does not distinguish "changed" from "not present here". So on
+      # CI this step would fail every run for a reason that says nothing about the cards.
+      # To make it gating, either check out the sibling repo and set CERT_SIBLING_ROOT to
+      # its parent, or teach the tool to report an unreadable sibling pin separately from a
+      # changed hash. Until then the log carries the finding and a human reads it.
+      - name: Certification card expiry (reported, not gating — see comment)
+        run: node validation/certification/expiry-check.mjs
+        continue-on-error: true

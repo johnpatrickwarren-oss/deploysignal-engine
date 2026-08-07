@@ -24,7 +24,12 @@ export function checkExpiry(cardsDir, repoRoot, siblingRoot = resolve(repoRoot, 
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const here = dirname(fileURLToPath(import.meta.url));
-  const drifted = checkExpiry(join(here, 'cards'), join(here, '..', '..'), '/Users/johnwarren/concord');
+  // Cards may pin a source file in a SIBLING repo (family_E pins
+  // ../deploysignal/tools/calibrators/family-e.ts). The default is this operator's
+  // workspace root; CERT_SIBLING_ROOT overrides it, so CI and any other checkout can run
+  // the expiry check without the sibling tree sitting at a hardcoded absolute path.
+  const siblingRoot = process.env.CERT_SIBLING_ROOT ?? '/Users/johnwarren/concord';
+  const drifted = checkExpiry(join(here, 'cards'), join(here, '..', '..'), siblingRoot);
   for (const d of drifted) console.error(`EXPIRED ${d.card}: ${d.path} (${d.actual === null ? 'missing' : 'changed'})`);
   if (!drifted.length) console.log('all cards current');
   process.exit(drifted.length ? 1 : 0);

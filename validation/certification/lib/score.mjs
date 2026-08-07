@@ -1,11 +1,15 @@
-import { applyGuards, internalConsistency } from './guards.mjs';
-import { INERTNESS_FLOOR, INERTNESS_SHIFT_SIGMA, TIERS } from './constants.mjs';
+import { applyGuards, internalConsistency, meanRule } from './guards.mjs';
+import { INERTNESS_FLOOR, INERTNESS_SHIFT_SIGMA, TIERS, assertVerdict } from './constants.mjs';
+import { effectivePhi, phiIsEstimated } from './nulls.mjs';
+import { isWired } from './envelope.mjs';
 
 // Finding 4: crossing_rate is an e_process instrument (see CLASS_INSTRUMENTS), so S2
 // candidacy has to include it -- otherwise crossing_rate-only cells (no stopped_mean, no
 // exceedance, no increment_estimator) never reach the scorer at all.
+// C1: `mean_e` joins the list for the same reason -- it is a terminal_e_value instrument
+// (CLASS_INSTRUMENTS), so a mean-bearing cell is a validity candidate on its own.
 const isValidityCell = (c) =>
-  'increment_estimator' in c || 'stopped_mean' in c || 'exceedance' in c || 'crossing_rate' in c;
+  'increment_estimator' in c || 'stopped_mean' in c || 'exceedance' in c || 'crossing_rate' in c || 'mean_e' in c;
 // Fix round 2: rate_e_ge_20 is a vocabulary gap, not an evidence gap. The terminal-evalue
 // CONTROL_power cells (safe_t, universal_inference) are live power evidence at the
 // registered shift, recorded as an e>=20 detection rate under a different field name.
@@ -31,9 +35,40 @@ const rawClassVerdict = (cell, cls) => {
   return undefined;
 };
 
-const inRegime = (cell, regime) =>
-  (cell.phi == null || regime.phi_max == null || cell.phi <= regime.phi_max) &&
-  (cell.m == null || regime.m_min == null || cell.m >= regime.m_min);
+// C2 -- the regime check, fail-closed on phi.
+//
+// Three outcomes, not two. `refused` marks a cell the card's regime cannot speak about at
+// all because its phi is unmeasured: the pre-fix rule read `cell.phi == null` as "in
+// regime", which admitted every phi-less cell into every claimed phi bound for free
+// (1,600+ of the corpus's cells carry no phi field). Refusing instead matches the engine's
+// own gate -- `detectors/validity-envelope.ts`'s `assertValidForFdrPath` refuses a detector
+// whose phi it cannot check rather than assuming it is fine -- and it is recorded, never
+// silently dropped. Derivation runs first (lib/nulls.mjs), so a cell whose null_id encodes
+// its phi is scored, not refused.
+//
+// `phi_known` is the machine form of a guarantee sentence that quantifies over KNOWN phi
+// (safe-t: "given known phi <= 0.95"). Cells whose phi came out of a finite calibration
+// window sit outside such a regime -- they BOUND it rather than failing it, which is the
+// protocol's "cells outside the claimed regime bound the regime" clause and exactly how
+// safe-t stays usable at oracle phi while being wrong at estimated phi.
+function regimeCheck(cell, regime) {
+  const phi = effectivePhi(cell);
+  if (regime.phi_max != null && phi == null) {
+    return { in: false, refused: true, reason: 'phi unmeasured, refused (fail-closed)' };
+  }
+  if (regime.phi_known === true && phiIsEstimated(cell)) {
+    return { in: false, refused: false, reason: `outside the known-phi regime: estimated phi (${cell.null_id ?? 'no null_id'})` };
+  }
+  if (phi != null && regime.phi_max != null && phi > regime.phi_max) {
+    return { in: false, refused: false, reason: `phi ${phi} > regime phi_max ${regime.phi_max}` };
+  }
+  if (cell.m != null && regime.m_min != null && cell.m < regime.m_min) {
+    return { in: false, refused: false, reason: `m ${cell.m} < regime m_min ${regime.m_min}` };
+  }
+  return { in: true, refused: false, reason: null };
+}
+
+const inRegime = (cell, regime) => regimeCheck(cell, regime).in;
 
 const minTier = (tiers) => {
   const present = tiers.filter((t) => t != null);
@@ -64,8 +99,11 @@ const tallySuppressed = (entries) => {
 // prior_evidence, not a scored cell -- DECLARED when the card cites a stage
 // S1 entry (and points at a wiki page), MISSING otherwise. Upgrading S1 to
 // run-backed is a MISSING-CELLS item, not this function's job.
+// I1: match any stage token CONTAINING 'S1', not just the bare string. family_E's card
+// cites its reachability evidence under stage 'S1+S2' (one study covering both), and an
+// equality test read that as no S1 evidence at all.
 export function scoreS1(card) {
-  return { status: card.prior_evidence.some((e) => e.stage === 'S1') ? 'DECLARED' : 'MISSING' };
+  return { status: (card.prior_evidence ?? []).some((e) => typeof e.stage === 'string' && e.stage.includes('S1')) ? 'DECLARED' : 'MISSING' };
 }
 
 export function scoreS2(card, cells) {
@@ -73,6 +111,8 @@ export function scoreS2(card, cells) {
   const perCell = [];
   const excluded = [];
   const missing = [];
+
+  const meanRuleOverrides = [];
 
   const candidates = cells.filter(isValidityCell);
   const guarded = candidates.map((cell) => ({ cell, guard: applyGuards(cell, card.class), rawVerdict: rawClassVerdict(cell, card.class) }));
@@ -116,7 +156,17 @@ export function scoreS2(card, cells) {
       missing.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: 'vacuous: wealth never moved' }, rawVerdict));
       continue;
     }
-    const out_of_regime = !inRegime(cell, regime);
+    const regimeStatus = regimeCheck(cell, regime);
+    // C2 fail-closed: an unmeasured phi is refused, not admitted. Recorded with whatever
+    // verdict token it was carrying, so the refusal is visible in the suppressed tally.
+    if (regimeStatus.refused) {
+      missing.push(withSuppression(
+        { detector: cell.detector, null_id: cell.null_id, reason: regimeStatus.reason },
+        rawVerdict,
+      ));
+      continue;
+    }
+    const out_of_regime = !regimeStatus.in;
 
     // Finding 2 (round 3): a foreign-instrument verdict (increment_verdict, tied to
     // increment_estimator -- test_martingale's instrument, not this cell's class's) is
@@ -137,16 +187,31 @@ export function scoreS2(card, cells) {
       missing.push({ detector: cell.detector, null_id: cell.null_id, reason: `unmapped verdict token ${rawVerdict}`, suppressed_verdict: rawVerdict });
       continue;
     }
-    perCell.push({ ...cell, mapped, out_of_regime });
+
+    // C1 -- the mean rule. Applies only where the recorded token CLEARED the cell: the
+    // mean above 1 overrides a clearance, and a cell already REFUTED needs no help.
+    const mean = mapped === 'CLEARED' ? meanRule(cell, card.class) : null;
+    if (mean) {
+      meanRuleOverrides.push({ detector: cell.detector, null_id: cell.null_id, suppressed_verdict: rawVerdict, reason: mean.reason });
+      perCell.push({
+        ...cell, mapped: 'REFUTED', out_of_regime,
+        out_of_regime_reason: regimeStatus.reason,
+        mean_rule_applied: true, mean_rule_reason: mean.reason, overridden_verdict: rawVerdict,
+      });
+      continue;
+    }
+    perCell.push({ ...cell, mapped, out_of_regime, out_of_regime_reason: regimeStatus.reason });
   }
 
-  const suppressed_verdicts = tallySuppressed([...excluded, ...missing]);
+  // The overridden exceedance token is a discarded verdict like any other, so it joins the
+  // suppressed tally -- the mean rule threw away a recorded 'not-refuted'.
+  const suppressed_verdicts = tallySuppressed([...excluded, ...missing, ...meanRuleOverrides]);
 
   // Stage VOID only if every in-regime candidate came from a voided run (finding 4, round 2).
   const candidateInRegime = candidates.filter((c) => inRegime(c, regime));
   const voidedInRegime = candidateInRegime.filter((c) => voidedRuns.has(c.__run));
   if (candidateInRegime.length > 0 && voidedInRegime.length === candidateInRegime.length) {
-    return { status: 'VOID', perCell, excluded, missing, suppressed_verdicts };
+    return { status: 'VOID', perCell, excluded, missing, mean_rule_overrides: meanRuleOverrides, suppressed_verdicts };
   }
 
   const inRegimeMapped = perCell.filter((c) => !c.out_of_regime && (c.mapped === 'CLEARED' || c.mapped === 'REFUTED'));
@@ -160,7 +225,7 @@ export function scoreS2(card, cells) {
     status = 'PASS';
   }
 
-  return { status, perCell, excluded, missing, suppressed_verdicts };
+  return { status, perCell, excluded, missing, mean_rule_overrides: meanRuleOverrides, suppressed_verdicts };
 }
 
 export function scoreS3(card, cells) {
@@ -174,9 +239,37 @@ export function scoreS3(card, cells) {
   // Minor 5(a) (round 3): shift/regime scoping runs before guards, so excluded[]/missing[]
   // only ever name cells that were actually in scope for this stage -- an out-of-shift or
   // out-of-regime cell was never a candidate to begin with, guard or no guard.
+  //
+  // Round 4 minor: out-of-scope cells are now NAMED rather than dropped on a bare
+  // `continue`. Aggregated per (detector, shift) with a count: the corpus holds 144
+  // detector-audit-power cells at the other registered effect size (delta* = 0.75 sigma),
+  // and 48 identical lines per card would bury the report. delta* = 0.75 sigma is
+  // registered evidence, not a gap -- it is simply not the shift the inertness floor is
+  // defined at (INERTNESS_SHIFT_SIGMA), which is what the line says.
+  const offShift = new Map();
+  const unmeasuredPhi = new Map();
+  const bump = (map, key, entry) => {
+    const cur = map.get(key);
+    if (cur) cur.count += 1; else map.set(key, { ...entry, count: 1 });
+  };
+
   for (const cell of candidates) {
-    if (cell.shift_sigma !== INERTNESS_SHIFT_SIGMA) continue;
-    if (!inRegime(cell, regime)) continue;
+    if (cell.shift_sigma !== INERTNESS_SHIFT_SIGMA) {
+      bump(offShift, `${cell.detector} ${cell.shift_sigma}`, { detector: cell.detector, shift_sigma: cell.shift_sigma ?? null });
+      continue;
+    }
+    // C2 note: S3 does NOT fail closed on an unmeasured phi. A pooled power control
+    // (terminal-evalue's CONTROL_power cells) has no null_id and no phi by construction --
+    // it averages over the whole battery -- and refusing it would delete the only power
+    // evidence both terminal detectors have, turning a power reading into a validity
+    // question. Power is not a validity guarantee, so the unmeasured phi is recorded as a
+    // gap and the cell is still scored. The per-null pairing this leaves open is the
+    // separate `pairingGaps` finding.
+    if (regime.phi_max != null && effectivePhi(cell) == null) {
+      bump(unmeasuredPhi, String(cell.detector), { detector: cell.detector, null_id: cell.null_id ?? null });
+    } else if (!inRegime(cell, regime)) {
+      continue;
+    }
 
     const rawVerdict = cell.verdict;
     // Finding 2 (round 3, S3 leg): S3 had no guards at all. Runs whose wealth process is
@@ -210,6 +303,30 @@ export function scoreS3(card, cells) {
     perCell.push(Number.isFinite(cell.detection_rate) ? cell : { ...cell, detection_rate: rate });
   }
 
+  for (const e of offShift.values()) {
+    // Two different gaps, and they must not be described in the same words. A cell at
+    // delta* = 0.75 sigma is registered evidence at the other house effect size. A cell
+    // with NO shift_sigma recorded (the family-ce-nulls power cells) is a cell whose effect
+    // size is unknown, which is a defect in the run, not evidence at another shift.
+    missing.push({
+      detector: e.detector,
+      null_id: null,
+      reason: e.shift_sigma == null
+        ? `power cell with no shift_sigma recorded x${e.count}: its effect size is unknown, so it cannot be `
+          + `placed at the inertness-floor shift (${INERTNESS_SHIFT_SIGMA}) — not scored for INERT`
+        : `power cell at shift_sigma=${e.shift_sigma} x${e.count}: registered effect size, but not the `
+          + `inertness-floor shift (${INERTNESS_SHIFT_SIGMA}) — not scored for INERT`,
+    });
+  }
+  for (const e of unmeasuredPhi.values()) {
+    missing.push({
+      detector: e.detector,
+      null_id: e.null_id,
+      reason: `phi unmeasured on a power cell x${e.count}: scored anyway (power is not a validity claim); `
+        + 'the per-null pairing gap is recorded separately',
+    });
+  }
+
   const suppressed_verdicts = tallySuppressed([...excluded, ...missing]);
 
   let status;
@@ -224,16 +341,55 @@ export function scoreS3(card, cells) {
   return { status, perCell, excluded, missing, suppressed_verdicts };
 }
 
-export function scoreS4(card) {
-  const kind = card.shipped_path.kind ?? '';
-  const reasons = [];
+// I3 -- the two free-text shipped-path checks, anchored.
+//
+// A p-value shipped path, not a mention of the words. `\bp-value\b` with a negation guard:
+// "terminal e-value, not a p-value" describes an e-value path and must not be refused.
+const P_VALUE_PATH = /(?:^|[^a-z-])p-values?\b/i;
+const NEGATED_P_VALUE = /\b(?:not|never|no longer|rather than|instead of)\s+(?:a\s+)?p-value/i;
+// A bootstrap-SUBSTITUTED threshold, not a mention of bootstraps. family_D's kind ends
+// "analytical 1/alpha threshold (no bootstrap substitution)" -- a positive-claim pattern
+// plus a negation guard is what keeps it out of UNPRICED.
+const BOOTSTRAP_SUBSTITUTION = /bootstrap[\s-]+(?:threshold[\s-]+)?substitut/i;
+const NEGATED_BOOTSTRAP = /\bno\s+bootstrap/i;
+// S4.2: the resolution the delivering machinery claims, as a number in scientific
+// notation ("bootstrap resolves 2e-3 at N=500"). The first such number is the resolution;
+// plain integers in the same sentence (N=500) are not resolutions.
+const RESOLUTION = /(\d+(?:\.\d+)?[eE]-\d+)/;
 
-  if (kind.includes('p-value') && card.budget.participating) {
+export function scoreS4(card, opts = {}) {
+  const kind = card.shipped_path.kind ?? '';
+  const budget = card.budget ?? {};
+  const reasons = [];
+  let status = 'PASS';
+
+  // S4.4 wiring: recorded, never blocking in v1. P1 (the gate has no production caller)
+  // means no card's USE is enforced today anyway, so an unwired envelope is a gap to name,
+  // not grounds to refuse a detector whose maths is sound.
+  if (Array.isArray(opts.envelopeKeys) && !isWired(card.detector_id, card.aliases, opts.envelopeKeys)) {
+    reasons.push('no envelope wiring');
+  }
+
+  // S4.2 alpha resolvability. Only a positive booked alpha can be finer than anything.
+  const booked = typeof budget.alpha_booked === 'number' && budget.alpha_booked > 0 ? budget.alpha_booked : null;
+  if (booked !== null) {
+    const claim = RESOLUTION.exec(budget.resolution_claim ?? '');
+    const resolvable = claim ? Number(claim[1]) : null;
+    if (resolvable !== null && booked < resolvable) {
+      reasons.push(`alpha booked ${booked} is finer than the claimed resolution ${resolvable} of the machinery that delivers it (S4.2)`);
+      status = 'REFUSE';
+    } else if (resolvable === null && budget.participating) {
+      reasons.push('alpha resolution unverifiable');
+    }
+  }
+
+  if (P_VALUE_PATH.test(kind) && !NEGATED_P_VALUE.test(kind) && budget.participating) {
     reasons.push('shipped path is a p-value combination and the budget is participating: unanswered combination question is a refusal, not a pass (C25)');
     return { status: 'REFUSE', reasons };
   }
+  if (status === 'REFUSE') return { status, reasons };
 
-  if (kind.includes('bootstrap threshold substitution')) {
+  if (BOOTSTRAP_SUBSTITUTION.test(kind) && !NEGATED_BOOTSTRAP.test(kind)) {
     // Finding 3: a prior_evidence[stage=S4] entry with runs: null is a *declared* c-bound
     // question, not a *measured* c-bound artifact. Only runs != null clears the gate.
     const hasCBound = (card.prior_evidence ?? []).some((e) => e.stage === 'S4' && e.runs != null);
@@ -243,27 +399,89 @@ export function scoreS4(card) {
     }
   }
 
-  return { status: 'PASS', reasons };
+  return { status, reasons };
 }
 
-export function overallVerdict(card, s2, s3, s4) {
-  const regime = card.guarantee.regime;
+// I2 -- the pairing check. Protocol S3: "Every S2 validity cell inside the claimed regime
+// gets a paired power arm at the registered effect sizes." An in-regime CLEARED validity
+// cell with no power cell at the same null is an unmeasured cell, and a pooled power
+// control cannot stand in for it: the sequential-UI failure was a detector that was valid
+// everywhere and inert everywhere, and a pooled rate averaged over the battery is exactly
+// the shape that hides it. This does NOT fail the stage in v1 -- pooled CONTROL evidence
+// still passes S3 -- the gap is recorded so the missing arms can be run.
+export function pairingGaps(s2, s3) {
+  const powered = new Set((s3.perCell ?? []).map((c) => `${c.detector}::${c.null_id ?? ''}`));
+  const gaps = new Map();
+  for (const c of s2.perCell ?? []) {
+    if (c.out_of_regime || c.mapped !== 'CLEARED') continue;
+    const key = `${c.detector}::${c.null_id ?? ''}`;
+    if (powered.has(key) || gaps.has(key)) continue;
+    gaps.set(key, {
+      detector: c.detector,
+      null_id: c.null_id ?? null,
+      line: `unpaired: ${c.detector} ${c.null_id ?? '(no null_id)'} validity cell has no power arm`,
+    });
+  }
+  return [...gaps.values()];
+}
+
+// I8 -- excluded cells that carried no verdict token at all. `suppressed_verdicts` covers
+// what was thrown away WITH a verdict; this covers the rest, so a reader of
+// MISSING-CELLS.md can see the whole excluded population and not just its noisy half.
+export function untokenedExclusions(stage) {
+  const groups = new Map();
+  for (const e of stage.excluded ?? []) {
+    if (e.suppressed_verdict !== undefined) continue;
+    const key = `${e.detector}::${e.reason}`;
+    const cur = groups.get(key);
+    if (cur) cur.count += 1; else groups.set(key, { detector: e.detector, reason: e.reason, count: 1 });
+  }
+  return [...groups.values()].map((g) => `excluded without token: ${g.detector} x${g.count} (${g.reason})`);
+}
+
+export function overallVerdict(card, s1, s2, s3, s4) {
+  const cardRegime = card.guarantee.regime;
   const reasons = [];
+
+  // I1 -- S1 is recorded on every card and blocks nothing. v1's S1 is a declaration check
+  // against prior_evidence, not a run: no machine-readable reachability run exists for any
+  // card. Making that floor block USE would refuse the whole portfolio on a missing
+  // artifact rather than on evidence, so the floor is named in reasons[] instead. Upgrading
+  // S1 to run-backed is a MISSING-CELLS item.
+  if (s1?.status !== 'DECLARED') reasons.push('S1 reachability not run-backed (v1 floor)');
+
+  // R3 -- regime narrowing is structural, not prose. Every cell the regime excluded is
+  // listed on the emitted regime object, so a reader of the card JSON can see what the
+  // published regime does NOT cover without parsing reasons[] strings. The card's own
+  // regime is copied, never mutated.
+  const excluded_cells = [
+    ...s2.perCell.filter((c) => c.out_of_regime).map((c) => ({
+      stage: 'S2', detector: c.detector, null_id: c.null_id ?? null, mapped: c.mapped,
+      reason: c.out_of_regime_reason ?? 'outside the claimed regime',
+    })),
+  ];
+  const regime = { ...cardRegime, excluded_cells };
+  const done = (verdict, tier) => {
+    assertVerdict(verdict);
+    return { verdict, tier, regime, reasons };
+  };
 
   if (s2.status === 'VOID') {
     reasons.push('S2 is VOID');
-    return { verdict: 'NOT_EXECUTABLE', tier: null, regime, reasons };
+    return done('NOT_EXECUTABLE', null);
   }
 
   if (s2.status === 'REFUTED') {
     reasons.push('S2 in-regime refutation');
-    return { verdict: 'REFUSE', tier: null, regime, reasons };
+    return done('REFUSE', null);
   }
 
   if (s2.status === 'MISSING' || s3.status === 'MISSING') {
     reasons.push('S2 or S3 has no scoreable evidence');
-    return { verdict: 'NOT_EXECUTABLE', tier: null, regime, reasons };
+    return done('NOT_EXECUTABLE', null);
   }
+
+  if (s2.status !== 'PASS') throw new Error(`unknown S2 status "${s2.status}"`);
 
   const s2Supporting = s2.perCell.filter((c) => !c.out_of_regime && c.mapped === 'CLEARED');
 
@@ -273,11 +491,17 @@ export function overallVerdict(card, s2, s3, s4) {
   const s3Inert = s3.perCell.filter((c) => c.detection_rate < INERTNESS_FLOOR);
   const s3Powered = s3.perCell.filter((c) => c.detection_rate >= INERTNESS_FLOOR);
 
+  for (const c of s3Inert) {
+    excluded_cells.push({
+      stage: 'S3', detector: c.detector, null_id: c.null_id ?? null, mapped: 'INERT',
+      reason: `inert: detection_rate ${c.detection_rate} < floor ${INERTNESS_FLOOR} at shift ${INERTNESS_SHIFT_SIGMA} sigma`,
+    });
+  }
+
   if (s3Powered.length === 0) {
     reasons.push('S3 inert across all claimed cells: valid-but-inert fails USE');
     // Promoted minor 7: tier still reflects supporting S2 evidence, not null.
-    const tier = minTier(s2Supporting.map((c) => c.__tier));
-    return { verdict: 'ADVISORY', tier, regime, reasons };
+    return done('ADVISORY', minTier(s2Supporting.map((c) => c.__tier)));
   }
 
   for (const c of s3Inert) {
@@ -288,13 +512,14 @@ export function overallVerdict(card, s2, s3, s4) {
 
   if (s4.status === 'REFUSE') {
     reasons.push(...s4.reasons, 'budget participation refused');
-    return { verdict: 'ADVISORY', tier, regime, reasons };
+    return done('ADVISORY', tier);
   }
 
   if (s4.status === 'UNPRICED') {
     reasons.push(...s4.reasons, 'USE capped at ADVISORY until the c-bound is measured');
-    return { verdict: 'ADVISORY', tier, regime, reasons };
+    return done('ADVISORY', tier);
   }
 
-  return { verdict: 'USE', tier, regime, reasons };
+  reasons.push(...s4.reasons);
+  return done('USE', tier);
 }

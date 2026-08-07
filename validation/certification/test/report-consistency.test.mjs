@@ -45,25 +45,61 @@ function checkRunDir(dir) {
     const row = report.split('\n').find((l) => l.includes(`| ${o.card.detector_id} |`));
     assert.ok(row, `${dir}: no report row for ${o.card.detector_id}`);
     assert.ok(row.includes(`**${o.overall.verdict}**`), `${dir}/${f}: report says "${row}" but card verdict is ${o.overall.verdict}`);
-    assert.ok(row.includes(`| ${o.s2.status} |`), `${dir}/${f}: S2 mismatch`);
-    assert.ok(row.includes(`| ${o.s3.status} |`), `${dir}/${f}: S3 mismatch`);
-    assert.ok(row.includes(`| ${o.s4.status} |`), `${dir}/${f}: S4 mismatch`);
 
-    // Row shape: | detector | class | S2 | S3 | S4 | suppressed | **verdict** | tier |
-    // split('|') on a line that starts and ends with '|' yields a leading and
-    // trailing empty string, so the suppressed cell is index 6.
+    // Row shape: | detector | class | S1 | S2 | S3 | S4 | suppressed | **verdict** | tier |
+    // split('|') on a line that starts and ends with '|' yields a leading and trailing
+    // empty string, so the detector is index 1 and every stage column is positional --
+    // checked by index rather than by `includes`, so one stage's status can no longer
+    // satisfy another stage's assertion.
     const cells = row.split('|').map((c) => c.trim());
+    assert.equal(cells[3], o.s1.status, `${dir}/${f}: S1 mismatch`);
+    assert.equal(cells[4], o.s2.status, `${dir}/${f}: S2 mismatch`);
+    assert.equal(cells[5], o.s3.status, `${dir}/${f}: S3 mismatch`);
+    assert.equal(cells[6], o.s4.status, `${dir}/${f}: S4 mismatch`);
     assert.equal(
-      cells[6], expectedSuppressedCell(o),
-      `${dir}/${f}: suppressed column "${cells[6]}" does not match the card's suppressed_verdicts tally`,
+      cells[7], expectedSuppressedCell(o),
+      `${dir}/${f}: suppressed column "${cells[7]}" does not match the card's suppressed_verdicts tally`,
     );
+    assert.equal(cells[9], o.overall.tier ?? '—', `${dir}/${f}: tier mismatch`);
   }
+
+  // I9: both standing caveats, verbatim, on every run's report footer.
+  assert.match(report, /ADR-0012 real-telemetry anomaly \(E\[e\|H0\] = 24\/9\/9\) attaches to every T1\/T2 verdict until explained/, `${dir}: ADR-0012 caveat missing from REPORT.md`);
+  assert.match(report, /P1 unmet: assertValidForFdrPath has no production caller — every USE is advisory in practice until the gate is wired/, `${dir}: P1 caveat missing from REPORT.md`);
 }
 
-test('every REPORT.md verdict line matches its card JSON (results/, if any runs exist yet)', (t) => {
-  if (!existsSync(resultsRoot)) return t.skip('no runs yet -- the official first run belongs to a later task');
-  for (const run of readdirSync(resultsRoot).filter((d) => d.startsWith('run-'))) {
-    checkRunDir(join(resultsRoot, run));
+// Run directories are named run-<UTC basic>, so lexicographic order IS chronological.
+// No pointer file: results/ is append-only, and a "current run" pointer would be the one
+// file every run rewrote. Which report shape a run has is read off its own manifest's
+// report_format, so a preserved run written under an earlier shape is checked against the
+// shape it was written under rather than the shape the CLI emits today.
+const runDirs = () => (existsSync(resultsRoot) ? readdirSync(resultsRoot).filter((d) => d.startsWith('run-')).sort() : []);
+const reportFormat = (dir) => {
+  const p = join(dir, 'manifest.json');
+  return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')).report_format ?? 1) : 1;
+};
+
+test('every format-2 run report matches its card JSONs, column for column', (t) => {
+  const dirs = runDirs().map((r) => join(resultsRoot, r)).filter((d) => reportFormat(d) >= 2);
+  if (dirs.length === 0) return t.skip('no format-2 run in results/ yet');
+  for (const dir of dirs) checkRunDir(dir);
+});
+
+// Preserved earlier runs are NOT rewritten -- that is what append-only means -- so a
+// format-1 run keeps its own table shape (no S1 column, no caveat footer). What must still
+// hold for every preserved run is the property the machine check exists for: no report row
+// may disagree with the verdict in the card JSON beside it.
+test('every preserved format-1 run report still agrees with its own card JSONs on the verdict', (t) => {
+  const dirs = runDirs().map((r) => join(resultsRoot, r)).filter((d) => reportFormat(d) < 2);
+  if (dirs.length === 0) return t.skip('no format-1 run preserved in results/');
+  for (const dir of dirs) {
+    const report = readFileSync(join(dir, 'REPORT.md'), 'utf8');
+    for (const f of readdirSync(dir).filter((n) => n.endsWith('.card.json'))) {
+      const o = JSON.parse(readFileSync(join(dir, f), 'utf8'));
+      const row = report.split('\n').find((l) => l.includes(`| ${o.card.detector_id} |`));
+      assert.ok(row, `${dir}: no report row for ${o.card.detector_id}`);
+      assert.ok(row.includes(`**${o.overall.verdict}**`), `${dir}/${f}: report says "${row}" but card verdict is ${o.overall.verdict}`);
+    }
   }
 });
 

@@ -1,0 +1,29 @@
+{
+  "protocol_version": 1,
+  "detector_id": "sequential_ui_e_process",
+  "aliases": ["sequential_ui", "seq_ui"],
+  "family": null,
+  "class": "e_process",
+  "engine_pin": { "version": "v0.6.6-pre", "sha": null },
+  "source_files": [
+    { "path": "detectors/sequential-ui.ts", "sha256": null }
+  ],
+  "guarantee": {
+    "sentence": "E[E_tau] <= 1 at every stopping time for any phi including near unit root (numerator fit on strictly-past data, denominator a profiled sup)",
+    "quantifiers": [
+      { "text": "every stopping time, any phi", "tag": "empirical", "proof_artifact": null }
+    ],
+    "regime": { "phi_max": 0.99, "m_min": null, "baseline": "estimated", "nulls": "any tested" }
+  },
+  "shipped_path": {
+    "kind": "e-process; numerator fit on strictly-past data, denominator a profiled sup re-maximised over the null at every tick",
+    "estimator": null,
+    "notes": "valid but inert under strong autocorrelation: crossing 0.0000 on every clustersynth-ui counter, zero power against a +3sd shift"
+  },
+  "budget": { "participating": true, "alpha_booked": null, "resolution_claim": null },
+  "falsifier": "crossing rate > alpha at a stopping rule inside the regime",
+  "prior_evidence": [
+    { "stage": "S2", "study": "detector-audit-arm3", "runs": "detector-audit/results/live/sui-*", "wiki": "stats/detector-audit-arm3-2026-08-05" },
+    { "stage": "S2+S3", "study": "clustersynth-ui", "runs": "shape-battery/results/live/csui-*", "wiki": "stats/clustersynth-ui-2026-08-05" }
+  ]
+}

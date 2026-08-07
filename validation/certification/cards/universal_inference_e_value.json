@@ -1,0 +1,30 @@
+{
+  "protocol_version": 1,
+  "detector_id": "universal_inference_e_value",
+  "aliases": ["ui", "universal_inference"],
+  "family": null,
+  "class": "terminal_e_value",
+  "engine_pin": { "version": "v0.6.6-pre", "sha": null },
+  "source_files": [
+    { "path": "detectors/universal-inference-e-value.ts", "sha256": null }
+  ],
+  "guarantee": {
+    "sentence": "E[e] <= 1 under H0 for any phi (split-LRT, no regularity conditions); power claimed only at phi <= 0.8",
+    "quantifiers": [
+      { "text": "for any phi", "tag": "proof", "proof_artifact": "Wasserman-Ramdas-Balakrishnan 2020 universal inference; split independence checked at S2" }
+    ],
+    "regime": { "phi_max": 0.99, "m_min": null, "baseline": "estimated", "nulls": "any tested", "power_phi_max": 0.8 }
+  },
+  "shipped_path": {
+    "kind": "terminal e-value, fixed split",
+    "estimator": null,
+    "notes": ""
+  },
+  "budget": { "participating": true, "alpha_booked": null, "resolution_claim": null },
+  "falsifier": "exceedance > alpha in any cell",
+  "prior_evidence": [
+    { "stage": "S2", "study": "detector-audit-terminal", "runs": null, "wiki": "stats/detector-audit-terminal-2026-08-05" },
+    { "stage": "S2+S3", "study": "clustersynth-ui", "runs": "shape-battery/results/live/csui-*", "wiki": "stats/clustersynth-ui-2026-08-05" },
+    { "stage": "S3", "study": "power-per-cell", "runs": null, "wiki": "stats/power-per-cell-2026-08-05" }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "protocol_version": 1,
+  "detector_id": "family_D_spectral_e_detector",
+  "aliases": ["family_D_spectral", "spectral_e_detector"],
+  "family": "D",
+  "class": "test_martingale",
+  "engine_pin": { "version": "v0.6.6-pre", "sha": null },
+  "source_files": [
+    { "path": "detectors/spectral.ts", "sha256": null }
+  ],
+  "guarantee": {
+    "sentence": "Shin-Ramdas-Rinaldo e-detector on spectral peak; shipped rolling windows violate the martingale-difference condition; heuristic as shipped, priced c-bound optional (c = 1.064 at T=300, 1.108 at T=900, grows with horizon)",
+    "quantifiers": [],
+    "regime": { "phi_max": null, "m_min": null, "baseline": "any", "nulls": "none claimed" }
+  },
+  "shipped_path": {
+    "kind": "wealth process on peak|ACF| (spectral autocorrelation statistic), disjoint-window evaluation, analytical 1/alpha threshold (no bootstrap substitution)",
+    "estimator": null,
+    "notes": ""
+  },
+  "budget": { "participating": false, "alpha_booked": 0, "resolution_claim": "bootstrap resolves 2e-3 at N=500; do not book finer" },
+  "falsifier": "already fired: REFUTED at N1 (increment 1.0012, crossing 1.0 at N7)",
+  "prior_evidence": [
+    { "stage": "S2", "study": "detector-audit", "runs": "detector-audit/results/live/seq-*", "wiki": "stats/detector-audit-sequential-2026-08-05" },
+    { "stage": "S3", "study": "detector-audit-power", "runs": "detector-audit/results/live/power-*", "wiki": "stats/detector-audit-power-2026-08-05" }
+  ]
+}

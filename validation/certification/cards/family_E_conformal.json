@@ -1,0 +1,35 @@
+{
+  "protocol_version": 1,
+  "detector_id": "family_E_conformal",
+  "aliases": ["mahalanobis_conformal_baseline", "family_E"],
+  "family": "E",
+  "class": "terminal_e_value",
+  "engine_pin": { "version": "v0.6.6-pre", "sha": null },
+  "source_files": [
+    { "path": "detectors/conformal.ts", "sha256": null },
+    { "path": "../deploysignal/tools/calibrators/family-e.ts", "sha256": null }
+  ],
+  "guarantee": {
+    "sentence": "weighted_e_value kind: hedged indicator e-value; UNREACHABLE on the shipped path — the auto selector emits the pre-#19 parametric-bootstrap p-value kind because the ESS gate (0.9) never passes (measured 0.86562 at every span)",
+    "quantifiers": [
+      { "text": "P(indicator=1|H0) = alpha_E by construction", "tag": "empirical", "proof_artifact": null }
+    ],
+    "regime": { "phi_max": null, "m_min": null, "baseline": "synthetic chi_p calibration, no real data", "nulls": "gaussian plug-in" }
+  },
+  "shipped_path": {
+    "kind": "p-value (kind: unweighted)",
+    "estimator": null,
+    "notes": ""
+  },
+  "budget": {
+    "participating": true,
+    "alpha_booked": 1.0e-4,
+    "resolution_claim": null,
+    "notes": "~12.5% of participating budget as a classical path — S4.1 adjudicates this"
+  },
+  "falsifier": "the ESS gate passing on a shipped config would falsify the unreachability claim",
+  "prior_evidence": [
+    { "stage": "S1+S2", "study": "detector-audit-arm3", "runs": null, "wiki": "stats/detector-audit-arm3-2026-08-05" },
+    { "stage": "S2", "study": "family-ce-nulls", "runs": "family-ce-nulls/results/live/*", "wiki": "stats/family-ce-nulls-2026-08-03" }
+  ]
+}

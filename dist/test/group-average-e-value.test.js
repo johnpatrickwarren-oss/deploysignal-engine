@@ -30,6 +30,20 @@ const group_average_e_value_1 = require("../detectors/group-average-e-value");
     const got = (0, group_average_e_value_1.groupAverageEValue)([0, 4]);
     strict_1.default.ok(Math.abs(got - 2) < 1e-9, `expected ~2, got ${got}`);
 });
+// Regression: the log/exp round trip through combineAverage degenerates when EVERY component is
+// exactly 0 (Math.log(0) = -Infinity for all inputs; the max-shift logSumExp then computes
+// exp(-Infinity - -Infinity) = exp(NaN) = NaN). Zero is a legal e-value and the mean of all-zeros
+// is 0, not NaN.
+(0, node_test_1.test)('mean: a single 0 component is 0 (not NaN)', () => {
+    strict_1.default.equal((0, group_average_e_value_1.groupAverageEValue)([0]), 0);
+});
+(0, node_test_1.test)('mean: all-zero components average to 0 (not NaN)', () => {
+    strict_1.default.equal((0, group_average_e_value_1.groupAverageEValue)([0, 0]), 0);
+});
+(0, node_test_1.test)('mean: a mixed [0, 4] still averages to 2 (regression guard alongside the all-zero fix)', () => {
+    const got = (0, group_average_e_value_1.groupAverageEValue)([0, 4]);
+    strict_1.default.ok(Math.abs(got - 2) < 1e-9, `expected ~2, got ${got}`);
+});
 (0, node_test_1.test)('guards: throws on empty input', () => {
     strict_1.default.throws(() => (0, group_average_e_value_1.groupAverageEValue)([]), Error);
 });

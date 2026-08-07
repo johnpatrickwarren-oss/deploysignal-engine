@@ -1,0 +1,31 @@
+{
+  "protocol_version": 1,
+  "detector_id": "sequential_mmd_betting_e_process",
+  "aliases": ["family_C_mmd", "mmd_betting"],
+  "family": "C",
+  "class": "test_martingale",
+  "engine_pin": { "version": "v0.6.6-pre", "sha": null },
+  "source_files": [
+    { "path": "detectors/sequential-mmd.ts", "sha256": null },
+    { "path": "detectors/family-c-betting-e-process.ts", "sha256": null }
+  ],
+  "guarantee": {
+    "sentence": "Shekhar-Ramdas betting e-process on RFF-MMD: E[e_t|F_{t-1}] <= 1 under H0",
+    "quantifiers": [
+      { "text": "per tick", "tag": "empirical", "proof_artifact": null }
+    ],
+    "regime": { "phi_max": null, "m_min": 100, "baseline": "compiled", "nulls": "multivariate" }
+  },
+  "shipped_path": {
+    "kind": "wealth process, RFF-MMD betting witness against a compiled mcd/mrcd covariance reference",
+    "estimator": null,
+    "notes": "retirement implemented on deploysignal branch retire/family-c-mmd, unmerged; refuted on own Gaussian control; blind to shape; compiles on zero real cells"
+  },
+  "budget": { "participating": false, "alpha_booked": null, "resolution_claim": null },
+  "falsifier": "already fired: crossing 0.1575 on Gaussian control under mrcd",
+  "prior_evidence": [
+    { "stage": "S2", "study": "family-c-shipped", "runs": null, "wiki": "stats/family-c-shipped-2026-08-04" },
+    { "stage": "S1", "study": "family-c-reachability", "runs": null, "wiki": "stats/family-c-reachability-2026-08-04" },
+    { "stage": "S3", "study": "family-c-blind-to-shape", "runs": null, "wiki": "stats/family-c-blind-to-shape-2026-08-04" }
+  ]
+}

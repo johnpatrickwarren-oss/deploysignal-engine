@@ -1,0 +1,30 @@
+{
+  "study": "2026-08-phi-identifiability",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "a06554b79742b3dda3eda447b5d8e185a0ff1944",
+  "node": "v25.9.0",
+  "seed_base": 4242,
+  "n": 2000,
+  "m": 100,
+  "n_test": 100,
+  "alpha": 0.05,
+  "shift_sigma": 3,
+  "phi_grid": [
+    0,
+    0.3,
+    0.6,
+    0.8,
+    0.9,
+    0.95,
+    0.99
+  ],
+  "generated_at": "20260807T215105Z",
+  "prereg": [
+    "PHI-IDENTIFIABILITY-PREREG.md"
+  ],
+  "addenda": [
+    "PHI-IDENTIFIABILITY-ADDENDUM-2026-08-07.md"
+  ],
+  "error_count": 0
+}

@@ -1,0 +1,21 @@
+{
+  "detector": "universal_inference",
+  "null_id": "N5",
+  "m": 100,
+  "alpha": 0.01,
+  "n": 4000,
+  "exceedance": 0,
+  "lower_95": 0,
+  "verdict": "not-refuted",
+  "mean_e": 0.09981421030136466,
+  "mean_e_sd": 0.3405271710650205,
+  "mean_e_lower_95": 0.09095718924565932,
+  "p_e_ge_10": 0.00025,
+  "p99_e": 1.1862529362605345,
+  "nan_count": 0,
+  "power_this_cell": 0.86825,
+  "power_verdict": "powered",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "a06554b79742b3dda3eda447b5d8e185a0ff1944"
+}

@@ -1,0 +1,13 @@
+{
+  "control": "power_per_cell",
+  "detector": "universal_inference",
+  "null_id": "N6",
+  "m": 100,
+  "shift_sigma": 3,
+  "n": 4000,
+  "rate_e_ge_20": 0.895,
+  "power_verdict": "powered",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "a06554b79742b3dda3eda447b5d8e185a0ff1944"
+}

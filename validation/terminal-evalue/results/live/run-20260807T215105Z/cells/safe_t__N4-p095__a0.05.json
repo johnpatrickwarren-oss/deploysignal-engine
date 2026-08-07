@@ -1,0 +1,20 @@
+{
+  "detector": "safe_t",
+  "null_id": "N4-p095",
+  "m": 100,
+  "alpha": 0.05,
+  "n": 2000,
+  "phi": 0.95,
+  "exceedance": 0.0355,
+  "lower_95": 0.029296949680581823,
+  "verdict": "not-refuted",
+  "mean_e": 2.960179453482096e+21,
+  "mean_e_sd": 1.3238324956343074e+23,
+  "mean_e_lower_95": 0,
+  "p_e_ge_10": 0.042,
+  "p99_e": 2108.14141714657,
+  "error_count": 0,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "a06554b79742b3dda3eda447b5d8e185a0ff1944"
+}

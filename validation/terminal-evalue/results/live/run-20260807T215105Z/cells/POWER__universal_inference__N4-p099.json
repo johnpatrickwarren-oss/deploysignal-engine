@@ -1,0 +1,14 @@
+{
+  "control": "power_per_cell",
+  "detector": "universal_inference",
+  "null_id": "N4-p099",
+  "m": 100,
+  "phi": 0.99,
+  "shift_sigma": 3,
+  "n": 2000,
+  "rate_e_ge_20": 0,
+  "power_verdict": "INERT",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "a06554b79742b3dda3eda447b5d8e185a0ff1944"
+}

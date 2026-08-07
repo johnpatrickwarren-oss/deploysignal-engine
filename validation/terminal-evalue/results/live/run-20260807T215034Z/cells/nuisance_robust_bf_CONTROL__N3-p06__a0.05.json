@@ -1,0 +1,21 @@
+{
+  "detector": "nuisance_robust_bf_CONTROL",
+  "null_id": "N3-p06",
+  "m": 100,
+  "alpha": 0.05,
+  "n": 4000,
+  "exceedance": 0.00325,
+  "lower_95": 0.002068329968102551,
+  "verdict": "not-refuted",
+  "mean_e": 1.9628028650549085,
+  "mean_e_sd": 94.43546128743013,
+  "mean_e_lower_95": 0,
+  "p_e_ge_10": 0.005,
+  "p99_e": 2.945040963071764,
+  "nan_count": 0,
+  "power_this_cell": 1,
+  "power_verdict": "powered",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "a06554b79742b3dda3eda447b5d8e185a0ff1944"
+}

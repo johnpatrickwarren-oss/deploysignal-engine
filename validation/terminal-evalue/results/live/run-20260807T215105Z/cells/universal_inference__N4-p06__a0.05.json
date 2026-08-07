@@ -1,0 +1,20 @@
+{
+  "detector": "universal_inference",
+  "null_id": "N4-p06",
+  "m": 100,
+  "alpha": 0.05,
+  "n": 2000,
+  "phi": 0.6,
+  "exceedance": 0,
+  "lower_95": 0,
+  "verdict": "not-refuted",
+  "mean_e": 0.1555199238816955,
+  "mean_e_sd": 0.34715094062579066,
+  "mean_e_lower_95": 0.1427505603588578,
+  "p_e_ge_10": 0,
+  "p99_e": 1.6046645619320876,
+  "error_count": 0,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "a06554b79742b3dda3eda447b5d8e185a0ff1944"
+}

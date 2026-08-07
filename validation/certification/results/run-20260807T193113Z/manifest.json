@@ -1,0 +1,44 @@
+{
+  "study": "detector-certification",
+  "protocol_version": 1,
+  "git_sha": "5a9363f98fac5c1a14d63fce24c3e4e9c24f9f4d",
+  "node": "v25.9.0",
+  "cards": [
+    {
+      "file": "family_A_betting_e_process.json",
+      "sha256": "a47c13c89801dd9464a70ac6fb0137a64c6ee2d8891b31d300b2bc49f33fa8c8"
+    },
+    {
+      "file": "family_A_mixture_supermartingale.json",
+      "sha256": "d4936e9fa303bd217eb96581cc7a5358cde28cefe9cc83129f2eb432075d6543"
+    },
+    {
+      "file": "family_C_safe_hotelling.json",
+      "sha256": "c5957b64007f58ce420c3925dbb0302ec882c83bf1c9c09157a96e334a4f800e"
+    },
+    {
+      "file": "family_D_spectral_e_detector.json",
+      "sha256": "de4b737604abbfe5a2618abcf6b71bd4ea391330c23fc7a290e933021bc781a3"
+    },
+    {
+      "file": "family_E_conformal.json",
+      "sha256": "d05e8cdc88542cf6fa35e1535c34d1115ab66f3ae71edba5536527f70c77edbf"
+    },
+    {
+      "file": "safe_t_e_value.json",
+      "sha256": "e877c28942329dd671b5f2f0b38dc590e40100bc176b05b7b8f5d7c03d265bbb"
+    },
+    {
+      "file": "sequential_mmd_betting_e_process.json",
+      "sha256": "6c3b01141c8f3348251907cf7879880df9ed9e13dee18f434f1246ce8b3ebb8b"
+    },
+    {
+      "file": "sequential_ui_e_process.json",
+      "sha256": "c20495407e67035834bb060f0cfb14587eaec8d9b699b4236fdff89f4ff4380a"
+    },
+    {
+      "file": "universal_inference_e_value.json",
+      "sha256": "d7109b525b912a82c3df98dbe34ea84fa5a94484dbfeb0de84b26f7c76f2f21b"
+    }
+  ]
+}

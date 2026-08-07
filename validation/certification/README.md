@@ -45,10 +45,22 @@ written is ever edited or deleted by a later run.
 
 ### Which run is current
 
-**Current: `results/run-20260807T202419Z`.** Run directories are named `run-<UTC basic>`, so
+**Current: `results/run-20260807T215155Z`.** Run directories are named `run-<UTC basic>`, so
 lexicographic order is chronological and the greatest name is the current run — there is no
 pointer file, because a pointer would be the one file in an append-only tree that every run
 rewrote.
+
+`results/run-20260807T202419Z` is **preserved and superseded**. It is the first run scored
+against the two live terminal-evalue runs of 2026-08-07
+(`validation/terminal-evalue/results/live/run-20260807T215034Z` and `run-20260807T215105Z`,
+registered by that study's two 2026-08-07 addenda) that supersedes it, and its differences are
+evidence deltas rather than scoring corrections. Three: `universal_inference_e_value` moves S3
+**PASS → INERT** on per-null power arms of 0.0222 at φ = 0.9 and 0.0000 at φ = 0.99 that its
+pooled control of 0.7030 averaged away, keeping **USE T1** on a regime narrowed to φ < 0.9; the
+unpaired-validity-cell count falls from **29 to 11**, the remaining 11 all
+`sequential_ui_e_process`; and safe-t's suppressed tally moves from `not-refuted x2` to
+`FAIL x1, not-refuted x3`. See `study-power-live-report.md` in the SDD directory for what the
+new `mean_e_lower_95` instrument did and did not fire on.
 
 `results/run-20260807T193113Z` is **preserved and superseded**. It is the first official
 re-score, and it is kept rather than corrected for two reasons. It is the record of what the

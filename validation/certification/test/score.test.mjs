@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreS1, scoreS2, scoreS3, scoreS4, overallVerdict } from '../lib/score.mjs';
+import { scoreS1, scoreS2, scoreS3, scoreS4, overallVerdict, pairingGaps, untokenedExclusions } from '../lib/score.mjs';
 
 const card = {
   detector_id: 'd', aliases: [], class: 'test_martingale',
@@ -10,6 +10,7 @@ const card = {
   prior_evidence: [{ stage: 'S1', study: 'x', wiki: 'y' }],
 };
 const eCard = { ...card, class: 'e_process', guarantee: { regime: { phi_max: 0.99, m_min: null } } };
+const s1D = scoreS1(card);
 
 const vCell = (over = {}) => ({ detector: 'd', null_id: 'N1', phi: 0, m: null, verdict: 'CLEARED',
   increment_estimator: { mean: 1.0, sd: 0.001, lower95_one_sided: 0.999 }, crossing_rate: 0, __tier: 'T1', ...over });
@@ -96,13 +97,15 @@ test('S2: a voided run is excluded but a healthy run still scores', () => {
   const mismatched = { detector: 'd', null_id: 'N1', phi: null, m: null,
     increment_estimator: { mean: 1.1e8, sd: 2.3e8, lower95_one_sided: 9.9e7 },
     __run: 'run-void', __tier: 'T1' };
-  const healthy = { detector: 'd', null_id: 'N2', phi: null, m: null,
+  // N2-m100, not a bare 'N2': the registered grammar always carries the cal length on an
+  // N2 id, and an id outside the grammar has an unmeasured phi the scorer now refuses.
+  const healthy = { detector: 'd', null_id: 'N2-m100', phi: null, m: null,
     crossing_rate: 0, verdict: 'not-refuted', __run: 'run-ok', __tier: 'T1' };
   const s2 = scoreS2(eCard, [mismatched, healthy]);
   assert.equal(s2.status, 'PASS');
   assert.equal(s2.excluded.length, 1);
   assert.equal(s2.excluded[0].reason, 'run voided: instrument-class mismatch');
-  assert.equal(s2.perCell.find((c) => c.null_id === 'N2').mapped, 'CLEARED');
+  assert.equal(s2.perCell.find((c) => c.null_id === 'N2-m100').mapped, 'CLEARED');
 });
 
 test('S2: stage is VOID only when every in-regime cell came from voided runs', () => {
@@ -306,13 +309,13 @@ test('S4 an S4 prior_evidence entry with runs != null clears the UNPRICED gate',
 });
 
 test('overall: clean stages give USE at the evidence tier', () => {
-  const v = overallVerdict(card, scoreS2(card, [vCell()]), scoreS3(card, [pCell()]), scoreS4(card));
+  const v = overallVerdict(card, s1D, scoreS2(card, [vCell()]), scoreS3(card, [pCell()]), scoreS4(card));
   assert.equal(v.verdict, 'USE');
   assert.equal(v.tier, 'T1');
 });
 
 test('overall: valid-but-inert is ADVISORY, never USE', () => {
-  const v = overallVerdict(card, scoreS2(card, [vCell()]), scoreS3(card, [pCell({ detection_rate: 0.0, verdict: 'INERT' })]), scoreS4(card));
+  const v = overallVerdict(card, s1D, scoreS2(card, [vCell()]), scoreS3(card, [pCell({ detection_rate: 0.0, verdict: 'INERT' })]), scoreS4(card));
   assert.equal(v.verdict, 'ADVISORY');
 });
 
@@ -320,7 +323,7 @@ test('overall: valid-but-inert is ADVISORY, never USE', () => {
 // at least one claimed cell is powered; the inert ones are named in reasons[].
 test('overall: some-inert-some-powered is USE, with the inert cell named in reasons[]', () => {
   const v = overallVerdict(
-    card,
+    card, s1D,
     scoreS2(card, [vCell()]),
     scoreS3(card, [pCell(), pCell({ null_id: 'N2', detection_rate: 0.0, verdict: 'INERT' })]),
     scoreS4(card),
@@ -330,7 +333,7 @@ test('overall: some-inert-some-powered is USE, with the inert cell named in reas
 });
 
 test('overall: in-regime refutation is REFUSE', () => {
-  const v = overallVerdict(card, scoreS2(card, [vCell({ verdict: 'REFUTED' })]), scoreS3(card, [pCell()]), scoreS4(card));
+  const v = overallVerdict(card, s1D, scoreS2(card, [vCell({ verdict: 'REFUTED' })]), scoreS3(card, [pCell()]), scoreS4(card));
   assert.equal(v.verdict, 'REFUSE');
 });
 
@@ -338,7 +341,7 @@ test('overall: in-regime refutation is REFUSE', () => {
 // min-supporting-tier computation as UNPRICED, instead of tier: null.
 test('overall: S4 REFUSE still carries the supporting tier, not null', () => {
   const v = overallVerdict(
-    { ...card, shipped_path: { kind: 'p-value (kind: unweighted)' } },
+    { ...card, shipped_path: { kind: 'p-value (kind: unweighted)' } }, s1D,
     scoreS2(card, [vCell()]),
     scoreS3(card, [pCell()]),
     scoreS4({ ...card, shipped_path: { kind: 'p-value (kind: unweighted)' } }),
@@ -349,11 +352,304 @@ test('overall: S4 REFUSE still carries the supporting tier, not null', () => {
 
 test('overall: S3-all-inert ADVISORY still carries the supporting tier, not null', () => {
   const v = overallVerdict(
-    card,
+    card, s1D,
     scoreS2(card, [vCell()]),
     scoreS3(card, [pCell({ detection_rate: 0.0, verdict: 'INERT' })]),
     scoreS4(card),
   );
   assert.equal(v.verdict, 'ADVISORY');
   assert.equal(v.tier, 'T1');
+});
+
+// ===========================================================================
+// C1 -- the mean rule inside S2.
+// ===========================================================================
+
+const tCard = {
+  detector_id: 'st', aliases: [], class: 'terminal_e_value',
+  guarantee: { regime: { phi_max: 0.95, m_min: null } },
+  shipped_path: { kind: 'terminal e-value, phi plug-in', notes: '' },
+  budget: { participating: true, alpha_booked: null, resolution_claim: null },
+  prior_evidence: [{ stage: 'S2', study: 'terminal-evalue', runs: 'x', wiki: 'y' }],
+};
+const tCell = (over = {}) => ({ detector: 'st', null_id: 'N1', alpha: 0.05, m: 100,
+  exceedance: 0.00025, lower_95: 0.0000557, mean_e: 0.0954, verdict: 'not-refuted',
+  __run: 'run-t', __tier: 'T1', ...over });
+
+test('S2 mean rule: a CLEARED terminal cell whose mean_e exceeds 1 maps REFUTED', () => {
+  const s2 = scoreS2(tCard, [tCell({ null_id: 'N4-p09', mean_e: 9709.992955188858, exceedance: 0.016, lower_95: 0.013 })]);
+  const cell = s2.perCell[0];
+  assert.equal(cell.mapped, 'REFUTED');
+  assert.equal(cell.mean_rule_applied, true);
+  assert.match(cell.mean_rule_reason, /^mean rule: exceedance verdict overridden/);
+  assert.equal(s2.status, 'REFUTED', 'an in-regime mean-rule refutation fails the stage');
+});
+
+test('S2 mean rule: the overridden exceedance token goes into the suppressed tally', () => {
+  const s2 = scoreS2(tCard, [tCell({ null_id: 'N4-p09', mean_e: 9709.99 })]);
+  assert.deepEqual(s2.suppressed_verdicts, { 'not-refuted': 1 });
+});
+
+test('S2 mean rule leaves a below-1 mean alone (a mean below 1 is not evidence either way)', () => {
+  const s2 = scoreS2(tCard, [tCell()]);
+  assert.equal(s2.perCell[0].mapped, 'CLEARED');
+  assert.equal(s2.perCell[0].mean_rule_applied, undefined);
+  assert.equal(s2.status, 'PASS');
+});
+
+test('S2 mean rule never rescues an already-REFUTED cell into CLEARED', () => {
+  const s2 = scoreS2(tCard, [tCell({ verdict: 'REFUTED', mean_e: 0.0001 })]);
+  assert.equal(s2.perCell[0].mapped, 'REFUTED');
+});
+
+test('S2 mean rule does not apply to test_martingale or e_process cells', () => {
+  const s2 = scoreS2(card, [vCell({ mean_e: 9709.99 })]);
+  assert.equal(s2.perCell[0].mapped, 'CLEARED');
+  assert.equal(s2.status, 'PASS');
+});
+
+// ===========================================================================
+// C2 -- fail-closed phi and the known-phi regime.
+// ===========================================================================
+
+test('S2 fails closed on a validity cell whose phi is unknown after derivation', () => {
+  const s2 = scoreS2(tCard, [tCell({ null_id: 'HC-gauss-corr' })]);
+  assert.equal(s2.perCell.length, 0);
+  assert.equal(s2.status, 'MISSING');
+  assert.equal(s2.missing.length, 1);
+  assert.match(s2.missing[0].reason, /phi unmeasured, refused \(fail-closed\)/);
+  assert.equal(s2.missing[0].suppressed_verdict, 'not-refuted');
+});
+
+test('S2 does not fail closed when the card claims no phi bound at all', () => {
+  const noPhiCard = { ...tCard, guarantee: { regime: { phi_max: null, m_min: null } } };
+  const s2 = scoreS2(noPhiCard, [tCell({ null_id: 'HC-gauss-corr' })]);
+  assert.equal(s2.status, 'PASS');
+  assert.equal(s2.perCell.length, 1);
+});
+
+test('S2 derives phi from the null_id, so a phi-less N3-p09 cell is in regime at phi_max 0.95', () => {
+  const s2 = scoreS2(tCard, [tCell({ null_id: 'N3-p09' })]);
+  assert.equal(s2.perCell[0].out_of_regime, false);
+  assert.equal(s2.status, 'PASS');
+});
+
+test('regime.phi_known puts an estimated-phi cell out of regime, narrowing rather than failing', () => {
+  const knownCard = { ...tCard, guarantee: { regime: { phi_max: 0.95, m_min: null, phi_known: true } } };
+  const s2 = scoreS2(knownCard, [
+    tCell({ null_id: 'N1' }),
+    tCell({ null_id: 'N4-p09', mean_e: 9709.99 }),
+  ]);
+  assert.equal(s2.status, 'PASS', 'the out-of-regime N4 refutation must not fail the stage');
+  const n4 = s2.perCell.find((c) => c.null_id === 'N4-p09');
+  assert.equal(n4.mapped, 'REFUTED');
+  assert.equal(n4.out_of_regime, true);
+  assert.match(n4.out_of_regime_reason, /estimated phi/);
+});
+
+test('without phi_known, the same estimated-phi cell stays in regime and refutes', () => {
+  const s2 = scoreS2(tCard, [tCell({ null_id: 'N1' }), tCell({ null_id: 'N4-p09', mean_e: 9709.99 })]);
+  assert.equal(s2.status, 'REFUTED');
+});
+
+test('S3 does not fail closed on unknown phi: a pooled power control has no null and no phi', () => {
+  const s3 = scoreS3(tCard, [rateCell({ detector: 'st' })]);
+  assert.equal(s3.status, 'PASS');
+  assert.equal(s3.perCell.length, 1);
+  assert.ok(s3.missing.some((m) => /phi unmeasured on a power cell/.test(m.reason)),
+    'the unmeasured phi is still recorded as a gap, not silently accepted');
+});
+
+// ===========================================================================
+// I1 -- S1 in the overall verdict.
+// ===========================================================================
+
+test('overall: a MISSING S1 appends the v1-floor reason and never blocks USE', () => {
+  const s1 = scoreS1({ ...card, prior_evidence: [] });
+  const v = overallVerdict(card, s1, scoreS2(card, [vCell()]), scoreS3(card, [pCell()]), scoreS4(card));
+  assert.equal(v.verdict, 'USE');
+  assert.ok(v.reasons.includes('S1 reachability not run-backed (v1 floor)'));
+});
+
+test('overall: a DECLARED S1 adds no S1 reason', () => {
+  const v = overallVerdict(card, s1D, scoreS2(card, [vCell()]), scoreS3(card, [pCell()]), scoreS4(card));
+  assert.ok(!v.reasons.some((r) => r.includes('S1 reachability')));
+});
+
+test('overall: the S1 floor reason is appended on every verdict branch, including REFUSE', () => {
+  const s1 = scoreS1({ ...card, prior_evidence: [] });
+  const v = overallVerdict(card, s1, scoreS2(card, [vCell({ verdict: 'REFUTED' })]), scoreS3(card, [pCell()]), scoreS4(card));
+  assert.equal(v.verdict, 'REFUSE');
+  assert.ok(v.reasons.includes('S1 reachability not run-backed (v1 floor)'));
+});
+
+test('scoreS1 matches a compound stage token containing S1 (the family_E S1+S2 shape)', () => {
+  assert.equal(scoreS1({ ...card, prior_evidence: [{ stage: 'S1+S2', study: 'x', wiki: 'y' }] }).status, 'DECLARED');
+  assert.equal(scoreS1({ ...card, prior_evidence: [{ stage: 'S2+S3', study: 'x', wiki: 'y' }] }).status, 'MISSING');
+  assert.equal(scoreS1({ ...card, prior_evidence: [{ stage: null, study: 'x', wiki: 'y' }] }).status, 'MISSING');
+});
+
+// ===========================================================================
+// I2 -- validity/power pairing.
+// ===========================================================================
+
+test('pairingGaps names an in-regime CLEARED validity cell that has no same-null power arm', () => {
+  const s2 = scoreS2(tCard, [tCell({ null_id: 'N1' }), tCell({ null_id: 'N3-p06' })]);
+  const s3 = scoreS3(tCard, [rateCell({ detector: 'st' })]);
+  const gaps = pairingGaps(s2, s3);
+  assert.deepEqual(gaps.map((g) => g.line), [
+    'unpaired: st N1 validity cell has no power arm',
+    'unpaired: st N3-p06 validity cell has no power arm',
+  ]);
+});
+
+test('pairingGaps is empty when a same-null power cell exists', () => {
+  const s2 = scoreS2(card, [vCell()]);
+  const s3 = scoreS3(card, [pCell()]);
+  assert.deepEqual(pairingGaps(s2, s3), []);
+});
+
+test('pairingGaps ignores out-of-regime and REFUTED validity cells', () => {
+  const s2 = scoreS2(card, [vCell({ null_id: 'N4', phi: 0.99 }), vCell({ null_id: 'N2', verdict: 'REFUTED' })]);
+  assert.deepEqual(pairingGaps(s2, scoreS3(card, [])), []);
+});
+
+test('pairingGaps dedupes the alpha replicates of one null into a single line', () => {
+  const s2 = scoreS2(tCard, [tCell({ alpha: 0.05 }), tCell({ alpha: 0.01 })]);
+  assert.equal(pairingGaps(s2, scoreS3(tCard, [])).length, 1);
+});
+
+// ===========================================================================
+// I3 -- S4 completions.
+// ===========================================================================
+
+test('S4 REFUSES an alpha booked finer than the machinery resolves', () => {
+  const s4 = scoreS4({ ...card, budget: { participating: true, alpha_booked: 2e-4, resolution_claim: 'bootstrap resolves 2e-3 at N=500' } });
+  assert.equal(s4.status, 'REFUSE');
+  assert.ok(s4.reasons.some((r) => /alpha booked 0\.0002 is finer than the claimed resolution 0\.002/.test(r)));
+});
+
+test('S4 passes an alpha booked coarser than the claimed resolution', () => {
+  const s4 = scoreS4({ ...card, budget: { participating: true, alpha_booked: 1e-2, resolution_claim: 'bootstrap resolves 2e-3 at N=500' } });
+  assert.equal(s4.status, 'PASS');
+});
+
+test('S4 records "alpha resolution unverifiable" when a participating card books alpha with no parseable resolution', () => {
+  const s4 = scoreS4({ ...card, budget: { participating: true, alpha_booked: 1e-4, resolution_claim: null } });
+  assert.notEqual(s4.status, 'REFUSE');
+  assert.ok(s4.reasons.includes('alpha resolution unverifiable'));
+});
+
+test('S4 says nothing about alpha when alpha_booked is 0 or null (family_D, safe_t)', () => {
+  assert.deepEqual(scoreS4({ ...card, budget: { participating: false, alpha_booked: 0, resolution_claim: 'bootstrap resolves 2e-3' } }).reasons, []);
+  assert.deepEqual(scoreS4({ ...card, budget: { participating: true, alpha_booked: null, resolution_claim: null } }).reasons, []);
+});
+
+test('S4 records "no envelope wiring" when the detector is absent from the envelope map, without refusing', () => {
+  const s4 = scoreS4(card, { envelopeKeys: ['safe_t_e_value'] });
+  assert.equal(s4.status, 'PASS');
+  assert.ok(s4.reasons.includes('no envelope wiring'));
+});
+
+test('S4 says nothing about wiring when the detector is in the envelope map', () => {
+  const s4 = scoreS4({ ...card, detector_id: 'safe_t_e_value' }, { envelopeKeys: ['safe_t_e_value'] });
+  assert.deepEqual(s4.reasons, []);
+});
+
+// The regression the anchored pattern exists for: family_D's shipped-path kind says
+// "analytical 1/alpha threshold (no bootstrap substitution)". A substring match on
+// 'bootstrap' or an unanchored 'substitution' would price it UNPRICED for saying it
+// does NOT substitute.
+test('S4 does not trip UNPRICED on family_D\'s "no bootstrap substitution" kind', () => {
+  const s4 = scoreS4({ ...card,
+    budget: { participating: false, alpha_booked: 0, resolution_claim: null },
+    shipped_path: { kind: 'wealth process on peak|ACF| (spectral autocorrelation statistic), disjoint-window evaluation, analytical 1/alpha threshold (no bootstrap substitution)' } });
+  assert.equal(s4.status, 'PASS');
+});
+
+test('S4 still prices the two real bootstrap-substituting kinds UNPRICED', () => {
+  for (const kind of [
+    'wealth process (aGRAPA bet), AR(1) pre-whitened, bootstrap threshold substitution ~2.4e4x over 1/alpha',
+    'wealth process, bootstrap threshold substitution ~3.6e76x over 1/alpha',
+  ]) {
+    assert.equal(scoreS4({ ...card, shipped_path: { kind } }).status, 'UNPRICED', kind);
+  }
+});
+
+test('S4 does not read a negated p-value mention as a p-value path', () => {
+  const s4 = scoreS4({ ...card, shipped_path: { kind: 'terminal e-value, not a p-value' } });
+  assert.notEqual(s4.status, 'REFUSE');
+});
+
+test('S4 still refuses the real family_E p-value kind', () => {
+  assert.equal(scoreS4({ ...card, shipped_path: { kind: 'p-value (kind: unweighted)' } }).status, 'REFUSE');
+});
+
+// ===========================================================================
+// Minors: VERDICTS vocabulary, structural regime narrowing, untokened exclusions.
+// ===========================================================================
+
+test('overallVerdict throws if it would emit a token outside the registered VERDICTS vocabulary', () => {
+  // s2.status is a token the scorer never emits, so the verdict falls through every
+  // branch -- the guard must throw rather than return something unregistered.
+  assert.throws(
+    () => overallVerdict(card, s1D, { status: 'WAT', perCell: [], excluded: [], missing: [] }, scoreS3(card, [pCell()]), scoreS4(card)),
+    /unregistered verdict|unknown S2 status/,
+  );
+});
+
+test('overall: regime narrowing is structural, not just prose', () => {
+  const knownCard = { ...tCard, guarantee: { regime: { phi_max: 0.95, m_min: null, phi_known: true } } };
+  const s2 = scoreS2(knownCard, [tCell({ null_id: 'N1' }), tCell({ null_id: 'N4-p09', mean_e: 9709.99 })]);
+  const s3 = scoreS3(knownCard, [rateCell({ detector: 'st' })]);
+  const v = overallVerdict(knownCard, s1D, s2, s3, scoreS4(knownCard));
+  assert.equal(v.verdict, 'USE');
+  assert.ok(Array.isArray(v.regime.excluded_cells));
+  const ex = v.regime.excluded_cells.find((c) => c.null_id === 'N4-p09');
+  assert.equal(ex.stage, 'S2');
+  assert.equal(ex.mapped, 'REFUTED');
+  assert.match(ex.reason, /estimated phi/);
+  assert.equal(v.regime.phi_max, 0.95, 'the card regime fields are carried through unchanged');
+});
+
+test('overall: inert S3 cells also land in regime.excluded_cells', () => {
+  const v = overallVerdict(card, s1D, scoreS2(card, [vCell()]),
+    scoreS3(card, [pCell(), pCell({ null_id: 'N2', detection_rate: 0.0 })]), scoreS4(card));
+  assert.equal(v.verdict, 'USE');
+  assert.ok(v.regime.excluded_cells.some((c) => c.stage === 'S3' && c.null_id === 'N2'));
+});
+
+test('overall: the card object is never mutated by regime narrowing', () => {
+  const knownCard = { ...tCard, guarantee: { regime: { phi_max: 0.95, m_min: null, phi_known: true } } };
+  const before = JSON.stringify(knownCard);
+  overallVerdict(knownCard, s1D, scoreS2(knownCard, [tCell()]), scoreS3(knownCard, [rateCell({ detector: 'st' })]), scoreS4(knownCard));
+  assert.equal(JSON.stringify(knownCard), before);
+});
+
+test('untokenedExclusions groups excluded cells that carried no verdict token, with counts', () => {
+  const s2 = scoreS2(eCard, [
+    { detector: 'd', null_id: 'N1', crossing_rate: 0, verdict: 'not-refuted', non_finite_wealth: 3, __run: 'r1', __tier: 'T1' },
+    { detector: 'd', null_id: 'N2', crossing_rate: 0, non_finite_wealth: 3, __run: 'r1', __tier: 'T1' },
+    { detector: 'd', null_id: 'N5', crossing_rate: 0, non_finite_wealth: 3, __run: 'r1', __tier: 'T1' },
+  ]);
+  const lines = untokenedExclusions(s2);
+  assert.deepEqual(lines, ['excluded without token: d x2 (non_finite_wealth=3)']);
+});
+
+test('S3 distinguishes a cell at the other registered shift from a cell with no shift recorded', () => {
+  const s3 = scoreS3(card, [pCell({ shift_sigma: undefined }), pCell()]);
+  const line = s3.missing.find((m) => /no shift_sigma recorded/.test(m.reason));
+  assert.ok(line, 'a cell with no shift_sigma must not be described as registered evidence at another shift');
+  assert.match(line.reason, /effect size is unknown/);
+  assert.ok(!/registered effect size/.test(line.reason));
+});
+
+test('S3 records an off-shift power cell instead of dropping it silently', () => {
+  const s3 = scoreS3(card, [pCell({ shift_sigma: 0.75 }), pCell({ shift_sigma: 0.75, null_id: 'N2' }), pCell()]);
+  assert.equal(s3.status, 'PASS');
+  assert.equal(s3.perCell.length, 1);
+  const line = s3.missing.find((m) => /shift_sigma=0\.75/.test(m.reason));
+  assert.ok(line, 'off-shift cells must be named in missing[]');
+  assert.match(line.reason, /x2/, 'off-shift cells at one shift are aggregated with a count');
+  assert.equal(s3.excluded.length, 0);
 });

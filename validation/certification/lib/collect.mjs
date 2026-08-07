@@ -1,8 +1,30 @@
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { tierOfStudy } from './constants.mjs';
+import { derivePhiParams } from './nulls.mjs';
+
+export { derivePhiParams };
 
 const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'));
+
+// C2 -- annotate a loaded cell with the phi/params its null_id mechanically encodes.
+// A RECORDED value always wins: detector-audit-sequential carries a measured `phi` and its
+// own `params` tag, and this must not overwrite either. `phi_source` is derived even when
+// phi is recorded, so the known-phi regime test in lib/score.mjs reads one uniform field
+// across studies. A cell whose null_id is outside the registered grammar is left alone,
+// with no phi -- that is the fail-closed case the scorer refuses.
+function annotatePhi(cell) {
+  const d = derivePhiParams(cell.null_id);
+  if (!d) return cell;
+  const out = { ...cell };
+  if (out.phi == null) {
+    out.phi = d.phi;
+    out.phi_derived_from = 'null_id grammar (h0-battery/harness/nulls.mjs)';
+  }
+  out.phi_source = d.phi_source;
+  if (out.params == null) out.params = d.params;
+  return out;
+}
 
 // Identity tuple for deduping a cell loaded from an aggregate (summary.json/endpoints.json)
 // against the same cell re-encountered while scanning cells/. Two cells are the same
@@ -87,9 +109,10 @@ export function loadEvidence(validationRoot) {
       }
       const studyName = manifest.study ?? study.name;
       const gitSha = manifest.git_sha ?? null;
-      runs.push({ study: studyName, run: run.name, git_sha: gitSha });
+      const tier = tierOfStudy(studyName, manifest.tier ?? null);
+      runs.push({ study: studyName, run: run.name, git_sha: gitSha, tier });
       for (const c of rawCells) {
-        cells.push({ ...c, __study: studyName, __run: run.name, __git_sha: gitSha, __tier: tierOfStudy(studyName) });
+        cells.push(annotatePhi({ ...c, __study: studyName, __run: run.name, __git_sha: gitSha, __tier: tier }));
       }
     }
   }

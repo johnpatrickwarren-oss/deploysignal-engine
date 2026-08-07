@@ -45,11 +45,35 @@ test('missing falsifier is rejected', () => {
 
 test('class fixes instruments per the protocol table', () => {
   assert.deepEqual(CLASS_INSTRUMENTS.test_martingale, ['increment_estimator']);
-  assert.deepEqual(CLASS_INSTRUMENTS.terminal_e_value, ['exceedance', 'mean_above_1']);
+  // C1: the terminal class's second instrument is the MEAN, and its field name in every
+  // run that records one is `mean_e` (terminal-evalue/harness/run.mjs:95). This table read
+  // `mean_above_1` until 2026-08-07 -- the protocol's English ("mean above 1") mistaken
+  // for a field name, matching no cell in the corpus.
+  assert.deepEqual(CLASS_INSTRUMENTS.terminal_e_value, ['exceedance', 'mean_e']);
   assert.deepEqual(CLASS_INSTRUMENTS.e_process, ['stopped_mean', 'crossing_rate']);
 });
 
 test('tier map: clustersynth studies are T2, others T1', () => {
   assert.equal(tierOfStudy('clustersynth-ui'), 'T2');
   assert.equal(tierOfStudy('detector-audit-sequential'), 'T1');
+});
+
+// Minor: the tier map had no T3 branch, so a real-telemetry run would have scored as a
+// house-synthetic T1 claim -- the over-claim the tier labels exist to stop. Two mechanical
+// routes to T3, manifest declaration first.
+test('tier map: a manifest tier declaration wins over the name', () => {
+  assert.equal(tierOfStudy('clustersynth-ui', 'T3'), 'T3');
+  assert.equal(tierOfStudy('detector-audit-sequential', 'T2'), 'T2');
+  assert.throws(() => tierOfStudy('x', 'T9'), /unregistered tier/);
+});
+
+test('tier map: a study whose name carries the real token is T3', () => {
+  assert.equal(tierOfStudy('real-telemetry-gwdg'), 'T3');
+  assert.equal(tierOfStudy('gwdg_real'), 'T3');
+  assert.equal(tierOfStudy('nab-per-dataset real'), 'T3');
+});
+
+test('tier map: the real token is boundary-bounded, not a bare substring', () => {
+  assert.equal(tierOfStudy('realignment-study'), 'T1');
+  assert.equal(tierOfStudy('unrealistic-nulls'), 'T1');
 });

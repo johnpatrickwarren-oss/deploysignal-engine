@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { loadEvidence, cellsFor } from '../lib/collect.mjs';
+import { loadEvidence, cellsFor, derivePhiParams } from '../lib/collect.mjs';
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'ev-'));
@@ -128,6 +128,76 @@ test('loads one cell per file from cells/ when neither summary.json nor endpoint
   assert.equal(tevCells.length, 2);
   assert.ok(tevCells.every((c) => c.detector === 'safe_t'));
   assert.ok(tevCells.every((c) => c.__git_sha === 'ddd'));
+});
+
+// ---------------------------------------------------------------------------
+// C2 -- mechanical phi/params derivation from the registered null-id grammar.
+// Source of truth: h0-battery/harness/nulls.mjs (the NULLS table), which
+// terminal-evalue's harness imports from and whose PREREGISTRATION section 5
+// reuses verbatim. The id encodes phi and which parameter was estimated.
+// ---------------------------------------------------------------------------
+
+test('derivePhiParams: N1 is an oracle-parameter iid null at phi 0', () => {
+  assert.deepEqual(derivePhiParams('N1'), { phi: 0, phi_source: 'oracle', params: 'oracle' });
+});
+
+test('derivePhiParams: N2-mXX estimates the baseline moments; phi is 0 by construction (iid)', () => {
+  assert.deepEqual(derivePhiParams('N2-m30'), { phi: 0, phi_source: 'iid-by-construction', params: 'estimated-moments' });
+  assert.deepEqual(derivePhiParams('N2-m500'), { phi: 0, phi_source: 'iid-by-construction', params: 'estimated-moments' });
+});
+
+test('derivePhiParams: N3-pXX carries an ORACLE phi read off the id', () => {
+  assert.deepEqual(derivePhiParams('N3-p06'), { phi: 0.6, phi_source: 'oracle', params: 'oracle-phi' });
+  assert.deepEqual(derivePhiParams('N3-p09'), { phi: 0.9, phi_source: 'oracle', params: 'oracle-phi' });
+  assert.equal(derivePhiParams('N3-p03').phi, 0.3);
+});
+
+test('derivePhiParams: N4-pXX ESTIMATES phi, with or without the -mYY suffix', () => {
+  assert.deepEqual(derivePhiParams('N4-p09'), { phi: 0.9, phi_source: 'estimated', params: 'estimated-phi' });
+  assert.deepEqual(derivePhiParams('N4-p06-m100'), { phi: 0.6, phi_source: 'estimated', params: 'estimated-phi' });
+});
+
+test('derivePhiParams: N5/N6 are iid moment-matched nulls at phi 0; N7 is oracle', () => {
+  assert.equal(derivePhiParams('N5').phi, 0);
+  assert.equal(derivePhiParams('N5').params, 'moment-matched');
+  assert.equal(derivePhiParams('N6').phi_source, 'iid-by-construction');
+  assert.deepEqual(derivePhiParams('N7'), { phi: 0, phi_source: 'oracle', params: 'oracle' });
+});
+
+test('derivePhiParams returns null for any id outside the registered grammar (fail-closed input)', () => {
+  for (const id of ['HC-gauss-corr', 'CS1', 'N8', 'N3', 'N4', 'N1-p09', '', undefined, null]) {
+    assert.equal(derivePhiParams(id), null, `${id} must not be derivable`);
+  }
+});
+
+test('loadEvidence annotates a phi-less cell whose null_id is in the grammar', () => {
+  const ev = loadEvidence(fixture());
+  const c = ev.cells.find((x) => x.__study === '2026-08-terminal-evalue' && x.null_id === 'N1');
+  assert.equal(c.phi, 0);
+  assert.equal(c.phi_source, 'oracle');
+  assert.equal(c.phi_derived_from, 'null_id grammar (h0-battery/harness/nulls.mjs)');
+});
+
+test('loadEvidence never overwrites a recorded phi or a recorded params, but still tags phi_source', () => {
+  const root = fixture();
+  const d = join(root, 'phi-recorded', 'results', 'live', 'run-1');
+  mkdirSync(d, { recursive: true });
+  writeFileSync(join(d, 'manifest.json'), JSON.stringify({ study: 'phi-recorded-study', git_sha: 'ggg' }));
+  writeFileSync(join(d, 'summary.json'), JSON.stringify({ cells: [
+    { detector: 'd', null_id: 'N4-p09-m100', phi: 0.87, params: 'estimated', verdict: 'REFUTED' },
+  ] }));
+  const c = loadEvidence(root).cells.find((x) => x.__study === 'phi-recorded-study');
+  assert.equal(c.phi, 0.87, 'a recorded phi must win over the derived one');
+  assert.equal(c.params, 'estimated', 'a recorded params must win over the derived one');
+  assert.equal(c.phi_source, 'estimated', 'phi_source is still derived so the known-phi regime test is uniform');
+  assert.equal(c.phi_derived_from, undefined);
+});
+
+test('loadEvidence leaves a non-grammar cell without phi, so the scorer can fail closed', () => {
+  const ev = loadEvidence(fixture());
+  const cs = ev.cells.find((c) => c.null_id === 'CS1');
+  assert.equal(cs.phi, undefined);
+  assert.equal(cs.phi_source, undefined);
 });
 
 test('unsupported run layouts are skipped (reported to stderr), not thrown, and not counted', () => {

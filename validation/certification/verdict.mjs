@@ -16,7 +16,8 @@ import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { validateCard } from './lib/schema.mjs';
 import { loadEvidence, cellsFor } from './lib/collect.mjs';
-import { scoreS1, scoreS2, scoreS3, scoreS4, overallVerdict } from './lib/score.mjs';
+import { scoreS1, scoreS2, scoreS3, scoreS4, overallVerdict, pairingGaps, untokenedExclusions } from './lib/score.mjs';
+import { envelopeKeys } from './lib/envelope.mjs';
 import { fileSha256 } from './lib/freeze.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,9 @@ const outDir = join(outRoot, `run-${stamp}`);
 mkdirSync(outDir, { recursive: true });
 
 const evidence = loadEvidence(join(repoRoot, 'validation'));
+// S4.4 wiring is a fact about the shipped gate's envelope map, read out of the file
+// mechanically once per run (lib/envelope.mjs).
+const envKeys = envelopeKeys(readFileSync(join(repoRoot, 'fleet', 'e-bh-guarded.ts'), 'utf8'));
 const cardFiles = readdirSync(join(here, 'cards')).filter((f) => f.endsWith('.json')).sort();
 const emitted = [];
 for (const f of cardFiles) {
@@ -42,16 +46,21 @@ for (const f of cardFiles) {
   const s1 = scoreS1(card);
   const s2 = scoreS2(card, cells);
   const s3 = scoreS3(card, cells);
-  const s4 = scoreS4(card);
-  const overall = overallVerdict(card, s2, s3, s4);
-  const out = { card, s1, s2, s3, s4, overall, generated_from: { runs: [...new Set(cells.map((c) => `${c.__study}/${c.__run}`))] } };
+  const s4 = scoreS4(card, { envelopeKeys: envKeys });
+  const overall = overallVerdict(card, s1, s2, s3, s4);
+  const pairing = pairingGaps(s2, s3);
+  const out = { card, s1, s2, s3, s4, pairing, overall, generated_from: { runs: [...new Set(cells.map((c) => `${c.__study}/${c.__run}`))] } };
   writeFileSync(join(outDir, `${card.detector_id}.card.json`), JSON.stringify(out, null, 2) + '\n');
   emitted.push(out);
 }
 
 const gitSha = execSync('git rev-parse HEAD', { cwd: repoRoot }).toString().trim();
+// report_format is the shape of REPORT.md, NOT the protocol version (which stays 1).
+// Format 2 added the S1 column and the standing-caveat footer. Preserved runs written
+// under format 1 are never rewritten -- results/ is append-only -- so the machine check in
+// test/report-consistency.test.mjs reads this field to know which columns to expect.
 writeFileSync(join(outDir, 'manifest.json'), JSON.stringify({
-  study: 'detector-certification', protocol_version: 1, git_sha: gitSha,
+  study: 'detector-certification', protocol_version: 1, report_format: 2, git_sha: gitSha,
   node: process.version, cards: cardFiles.map((f) => ({ file: f, sha256: fileSha256(join(here, 'cards', f)) })),
 }, null, 2) + '\n');
 
@@ -75,13 +84,23 @@ function formatTally(tally) {
 
 const line = (o) => {
   const suppressed = formatTally(mergeSuppressed(o.s2.suppressed_verdicts, o.s3.suppressed_verdicts));
-  return `| ${o.card.detector_id} | ${o.card.class} | ${o.s2.status} | ${o.s3.status} | ${o.s4.status} | ${suppressed} | **${o.overall.verdict}** | ${o.overall.tier ?? '—'} |`;
+  return `| ${o.card.detector_id} | ${o.card.class} | ${o.s1.status} | ${o.s2.status} | ${o.s3.status} | ${o.s4.status} | ${suppressed} | **${o.overall.verdict}** | ${o.overall.tier ?? '—'} |`;
 };
+
+// Two caveats that attach to every verdict in the table and are not derivable from any
+// card's stage scores, carried verbatim so no reader can quote a row without them.
+const STANDING_CAVEATS = [
+  'ADR-0012 real-telemetry anomaly (E[e|H0] = 24/9/9) attaches to every T1/T2 verdict until explained',
+  'P1 unmet: assertValidForFdrPath has no production caller — every USE is advisory in practice until the gate is wired',
+];
+
 writeFileSync(join(outDir, 'REPORT.md'), [
   `# Certification re-score — protocol v1, engine ${gitSha.slice(0, 7)}`, '',
   'Verdicts computed mechanically from frozen cards and existing registered runs. See MISSING-CELLS.md for what this run could not adjudicate.', '',
-  '| detector | class | S2 | S3 | S4 | suppressed | verdict | tier |', '|---|---|---|---|---|---|---|---|',
+  '| detector | class | S1 | S2 | S3 | S4 | suppressed | verdict | tier |', '|---|---|---|---|---|---|---|---|---|',
   ...emitted.map(line), '',
+  '## Standing caveats', '',
+  ...STANDING_CAVEATS.map((c) => `- ${c}`), '',
 ].join('\n'));
 
 // A nonempty suppressed_verdicts tally gets its own MISSING-CELLS line per
@@ -110,8 +129,20 @@ const missing = emitted.flatMap((o) => [
   ...(o.s2.status === 'MISSING' ? [`- ${o.card.detector_id}: S2 has no scoreable in-regime validity cell`] : []),
   ...(o.s3.status === 'MISSING' ? [`- ${o.card.detector_id}: S3 has no in-regime power cell at the registered shift`] : []),
   ...(o.s4.status === 'UNPRICED' ? [`- ${o.card.detector_id}: S4 c-bound unmeasured behind a bootstrap-substituted threshold`] : []),
+  // Every S4 reason, whatever the status. Some record a gap without changing the status
+  // (no envelope wiring, alpha resolution unverifiable) and would otherwise appear nowhere,
+  // since the REPORT column shows PASS; and gating them on PASS would let one S4 finding
+  // suppress another, which is how family_C's unwired envelope hid behind its UNPRICED
+  // c-bound. Overlap with the status line above is better than a swallowed finding.
+  ...(o.s4.reasons ?? []).map((r) => `- ${o.card.detector_id}: S4 ${r}`),
   ...(o.s2.missing ?? []).map((e) => cellLine(o, 'S2', e)),
   ...(o.s3.missing ?? []).map((e) => cellLine(o, 'S3', e)),
+  // I2: an in-regime cleared validity cell with no power arm at the same null.
+  ...(o.pairing ?? []).map((g) => `- ${o.card.detector_id}: ${g.line}`),
+  // I8: the excluded cells that carried no verdict token, grouped with counts -- the other
+  // half of the excluded population from the suppressed-verdict tallies below.
+  ...untokenedExclusions(o.s2).map((l) => `- ${o.card.detector_id}: S2 ${l}`),
+  ...untokenedExclusions(o.s3).map((l) => `- ${o.card.detector_id}: S3 ${l}`),
   ...suppressedLines(o),
 ]);
 

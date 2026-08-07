@@ -1,0 +1,164 @@
+{
+  "card": {
+    "protocol_version": 1,
+    "detector_id": "family_C_safe_hotelling",
+    "aliases": [
+      "safe_hotelling",
+      "hotelling_safe_test"
+    ],
+    "family": "C",
+    "class": "test_martingale",
+    "engine_pin": {
+      "version": "0.6.6-pre",
+      "sha": "77067e6e3180907f764edbd452811853ff2d57d3"
+    },
+    "source_files": [
+      {
+        "path": "detectors/_hotelling-safe.ts",
+        "sha256": "c5cc555982e09fce449f06cc96e5cda57bf017ea6c7f48f2cc4f450ff964185e"
+      },
+      {
+        "path": "detectors/validity-envelope.ts",
+        "sha256": "750808f33eaf15614c42149b869145d46da36ab490c6a7a28fdaefc9bb61cb33"
+      },
+      {
+        "path": "validation/certification/lib/score.mjs",
+        "sha256": "2ca737538ec05d2dfd5afe8248ebb2e78ccf4c135696253fd07e8c39fbc09530"
+      },
+      {
+        "path": "validation/certification/verdict.mjs",
+        "sha256": "aab96f71bdffd925aa1e062d92356f4eb670929b3638657db3e8f36b9042a7a4"
+      }
+    ],
+    "guarantee": {
+      "sentence": "Gruenwald GROW safe test on Hotelling T^2: E[e_t|F_{t-1}] <= 1 under H0 given the compiled (mu, Sigma) as truth",
+      "quantifiers": [
+        {
+          "text": "per tick",
+          "tag": "empirical",
+          "proof_artifact": null
+        }
+      ],
+      "regime": {
+        "phi_max": null,
+        "m_min": null,
+        "baseline": "oracle-compiled",
+        "nulls": "multivariate gaussian"
+      }
+    },
+    "shipped_path": {
+      "kind": "wealth process, bootstrap threshold substitution ~3.6e76x over 1/alpha",
+      "estimator": null,
+      "notes": ""
+    },
+    "budget": {
+      "participating": true,
+      "alpha_booked": null,
+      "resolution_claim": null
+    },
+    "falsifier": "increment lower95 > 1.0005 on the compiled-oracle null",
+    "prior_evidence": [
+      {
+        "stage": "S2",
+        "study": "h0-battery",
+        "runs": "h0-battery/results/live/run-*",
+        "wiki": "stats/h0-battery-2026-08-01"
+      },
+      {
+        "stage": "S4",
+        "study": "bootstrap-overshoot",
+        "runs": null,
+        "wiki": "stats/ville-guarantee-is-empirical"
+      }
+    ]
+  },
+  "s1": {
+    "status": "MISSING"
+  },
+  "s2": {
+    "status": "MISSING",
+    "perCell": [],
+    "excluded": [],
+    "missing": [],
+    "mean_rule_overrides": [],
+    "suppressed_verdicts": {}
+  },
+  "s3": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "family_C_safe_hotelling",
+        "shift_sigma": 3,
+        "detection_rate": 0.9725,
+        "verdict": "pass",
+        "mode": "live",
+        "engine_version": "0.6.6-pre",
+        "git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578",
+        "__study": "2026-07-h0-battery",
+        "__run": "run-20260801T062824Z",
+        "__git_sha": "17cc3f869350af4e46dd89c7fcc020e75bf19578",
+        "__tier": "T1"
+      },
+      {
+        "detector": "family_C_safe_hotelling",
+        "shift_sigma": 3,
+        "detection_rate": 0.9725,
+        "verdict": "pass",
+        "mode": "live",
+        "engine_version": "0.6.6-pre",
+        "git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+        "__study": "2026-07-h0-battery",
+        "__run": "run-20260801T064237Z",
+        "__git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+        "__tier": "T1"
+      },
+      {
+        "detector": "family_C_safe_hotelling",
+        "shift_sigma": 3,
+        "detection_rate": 0.9725,
+        "verdict": "pass",
+        "mode": "live",
+        "engine_version": "0.6.6-pre",
+        "git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+        "__study": "2026-07-h0-battery",
+        "__run": "run-20260801T064627Z",
+        "__git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+        "__tier": "T1"
+      }
+    ],
+    "excluded": [],
+    "missing": [],
+    "suppressed_verdicts": {}
+  },
+  "s4": {
+    "status": "UNPRICED",
+    "reasons": [
+      "no envelope wiring",
+      "shipped path substitutes a bootstrap threshold and no measured c-bound artifact (prior_evidence[stage=S4] with runs != null) is cited"
+    ]
+  },
+  "pairing": [],
+  "overall": {
+    "verdict": "NOT_EXECUTABLE",
+    "tier": null,
+    "regime": {
+      "phi_max": null,
+      "m_min": null,
+      "baseline": "oracle-compiled",
+      "nulls": "multivariate gaussian",
+      "excluded_cells": []
+    },
+    "reasons": [
+      "S1 reachability not run-backed (v1 floor)",
+      "S2 or S3 has no scoreable evidence"
+    ]
+  },
+  "generated_from": {
+    "runs": [
+      "2026-07-h0-battery/run-20260801T062612Z",
+      "2026-07-h0-battery/run-20260801T062824Z",
+      "2026-07-h0-battery/run-20260801T064237Z",
+      "2026-07-h0-battery/run-20260801T064627Z"
+    ]
+  }
+}

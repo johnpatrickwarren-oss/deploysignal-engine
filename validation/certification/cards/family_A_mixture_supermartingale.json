@@ -10,11 +10,11 @@
     { "path": "detectors/family-a-mixture-supermartingale.ts", "sha256": null }
   ],
   "guarantee": {
-    "sentence": "Howard-Ramdas mixture supermartingale: E[M_t|F_{t-1}] <= M_{t-1} under H0 given oracle (mu, sigma^2, phi)",
+    "sentence": "Howard-Ramdas mixture supermartingale: E[M_t|F_{t-1}] <= M_{t-1} under H0, valid at oracle parameters (mu, sigma^2, phi); estimated-baseline operation is NOT claimed and awaits a measured c-bound (measured excess ~1.002 at m=500)",
     "quantifiers": [
       { "text": "per tick, any stopping time", "tag": "empirical", "proof_artifact": null }
     ],
-    "regime": { "phi_max": 0.9, "m_min": 500, "baseline": "oracle-or-large-m", "nulls": "iid-gaussian, ar1" }
+    "regime": { "phi_max": 0.9, "m_min": null, "baseline": "oracle", "nulls": "iid-gaussian, ar1" }
   },
   "shipped_path": {
     "kind": "wealth process (Howard-Ramdas mixture), AR(1) pre-whitened",

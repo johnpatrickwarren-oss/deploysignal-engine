@@ -158,12 +158,12 @@ In `score.mjs`, add `coverageFor(card, cells)`: filter cells with a `fault_class
 - Test: `validation/coverage/test/inject.test.mjs`
 
 **Interfaces:**
-- Produces (all pure, all take a seeded RNG `rng()` from the harness — reuse the mulberry32 pattern in `validation/terminal-evalue/harness/run.mjs`, verify its name/location by reading that file):
+- Produces (all pure, all take a seeded RNG `rng()` from the harness — reuse the PRNG that `validation/terminal-evalue/harness/run.mjs` actually drives — verified by Task 3 to be the LCG `rng` from `validation/h0-battery/harness/nulls.mjs:7-17`, not mulberry32 as this plan originally said):
   - `injectStep(series, {sigma, at, delta})` — adds `delta*sigma` to `series[at..]`.
   - `injectUnison(matrix, {sigma, at, eps})` — matrix is `K` series; adds `eps*sigma` to every series from `at`. Property under test: per-series shift equals `eps*sigma` exactly (individually sub-threshold is a property of `eps`, chosen by the grid).
   - `injectOscillation(series, {sigma, at, amp, freq})` — adds `amp*sigma*sin(2π*freq*(t-at))` for `t≥at`. Property: max absolute added value ≤ `amp*sigma` (never crosses a level threshold above amp).
   - `injectPoint(series, {sigma, at, mult})` — adds `mult*sigma` at exactly index `at`. Property: exactly one index differs.
-  - `injectDrift(series, {sigma, at, slope})` — adds `slope*(t-at)*sigma` for `t≥at` (the drift-sweep formula `v' = v + slope·t·σ`).
+  - `injectDrift(series, {sigma, at, slope})` — adds `slope*(t-at)*sigma` for `t≥at`. *(Corrected 2026-08-07 by Task 3 review: this plan originally cited "the drift-sweep formula `v' = v + slope·t·σ`" — wrong on both functional form and anchor; the registered C35 study is multiplicative and anchored at `(t - T_INJECT)`. The additive `(t-at)` form here is this battery's own registered form; Task 5 registers it as such and does not cite C35's formula.)*
   - `injectShapeMix(series, {sigma, at, d})` — from `at`, replaces innovations with a two-component mixture with **matched mean and variance** and component separation `d*sigma`: draw `z = (b ? +d/2 : -d/2) + w*s` with `b ~ Bernoulli(0.5)`, `w ~ N(0,1)`, and `s = sqrt(max(0, 1 - d*d/4))` so that `E[z]=0`, `Var[z]=1`. Property under test: sample mean within `4/sqrt(n)` of 0 and sample variance within `0.1` of 1 at n=10,000 (matched moments), and sample kurtosis differs from 3 (shape actually changed).
 
 - [ ] **Step 1: Write the failing tests** — one `test()` per generator asserting the named property with a fixed-seed RNG (`const rng = mulberry32(42)`; copy the PRNG into the test file if not exported by the harness), plus a shared test that every generator leaves `series[0..at-1]` byte-identical (pre-injection prefix untouched).

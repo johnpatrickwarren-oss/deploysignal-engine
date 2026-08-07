@@ -10,6 +10,10 @@ export function applyGuards(cell, cls) {
       return { status: 'NON_FINITE', reason: 'non-finite increment estimator' };
     if (inc.sd === 0) return { status: 'VACUOUS', reason: 'zero-width interval: the wealth process never moved' };
   }
+  if (cls === 'terminal_e_value' && 'stopped_mean' in cell)
+    return { status: 'VOID', reason: 'e-process instrument on a terminal_e_value cell' };
+  if (cls === 'e_process' && 'exceedance' in cell && !('stopped_mean' in cell))
+    return { status: 'VOID', reason: 'terminal instrument on an e_process cell' };
   if (isValidityCell(cell) && !inc && cls === 'test_martingale')
     return { status: 'VOID', reason: 'test_martingale cell without an increment estimator' };
   return { status: 'OK', reason: null };

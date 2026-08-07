@@ -34,6 +34,16 @@ test('internalConsistency flags an impossible increment/crossing pair', () => {
   assert.match(flags[0], /N1/);
 });
 
+test('e-process instrument on a terminal_e_value cell is VOID', () => {
+  const g = applyGuards({detector: 'x', null_id: 'N1', stopped_mean: 2.5e-5, crossing_rate: 0}, 'terminal_e_value');
+  assert.equal(g.status, 'VOID');
+});
+
+test('terminal instrument on an e_process cell is VOID', () => {
+  const g = applyGuards({detector: 'x', null_id: 'N1', exceedance: 0.01}, 'e_process');
+  assert.equal(g.status, 'VOID');
+});
+
 test('power cell with non_finite_wealth > 0 is NON_FINITE', () => {
   const g = applyGuards({ detector: 'x', null_id: 'N5', detection_rate: 0, shift_sigma: 3, non_finite_wealth: 12, verdict: 'INERT' }, 'test_martingale');
   assert.equal(g.status, 'NON_FINITE');

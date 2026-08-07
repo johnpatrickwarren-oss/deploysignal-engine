@@ -1,31 +1,70 @@
 {
   "protocol_version": 1,
   "detector_id": "family_A_mixture_supermartingale",
-  "aliases": ["mixture_supermartingale"],
+  "aliases": [
+    "mixture_supermartingale"
+  ],
   "family": "A",
   "class": "test_martingale",
-  "engine_pin": { "version": "v0.6.6-pre", "sha": null },
+  "engine_pin": {
+    "version": "0.6.6-pre",
+    "sha": "7dc473b63e6e03cec1ee7b2719c63b74b14a87d6"
+  },
   "source_files": [
-    { "path": "detectors/_page-cusum-mixture.ts", "sha256": null },
-    { "path": "detectors/family-a-mixture-supermartingale.ts", "sha256": null }
+    {
+      "path": "detectors/_page-cusum-mixture.ts",
+      "sha256": "32a3b3b2624641a8e0127f9d14673b6f6d6b9f17303ae81041cf6a3dac551944"
+    },
+    {
+      "path": "detectors/family-a-mixture-supermartingale.ts",
+      "sha256": "af2c2c414187d41a33dc5f0702ffcb76bfb98cd2e393492a9e8381ec5a150c4f"
+    }
   ],
   "guarantee": {
     "sentence": "Howard-Ramdas mixture supermartingale: E[M_t|F_{t-1}] <= M_{t-1} under H0, valid at oracle parameters (mu, sigma^2, phi); estimated-baseline operation is NOT claimed and awaits a measured c-bound (measured excess ~1.002 at m=500)",
     "quantifiers": [
-      { "text": "per tick, any stopping time", "tag": "empirical", "proof_artifact": null }
+      {
+        "text": "per tick, any stopping time",
+        "tag": "empirical",
+        "proof_artifact": null
+      }
     ],
-    "regime": { "phi_max": 0.9, "m_min": null, "baseline": "oracle", "nulls": "iid-gaussian, ar1" }
+    "regime": {
+      "phi_max": 0.9,
+      "m_min": null,
+      "baseline": "oracle",
+      "nulls": "iid-gaussian, ar1"
+    }
   },
   "shipped_path": {
     "kind": "wealth process (Howard-Ramdas mixture), AR(1) pre-whitened",
     "estimator": null,
     "notes": "known defects: NaN on right-skewed (N5), 8.5e46 on t3 (N6) — non-finite guard applies"
   },
-  "budget": { "participating": true, "alpha_booked": null, "resolution_claim": null },
+  "budget": {
+    "participating": true,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
   "falsifier": "increment lower95 > 1.0005 in a claimed-regime cell",
   "prior_evidence": [
-    { "stage": "S2", "study": "detector-audit", "runs": "detector-audit/results/live/seq-*", "wiki": "stats/detector-audit-sequential-2026-08-05" },
-    { "stage": "S3", "study": "detector-audit-power", "runs": "detector-audit/results/live/power-*", "wiki": "stats/detector-audit-power-2026-08-05" },
-    { "stage": "S2", "study": "h0-battery", "runs": "h0-battery/results/live/run-*", "wiki": "stats/h0-battery-2026-08-01" }
+    {
+      "stage": "S2",
+      "study": "detector-audit",
+      "runs": "detector-audit/results/live/seq-*",
+      "wiki": "stats/detector-audit-sequential-2026-08-05"
+    },
+    {
+      "stage": "S3",
+      "study": "detector-audit-power",
+      "runs": "detector-audit/results/live/power-*",
+      "wiki": "stats/detector-audit-power-2026-08-05"
+    },
+    {
+      "stage": "S2",
+      "study": "h0-battery",
+      "runs": "h0-battery/results/live/run-*",
+      "wiki": "stats/h0-battery-2026-08-01"
+    }
   ]
 }

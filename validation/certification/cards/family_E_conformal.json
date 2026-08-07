@@ -1,20 +1,41 @@
 {
   "protocol_version": 1,
   "detector_id": "family_E_conformal",
-  "aliases": ["mahalanobis_conformal_baseline", "family_E"],
+  "aliases": [
+    "mahalanobis_conformal_baseline",
+    "family_E"
+  ],
   "family": "E",
   "class": "terminal_e_value",
-  "engine_pin": { "version": "v0.6.6-pre", "sha": null },
+  "engine_pin": {
+    "version": "0.6.6-pre",
+    "sha": "7dc473b63e6e03cec1ee7b2719c63b74b14a87d6"
+  },
   "source_files": [
-    { "path": "detectors/conformal.ts", "sha256": null },
-    { "path": "../deploysignal/tools/calibrators/family-e.ts", "sha256": null }
+    {
+      "path": "detectors/conformal.ts",
+      "sha256": "b9efef8675264595aca1de1fdd68b35f630812f9e631f1403ec08bebdd84e4f5"
+    },
+    {
+      "path": "../deploysignal/tools/calibrators/family-e.ts",
+      "sha256": "acf8dcd2b217235501e28910edca00a6b4707d0999bfc5c0901cf78b27802ed7"
+    }
   ],
   "guarantee": {
     "sentence": "weighted_e_value kind: hedged indicator e-value; UNREACHABLE on the shipped path — the auto selector emits the pre-#19 parametric-bootstrap p-value kind because the ESS gate (0.9) never passes (measured 0.86562 at every span)",
     "quantifiers": [
-      { "text": "P(indicator=1|H0) = alpha_E by construction", "tag": "empirical", "proof_artifact": null }
+      {
+        "text": "P(indicator=1|H0) = alpha_E by construction",
+        "tag": "empirical",
+        "proof_artifact": null
+      }
     ],
-    "regime": { "phi_max": null, "m_min": null, "baseline": "synthetic chi_p calibration, no real data", "nulls": "gaussian plug-in" }
+    "regime": {
+      "phi_max": null,
+      "m_min": null,
+      "baseline": "synthetic chi_p calibration, no real data",
+      "nulls": "gaussian plug-in"
+    }
   },
   "shipped_path": {
     "kind": "p-value (kind: unweighted)",
@@ -23,12 +44,22 @@
   },
   "budget": {
     "participating": true,
-    "alpha_booked": 1.0e-4,
+    "alpha_booked": 0.0001,
     "resolution_claim": null
   },
   "falsifier": "the ESS gate passing on a shipped config would falsify the unreachability claim",
   "prior_evidence": [
-    { "stage": "S1+S2", "study": "detector-audit-arm3", "runs": null, "wiki": "stats/detector-audit-arm3-2026-08-05" },
-    { "stage": "S2", "study": "family-ce-nulls", "runs": "family-ce-nulls/results/live/*", "wiki": "stats/family-ce-nulls-2026-08-03" }
+    {
+      "stage": "S1+S2",
+      "study": "detector-audit-arm3",
+      "runs": null,
+      "wiki": "stats/detector-audit-arm3-2026-08-05"
+    },
+    {
+      "stage": "S2",
+      "study": "family-ce-nulls",
+      "runs": "family-ce-nulls/results/live/*",
+      "wiki": "stats/family-ce-nulls-2026-08-03"
+    }
   ]
 }

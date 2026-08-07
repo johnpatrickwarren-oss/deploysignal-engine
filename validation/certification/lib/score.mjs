@@ -6,7 +6,11 @@ import { INERTNESS_FLOOR, INERTNESS_SHIFT_SIGMA, TIERS } from './constants.mjs';
 // exceedance, no increment_estimator) never reach the scorer at all.
 const isValidityCell = (c) =>
   'increment_estimator' in c || 'stopped_mean' in c || 'exceedance' in c || 'crossing_rate' in c;
-const isPowerCell = (c) => 'detection_rate' in c;
+// Fix round 2: rate_e_ge_20 is a vocabulary gap, not an evidence gap. The terminal-evalue
+// CONTROL_power cells (safe_t, universal_inference) are live power evidence at the
+// registered shift, recorded as an e>=20 detection rate under a different field name.
+const isPowerCell = (c) => 'detection_rate' in c || 'rate_e_ge_20' in c;
+const powerRate = (c) => (c.detection_rate ?? c.rate_e_ge_20);
 
 // Finding 1: mapped is an explicit vocabulary, not identity. 'not-refuted' is the
 // corpus's dominant clearance token (h0-battery, terminal-evalue, ...); reading
@@ -103,11 +107,15 @@ export function scoreS3(card, cells) {
     }
     if (cell.shift_sigma !== INERTNESS_SHIFT_SIGMA) continue;
     if (!inRegime(cell, regime)) continue;
-    if (!Number.isFinite(cell.detection_rate)) {
+    const rate = powerRate(cell);
+    if (!Number.isFinite(rate)) {
       missing.push({ detector: cell.detector, null_id: cell.null_id, reason: 'non-finite detection_rate' });
       continue;
     }
-    perCell.push(cell);
+    // detection_rate cells are kept exactly as they are; rate_e_ge_20 cells are annotated
+    // with a detection_rate field so every downstream consumer (this stage's own status
+    // computation, overallVerdict's tier/inert accounting) can read one uniform field.
+    perCell.push('detection_rate' in cell ? cell : { ...cell, detection_rate: rate });
   }
 
   let status;

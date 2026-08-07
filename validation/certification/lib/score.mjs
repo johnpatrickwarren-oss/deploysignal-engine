@@ -1,4 +1,4 @@
-import { applyGuards } from './guards.mjs';
+import { applyGuards, internalConsistency } from './guards.mjs';
 import { INERTNESS_FLOOR, INERTNESS_SHIFT_SIGMA, TIERS } from './constants.mjs';
 
 // Finding 4: crossing_rate is an e_process instrument (see CLASS_INSTRUMENTS), so S2
@@ -19,6 +19,18 @@ const powerRate = (c) => (c.detection_rate ?? c.rate_e_ge_20);
 // missing evidence, and must be named, never dropped.
 const VERDICT_MAP = { CLEARED: 'CLEARED', 'not-refuted': 'CLEARED', REFUTED: 'REFUTED' };
 
+// Round 3 finding 1: for test_martingale-class cells, when the top-level verdict field is
+// absent, supermartingale_verdict carries the same information under a different name
+// (sequential_mmd's 136 matched cells: no verdict, supermartingale_verdict: 'REFUTED' on
+// every one). Only test_martingale, because supermartingale_verdict is that class's own
+// instrument's verdict field -- reading it for another class would be exactly the foreign-
+// verdict mistake finding 2 fixes in the other direction.
+const rawClassVerdict = (cell, cls) => {
+  if (cell.verdict !== undefined) return cell.verdict;
+  if (cls === 'test_martingale' && cell.supermartingale_verdict !== undefined) return cell.supermartingale_verdict;
+  return undefined;
+};
+
 const inRegime = (cell, regime) =>
   (cell.phi == null || regime.phi_max == null || cell.phi <= regime.phi_max) &&
   (cell.m == null || regime.m_min == null || cell.m >= regime.m_min);
@@ -29,6 +41,22 @@ const minTier = (tiers) => {
   return present.reduce((best, t) => (TIERS.indexOf(t) < TIERS.indexOf(best) ? t : best), present[0]);
 };
 
+// Round 3 finding 4: no silent suppression. Every excluded[]/missing[] entry names the
+// verdict token it suppressed, when one exists (a foreign-instrument-ignored verdict does
+// not count here -- that has its own explicit foreign_verdict_ignored annotation instead).
+const withSuppression = (entry, token) => {
+  if (token === undefined) return entry;
+  return { ...entry, suppressed_verdict: token, reason: `${entry.reason}; suppressed verdict: ${token}` };
+};
+
+const tallySuppressed = (entries) => {
+  const tally = {};
+  for (const e of entries) {
+    if (e.suppressed_verdict !== undefined) tally[e.suppressed_verdict] = (tally[e.suppressed_verdict] ?? 0) + 1;
+  }
+  return tally;
+};
+
 export function scoreS2(card, cells) {
   const regime = card.guarantee.regime;
   const perCell = [];
@@ -36,42 +64,78 @@ export function scoreS2(card, cells) {
   const missing = [];
 
   const candidates = cells.filter(isValidityCell);
-  const guarded = candidates.map((cell) => ({ cell, guard: applyGuards(cell, card.class) }));
+  const guarded = candidates.map((cell) => ({ cell, guard: applyGuards(cell, card.class), rawVerdict: rawClassVerdict(cell, card.class) }));
 
-  // Finding 4: VOID no longer poisons the whole stage. Track which runs produced a
-  // genuine instrument-class mismatch and exclude every cell from that run -- a run's
-  // own defect doesn't erase evidence a different, healthy run produced.
-  const voidedRuns = new Set(guarded.filter((g) => g.guard.status === 'VOID').map((g) => g.cell.__run));
+  // Finding 4 (round 2): VOID no longer poisons the whole stage. Track which runs produced
+  // a genuine instrument-class mismatch and exclude every cell from that run -- a run's own
+  // defect doesn't erase evidence a different, healthy run produced.
+  const mismatchVoidedRuns = new Set(guarded.filter((g) => g.guard.status === 'VOID').map((g) => g.cell.__run));
 
-  for (const { cell, guard } of guarded) {
+  // Finding 3 (round 3): internalConsistency is class-scoped (test_martingale only -- see
+  // guards.mjs) and wired here through the same per-run voiding mechanism as instrument
+  // mismatch: a flagged cell voids every cell sharing its __run, not just itself.
+  const consistencyFlags = internalConsistency(candidates, card.class);
+  const consistencyVoidedRuns = new Set(consistencyFlags.map((f) => f.__run));
+  const consistencyReasonsByRun = new Map();
+  for (const f of consistencyFlags) {
+    if (!consistencyReasonsByRun.has(f.__run)) consistencyReasonsByRun.set(f.__run, []);
+    consistencyReasonsByRun.get(f.__run).push(f.reason);
+  }
+
+  const voidedRuns = new Set([...mismatchVoidedRuns, ...consistencyVoidedRuns]);
+
+  for (const { cell, guard, rawVerdict } of guarded) {
     if (voidedRuns.has(cell.__run)) {
-      excluded.push({ detector: cell.detector, null_id: cell.null_id, __run: cell.__run, reason: 'run voided: instrument-class mismatch' });
+      const reasons = [];
+      if (mismatchVoidedRuns.has(cell.__run)) reasons.push('run voided: instrument-class mismatch');
+      if (consistencyVoidedRuns.has(cell.__run)) reasons.push(...consistencyReasonsByRun.get(cell.__run));
+      excluded.push(withSuppression(
+        { detector: cell.detector, null_id: cell.null_id, __run: cell.__run, reason: reasons.join('; ') },
+        rawVerdict,
+      ));
       continue;
     }
     if (guard.status === 'NON_FINITE') {
-      excluded.push({ detector: cell.detector, null_id: cell.null_id, reason: guard.reason });
+      excluded.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: guard.reason }, rawVerdict));
       continue;
     }
     // Promoted minor 6: vacuous cells are evidence gaps, not per-cell verdicts. They
     // belong in missing[], and a stage can still PASS on its other cleared cells.
     if (guard.status === 'VACUOUS') {
-      missing.push({ detector: cell.detector, null_id: cell.null_id, reason: 'vacuous: wealth never moved' });
+      missing.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: 'vacuous: wealth never moved' }, rawVerdict));
       continue;
     }
     const out_of_regime = !inRegime(cell, regime);
-    const mapped = VERDICT_MAP[cell.verdict];
+
+    // Finding 2 (round 3): a foreign-instrument verdict (increment_verdict, tied to
+    // increment_estimator -- test_martingale's instrument, not this cell's class's) is
+    // discarded ON PURPOSE, not folded into "unmapped verdict token". The sui 170319Z run
+    // shape: no class verdict field at all, only increment_verdict from the wrong instrument.
+    if (rawVerdict === undefined && card.class !== 'test_martingale' && cell.increment_verdict !== undefined) {
+      missing.push({
+        detector: cell.detector,
+        null_id: cell.null_id,
+        reason: `no class-instrument verdict recorded (foreign increment_verdict=${cell.increment_verdict} ignored)`,
+        foreign_verdict_ignored: `increment_verdict=${cell.increment_verdict} (invalid instrument for class)`,
+      });
+      continue;
+    }
+
+    const mapped = VERDICT_MAP[rawVerdict];
     if (!mapped) {
-      missing.push({ detector: cell.detector, null_id: cell.null_id, reason: `unmapped verdict token ${cell.verdict}` });
+      missing.push({ detector: cell.detector, null_id: cell.null_id, reason: `unmapped verdict token ${rawVerdict}`, suppressed_verdict: rawVerdict });
       continue;
     }
     perCell.push({ ...cell, mapped, out_of_regime });
   }
 
-  // Stage VOID only if every in-regime candidate came from a voided run (finding 4).
+  const suppressed_verdicts = tallySuppressed([...excluded, ...missing]);
+
+  // Stage VOID only if every in-regime candidate came from a voided run (finding 4, round 2).
   const candidateInRegime = candidates.filter((c) => inRegime(c, regime));
   const voidedInRegime = candidateInRegime.filter((c) => voidedRuns.has(c.__run));
   if (candidateInRegime.length > 0 && voidedInRegime.length === candidateInRegime.length) {
-    return { status: 'VOID', perCell, excluded, missing };
+    return { status: 'VOID', perCell, excluded, missing, suppressed_verdicts };
   }
 
   const inRegimeMapped = perCell.filter((c) => !c.out_of_regime && (c.mapped === 'CLEARED' || c.mapped === 'REFUTED'));
@@ -85,7 +149,7 @@ export function scoreS2(card, cells) {
     status = 'PASS';
   }
 
-  return { status, perCell, excluded, missing };
+  return { status, perCell, excluded, missing, suppressed_verdicts };
 }
 
 export function scoreS3(card, cells) {
@@ -96,27 +160,46 @@ export function scoreS3(card, cells) {
 
   const candidates = cells.filter(isPowerCell);
 
-  // Finding 2: S3 had no guards at all. Runs whose wealth process is non-finite are
-  // non-executable, not inert -- they must not drag detection_rate: 0 into the floor
-  // determination (family_A_mixture_supermartingale's non-finite N5 runs did exactly this).
+  // Minor 5(a) (round 3): shift/regime scoping runs before guards, so excluded[]/missing[]
+  // only ever name cells that were actually in scope for this stage -- an out-of-shift or
+  // out-of-regime cell was never a candidate to begin with, guard or no guard.
   for (const cell of candidates) {
-    const guard = applyGuards(cell, card.class);
-    if (guard.status === 'NON_FINITE') {
-      excluded.push({ detector: cell.detector, null_id: cell.null_id, reason: guard.reason });
-      continue;
-    }
     if (cell.shift_sigma !== INERTNESS_SHIFT_SIGMA) continue;
     if (!inRegime(cell, regime)) continue;
-    const rate = powerRate(cell);
-    if (!Number.isFinite(rate)) {
-      missing.push({ detector: cell.detector, null_id: cell.null_id, reason: 'non-finite detection_rate' });
+
+    const rawVerdict = cell.verdict;
+    // Finding 2 (round 3, S3 leg): S3 had no guards at all. Runs whose wealth process is
+    // non-finite are non-executable, not inert -- they must not drag detection_rate: 0 into
+    // the floor determination (family_A_mixture_supermartingale's non-finite N5 runs did
+    // exactly this). Minor 5(c): VOID/VACUOUS candidates are named and excluded too, never
+    // silently scored.
+    const guard = applyGuards(cell, card.class);
+    if (guard.status === 'VOID') {
+      excluded.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: guard.reason }, rawVerdict));
       continue;
     }
-    // detection_rate cells are kept exactly as they are; rate_e_ge_20 cells are annotated
-    // with a detection_rate field so every downstream consumer (this stage's own status
-    // computation, overallVerdict's tier/inert accounting) can read one uniform field.
-    perCell.push('detection_rate' in cell ? cell : { ...cell, detection_rate: rate });
+    if (guard.status === 'VACUOUS') {
+      missing.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: 'vacuous: wealth never moved' }, rawVerdict));
+      continue;
+    }
+    if (guard.status === 'NON_FINITE') {
+      excluded.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: guard.reason }, rawVerdict));
+      continue;
+    }
+
+    const rate = powerRate(cell);
+    if (!Number.isFinite(rate)) {
+      missing.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: 'non-finite detection_rate' }, rawVerdict));
+      continue;
+    }
+    // Minor 5(b): a present-but-null/non-finite detection_rate must not survive onto
+    // perCell as-is -- a literal null reads as < INERTNESS_FLOOR and would misreport as
+    // inert. Only a genuinely finite detection_rate is kept unchanged; everything else
+    // (including rate_e_ge_20-only cells) is annotated with the resolved rate.
+    perCell.push(Number.isFinite(cell.detection_rate) ? cell : { ...cell, detection_rate: rate });
   }
+
+  const suppressed_verdicts = tallySuppressed([...excluded, ...missing]);
 
   let status;
   if (perCell.length === 0) {
@@ -127,7 +210,7 @@ export function scoreS3(card, cells) {
     status = 'PASS';
   }
 
-  return { status, perCell, excluded, missing };
+  return { status, perCell, excluded, missing, suppressed_verdicts };
 }
 
 export function scoreS4(card) {

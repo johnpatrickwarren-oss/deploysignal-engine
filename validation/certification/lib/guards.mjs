@@ -36,12 +36,24 @@ export function applyGuards(cell, cls) {
   return { status: 'OK', reason: null };
 }
 
-export function internalConsistency(cells) {
+// Round 3 finding 3: increment_estimator's mean/crossing_rate contradiction is only a
+// genuine internal impossibility when increment_estimator is the CLASS's own scoring
+// instrument (test_martingale). On e_process cells (the sui shape: increment_estimator
+// present alongside crossing_rate as a foreign, descriptive-only annotation) a huge mean
+// recorded beside crossing_rate: 0 is expected, not impossible -- it was never scored.
+export function internalConsistency(cells, cls) {
   const flags = [];
+  if (cls !== 'test_martingale') return flags;
   for (const c of cells) {
     const inc = c.increment_estimator;
-    if (inc && Number.isFinite(inc.mean) && inc.mean > 1e6 && c.crossing_rate === 0)
-      flags.push(`${c.detector} ${c.null_id}: increment mean ${inc.mean} with crossing_rate 0 is internally impossible`);
+    if (inc && Number.isFinite(inc.mean) && inc.mean > 1e6 && c.crossing_rate === 0) {
+      flags.push({
+        detector: c.detector,
+        null_id: c.null_id,
+        __run: c.__run,
+        reason: `${c.detector} ${c.null_id}: increment mean ${inc.mean} with crossing_rate 0 is internally impossible`,
+      });
+    }
   }
   return flags;
 }

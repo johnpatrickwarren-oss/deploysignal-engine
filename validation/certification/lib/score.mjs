@@ -373,6 +373,17 @@ export function coverageFor(card, cells) {
         excluded.push(withSuppression({ detector: cell.detector, null_id: cell.null_id ?? null, reason: 'vacuous: wealth never moved' }, rawVerdict));
         continue;
       }
+      // Mirrors scoreS3's post-guard finite-rate check (score.mjs, isPowerCell/powerRate
+      // path): a cell can pass every guard and still carry no usable power reading (neither
+      // detection_rate nor rate_e_ge_20 finite). Without this check such a cell survived
+      // into canonicalCells with powerRate() === undefined, which is not >= COVERAGE_FLOOR,
+      // so `covering` came back undefined and the class silently read NOT_POWERED instead
+      // of the true NO_EVIDENCE -- a guard-passing but reading-less cell must be excluded
+      // and named, not treated as a powered-but-failing measurement.
+      if (!Number.isFinite(powerRate(cell))) {
+        excluded.push(withSuppression({ detector: cell.detector, null_id: cell.null_id ?? null, reason: 'no finite power rate recorded' }, rawVerdict));
+        continue;
+      }
       survivors.push(cell);
     }
 

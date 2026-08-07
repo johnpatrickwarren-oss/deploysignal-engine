@@ -9,12 +9,24 @@
   "class": "terminal_e_value",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "017599fe24c15d7a8b622e40456d1b937a562ea1"
+    "sha": "45ce230c180a9ca50a3166fd6a1f1c69afa9a560"
   },
   "source_files": [
     {
       "path": "detectors/universal-inference-e-value.ts",
       "sha256": "c6dcb83422bb5097b279c0619fb25ea44ddc9c2310b68b6e1e12410696ddab9f"
+    },
+    {
+      "path": "detectors/validity-envelope.ts",
+      "sha256": "750808f33eaf15614c42149b869145d46da36ab490c6a7a28fdaefc9bb61cb33"
+    },
+    {
+      "path": "validation/certification/lib/score.mjs",
+      "sha256": "d543b2b9dadce69dd86ddea294a6eb1e7b5cf0b85770954818620c5ab8dfbbc8"
+    },
+    {
+      "path": "validation/certification/verdict.mjs",
+      "sha256": "aab96f71bdffd925aa1e062d92356f4eb670929b3638657db3e8f36b9042a7a4"
     }
   ],
   "guarantee": {

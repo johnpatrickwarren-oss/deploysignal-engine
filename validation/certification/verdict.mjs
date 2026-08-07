@@ -16,9 +16,10 @@ import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { validateCard } from './lib/schema.mjs';
 import { loadEvidence, cellsFor } from './lib/collect.mjs';
-import { scoreS1, scoreS2, scoreS3, scoreS4, overallVerdict, pairingGaps, untokenedExclusions } from './lib/score.mjs';
+import { scoreS1, scoreS2, scoreS3, scoreS4, overallVerdict, pairingGaps, untokenedExclusions, coverageFor } from './lib/score.mjs';
 import { envelopeKeys } from './lib/envelope.mjs';
 import { fileSha256 } from './lib/freeze.mjs';
+import { FAULT_CLASSES, COVERAGE_FLOOR, TIERS } from './lib/constants.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..');
@@ -49,7 +50,12 @@ for (const f of cardFiles) {
   const s4 = scoreS4(card, { envelopeKeys: envKeys });
   const overall = overallVerdict(card, s1, s2, s3, s4);
   const pairing = pairingGaps(s2, s3);
-  const out = { card, s1, s2, s3, s4, pairing, overall, generated_from: { runs: [...new Set(cells.map((c) => `${c.__study}/${c.__run}`))] } };
+  // Task 2: fault-class coverage, a grouping layer over the same S3 power evidence
+  // (lib/score.mjs coverageFor doc comment). Attached to the per-card JSON so
+  // COVERAGE.md below -- and the report-consistency machine check -- can both read it
+  // straight off disk rather than recomputing it from raw cells.
+  const coverage = coverageFor(card, cells);
+  const out = { card, s1, s2, s3, s4, pairing, overall, coverage, generated_from: { runs: [...new Set(cells.map((c) => `${c.__study}/${c.__run}`))] } };
   writeFileSync(join(outDir, `${card.detector_id}.card.json`), JSON.stringify(out, null, 2) + '\n');
   emitted.push(out);
 }
@@ -160,4 +166,85 @@ writeFileSync(join(outDir, 'MISSING-CELLS.md'), [
   '## Standing gaps (protocol-wide, not per-card)', '',
   ...standingGaps.map((g) => `- ${g}`), '',
 ].join('\n'));
+
+// COVERAGE.md -- fault-class coverage, aggregated across the whole card set. A class
+// answers YES iff at least one card with overall.verdict === 'USE' has that class
+// COVERED (lib/score.mjs coverageFor); everything else is NO. This is a portfolio
+// question ("can anything in the fleet see a K3 fault"), not a per-card one, so it
+// aggregates emitted[] rather than living inside the per-card loop above.
+const minTier = (tiers) => {
+  const present = tiers.filter((t) => t != null);
+  if (present.length === 0) return null;
+  return present.reduce((best, t) => (TIERS.indexOf(t) < TIERS.indexOf(best) ? t : best), present[0]);
+};
+
+// Mirrors coverageFor's own canonical/covering selection (lib/score.mjs, the
+// `canonicalCells.find(... >= COVERAGE_FLOOR) ?? canonicalCells[0] ?? null` line) --
+// `coverage[K].canonical` records the {severity, rate} the covering cell produced but
+// not the cell's own __tier, so a YES row's tier is recovered by re-selecting the same
+// cell out of `coverage[K].cells` (the full survivor objects) rather than re-deriving a
+// second, divergent notion of "covering".
+function coveringCellFor(covClass) {
+  const rate = (c) => c.detection_rate ?? c.rate_e_ge_20;
+  const canonicalCells = (covClass.cells ?? []).filter((c) => c.canonical === true);
+  return canonicalCells.find((c) => rate(c) >= COVERAGE_FLOOR) ?? canonicalCells[0] ?? null;
+}
+
+function classRow(classId) {
+  const supporting = emitted
+    .filter((o) => o.overall.verdict === 'USE' && o.coverage[classId].status === 'COVERED')
+    .map((o) => ({ o, cell: coveringCellFor(o.coverage[classId]) }))
+    .sort((a, b) => a.o.card.detector_id.localeCompare(b.o.card.detector_id));
+
+  if (supporting.length === 0) {
+    return { classId, answer: 'NO', detectors: '—', tier: '—', rate: '—' };
+  }
+
+  const detectors = supporting.map(({ o }) => o.card.detector_id).join(', ');
+  const rate = supporting.map(({ o }) => o.coverage[classId].canonical.rate).join(', ');
+  const tier = minTier(supporting.map(({ cell }) => cell?.__tier ?? null)) ?? '—';
+  return { classId, answer: 'YES', detectors, tier, rate };
+}
+
+const coverageRows = Object.keys(FAULT_CLASSES).map(classRow);
+const coverageLine = (r) => `| ${r.classId} | ${r.answer} | ${r.detectors} | ${r.tier} | ${r.rate} |`;
+
+// For a NO class, the detail line names the single best-status card that still fell
+// short -- COVERED-but-not-USE beats NOT_POWERED beats NO_EVIDENCE, ties broken by the
+// higher canonical rate and then by detector_id -- so a reader sees exactly what is
+// blocking the class rather than nine identical "no evidence" lines.
+const STATUS_PRIORITY = { COVERED: 0, NOT_POWERED: 1, NO_EVIDENCE: 2 };
+function bestBlocked(classId) {
+  let best = null;
+  for (const o of emitted) {
+    const cov = o.coverage[classId];
+    const candidate = { detector: o.card.detector_id, status: cov.status, rate: cov.canonical?.rate ?? null, verdict: o.overall.verdict };
+    if (
+      best === null
+      || STATUS_PRIORITY[candidate.status] < STATUS_PRIORITY[best.status]
+      || (STATUS_PRIORITY[candidate.status] === STATUS_PRIORITY[best.status]
+          && (candidate.rate ?? -Infinity) > (best.rate ?? -Infinity))
+    ) {
+      best = candidate;
+    }
+  }
+  return best;
+}
+function blockedLine(classId) {
+  const best = bestBlocked(classId);
+  const rateStr = best.rate != null ? ` ${best.rate}` : '';
+  return `- ${classId}: NO — best: ${best.detector} ${best.status}${rateStr} (verdict ${best.verdict})`;
+}
+
+writeFileSync(join(outDir, 'COVERAGE.md'), [
+  `# Fault-class coverage — protocol v1, engine ${gitSha.slice(0, 7)}`, '',
+  'A class answers YES iff at least one card with overall verdict USE has that class COVERED '
+    + '(lib/score.mjs coverageFor). Tier on a YES row is the min tier of the supporting canonical '
+    + 'cells. NO rows are detailed below the table with the best status found across every card.', '',
+  '| class | answer | detector(s) | tier | canonical rate |', '|---|---|---|---|---|',
+  ...coverageRows.map(coverageLine), '',
+  '## Detail (NO rows)', '',
+  ...coverageRows.filter((r) => r.answer === 'NO').map((r) => blockedLine(r.classId)), '',
+].join('\n'));
+
 console.log(`emitted ${emitted.length} cards -> ${outDir}`);

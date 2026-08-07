@@ -16,11 +16,67 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { FAULT_CLASSES, TIERS, COVERAGE_FLOOR } from '../lib/constants.mjs';
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const certDir = join(testDir, '..');
 const verdictScript = join(certDir, 'verdict.mjs');
 const resultsRoot = join(certDir, 'results');
+
+// Same min-tier reduction lib/score.mjs's (unexported) minTier performs, reimplemented
+// independently here for the same reason expectedSuppressedCell reimplements
+// mergeSuppressed/formatTally below: the test must not trust the CLI's own arithmetic.
+function minTier(tiers) {
+  const present = tiers.filter((t) => t != null);
+  if (present.length === 0) return null;
+  return present.reduce((best, t) => (TIERS.indexOf(t) < TIERS.indexOf(best) ? t : best), present[0]);
+}
+
+// Mirrors coverageFor's own canonical/covering selection (lib/score.mjs coverageFor,
+// the `canonicalCells.find(... >= COVERAGE_FLOOR) ?? canonicalCells[0] ?? null` line) so
+// this test can recover the tier of the specific cell that produced a class's
+// `coverage[K].canonical` reading -- that tier is not itself exposed on `canonical`,
+// only on the full cell objects in `coverage[K].cells`.
+function coveringCellFor(covClass) {
+  const rate = (c) => c.detection_rate ?? c.rate_e_ge_20;
+  const canonicalCells = (covClass.cells ?? []).filter((c) => c.canonical === true);
+  return canonicalCells.find((c) => rate(c) >= COVERAGE_FLOOR) ?? canonicalCells[0] ?? null;
+}
+
+// Task 2 machine-check: independently re-derive every COVERAGE.md row from the card
+// JSONs beside it, the same "recompute, don't trust the CLI's formatting" pattern
+// checkRunDir already applies to REPORT.md. A class answers YES iff at least one card
+// with overall.verdict === 'USE' has that class COVERED; a YES row's tier must equal the
+// min tier of the supporting cards' covering canonical cells.
+function checkCoverageDir(dir) {
+  const coveragePath = join(dir, 'COVERAGE.md');
+  if (!existsSync(coveragePath)) return;
+  const coverage = readFileSync(coveragePath, 'utf8');
+  const cards = readdirSync(dir).filter((n) => n.endsWith('.card.json'))
+    .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')));
+
+  const classIds = Object.keys(FAULT_CLASSES);
+  const rows = coverage.split('\n').filter((l) => classIds.some((k) => l.startsWith(`| ${k} |`)));
+  assert.equal(rows.length, classIds.length, `${dir}: expected ${classIds.length} class rows in COVERAGE.md, got ${rows.length}`);
+
+  for (const row of rows) {
+    const cells = row.split('|').map((c) => c.trim());
+    const classId = cells[1];
+    const answer = cells[2];
+    const tier = cells[4];
+
+    for (const o of cards) assert.ok(o.coverage, `${dir}: ${o.card.detector_id}.card.json has no coverage key`);
+
+    const supporting = cards.filter((o) => o.overall.verdict === 'USE' && o.coverage[classId].status === 'COVERED');
+    const expectedAnswer = supporting.length > 0 ? 'YES' : 'NO';
+    assert.equal(answer, expectedAnswer, `${dir}: COVERAGE.md ${classId} answer "${answer}" disagrees with independent re-derivation (${expectedAnswer})`);
+
+    if (expectedAnswer === 'YES') {
+      const expectedTier = minTier(supporting.map((o) => coveringCellFor(o.coverage[classId])?.__tier ?? null));
+      assert.equal(tier, expectedTier ?? '—', `${dir}: COVERAGE.md ${classId} tier "${tier}" disagrees with independent re-derivation (${expectedTier ?? '—'})`);
+    }
+  }
+}
 
 // Same merge-then-format algorithm verdict.mjs uses to build the REPORT.md
 // 'suppressed' column (its mergeSuppressed/formatTally helpers) --
@@ -66,6 +122,8 @@ function checkRunDir(dir) {
   // I9: both standing caveats, verbatim, on every run's report footer.
   assert.match(report, /ADR-0012 real-telemetry anomaly \(E\[e\|H0\] = 24\/9\/9\) attaches to every T1\/T2 verdict until explained/, `${dir}: ADR-0012 caveat missing from REPORT.md`);
   assert.match(report, /P1 unmet: assertValidForFdrPath has no production caller — every USE is advisory in practice until the gate is wired/, `${dir}: P1 caveat missing from REPORT.md`);
+
+  checkCoverageDir(dir);
 }
 
 // Run directories are named run-<UTC basic>, so lexicographic order IS chronological.
@@ -119,6 +177,7 @@ test('verdict.mjs run against a temp CERT_RESULTS_DIR produces a self-consistent
 
   assert.ok(existsSync(join(dir, 'manifest.json')), 'manifest.json missing');
   assert.ok(existsSync(join(dir, 'MISSING-CELLS.md')), 'MISSING-CELLS.md missing');
+  assert.ok(existsSync(join(dir, 'COVERAGE.md')), 'COVERAGE.md missing');
   checkRunDir(dir);
 
   const missing = readFileSync(join(dir, 'MISSING-CELLS.md'), 'utf8');

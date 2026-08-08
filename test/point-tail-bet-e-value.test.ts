@@ -38,3 +38,23 @@ test('a beyond-calibration point is decisive on its own', () => {
   assert.equal(p, 1 / 10001);
   assert.ok(e > 300 && e < 500, `e ${e}`); // 0.1 * (1/10001)^(-0.9) ≈ 398
 });
+
+// Mutation regression: the conformal p-value's validity depends on the tie
+// direction in the rank count — #{s_cal >= s(x)}, not #{s_cal > s(x)}.
+// Excluding exact ties breaks super-uniformity silently (it never shows up
+// on continuous draws, since ties have probability 0). rows = 0..9999 is
+// symmetric about its median, so every deviation |k - median| repeats
+// exactly twice — an exact-tie fixture by construction, not by luck.
+test('conformal rank count is >=, not > (tie regression; symmetric-integer fixture)', () => {
+  const rows = Array.from({ length: 10000 }, (_, k) => k);
+  const cal = calibrateTailBet(rows);
+  const x = 1000; // |1000 - median| === |8999 - median|: an exact tie, and x is itself a calibration row.
+  const score = Math.abs(x - cal.median) / cal.mad;
+  const tiedAtScore = cal.sortedScores.filter((s) => s === score).length;
+  assert.ok(tiedAtScore >= 2, `fixture must produce an exact tie at the query score; got ${tiedAtScore}`);
+
+  const expectedCount = cal.sortedScores.filter((s) => s >= score).length; // >= is the correct, validity-bearing direction
+  const expectedP = (1 + expectedCount) / (cal.sortedScores.length + 1);
+  const { p } = pointTailBetEValue(x, cal);
+  assert.equal(p, expectedP);
+});

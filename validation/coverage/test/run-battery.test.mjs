@@ -19,7 +19,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { FAULT_CLASSES } from '../../certification/lib/constants.mjs';
+import { rng, gaussFrom } from '../lib/inject.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const HARNESS = path.join(HERE, '..', 'harness', 'run-battery.mjs');
@@ -279,6 +281,107 @@ test('K4.5: cell 32 power (S3) arm fires per-trajectory on any of the 200-tick w
   assert.equal(s3.shift_sigma, 3);
   assert.ok(Number.isFinite(s3.detection_rate));
   assert.ok(!('n_points' in s3), 'S3 keeps A1\'s per-trajectory pair, not K4.1.4\'s per-point fields');
+});
+
+// Mutation-strength findings from the READY-FOR-RUN review: the six assertions below each fail
+// under a named one-line mutation with the rest of the suite green (confirmed by the reviewer,
+// re-confirmed here per mutation before landing — see the fix report for the kill log).
+
+test('K4.6 mutation guard: cell 18 window_crossing_rate is STRICTLY greater than detection_rate', () => {
+  const { summary } = smoke();
+  const c = summary.cells.find((x) => x.detector === 'point_tail_bet_e_value' && x.cell_index === 18);
+  assert.ok(c, 'no cell 18 point_tail_bet_e_value row');
+  // Kills the any-tick-collapse mutation: if the window scan were narrowed to the injected
+  // tick alone, windowCrossed would equal fires exactly and this would be an equality, not a
+  // strict inequality. `>=` (as used on all four cells elsewhere) does not catch that.
+  assert.ok(c.window_crossing_rate > c.detection_rate,
+    `cell 18: window_crossing_rate (${c.window_crossing_rate}) must exceed detection_rate `
+    + `(${c.detection_rate}) at these seeds — an any-tick mutation collapsing the window scan `
+    + 'to the injected tick alone would make these equal');
+});
+
+test('K4.7: cell 32 S2 pins the exceedance/k/n_points triple, k recomputed independently', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'point_tail_bet_e_value' && c.arm === 'healthy');
+  assert.ok(Number.isInteger(s2.k), 'k must be an integer per-point exceedance count (K4.7\'s own triple)');
+  assert.equal(s2.exceedance, s2.k / s2.n_points, 'exceedance must equal k/n_points exactly, not a separately-tracked ratio');
+  assert.ok(s2.exceedance > 0, `expected some points >= threshold at n_points=${s2.n_points} (K4.8 predicts ~0.27%)`);
+  assert.ok(s2.lower_95 > 0);
+  // Recompute the Wilson lower bound from k/n_points alone, independently of whatever the
+  // harness's own lower95() happened to be called with — kills a mutation that computes
+  // lower_95 from the wrong (e.g. per-trajectory) k/n pair while k/n_points still look right.
+  const p = s2.k / s2.n_points, z = 1.645, d = 1 + (z * z) / s2.n_points;
+  const cc = p + (z * z) / (2 * s2.n_points);
+  const h = z * Math.sqrt((p * (1 - p)) / s2.n_points + (z * z) / (4 * s2.n_points * s2.n_points));
+  const recomputed = Math.max(0, (cc - h) / d);
+  assert.ok(Math.abs(s2.lower_95 - recomputed) < 1e-9,
+    `lower_95 (${s2.lower_95}) does not match the independent recomputation from k/n_points (${recomputed})`);
+});
+
+test('K4.5 mutation guard: cell 32 S3 detection_rate is exactly 1 at the registered smoke seeds', () => {
+  const { summary } = smoke();
+  const s3 = summary.cells.find((c) => c.detector === 'point_tail_bet_e_value' && c.arm === 'power');
+  assert.ok(s3, 'no point_tail_bet_e_value power arm');
+  // Kills the any-tick/fires-collapse mutation: reverting s3's detection reading to the
+  // onset-tick-only `fires` counter (K4.6's fault-cell reading, wrong for a sustained-step
+  // arm) moves this to 0.5 at these seeds instead of 1.
+  assert.equal(s3.detection_rate, 1,
+    'an any-tick/fires mutation (reading power.fires instead of power.windowCrossed) moves this to 0.5 at these seeds');
+});
+
+test('K4.1.8 mutation guard: cell 32 S2 mean_e is within the registered 3-sd band', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'point_tail_bet_e_value' && c.arm === 'healthy');
+  assert.ok(Math.abs(s2.mean_e - 0.6246) < 0.3,
+    `K4.1.8 predicts mean_e ~0.6246 (3-sd band at n_points=${s2.n_points} smoke); got ${s2.mean_e}`);
+});
+
+test('params negative scope: every non-point_tail_bet_e_value row keeps params=oracle', () => {
+  const { summary } = smoke();
+  const nonPointRows = summary.cells.filter((c) => c.detector !== 'point_tail_bet_e_value');
+  assert.ok(nonPointRows.length > 0);
+  for (const c of nonPointRows) {
+    // Kills a collapsed-ternary mutation (e.g. always 'heldout-empirical', or the branches
+    // swapped) that a point_tail_bet_e_value-only positive check cannot see.
+    assert.equal(c.params, 'oracle', `${c.detector} ${c.fault_class ?? c.arm} ${c.severity ?? ''}: params`);
+  }
+});
+
+test('K4.4 provenance: cal_median/cal_mad are re-derivable from lib/inject.mjs at the registered heldout seed', () => {
+  const { summary } = smoke();
+  const distRequire = createRequire(import.meta.url);
+  const tailBetDist = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/point-tail-bet-e-value.js'));
+  const HELDOUT_ROWS = 10000, TRAJ_STEP = 7919;
+  const regenRows = (heldoutSeed) => {
+    const rows = new Array(HELDOUT_ROWS);
+    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = gaussFrom(rng(heldoutSeed + TRAJ_STEP * j))();
+    return rows;
+  };
+  const cases = [
+    { label: 'cell 19 (canonical)', row: () => summary.cells.find(
+      (x) => x.detector === 'point_tail_bet_e_value' && x.cell_index === 19), heldoutSeed: 20760826 },
+    { label: 'arm 32 (S2)', row: () => summary.cells.find(
+      (x) => x.detector === 'point_tail_bet_e_value' && x.arm === 'healthy'), heldoutSeed: 20760839 },
+  ];
+  for (const { label, row, heldoutSeed } of cases) {
+    const c = row();
+    assert.ok(c, `${label}: no point_tail_bet_e_value row`);
+    const cal = tailBetDist.calibrateTailBet(regenRows(heldoutSeed));
+    // Kills a wrong-stream mutation: a heldoutSeed off by one, or accidentally sharing another
+    // cell's/arm's draw, moves median/mad away from what an independent re-derivation produces.
+    assert.equal(c.cal_median, cal.median, `${label}: cal_median`);
+    assert.equal(c.cal_mad, cal.mad, `${label}: cal_mad`);
+  }
+});
+
+test('K4.1.6 (Minor): point_non_finite is 0 on every point_tail_bet_e_value row at smoke', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'point_tail_bet_e_value');
+  assert.ok(rows.length > 0);
+  for (const c of rows) {
+    assert.equal(c.point_non_finite, 0,
+      `${c.fault_class ?? c.arm} ${c.severity ?? ''}: point_non_finite (K4.1.6 — structurally impossible once calibration succeeds)`);
+  }
 });
 
 test('manifest records the registered seed scheme, substrate hash and smoke flag', () => {

@@ -529,6 +529,17 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       c.window_crossing_rate = a.windowCrossed / N;
       c.heldout_seed = ctx.heldoutSeed;
       c.heldout_rows = HELDOUT_ROWS;
+      // Re-derivable provenance (review finding): the calibration this cell actually used,
+      // read straight off ctx.tailBetCal rather than re-derived — pins the row against a
+      // wrong-stream mutation (e.g. a heldoutSeed off by one or a shared-with-the-wrong-cell
+      // draw), which a report reader can check independently against §6/K4.4's own seed
+      // formula without re-running the battery.
+      c.cal_median = ctx.tailBetCal.median;
+      c.cal_mad = ctx.tailBetCal.mad;
+      // K4.1.6's structural-zero claim, exposed as a counted field rather than only implied by
+      // non_finite_wealth's (onset-only) reading — non_finite_wealth above is the injected-tick
+      // reading; this is the accumulated per-point counter across the whole window.
+      c.point_non_finite = a.pointNonFinite;
     }
     cells.push(c);
     process.stderr.write(
@@ -587,7 +598,9 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   //
   // Amendment v2.K4.1, K4.1.4: point_tail_bet_e_value's S2 row is PER-POINT, not
   // per-trajectory — n_points = n*200, exceedance = k/n_points, lower_95 the per-point Wilson
-  // bound, and verdict derived from that already-computed lower_95 (not recomputed).
+  // bound, and verdict derived from that already-computed lower_95 (not recomputed). K4.7 names
+  // the triple explicitly as exceedance/k/N_points, so `k` is pinned as its own field (review
+  // finding), not left implicit in the exceedance ratio alone.
   const s2Reason = fallback(healthy, N);
   const s2n = healthy.finite;
   const s2k = healthy.fires;
@@ -607,7 +620,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     n: s2n,
     ticks: T,
     onset: ONSET,
-    ...(pointKind ? { n_points: s2PointN } : {}),
+    ...(pointKind ? { n_points: s2PointN, k: s2PointK } : {}),
     exceedance: pointKind ? (s2PointN ? s2PointK / s2PointN : NaN) : (s2n ? s2k / s2n : NaN),
     mean_e: pointKind ? (s2PointN ? healthy.pointSumE / s2PointN : NaN) : (healthy.es ? mean(healthy.es) : NaN),
     lower_95: s2Lower95,
@@ -618,6 +631,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       : (s2Lower95 > ALPHA ? 'FAIL' : 'not-refuted'),   // run.mjs:115 / K4.1.4
     not_executable_reason: s2Reason,
     substrate_tier: 'T1',
+    ...(pointKind ? { point_non_finite: healthy.pointNonFinite, cal_median: ctx.tailBetCal.median, cal_mad: ctx.tailBetCal.mad } : {}),
   };
   // S3. No exceedance/mean_e, so this arm is not a validity candidate (run.mjs:130-132's
   // own reasoning); the paired S2 row above is. Amendment v2.K4, K4.5: point_tail_bet_e_value's
@@ -647,6 +661,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     verdict: s3Reason !== null ? 'NOT-EXECUTABLE' : (s3Rate >= COVERAGE_FLOOR ? 'POWERED' : 'INERT'),
     not_executable_reason: s3Reason,
     substrate_tier: 'T1',
+    ...(pointKind ? { point_non_finite: power.pointNonFinite, cal_median: ctx.tailBetCal.median, cal_mad: ctx.tailBetCal.mad } : {}),
   };
   if (detId === 'family_E_conformal_heldout' || pointKind) {
     s2.heldout_seed = ctx.heldoutSeed;

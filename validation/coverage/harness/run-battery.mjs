@@ -256,7 +256,16 @@ function assertRegistryAgreement() {
   // Amendment v2.K5R, K5R.5's index table, pinned by value: the cell indices ARE the seed scheme,
   // so a moved index is a different data set under the same severity label. Indices 35-37 are
   // reserved by K6.12/K6E.9/K6E.10 and must stay absent from the fault-cell table.
+  //
+  // Amendment v2.K5R.1, K5R.1.1: cell 25 joins this table. The three -ar1 checks above bound HOW
+  // MANY replicates a class carries, not WHICH ones -- so relabelling the preserved replicate from
+  // `slope1e-4-ar1` to any other grid severity's `-ar1` passed all three (the reviewer's mutation
+  // R1: both suites green, where the pre-K5R "exactly one, and it is the canonical's" assertion
+  // crashed here). Cell 42 was pinned by this table; cell 25 was pinned by nothing once that
+  // assertion was replaced. §6's seed table already registers cell 25 as slope1e-4-ar1 / 20260832;
+  // this makes the harness assert it.
   for (const [idx, severity, phi, seed] of [
+    [25, 'slope1e-4-ar1', 0.6, 20260832],
     [38, 'slope2.5e-3', 0, 20260845], [39, 'slope5e-3', 0, 20260846], [40, 'slope1e-2', 0, 20260847],
     [41, 'slope2e-2', 0, 20260848], [42, 'slope1e-2-ar1', 0.6, 20260849],
   ]) {

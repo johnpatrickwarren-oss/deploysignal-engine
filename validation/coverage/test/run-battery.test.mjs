@@ -224,7 +224,13 @@ test('K5 carries the registered cell indices, and the new cells sit at 38-42 wit
   const byIndex = new Map(summary.cells
     .filter((c) => c.fault_class === 'K5' && c.detector === 'safe_t')
     .map((c) => [c.cell_index, c]));
+  // Amendment v2.K5R.1, K5R.1.1: the PRESERVED replicate (cell 25) is pinned here too. The -ar1
+  // count and base-severity checks bound how many replicates a class carries, not which ones — so
+  // relabelling cell 25 to another grid severity's -ar1 passed every check the K5R change left in
+  // place (the reviewer's mutation R1, which took both suites green). Cell 42 was pinned by this
+  // table; cell 25 was pinned by nothing once the old assertion was replaced.
   const REGISTERED = [
+    [25, 'slope1e-4-ar1', 0.6, 20260832],
     [38, 'slope2.5e-3', 0, 20260845], [39, 'slope5e-3', 0, 20260846],
     [40, 'slope1e-2', 0, 20260847], [41, 'slope2e-2', 0, 20260848],
     [42, 'slope1e-2-ar1', 0.6, 20260849],

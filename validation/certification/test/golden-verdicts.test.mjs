@@ -121,6 +121,35 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // (whose exceedance/mean_e fields are exactly their class's own instrument). Expected to move only
 // if Task 8's adapter closes that gap; flagged here so a future NOT_EXECUTABLE reading post-run is
 // not mistaken for a defect in this test.
+//
+// Re-frozen 2026-08-08, coverage-gap-detectors Task 8 (cert run run-20260808T091718Z, consuming
+// battery run-20260808T091521Z): ONE row moves. `spectral_bet_e_process` goes NOT_EXECUTABLE ->
+// USE, tier null -> T1, S2 MISSING -> PASS, S3 MISSING -> PASS (S1 MISSING and S4 PASS unchanged).
+// No other card's verdict, tier or stage status moves -- the registered run was --classes K3, so
+// the other twelve cards' evidence is untouched.
+//
+// The S2 MISSING the paragraph above predicted did NOT persist, and the registered reason is an
+// amendment, not a scoring change: Amendment v2.K3.1 K3.1.1 (registered before any run, closing
+// K3.15's own gap) added `increment_estimator` -- the martingale's own per-window eAvg increments --
+// to arm cell 33's healthy row, and K3.1.2 renamed that row's rate field to the class-recognized
+// `crossing_rate`, so `isValidityCell` (lib/score.mjs) now recognizes a cell it previously could not
+// see. The Task 8 adapter emits both. The verdict token itself stays crossing_rate-derived (K3.1.3),
+// never increment_estimator-derived: k = 6 of n = 2000, crossing_rate 0.003, Wilson lower_95
+// 0.0015520 <= alpha 0.05, so K3.13's stop condition did not fire and S2 CLEARED as 'not-refuted'.
+// The test_martingale class carries no terminal mean rule, so nothing overrode that clearance the
+// way meanRule overrode group_average_e_value's and family_E_conformal_heldout's. S3 PASS comes
+// from arm 33's shift_sigma = 3 power row, detection_rate 1.0000 -- realized per class as an on-grid
+// oscillation (amp 3 sigma, freq 3/30, bin k=3) rather than a step, per Amendment v2.K3.3 K3.3.2:
+// the originally registered step probe is DC-blind to every bin this detector scores (K3.3.1) and
+// survives only as the verdict-free `step_blindness_probe_rate` row, which carries no
+// `detection_rate` and no `shift_sigma` and is therefore invisible to scoreS3 by construction.
+//
+// The class answer moves with it: COVERAGE.md's K3 row goes NO -> YES, carried by this card
+// (canonical cell 15 `A0.75sigma-f0.05` detection_rate 0.6540 >= COVERAGE_FLOOR 0.50, tier T1).
+// No USE card covered K3 at the previous corpus and none of the incumbents changed that here:
+// safe_t_e_value and universal_inference_e_value read 0.0000 on all six K3 cells in this same run,
+// and family_D_spectral_e_detector (also 0.0000 on idx 15/17) is REFUSE, barred from carrying a
+// class regardless. K5 and K6 stay NO.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -134,7 +163,7 @@ const GOLDEN = {
   group_average_e_value: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
   family_E_conformal_heldout: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
   point_tail_bet_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
-  spectral_bet_e_process: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
+  spectral_bet_e_process: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
 };
 
 function runHarness(t) {

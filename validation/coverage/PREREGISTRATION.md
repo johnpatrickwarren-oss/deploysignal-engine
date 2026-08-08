@@ -3837,3 +3837,1031 @@ one per detector merged from `cells/` — recomputed by loading the real corpus 
 `collect.mjs`, with the same slip fixed in the two code comments that carried it (C1.2.3).
 **C1.1.2's ruling that the legacy declaration is reported and not acted on is unaffected, and
 C1.1.4's write-back obligation stands as registered.**
+
+## Amendment v2.K6E — 2026-08-08, the design gate for `shape_ecdf_conformal_bet`, before any artifact
+
+Registered before any artifact of the second registered K6 attempt exists: no detector module, no
+card, no adapter, no run. Authority, per this document's own precedence rule:
+`~/concord/knowledge/methodology/pages/k6-ecdf-successor.md` (RATIFIED 2026-08-08, the binding
+construction) — then this document — then
+`docs/superpowers/plans/2026-08-08-k6-ecdf-successor.md`. Sections 1–14 and every earlier amendment
+stay intact; this amendment adds, and moves no endpoint, floor, seed or verdict belonging to
+`shape_block_conformal_bet` or to any other candidate.
+
+**What this amendment is for.** The design page requires a *design gate*: the growth criterion
+`E[log eAvg]` at the canonical K6 cell, computed for this feature before anything is built, with
+three outcomes registered in advance (page §"The design gate"). This amendment computes it,
+registers the computation verbatim, states the verdict, and registers every endpoint the runs
+would read. **The gate result is outcome 3 of the three registered outcomes — positive but
+marginal — and the canonical-detection prediction it implies is `0.0000`, structurally rather than
+statistically.** K6E.5 and K6E.6 state that in full, including what it does and does not refute.
+
+### K6E.1 Registered constants, with the arithmetic shown
+
+| constant | value | origin |
+|---|---|---|
+| held-out stream | the corrected post-C1 continuous-stream draw, `n = 10,000` rows per metric | `run-battery.mjs:585-599`, Amendment v2.C1 C1.2 (supersedes the `seed(j)` form) |
+| reference segment A | held-out ticks 1–4,000 → `n_A = 4,000`, fixed reference ECDF `F̂_A` | design page §Construction |
+| block segment B | held-out ticks 4,001–10,000, cut into contiguous disjoint blocks of `W` | design page §Construction |
+| `W` | **30** | design page; identical to `W_K6` (K6.1), so the successor is measured at the predecessor's geometry |
+| `m` (T1) | **200** — `(10000 - 4000)/30 = 200` exactly, **no remainder dropped** | arithmetic here; `200 >= M_MIN_K6 = 100` (K6.1) with margin |
+| `m` (T2) | **200** — `9000 = 3000 + 200*30`, K6E.10 | arithmetic here |
+| `κ*` | **0.9126** | derived at K6E.4, frozen here, derivation quoted |
+| live windows, T1 | **6** disjoint `W=30` windows over `[100,280)`, `t=280..299` unused | K6.10, reused unchanged |
+| live windows, T2 | **20** disjoint `W=30` windows over the final 600 of 9,600 ticks | K6.12, reused unchanged |
+| decisive endpoint | wealth `>= 20` (`log >= log 20 ≈ 2.99573`) at any window checkpoint | K6.10, unchanged |
+| `α` | 0.05 (§3); `COVERAGE_FLOOR = 0.50`; `INERTNESS_FLOOR = 0.10` | `constants.mjs:56`, `:20` |
+
+**The `m` figures do not agree with the predecessor's, and that is by construction, not drift.**
+`shape_block_conformal_bet` blocks the *whole* 10,000-row stream (`m = 333`, K6.3); the successor
+spends the first 4,000 rows on the reference ECDF and blocks only the remaining 6,000 (`m = 200`).
+Both exceed `M_MIN_K6 = 100`. Nothing in K6.1–K6.16 moves: `m = 333` remains the predecessor's
+registered value on its own cells.
+
+**Difference from the predecessor that the gate exists to test, stated so it cannot be lost:** the
+feature is the only thing that changes. Same stream, same `W`, same cells, same seeds, same
+endpoint, same 6-window accounting. A comparison across any other difference would mean nothing
+(design page §"What this page does not claim").
+
+### K6E.2 The feature, frozen exactly
+
+The design page states the form and delegates the exact discrete convention to this amendment
+("exact form frozen in the amendment"). **Frozen, with the convention named at every point it could
+be read two ways:**
+
+```
+Fhat_A(x) = (1/n_A) * #{a in A : a <= x}                      right-continuous ECDF of segment A, n_A = 4000
+x_(1) <= ... <= x_(W)                                         the live window's ascending order statistics
+T(w)      = SUM_{i=1..W} ( i/W - Fhat_A(x_(i)) )^2            i/W, the right-continuous ECDF of the window
+                                                              at its own i-th order statistic
+```
+
+`T(w)` is `W` times the Cramér–von-Mises criterion `∫ (F̂_w − F̂_A)² dF̂_w` with the window's own
+ECDF as the integrating measure — the two-sample-against-fixed-reference form, standard reference
+Anderson (1962), *On the distribution of the two-sample Cramér–von Mises criterion*, Ann. Math.
+Statist. 33(3). **Three deliberate departures from Anderson's statistic, each stated with why it
+cannot matter here:** no `nm/(n+m)²` normalization, no pooled-sample integrating measure, and no
+`1/(12W)`-type centering term. All three are strictly monotone or additive-constant
+transformations of the same quantity across the objects being compared, and **the only use made of
+`T` is its rank among the `m+1` exchangeable values `{T(B_1) … T(B_m), T(live)}`** (K6E.3), which
+no such transformation changes. The convention `i/W` rather than the midpoint `(2i−1)/(2W)` *is*
+a real choice, since the difference is not additive; it is registered because the design page's own
+formula states `F̂_w(x_(i))`, and its consequence is measured and disclosed at K6E.4 (the midpoint
+variant reads `E[log p|alt] = −1.10281 ± 0.00432` against the registered form's
+`−1.09715 ± 0.00420`, a 1.3-SE difference that moves no verdict — the form was not chosen by
+outcome).
+
+**Single feature, so no cross-feature averaging** (design page §Construction): `eAvg ≡ e` for this
+candidate, and the K6.2 "never max" argument has nothing to apply to. Every `eAvg` in this
+amendment is a single feature's `e`.
+
+**Why the K4 self-fit defect (C47) has no analogue** (design page, restated here as the tag this
+card will carry): `F̂_A` is fitted on A alone, and every ranked object — the `m` B-blocks and the
+live window — is drawn from `B ∪ live`, disjoint from A. Nothing is ranked against a reference
+fitted on itself. The rank identity is exact, not `O(1/n_A)`.
+
+### K6E.3 The block-conformal `p`, and its exact null law (closed form)
+
+```
+p = (1 + #{ j : T(B_j) >= T(live) }) / (m + 1)                 tie-inclusive >=, K6.2's validity-bearing rule
+e = kappa * p^(kappa - 1),  kappa in (0,1)
+log wealth after t windows = SUM_{w<=t} log e_w = t*log kappa + (1 - kappa) * S_t,
+                                                  S_t = SUM_{w<=t} ( -log p_w )
+```
+
+Conditional on A, `T(B_1) … T(B_m)` and `T(live)` are i.i.d. under the registered null (each is the
+same functional of 30 draws from the same stationary law, against the same fixed `F̂_A`), hence
+exchangeable, hence **`p` is exactly uniform on the `m+1` point grid `{1/(m+1), …, 1}`** — not
+merely super-uniform. At `m = 200` that grid has 201 points and the following closed forms hold
+exactly (all re-derived here, node-verified, reproducible with a calculator):
+
+```
+E[p | null]     = (m+2) / (2(m+1))                                  = 0.502488
+P(p <= 0.05)    = floor(0.05*(m+1)) / (m+1) = 10/201                = 0.049751      (K6.1.2's rule, at m=200)
+E[log p | null] = ( log((m+1)!) - (m+1)*log(m+1) ) / (m+1)           = -0.982234
+E[e | null]     = kappa * (m+1)^(-kappa) * SUM_{k=1..m+1} k^(kappa-1)
+```
+
+| `kappa` | exact `E[e \| null]` at `m=200` | gap below the continuous identity's 1 |
+|---|---|---|
+| 0.05 | 0.255044 | 0.744956 |
+| 0.1 | 0.445371 | 0.554629 |
+| 0.2 | 0.693218 | 0.306782 |
+| 0.3 | 0.830939 | 0.169061 |
+| 0.5 | 0.949741 | 0.050259 |
+| 0.7 | 0.986278 | 0.013722 |
+| **0.9126 (`κ*`)** | **0.998021** | **0.001979** |
+
+**`E[e | null] < 1` strictly, at every `κ`, and the gap is `O(m^(-κ))`, not `O(1/m)`** — by
+Euler–Maclaurin, `E[e|null] = 1 + κ/(2m) + κ*ζ(1-κ)*(m+1)^(-κ) + …`, and `ζ(1-κ) < 0` for
+`κ ∈ (0,1)`, so the dominant correction is negative and of order `m^(-κ)`. This is the conservative
+direction (validity is not at risk; it is strengthened), and it is the reason **this amendment does
+not register a null `E[e] = 1` check.** The registered identity check is against the exact discrete
+values in the table above; a construction whose measured null `E[e]` came out at 1.0 at `κ = 0.1`
+and `m = 200` would be evidence that the `p` formula was **not** the registered rank. Measured
+result: K6E.7(b). One consequence of the same arithmetic is filed as a correction to K6.11 at
+K6E.15, rider 2.
+
+### K6E.4 THE GATE — method, seeds, and the measured tables
+
+**A disclosed probe on non-registered seeds** (this document's own DISCLOSED convention,
+K6.4/K3.11). Two independent probes plus closed-form arithmetic. Scripts live outside the repo
+(scratchpad `c46/gate-probe.mjs`, `cells-and-W.mjs`, `requirement.mjs`); every number below is
+reproducible from what this section states, and the method is stated in full rather than referenced
+to a file nobody can open.
+
+**Generators.** `rng` (the Numerical-Recipes LCG) and `gaussFrom` copied verbatim from
+`inject.mjs:14-24`; the AR(1) draw from `run-battery.mjs:302-308`; the alternative's per-tick draw
+verbatim from `injectShapeMix` (`inject.mjs:60-70`), i.e. `z = (b ? +d/2 : -d/2) + w*s`,
+`s = sqrt(max(0, 1 - d²/4))`, three raw uniforms per tick, **the registered generator, not a
+re-derivation of it**. Held-out reference stream drawn as one continuously advanced stream, the
+post-C1 form (`run-battery.mjs:593-596`).
+
+**Seed provenance.** Probe 1 uses seeds `3.0e9 + {1000003, 7000019, 13000027}*rep`; probe 2 uses
+`3.5e9 + {1000003, 17000041}*rep`. Every seed this study registers is `<= 1.0e8` — `CELL_SEED`
+max `20260842`, trajectory seed max `20260841 + 7919*1999 = 36095122`, `+ 104729*k` for K2's
+series salt, `HELDOUT_SEED = CELL_SEED + 500000`, and even the retired pre-C1 lattice form maxed at
+`20760841 + 7919*9999 = 99942922`. **No registered seed, and no arithmetic derivation of one, can
+reach `3.0e9`.** `CELL_SEED`/`HELDOUT_SEED`-derived values were not touched.
+
+**Replicate counts.** Probe 1: `R = 400` independent held-out references × 100 six-window
+trajectories per arm per reference = **240,000 live windows and 40,000 trajectories per arm**.
+Probe 2: `R = 200` references × 100 trajectories per arm per cell = **120,000 windows per arm per
+cell**. Standard errors are **cluster-robust over references** (the unit of independence is the
+reference draw: the windows sharing one reference are dependent through it, the C1.7
+calibration-draw lottery), computed as `sd(per-reference means)/sqrt(R)`.
+
+**Table 1 — `E[log p]` at the canonical cell (`d = 1.5`, `W = 30`, `m = 200`, `n_A = 4000`).**
+
+| arm | probe 1 (240,000 windows) | probe 2, independent seeds (120,000 windows) | exact null value |
+|---|---|---|---|
+| null (healthy) | `-0.98187 ± 0.00361` | `-0.98049 ± 0.00526` | `-0.982234` |
+| canonical alt | `-1.09715 ± 0.00420` | `-1.09277 ± 0.00614` | — |
+
+Inverse-variance pooling of the two canonical readings (`w = SE^-2`: `56689` and `26526`):
+**`x ≡ -E[log p | alt] = 1.09576 ± 0.00347`**. Against the null value `0.982234`, the alternative is
+informative **in direction** at `32.7` SE — the opposite of the predecessor's reading at the same
+geometry (K6.7's anchor, K6E.7a).
+
+**Table 2 — the `κ` sweep. `E[log e] = log κ + (1-κ)*(-E[log p])` exactly, so the sweep is an
+identity in the two numbers of Table 1 rather than a separate simulation; SEs propagate as
+`(1-κ)*SE`.** Measured mean `e` under the null is shown against the exact discrete value of
+K6E.3 as the construction check.
+
+| `κ` | `E[log e \| null]` | SE | `E[log e \| alt]` | SE | measured mean `e \| null` | exact `E[e \| null]` | max `log e` per window |
+|---|---|---|---|---|---|---|---|
+| 0.05 | -2.06296 | 0.00343 | -1.95344 | 0.00399 | 0.2547 | 0.2550 | 2.0424 |
+| 0.1 | -1.41890 | 0.00325 | -1.31515 | 0.00378 | 0.4448 | 0.4454 | 2.4704 |
+| 0.2 | -0.82394 | 0.00289 | -0.73172 | 0.00336 | 0.6924 | 0.6932 | 2.6332 |
+| 0.3 | -0.51667 | 0.00253 | -0.43597 | 0.00294 | 0.8302 | 0.8309 | 2.5083 |
+| 0.32 | -0.47176 | 0.00246 | -0.39337 | 0.00286 | 0.8493 | 0.8500 | 2.4668 |
+| 0.35 | -0.41161 | 0.00235 | -0.33667 | 0.00273 | 0.8740 | 0.8747 | 2.3973 |
+| 0.4 | -0.32717 | 0.00217 | -0.25800 | 0.00252 | 0.9067 | 0.9074 | 2.2657 |
+| 0.5 | -0.20221 | 0.00181 | -0.14457 | 0.00210 | 0.9492 | 0.9497 | 1.9585 |
+| 0.7 | -0.06211 | 0.00108 | -0.02753 | 0.00126 | 0.9860 | 0.9863 | 1.2343 |
+| 0.8 | -0.02677 | 0.00072 | -0.00371 | 0.00084 | 0.9934 | 0.9936 | 0.8375 |
+| 0.9 | -0.00717 | 0.00036 | **+0.00435** | 0.00042 | 0.9976 | 0.9976 | 0.4250 |
+| **0.9126 (`κ*`)** | **-0.00563** | 0.00032 | **+0.00431** | 0.00030 | — | 0.9980 | **0.3721** |
+| 0.95 | -0.00220 | 0.00018 | +0.00356 | 0.00021 | 0.9990 | 0.9990 | 0.2139 |
+| 0.99 | -0.00023 | 0.00004 | +0.00092 | 0.00004 | 0.9998 | 0.9998 | 0.0430 |
+
+**Table 3 — the optimizing `κ`, in closed form.** For a single feature the growth criterion is
+exactly `g(κ) = log κ + (κ-1)*E[log p|alt]`, so `g'(κ) = 1/κ + E[log p|alt] = 0` gives
+
+```
+kappa*  = -1 / E[log p | alt] = 1/x = 1/1.09576 = 0.912608   ->  REGISTERED kappa* = 0.9126
+g(kappa*) = x - 1 - log x     = 0.09576 - 0.091448 = 0.004312 nats/window
+95% CI (from x's CI [1.08897, 1.10257]):  [0.003738, 0.004926] nats/window
+```
+
+Two structural facts about this criterion, registered because they decide how the three outcomes
+are read at all:
+
+- **`κ*` lies in `(0,1)` only if `x > 1`.** `g(κ) = x - 1 - log x > 0` whenever `x > 1`; if
+  `x <= 1` then `g(κ) < 0` for **every** `κ ∈ (0,1)` and the construction is anti-informative at
+  that cell with no calibrator able to rescue it. The gate's outcome 2 is therefore exactly the
+  event `-E[log p|alt] <= 1`.
+- **Under the null, `x_null = 0.982234 < 1`** (K6E.3, exact), so no `κ ∈ (0,1)` has positive growth
+  under the null. The criterion is not vacuous, and the sweep's null column is a calibration check
+  on the probe, not a finding.
+
+`κ* = 0.9126` is **not** in the `{0.05 … 0.7}` band the plan's dispatch suggested sweeping, and it
+is far above the predecessor's disclosed alternative-optimal `κ ≈ 0.32–0.4` (K6.5). That is a
+consequence of the feature change, not a tuning choice: the predecessor's `κ ≈ 0.32–0.4` was
+measured for a *two-feature average*, where the single-feature identity above does not apply.
+
+**Table 4 — the `W` sensitivity, disclosed (probe 2, `m` held at 200 by extending the B segment to
+`200*W` rows — a probe-only variation, registered as such, so `W` is isolated from `m`).** This
+answers "what would have to change", and nothing in it is a registered endpoint.
+
+| `W` | `E[log p \| alt]` | `x` | `κ*` | growth, nats/window | windows to reach `log 20` on drift alone |
+|---|---|---|---|---|---|
+| **30 (registered)** | `-1.09510 ± 0.00733` | 1.0951 | 0.9132 | **0.00425** | 705 |
+| 60 | `-1.17269 ± 0.00809` | 1.1727 | 0.8527 | 0.01339 | 224 |
+| 120 | `-1.34634 ± 0.01063` | 1.3463 | 0.7428 | **0.04895** | 62 |
+| 240 | `-1.65049 ± 0.01474` | 1.6505 | 0.6059 | 0.14942 | 21 |
+| 480 | `-2.17028 ± 0.02393` | 2.1703 | 0.4608 | 0.39542 | 8 |
+
+The feature reaches the design page's own 0.05 nats/window marginality floor at `W ≈ 120` and needs
+`≈ 62` windows at that `W` — `7,440` ticks — to reach `log 20` on drift. The registered battery
+geometry (`T = 300`, `ONSET = 100`) provides 200 post-onset ticks.
+
+### K6E.5 THE GATE VERDICT — outcome 3 of the three registered outcomes
+
+Mapped against the design page's three registered outcomes, verbatim:
+
+1. *"`E[log e] > 0` at canonical with the optimizing κ → freeze card, proceed to the runs."*
+   The measured growth is **positive**: `+0.004312` nats/window at `κ* = 0.9126`, `95% CI
+   [0.003738, 0.004926]`. Delta-method SE `0.00030` (`dg/dx = 1 - 1/x = 0.0874`), `t = 14.2`;
+   equivalently, the sign of the growth is exactly the event `x > 1`, which holds at `27.6` SE.
+   So outcome 1's condition holds.
+2. *"`E[log e] <= 0` at canonical → the successor is refuted at design time."* **NOT the measured
+   result.** `x = 1.09576 ± 0.00347 > 1` at `27.6` SE. **This amendment does not file a design-time
+   refutation of the growth criterion, and does not claim one.** The design page's central
+   mechanism claim — that a CvM-type statistic accumulates where a kurtosis statistic cancels — is
+   **confirmed in sign** at the canonical geometry: the same probe reads the predecessor's feature
+   as anti-informative (`E[log eAvg|alt] = -1.4132` against its own null `-1.3212`, K6E.7a) and
+   this feature as informative (`E[log p|alt] = -1.0958` against the null's `-0.9822`).
+3. *"Positive but marginal (< 0.05 nats/window) → proceed, with the expectation registered as
+   NOT_POWERED-at-floor and the run treated as a measurement of the margin, not a likely YES."*
+   `0.004312 < 0.05`, by a factor of **11.6**. **REGISTERED GATE VERDICT: OUTCOME 3.**
+
+**Registered alongside it, because outcome 3's own wording understates what the numbers say.**
+Outcome 3 anticipates a detector *near* the floor. The canonical-detection prediction this gate
+produces is not near a floor: it is **exactly `0.0000`, structurally**, at the registered
+6-window horizon and the registered `κ*` — the wealth process **cannot** reach 20, not "is
+unlikely to". K6E.6 derives it. The design page's coverage rule ("K6 = YES iff card USE and
+canonical detection `>= 0.50`") therefore has a determined answer before any run: **K6 stays NO**,
+and it stays NO under *every* `κ ∈ (0,1)`, not only at `κ*` (K6E.6, Table 6). What outcome 3's
+"measurement of the margin" buys is a measurement of `0.0000` against a prediction of `0.0000`.
+
+### K6E.6 The canonical-detection prediction, derived from the crossing arithmetic
+
+The endpoint is not the sign of `E[log e]`; it is `P(max_{t<=6} log wealth_t >= log 20)`
+(K6.10). From K6E.3's identity, a crossing at window `t` is exactly the event
+
+```
+S_t >= c_t(kappa) = ( log 20 - t*log kappa ) / (1 - kappa),      S_t = SUM_{w<=t}( -log p_w )
+```
+
+and `S_t <= t*log(m+1) = t*5.30330` always, because `p >= 1/(m+1)`.
+
+**At the registered `κ* = 0.9126`:**
+
+```
+per-window ceiling  = log kappa* + (1-kappa*)*log(m+1) = -0.091448 + 0.0874*5.303305 = 0.372061 nats
+6-window ceiling    = 6 * 0.372061 = 2.232366    <    log 20 = 2.995732
+windows needed for the ceiling to reach log 20   = ceil(2.995732 / 0.372061) = 9
+```
+
+**A crossing is impossible.** Even if every one of the six live windows returned the smallest
+attainable `p = 1/201`, wealth reaches `e^2.2324 = 9.32 < 20`. Nine windows would be needed;
+`[100,280)` provides six, and the whole post-onset span `[100,300)` cannot provide nine (`9*30 =
+270 > 200`). **Registered prediction: canonical (`idx 27`) detection `= 0.0000` exactly, and the
+same `0.0000` for every T1 cell and for the S3 arm, at `κ*`.** Measured, as a check on the
+arithmetic rather than as its source: `0/40,000` trajectories at `κ*` in probe 1 and `0/20,000` in
+probe 2, on every cell including `d = 2.0`.
+
+**Table 5 — measured 6-window crossing across the whole `κ` grid (probe 1, 40,000 trajectories per
+arm), disclosed so that no reader concludes another `κ` would have delivered the floor.**
+
+| `κ` | 6-window ceiling | healthy crossing | canonical crossing |
+|---|---|---|---|
+| 0.05 | 12.2544 | 0.00028 | 0.00038 |
+| 0.1 | 14.8223 | 0.00088 | 0.00208 |
+| 0.2 | 15.7992 | 0.00375 | 0.00683 |
+| 0.3 | 15.0500 | 0.00568 | 0.01110 |
+| 0.35 | 14.3840 | 0.00622 | **0.01205** |
+| 0.4 | 13.5942 | 0.00585 | **0.01205** |
+| 0.5 | 11.7510 | 0.00410 | 0.00873 |
+| 0.7 | 7.4059 | 0.00015 | 0.00070 |
+| 0.8 | 5.0251 | 0.00003 | 0.00003 |
+| **0.9126 (`κ*`)** | **2.2324** | **0.00000 (impossible)** | **0.00000 (impossible)** |
+| 0.95 | 1.2832 | 0.00000 (impossible) | 0.00000 (impossible) |
+
+The maximum canonical detection anywhere on the grid is **0.01205** at `κ ≈ 0.35–0.40`, **41×**
+below `COVERAGE_FLOOR = 0.50`, against a healthy crossing of `0.00622` at the same `κ` — a
+detector firing on 1.2% of faulty scenarios and 0.6% of healthy ones.
+
+**Table 6 — the closed-form requirement, which bounds every `κ` at once.** Minimising `c_t(κ)`
+over `κ ∈ (0,1)`:
+
+| `t` | `min_κ c_t` | argmin `κ` | max attainable `S_t` | reachable? | required mean `-log p` per window |
+|---|---|---|---|---|---|
+| 1 | 5.7439 | 0.174 | 5.3033 | **no — impossible for every `κ`** | 5.7439 |
+| 2 | 7.6890 | 0.260 | 10.6066 | yes | 3.8445 |
+| 3 | 9.4323 | 0.318 | 15.9099 | yes | 3.1441 |
+| 4 | 11.0661 | 0.362 | 21.2132 | yes | 2.7665 |
+| 5 | 12.6282 | 0.396 | 26.5165 | yes | 2.5256 |
+| 6 | 14.1386 | 0.425 | 31.8198 | yes | **2.3564** |
+
+**Registered reading: a detection rate of `0.50` at the 6-window horizon requires the feature to
+deliver a median `S_6` of at least `14.14` nats — about `2.36` nats per window — at some `κ`. This
+feature delivers `1.0958` nats per window at the canonical cell. It is short by a factor of
+`2.15`, and no choice of `κ` closes a gap in the statistic itself.** Per-window terms, the same
+fact: `P(p <= 0.05)` at canonical measures `0.0626` against the null's `0.0498` — the whole ECDF
+departure of the `d = 1.5` mixture at `W = 30` is worth about 1.3 percentage points of per-window
+rejection rate.
+
+### K6E.7 Sanity anchors
+
+**(a) The predecessor's anti-informativeness, reproduced qualitatively AND quantitatively** —
+the tie between this probe and the measured record. Same probe, same references, same alternative
+draws; feature swapped for `shapeMoments`' `{kurtosis, absSkew}` with `m = 333` blocks over the
+full 10,000 rows, distance-from-median rank, `κ = 0.1`, `eAvg` = mean of the two feature `e`s
+(K6.2's construction, verbatim):
+
+```
+E[log eAvg | null] = -1.3212 +- 0.0027
+E[log eAvg | alt ] = -1.4132 +- 0.0024        registered K6.4 Step 4: -1.414 +- 0.047
+```
+
+Both signs and the magnitude agree with the registered figure (`-1.4132` against `-1.414`, inside
+K6.4's own SE by a factor of 20), and `E[log eAvg|alt] < E[log eAvg|null]` reproduces K6.4's
+"anti-informative" reading directly: the mixture's own average payout is *worse* than a healthy
+window's. **The probe reproduces the record it is being asked to extend.**
+
+**(b) The null identity, checked against the exact discrete law rather than against 1.** Probe 1,
+240,000 healthy windows:
+
+```
+mean p          measured 0.50221   exact 0.502488
+P(p <= 0.05)    measured 0.04983   exact 0.049751
+P(p = 1/201)    measured 0.00496   exact 0.004975
+E[log p]        measured -0.98187 +- 0.00361   exact -0.982234
+mean e          matches the exact E[e|null] column of Table 2 to within 0.0007 at every kappa
+```
+
+Every marginal matches its exact value; the construction and the `p` formula are right. **The
+`E[e|null] = 1` form of this check is not applicable and is not registered** — see K6E.3: the exact
+value is `0.998021` at `κ*` and `0.445371` at `κ = 0.1`, and a measured 1.0 would have indicated a
+defect, not health. A `χ²` over the 201-point grid reads `689.8` on 200 df and is **reported as a
+diagnostic with no test authority**: the 600 windows sharing a reference are dependent through it,
+which inflates the statistic; the marginal rates above are the checks that hold under that
+dependence.
+
+**(c) The calibration-draw lottery, quantified (C1.7's caveat, made numerical for this feature).**
+Between-reference `sd` of the per-reference mean `log p`: `0.0723` (null), `0.0840` (alt). Of 400
+references, **50 (12.5%) have their own `x <= 1`** — for those held-out draws the feature is
+anti-informative at canonical, and the registered run draws exactly one reference per cell.
+Per-reference growth at that reference's own optimizing `κ`: median `0.0038`, p90 `0.0179`, max
+`0.0631`; **1 of 400 references reaches the 0.05 nats/window floor.** Registered consequence: the
+run's realized canonical reading is a draw from this spread, and `0.0000` detection is predicted
+regardless, since the structural ceiling of K6E.6 does not depend on the reference at all.
+
+### K6E.8 Per-cell and per-arm predictions (probe 2, 120,000 windows per cell)
+
+| cell | `E[log p]` | `x` | own `κ*` | growth at own `κ*` | mean `p` | `P(p<=0.05)` | detection at `κ*=0.9126` |
+|---|---|---|---|---|---|---|---|
+| arm healthy (S2) | `-0.98049 ± 0.00526` | 0.9805 | none in (0,1) | `<= 0` | 0.5039 | 0.04879 | **0.0000** (impossible) |
+| idx 26 `mix-d1.0` | `-0.98666 ± 0.00544` | 0.9867 | **none in (0,1)** | `<= 0` | 0.5017 | 0.04909 | **0.0000** |
+| idx 27 `mix-d1.5` **canonical** | `-1.09277 ± 0.00614` | 1.0928 | 0.9151 | +0.00405 | 0.4689 | 0.06263 | **0.0000** |
+| idx 28 `mix-d2.0` | `-4.90875 ± 0.02485` | 4.9088 | 0.2037 | **+2.3177** | 0.0084 | 1.00000 | **0.0000** |
+| idx 29 `mix-d1.5-ar1` | `-0.44667 ± 0.00330` | 0.4467 | **none in (0,1)** | `<= 0` | 0.6887 | 0.00052 | **0.0000** |
+| idx 29 healthy analogue (φ=0.6 both sides) | `-0.98819 ± 0.00518` | 0.9882 | none in (0,1) | `<= 0` | 0.5014 | 0.04975 | **0.0000** |
+
+Three findings registered off this table:
+
+- **`d = 1.0` is anti-informative** (`x = 0.9867 < 1`): no `κ ∈ (0,1)` gives positive growth. The
+  informative direction at `d = 1.5` does not extend downward.
+- **`d = 2.0` is strongly informative** (`x = 4.909`, mean `p = 0.0084`, `P(p<=0.05) = 1.000`) —
+  and it is **not** evidence about shape sensitivity. At `d = 2.0`, `s = sqrt(1 - 4/4) = 0`
+  exactly, so the injection is a pure two-point `±1σ` distribution, not an overlapping mixture:
+  the boundary artifact K6.2.1/K6.2.3 already registered for the predecessor, confirmed here for a
+  second, independent feature. An ECDF with two distinct values is far from a Gaussian reference for
+  reasons that have nothing to do with the canonical geometry. **At the registered `κ*` even this
+  cell reads `0.0000`**, because the ceiling of K6E.6 binds at every severity.
+- **`idx 29` (`mix-d1.5-ar1`, φ=0.6) is strongly anti-informative** (`x = 0.4467`, mean
+  `p = 0.6887`). Mechanism, registered: `injectShapeMix` **replaces** post-onset values with i.i.d.
+  mixture draws (`inject.mjs:60-70`, §2), so on this cell the live windows are i.i.d. while the
+  reference blocks are AR(1) φ=0.6, whose 30-tick ECDFs wobble far more (effective sample size
+  `30(1-φ)/(1+φ) = 7.5`). The live `T` is therefore *smaller* than the reference blocks' typical
+  `T`, and the one-sided upper-tail rank sends `p` toward 1. **This is a serial-structure mismatch
+  created by the injection, not by the detector**, and the healthy-analogue row above shows validity
+  is intact at matched φ=0.6 (`x = 0.9882`, `P(p<=0.05) = 0.04975`, exactly nominal). K6.11's
+  matched-process regime holds; the `-ar1` **power** cell is out of the feature's reach for a reason
+  the class's own injection creates.
+
+### K6E.9 T1 cell and arm registration (extends §6/§7, mirrors K6.6/K6.7/K6.9)
+
+`shape_ecdf_conformal_bet` joins §7 as a new row, **K6 only**, scored on the class's four
+registered fault cells with §6's `CELL_SEED`s and K6.6's `HELDOUT_SEED`s **unchanged** (§6's
+paired-comparison convention, extended to a fifth candidate; the successor must see the identical
+trajectories the predecessor saw or the comparison means nothing):
+
+| idx | severity | φ | `CELL_SEED` | `HELDOUT_SEED` |
+|---|---|---|---|---|
+| 26 | `mix-d1.0` | 0 | 20260833 | 20760833 |
+| 27 | `mix-d1.5` (canonical) | 0 | 20260834 | 20760834 |
+| 28 | `mix-d2.0` | 0 | 20260835 | 20760835 |
+| 29 | `mix-d1.5-ar1` | 0.6 | 20260836 | 20760836 |
+
+**New arm cell, continuing the index sequence past the predecessor's arm (idx 34) and past
+`K6_T2_SCENARIO_SEED` (idx 35, K6.12):**
+
+| cell | arm | `CELL_SEED = BASE_SEED + idx` | `HELDOUT_SEED = CELL_SEED + 500000` | arithmetic |
+|---|---|---|---|---|
+| **36** | `shape_ecdf_conformal_bet` S2/S3 | **20260843** | **20760843** | `20260807+36=20260843`; `+500000=20760843` |
+
+`K6E_T2_SCENARIO_SEED = BASE_SEED + 37 = 20260844` (K6E.10). Trajectory seeds
+`seed(i) = 20260843 + 7919*i`, `i = 0..1999`, §6's formula shape unchanged.
+
+**Field lists are registered BY REFERENCE, not re-derived** (the plan's own instruction, and the
+only way the two candidates stay comparable): the S2 row carries exactly K6.7's field set
+(`crossing_rate`, `k`, `n=2000`, `lower_95`, `increment_estimator{n,mean,sd,se,lower95_one_sided,
+upper95_one_sided}`, `p_uniformity{...}`, `degenerate_windows`, `non_finite_wealth`, `null_id`,
+`params`, `phi`, `alpha`, `n`, `ticks`, `onset`, `windows`, `window_len`, `window_span`,
+`final_wealth_mean`, `final_wealth_median`, `adapter_failures`, `not_executable_reason`,
+`substrate_tier`), with three substitutions and one deletion, each named:
+
+- `null_id: 'K6E-arm-heldout'`, `params: 'heldout-empirical'` (K6.7's convention, own literal).
+- `p_uniformity` pools **one** feature, so `n = 2000 × 6 × 1 = 12,000` values and
+  `ks_critical_at_alpha = 1.36/sqrt(12000) ≈ 0.012415` — K6.7's 24,000/0.008780 was a two-feature
+  figure. Same registered caveat as K6.7/K3.1.7: reported, **no verdict authority**, `p` is
+  discrete on 201 values.
+- The `increment_estimator`-vs-`crossing_rate` verdict rule is K6.7's, unchanged and cited:
+  **the verdict stays `crossing_rate`-derived.** At `κ* = 0.9126` the tail index is
+  `1/(1-κ*) = 11.4 > 2`, so `Var[e]` is finite here (unlike K6.7's `κ=0.1` case, tail index 1.111)
+  and a Wald interval on the increment mean would in fact be CLT-backed — **registered anyway as
+  non-authoritative**, because changing which field carries an S2 verdict is a protocol change, not
+  an amendment's call. The finite-variance fact is filed for
+  `~/concord/knowledge/stats/pages/terminal-mean-rule-contested.md` at write-back, same routing
+  K6.7 registers.
+- **No `shift_sigma` on fault cells** (K6.9's convention). S3 row carries `shift_sigma: 3`
+  realized as `injectShapeMix(..., d: 2.0)` — K6.8's construction, reused verbatim, **including its
+  registered honesty clause: no stronger or invented probe is substituted to avoid the outcome the
+  derivation predicts.** Predicted S3 `detection_rate = 0.0000` at `κ*` (K6E.6), which
+  `scoreS3` reads **INERT** (`0.0000 < INERTNESS_FLOOR = 0.10`, `constants.mjs:20`).
+- **Binding adapter constraint, K6.7's, restated as binding here:** the S3 row and all four fault
+  cells carry **none** of the five instrument-named fields; one offending cell VOIDs the whole run's
+  S2 evidence (`score.mjs`'s `mismatchVoidedRuns`).
+
+### K6E.10 T2 clustersynth arm registration
+
+K6.12's construction, reused unchanged except for the one thing the successor's feature requires —
+an A/B split inside the already-registered 9,000-tick reference:
+
+- Scenario: `cs.buildScenario({family:'gb200', pods:1, seed: 20260844, window:{steps:9600, dt_s:30},
+  faults:false})`; shards `sc.gpuIds.slice(0,120)`; the five `COUNTERS` coordinates
+  (`gpu_temp_c`, `power_w`, `sm_util`, `hbm_bw_gbps`, `nvlink_tx_gbps`) — all K6.12's own values,
+  cited not re-chosen.
+- **Registered split: per coordinate, A = ticks 1–3,000 (reference ECDF); B = ticks 3,001–9,000 →
+  `m = floor(6000/30) = 200` blocks exactly; live = the final 600 ticks → 20 disjoint windows.**
+  Arithmetic: `3000 + 200*30 = 9000`, `600/30 = 20`. **`m = 200` matches T1's `m` exactly**, which
+  is why this split and not a 4,000-tick A (which would give `m = 166`): one `m` for both tiers
+  makes the two arms one construction, and K6.3's T1-333/T2-300 split — the predecessor's own
+  documentation-provenance defect — is not repeated.
+- Degenerate-reference behaviour, endpoint (`wealth >= 20` at any of the 20 checkpoints, per
+  coordinate and pooled), skip-with-reason accounting, and the **binding field names**
+  (`t2_crossing_rate` not `crossing_rate`, `t2_verdict` not `verdict`, **and no `fault_class`
+  field at all**) are K6.12 + K6.1.3's registered set, applied unchanged with `detector:
+  'shape_ecdf_conformal_bet'`. A degenerate-reference throw is per-`(shard, coordinate)`
+  skip-with-reason, excluded from both denominators, never folded in as a `0`.
+- **The T2 falsifier is not vacuous at `κ*`, unlike T1's** (K6E.11): the 20-window ceiling is
+  `20 × 0.372061 = 7.4412 >= log 20`, so a crossing is possible in principle. A crossing needs
+  `S_20 >= (log 20 - 20 log κ*)/(1-κ*) = 55.20` against `E[S_20|null] = 19.64` with
+  `sd = 4.26` — `8.3` sd. Measured on the i.i.d.-Gaussian analogue at this accounting:
+  `0/20,000` trajectories.
+- **T2 is required for a K6 YES** (design page §"Card and certification path"), and, exactly as
+  K6.12 registers for the predecessor, **that bar is moot here**: canonical detection is
+  predetermined at `0.0000` (K6E.6), so no T2 outcome can produce a YES. The arm's registered
+  purpose is unchanged and is the reason it still runs if the plan proceeds: **it is the C22-fix
+  vindication test**, and the successor keeps the predecessor's contiguity answer intact (blocks are
+  contiguous slices of the coordinate's own history), so whether validity survives independent
+  telemetry is a finding either way.
+
+### K6E.11 Stop conditions, and one vacuity disclosed
+
+Verbatim from the design page (§"Card and certification path": "Falsifier: healthy crossing above α
+on either tier. Stop conditions checked first, before any power reading") and the plan's Global
+Constraints ("healthy crossing Wilson lower-95 ≤ α on either tier"):
+
+- **T1**: arm cell 36's S2 `crossing_rate`/`k`/`n=2000`; Wilson 95% lower bound `> α = 0.05` fires.
+- **T2**: K6.12's pooled `t2_crossing_rate` Wilson 95% lower bound on the pooled `k`/`n` across
+  scored `(shard, coordinate)` pairs — pooled, not any single coordinate's rate.
+- A fired stop condition on either tier REFUTES `shape_ecdf_conformal_bet` on the record; K6 stays
+  NO either way (K6E.6).
+
+**Disclosed, not routed around: at `κ* = 0.9126` the T1 stop condition CANNOT fire.** Healthy
+crossing is structurally `0.0000` (K6E.6 — the ceiling argument is indifferent to which arm the
+windows come from), so the T1 falsifier is unfalsifiable at the registered `κ*`, and a T1 "PASS"
+on validity would carry no information. This is registered as a **limitation of the design page's
+own κ rule at this horizon**, not corrected here: the page registers `κ` as the output of the
+growth derivation, and substituting a κ chosen to keep the falsifier live — `κ ≈ 0.35`, where
+healthy crossing is `0.0062` and canonical `0.0121` — would be selecting a constant on an endpoint
+after seeing the numbers, which the page's own "No tuning after the gate" clause forbids and which
+this amendment will not do. **The T2 falsifier remains live (K6E.10), so the construction's
+validity claim is still testable on the tier that killed the predecessor's own predecessor.**
+Changing the κ rule is a design-page decision; it is named here as the one open question this gate
+produced (K6E.14).
+
+### K6E.12 Predictions, with falsifiers, for every endpoint the runs would read
+
+All at the registered `κ* = 0.9126`.
+
+| endpoint | prediction | falsifier |
+|---|---|---|
+| T1 healthy crossing (cell 36 S2 `crossing_rate`, `k/2000`) | **`0.0000`, `k = 0`**, Wilson LB `0.0000` | any crossing at all — a single one falsifies K6E.6's ceiling arithmetic and is a defect in the wiring or in this amendment, not a power finding |
+| T1 S2 `increment_estimator.mean` | `0.998 ± 0.001` (exact `E[e\|null] = 0.998021`, K6E.3) | outside `[0.99, 1.01]` |
+| T1 S2 `p_uniformity` first-decile count of 12,000 | `1194 ± 33` (sd 32.8) (exact `P(p<=0.1) = floor(0.1*201)/201 = 20/201 = 0.099502`) | reported, no verdict authority (K6.7's caveat) |
+| T1 S2 `degenerate_windows`, `non_finite_wealth` | **structurally 0**: `p ∈ [1/201, 1]` so `e ∈ [κ*, κ*·201^(1-κ*)] = [0.9126, 1.4507]`, always finite, no `p=0` pathway; `T(w)` is a finite sum of squares of bounded quantities, so the predecessor's `m2 = 0` NaN pathway has no analogue and a constant live window yields a finite, large `T` rather than `NaN` | any nonzero count |
+| idx 26 `mix-d1.0` detection | **`0.0000`** | any crossing |
+| **idx 27 `mix-d1.5` canonical detection** | **`0.0000`** — NOT_POWERED, `< COVERAGE_FLOOR = 0.50`, **structurally** (K6E.6) | any crossing; and materially above `0.50` would falsify the whole gate derivation |
+| idx 28 `mix-d2.0` detection | **`0.0000`** at `κ*`, despite `x = 4.909` at that cell (K6E.8) — the ceiling binds, not the signal | any crossing |
+| idx 29 `mix-d1.5-ar1` detection | **`0.0000`** | any crossing |
+| S3 arm (cell 36, `shift_sigma:3` = `d=2.0`) | **`0.0000`** → **INERT** (`< 0.10`) | materially above `0.10` |
+| T2 pooled healthy crossing | **`0.0000`**, `<= α = 0.05` (validity; exactness argument of K6E.3 plus the 8-sd margin of K6E.10) | the T2 stop condition |
+| T2 degenerate-reference skips | **not predicted** — registered as a finding to make (K6.12), disclosed per coordinate, never folded into a denominator | — |
+| K6 class answer | **NO**, canonical `0.0000 < 0.50`, decided at design time by this gate | canonical `>= 0.50` |
+
+A failed endpoint is a publishable result (§0 rule 2); nothing above moves afterward, **including
+the `0.0000` predictions** — they are registered as predictions to be confirmed or falsified, and a
+single crossing anywhere is a surprise to investigate, not a result to absorb.
+
+### K6E.13 Golden card-tuple expectation
+
+**Pre-run** (the state at the commit that would freeze the card, following K6.2.4's precedent
+exactly): `shape_ecdf_conformal_bet` enters `validation/certification/test/golden-verdicts.test.mjs`
+at **`NOT_EXECUTABLE`, tier `null`, S1 `MISSING`, S2 `MISSING`, S3 `MISSING`, S4 `PASS`** — no run
+of this candidate exists, and a card with no evidence has no other correct verdict.
+
+**Post-run expected delta, registered here and to be named against the actual numbers at the run's
+own commit, not asserted as already true:** `NOT_EXECUTABLE → ADVISORY`, tier `null → T1`,
+S2 `MISSING → PASS` (`crossing_rate = 0.0000`, Wilson LB `<= α` → `not-refuted`), S3
+`MISSING → INERT` (`detection_rate = 0.0000 < INERTNESS_FLOOR`), S1 `MISSING` and S4 `PASS`
+unchanged. `overallVerdict`'s valid-but-inert rule (`score.mjs:564-567`: `s3Powered.length === 0` →
+`ADVISORY`) caps this card at **ADVISORY**, and this amendment registers that plainly as the
+expected outcome rather than as a defect to route around. **The other fourteen cards' tuples do not
+move** — no existing card, cell, or run is touched.
+
+### K6E.14 The one open question this gate produced, named and not resolved here
+
+The gate's registered rule selects `κ` by growth at the canonical cell. At this horizon that rule
+selects `κ* = 0.9126`, and at `κ* = 0.9126` **every T1 endpoint — power and validity alike — is
+structurally `0.0000`, and the T1 falsifier cannot fire** (K6E.11). A `κ` chosen instead to
+maximize 6-window canonical detection would be `≈ 0.35–0.40`, where canonical detection is `0.0121`
+and healthy crossing `0.0062` — still `41×` below the coverage floor, so **the class answer is NO
+under either rule** and nothing about K6's coverage turns on this choice. What turns on it is
+whether the registered run measures a live falsifier or a pair of predetermined zeros.
+
+**This amendment does not choose.** Selecting `κ` on the crossing endpoint after seeing these
+numbers is exactly the tuning the design page's gate forbids, and the κ rule lives in the design
+page, not here. Registered instead: the fact, the two candidate readings, and that resolving it is
+an operator/design-page decision. **Nothing in this amendment is contingent on the outcome:** the
+constants of K6E.1, the feature of K6E.2, the null law of K6E.3, the gate tables of K6E.4, the
+verdict of K6E.5, the requirement arithmetic of K6E.6 and the class answer NO all stand at every
+`κ ∈ (0,1)`.
+
+### K6E.15 Housekeeping riders (quote-and-correct, per §11 rule 7)
+
+**Rider 1 — this document's own v2.C1.1 Amendment summary describes a disclosure section that no
+longer exists.** Quote (`PREREGISTRATION.md:3733-3736`):
+
+> Registers what IS done: the legacy `{priorRun, defect}` shape is recognized, recorded, and
+> disclosed in every certification `REPORT.md` under "Declared superseded but STILL SCORED",
+> naming the run and the stated defect verbatim; `report_format` `3 -> 4`;
+
+**Correct: since h0-battery Amendment A1 (merged PR #54), the two 2026-08-01 legacy declarations
+are disclosed under a different heading, and the phrase "STILL SCORED" no longer applies to them.**
+A1 registered a supersession registry (`results/live/SUPERSESSIONS.json`), `report_format` went
+`4 → 5`, and `validation/certification/verdict.mjs:141-145,166-175` now splits the legacy
+declarations: one a registry covers gains `covered_by_registry: true` and moves to **"Declared
+superseded in the legacy shape, and now closed by a registry"**, annotated `NOW DROPPED by a
+supersession registry`; registry-driven drops get their own **"Superseded evidence by study
+registry (h0-battery Amendment A1)"** section (`verdict.mjs:158-165`). The
+"Declared superseded but STILL SCORED" heading remains in the generator
+(`verdict.mjs:176-184`) and stays verbatim for any legacy declaration a registry does **not**
+cover, per A1's own registered wording — there are currently none, and the most recent
+certification run states so in its own text:
+`validation/certification/results/run-20260808T180653Z/REPORT.md:146` reads "The phrase `STILL
+SCORED` occurs **0** times in this report". **Nothing else in v2.C1.1 moves**: C1.1.2's ruling that
+the legacy shape itself is still not the mechanism that acts is unaffected (a registry is), and
+C1.1.4's write-back obligation is **discharged** by A1 rather than outstanding — recorded here
+because C1.1.4 named it "named-not-done work" and it is now done.
+
+**Rider 2 — K6.11's `O(1/m)` qualifier is the right order for the exceedance rate and the wrong
+order for the calibrator identity.** Quote (`PREREGISTRATION.md:2392-2396`):
+
+> At finite `m`, `p` is drawn from a DISCRETE distribution over `{1/(m+1), ..., (m+1)/(m+1)}` under
+> exchangeability, not the continuous Uniform(0,1) the calibrator identity (K6.2) integrates over
+> exactly [...] The deviation from continuous uniformity is `O(1/m)`.
+
+**Correct, in two parts.** For the *exceedance* rate the order is right and K6.1.2's closed form
+already pins the value (`floor(α(m+1))/(m+1)`, within `1/(m+1)` of `α`, conservative). For the
+*calibrator identity* — the sentence's own named subject — the deviation is `O(m^(-κ))`, not
+`O(1/m)`, and at small `κ` it is large:
+
+```
+E[e | null] = kappa*(m+1)^(-kappa) * SUM_{k=1..m+1} k^(kappa-1)
+            = 1 + kappa/(2m) + kappa*zeta(1-kappa)*(m+1)^(-kappa) + ...      zeta(1-kappa) < 0 on (0,1)
+kappa=0.1, m=333 (the predecessor's registered values):  E[e|null] = 0.472747  — a 52.7% shortfall, not 0.3%
+kappa=0.1, m=200:                                        E[e|null] = 0.4454
+kappa=0.9126, m=200 (this candidate):                    E[e|null] = 0.9980
+```
+
+**Direction: conservative, exactly as K6.1.2 corrected — validity is strengthened, not
+threatened, and no endpoint, floor, seed or verdict moves in K6 or anywhere else.** What moves is
+how a reader interprets a K6 row: `shape_block_conformal_bet`'s registered per-window `e` averages
+`0.4727` under the null at its registered `κ = 0.1`, not `≈ 1`, so its wealth process drifts
+*down* on healthy data by construction and its near-zero healthy crossing rate is in part this
+conservativeness rather than only the feature's behaviour. Filed here rather than in a K6 amendment
+because this amendment's own null-identity check (K6E.3/K6E.7b) is where the arithmetic was
+re-derived. For write-back:
+`~/concord/knowledge/methodology/pages/coverage-gap-detectors.md`'s K6 section and any page quoting
+the `O(1/m)` qualifier need the split.
+
+**Rider 3 — the dispatch's window accounting, corrected against the registered accounting.** This
+task's own dispatch reads "6 live windows per 600-tick scenario arm". The registered accounting is
+two different things and neither is that: **T1 is 6 windows of 30 over `[100,280)` of a 300-tick
+trajectory** (K6.10), and **T2 is 20 windows of 30 over the final 600 of 9,600 ticks** (K6.12).
+Both are registered above (K6E.1, K6E.9, K6E.10) in their own terms. No endpoint moves; the
+dispatch is not a registered artifact, and this is recorded so the "600-tick" figure is never read
+as a T1 span.
+
+### K6E.16 House rules, mapped
+
+Per `~/concord/knowledge/methodology/pages/pre-registration-discipline.md`: (1) **committed before
+any artifact it authorizes** — at this commit there is no `shape_ecdf_conformal_bet` module, card,
+adapter, run or result, and this amendment is the only change. (2) A failed endpoint is a
+publishable result; nothing above moves afterward, **including the `0.0000` predictions and the
+gate verdict itself** (K6E.12). (3) No post-hoc analysis exists; the probe of K6E.4 is a
+**pre-registration-time derivation disclosed with provenance**, not a post-hoc reading of a run —
+there is no run. (4) Fallback rules: A3 for T1 (K6.15's inheritance, applied to cell 36 and cells
+26–29), K6.12's skip-with-reason for T2. (5) Freeze: T1's seeds are frozen by K6E.9's arithmetic;
+T2's by `K6E_T2_SCENARIO_SEED = 20260844`, this document's equivalent freeze for a generator it does
+not own (K6.16's rule 5, unchanged). (6) Results append-only, binding on both arms. (7) Reruns only
+for a named code defect, prior run preserved; **and quote-and-correct for text**, which is what
+K6E.15's three riders do. (8) The report states every endpoint's number and verdict, both arms.
+
+### Amendment summary
+
+Registers, superseding nothing: the successor's constants with all arithmetic shown (K6E.1 —
+`n_A = 4000`, `W = 30`, T1 `m = 200` exactly with no remainder dropped, T2 `m = 200` from a
+`3000 + 200*30 = 9000` split, and the 6-window T1 / 20-window T2 accounting reused from
+K6.10/K6.12); the CvM feature frozen to an exact discrete form with its three departures from
+Anderson (1962) each shown to be rank-irrelevant, and the `i/W`-vs-midpoint choice measured and
+disclosed as verdict-neutral (K6E.2); the exact null law of the block-conformal rank, including the
+closed-form `E[log p|null] = -0.982234` and an `E[e|null]` table whose gap below 1 is `O(m^(-κ))`
+(K6E.3). **The design gate, computed: `E[log p|alt] = -1.09576 ± 0.00347` at the canonical cell
+(pooled over two probes on non-registered seeds `>= 3.0e9`, 360,000 live windows), giving
+`κ* = -1/E[log p|alt] = 0.9126` and growth `+0.004312` nats/window, 95% CI
+`[0.003738, 0.004926]` (K6E.4). GATE VERDICT: OUTCOME 3 of the three registered outcomes —
+positive, so no design-time refutation of the growth criterion is filed and the design page's
+mechanism claim is confirmed in sign, but `11.6×` below the page's own 0.05 nats/window marginality
+floor (K6E.5).** The canonical-detection prediction derived from the endpoint the coverage floor
+actually tests, not from the sign: at `κ*` the 6-window ceiling is `2.2324 < log 20 = 2.9957`, so a
+crossing is **impossible** and canonical detection is **`0.0000` structurally**; nine windows would
+be needed and the post-onset span cannot host them; across the whole `κ` grid canonical detection
+never exceeds `0.01205`, `41×` below `COVERAGE_FLOOR = 0.50`; and the closed-form requirement
+(`min_κ c_6 = 14.14`, `2.3564` nats/window) is `2.15×` more than the feature's measured `1.0958`
+(K6E.6). Sanity anchors: the predecessor's feature reproduced at `E[log eAvg|alt] = -1.4132 ±
+0.0024` against K6.4's registered `-1.414 ± 0.047`, anti-informative in the same direction; the
+null identity checked against the exact discrete law rather than against 1, every marginal matching
+(mean `p` `0.50221`/`0.502488`, `P(p<=0.05)` `0.04983`/`0.049751`); and the calibration-draw lottery
+quantified — 50 of 400 references are anti-informative at canonical on their own draw and 1 of 400
+reaches the marginality floor (K6E.7). Per-cell predictions with mechanisms: `d=1.0`
+anti-informative (`x = 0.9867`), `d=2.0` strongly informative (`x = 4.909`) but confirmed a
+two-point boundary artifact (`s = 0` exactly), `mix-d1.5-ar1` strongly anti-informative
+(`x = 0.4467`) because the injection replaces AR(1) values with i.i.d. mixture draws while the
+reference stays AR(1), with validity intact at matched φ (K6E.8). Cell/arm registration on §6's
+unchanged K6 seeds plus new arm cell 36 (`CELL_SEED 20260843`, `HELDOUT_SEED 20760843`) and
+`K6E_T2_SCENARIO_SEED 20260844`, field lists by reference to K6.7/K6.9 with the one-feature
+`p_uniformity` recount (12,000, `ks_critical 0.012417`) named (K6E.9); the T2 arm on K6.12/K6.1.3's
+registered construction and field names, with the A/B split registered so T2's `m` equals T1's
+(K6E.10); stop conditions for both tiers, **with the T1 falsifier's vacuity at `κ*` disclosed
+rather than routed around, and the T2 falsifier shown still live** (K6E.11); predictions with
+falsifiers for every endpoint (K6E.12); the golden tuple, pre-run `NOT_EXECUTABLE` and post-run
+expected `ADVISORY`/T1 (K6E.13); and the one open question — that the page's own κ rule selects a
+constant under which no T1 endpoint can move — named, with both readings and the class answer NO
+under either, and deliberately **not** resolved here (K6E.14). Three quote-and-correct riders: this
+document's `:3733-3736` claim that legacy supersessions are disclosed under "Declared superseded
+but STILL SCORED" is stale since h0-battery Amendment A1 (merged PR #54, `report_format 4 → 5`,
+`verdict.mjs:141-145,166-175`), and C1.1.4's write-back obligation is discharged rather than
+outstanding; K6.11's `O(1/m)` qualifier is right for the exceedance rate and wrong for the
+calibrator identity, which deviates `O(m^(-κ))` — `E[e|null] = 0.472747` at the predecessor's
+registered `κ = 0.1, m = 333`, a 52.7% conservative shortfall, no endpoint moved; and the dispatch's
+"6 windows per 600-tick arm" corrected to the registered T1/T2 accountings (K6E.15). **No endpoint,
+floor, seed, prediction or verdict in §1–14 or in any earlier amendment moves. `K6` stays `NO`, now
+decided at design time for the successor as it already was for the predecessor, and no run has been
+spent to learn it.**
+
+## Amendment v2.K6E.17 — 2026-08-08, the ruling: the second K6 attempt is refuted at design time and the run is cancelled
+
+Registered after Amendment v2.K6E's gate and after an **independent adversarial verification** of it,
+and before any artifact of `shape_ecdf_conformal_bet` exists — there is still no module, no card, no
+adapter, no run, and after this amendment there will be none. **This amendment cancels a registered
+run rather than reporting one.** It supersedes exactly one clause, named at K6E.17.1, and corrects
+five items in v2.K6E's own text by quote-and-correct with the original left intact. No endpoint,
+floor, seed or verdict belonging to any other candidate moves.
+
+**Authority chain, stated because a cancellation needs one.** Operator directive 2026-08-08
+("continue through recommended actions … until all detectors are complete"), under which the
+controller of `docs/superpowers/plans/2026-08-08-k6-ecdf-successor.md` ruled on the gate's own
+option list (`.superpowers/sdd/2026-08-08-c46-k6-ecdf/task-1-report.md` §9, option 1). **The
+controller's ruling is named as such and is the authority for K6E.17.1; it is not a finding of this
+document.** The verification is named at K6E.17.2 with its own provenance.
+
+### K6E.17.1 THE RULING, and the one clause it supersedes
+
+**Quoted, from the ratified design page**
+(`~/concord/knowledge/methodology/pages/k6-ecdf-successor.md` §"The design gate", outcome 3):
+
+> 3. **Positive but marginal (< 0.05 nats/window)** → proceed, with the expectation registered as
+>    NOT_POWERED-at-floor and the run treated as a measurement of the margin, not a likely YES.
+
+**SUPERSEDED FOR THIS CONSTRUCTION, by the controller's ruling.** The clause assumes the run
+measures something. It does not, and the gate proved it before the clause could apply:
+
+- **No T1 power endpoint can move.** At the registered `κ* = 0.9126` the six-window wealth ceiling
+  is `2.2323 < log 20 = 2.9957` (K6E.6, re-pinned at K6E.17.3(d)) — a crossing is arithmetically
+  impossible on every cell and on the S3 arm, so every predicted `detection_rate` is a
+  pre-registered constant `0.0000` that the run can only reproduce.
+- **No T1 validity endpoint can move, so the T1 falsifier cannot fire** (K6E.11) — a healthy
+  crossing is impossible by the same ceiling, and an unfalsifiable falsifier is not evidence of
+  validity.
+- **No `κ ∈ (0,1)` reaches the coverage floor**, now by a tail bound rather than a mean heuristic:
+  `detection(κ) <= 0.3014` for every admissible `κ` (K6E.17.2), against
+  `COVERAGE_FLOOR = 0.50`.
+
+**REGISTERED RULING: the T1 battery run and the T2 clustersynth arm for `shape_ecdf_conformal_bet`
+are CANCELLED. Tasks 2–5 of the plan do not execute. No detector module, card, adapter, harness
+change, run or result is created. `K6 = NO`; the second registered K6 attempt is REFUTED AT DESIGN
+TIME; no run was spent.** The one-attempt rule is satisfied by this refutation exactly as it would
+have been by a run: a third candidate is a new decision page, not a retune of this one (design page
+§"The design gate", final paragraph, which this amendment does **not** supersede).
+
+**Write-back obligation, named and NOT done here.** The design page is a ratified wiki page and this
+document cannot overrule it — this document's own precedence rule is that the page wins and a
+disagreement is a bug in this document to report. What is registered here is the **ruling** and the
+supersession it carries **for this construction**; the page itself must record the cancelled run and
+this superseded clause at write-back (plan Task 6). Until it does, the page's outcome-3 clause and
+this amendment disagree on the record, deliberately, with the ruling named as the reason.
+
+### K6E.17.2 THE VERIFIER'S STRENGTHENING, adopted as the binding bound
+
+**Provenance: independent adversarial verification of Amendment v2.K6E, on the verifier's own code
+and own seed families (`1.7e9`, `2.6e9` — disjoint from this amendment's `3.0e9`/`3.5e9`/`4.1e9`),
+300,000 windows per cell. Verdict: DERIVATION-SOUND; every load-bearing number of v2.K6E
+reproduced.** The verification also strengthened the argument, and the strengthening is adopted here
+in preference to v2.K6E's own framing.
+
+**Quoted, v2.K6E K6E.6 (`PREREGISTRATION.md:4158-4161`):**
+
+> **Registered reading: a detection rate of `0.50` at the 6-window horizon requires the feature to
+> deliver a median `S_6` of at least `14.14` nats — about `2.36` nats per window — at some `κ`. This
+> feature delivers `1.0958` nats per window at the canonical cell. It is short by a factor of
+> `2.15`, and no choice of `κ` closes a gap in the statistic itself.**
+
+**Corrected: that is a mean-against-threshold heuristic and it controls no tail.** A mean of
+`1.0958` against a required `2.3564` does not bound `P(S_6 >= 14.14)`, because `S_6` has a right
+tail and the required median is not a function of the mean. The comparison is retained as
+descriptive; **it is not the argument, and Table 6 must not be read as one.** The binding argument is
+the over-all-`κ` bound:
+
+```
+crossing at window t   =>  S_t >= c_t(kappa) >= b_t = min_kappa c_t          (Table 6's own b_t)
+t = 1 is unreachable for every kappa:  max S_1 = log(m+1) = 5.3033 < b_1 = 5.7439
+for t in 2..6:  S_t <= S_6  and  b_t >= b_2 = 7.6890
+=>  ANY crossing, at ANY t, under ANY kappa in (0,1)  =>  S_6 >= b_2 = 7.6890
+=>  detection(kappa) <= P( S_6 >= 7.6890 )   for every kappa in (0,1)
+```
+
+**Measured at the canonical alternative: `P(S_6 >= 7.6890) = 0.30140 ± 0.0021`** (the verifier's
+figure, adopted). **Reproduced independently on this amendment's own probe-2 streams:
+`0.29975 ± 0.00324` on 20,000 trajectories** — the two agree within `0.5` SE. **Registered binding
+bound: `detection(κ) <= 0.3014` for every `κ ∈ (0,1)`, against `COVERAGE_FLOOR = 0.50`.** This is
+the argument the class answer rests on: it holds without choosing a `κ`, without a distributional
+assumption on `S_6`, and without the mean heuristic above.
+
+**One correction to the strengthening itself, in the same spirit.** The verifier's "below the floor
+by 95 SE" uses a trajectory-level binomial SE, and trajectories are **not** independent here: the
+100 trajectories sharing one reference are dependent through it (the C1.7 lottery, made numerical at
+K6E.7c). Cluster-robust over references, this amendment measures the same quantity at
+`0.29975 ± 0.00561` — a **design effect of `1.73×`** on the binomial SE — so the honest margin is
+`35.7` cluster-robust SE on this amendment's sample, and the verifier's `±0.0021` needs the same
+inflation (`≈ ±0.0036`, `≈ 55` SE) before it is quoted. **The conclusion is unchanged and the
+direction of the correction is against this document's own interest: `0.30` versus `0.50` survives
+any plausible variance inflation, and `35` SE is not a close call.**
+
+### K6E.17.3 Corrections from the verification, each with the original intact
+
+**(a) The grid maximum, and the "41×" that followed from it.** Quoted, K6E.6
+(`PREREGISTRATION.md:4142-4144`):
+
+> The maximum canonical detection anywhere on the grid is **0.01205** at `κ ≈ 0.35–0.40`, **41×**
+> below `COVERAGE_FLOOR = 0.50`
+
+**Correct: `0.01272 ± 0.00050` at `κ = 0.38`, and `39×` below the floor** (`0.50/0.01272 = 39.3`).
+The verifier's finer grid found the maximum between v2.K6E's own grid points. Adopted. The same
+`41×` appears twice more and is corrected to `39×` at both: K6E.14 (`:4403`) and the Amendment
+summary (`:4515`).
+
+**Registered qualifier on the argmax, which the verification's own numbers require.** This
+amendment's grid reads `0.01130 (κ=0.34)`, `0.01170 (κ=0.36)`, `0.01145 (κ=0.38)`,
+`0.01125 (κ=0.40)`, `0.01090 (κ=0.42)`, each `± 0.00075` on 20,000 trajectories — **flat in `κ`
+within noise across `0.34–0.42`.** Naming `κ = 0.38` as *the* argmax overstates the resolution of
+either sample; what is registered is the **magnitude** (`≈ 0.0127`, `39×` below the floor) and that
+it is attained somewhere in `0.34–0.42`. The bound of K6E.17.2 does not depend on the argmax at all.
+
+**(b) "The rank identity is exact" overstates what is exact.** Quoted, K6E.2
+(`PREREGISTRATION.md:3921`):
+
+> fitted on itself. The rank identity is exact, not `O(1/n_A)`.
+
+**Correct, in two parts.** The rank identity **is** exact *per window* and *marginally* — the
+statement about `F̂_A` being fitted on A alone and every ranked object coming from `B ∪ live` stands,
+and K6E.7b's measured marginals confirm it. What the sentence should not be read as claiming is
+**joint** exactness across windows: the six live windows are ranked against **one shared** `{T(B_j)}`
+draw, so their `p`s — and their `e`s — are **positively dependent**, and **the six-window product is
+NOT a martingale in the filtration that includes the shared reference.** Measured (verifier, own
+seeds; direction and order independently reproduced here on seed family `4.1e9`, 300 references ×
+100 trajectories):
+
+| `κ` | `E[W_6 \| null]` (verifier) | product of marginals (verifier) | verifier ratio | this amendment's ratio |
+|---|---|---|---|---|
+| 0.1 | 0.0094 | 0.0078 | +20% | +15.8% (`0.0084` vs `0.0072`) |
+| 0.2 | 0.1322 | 0.1110 | +19% | +14.0% (`0.1193` vs `0.1047`) |
+| **0.9126 (`κ*`)** | 0.9887 | 0.9882 | **+0.05%** | **+0.05%** (`0.9869` vs `0.9864`) |
+
+**Registered reading.** The two measurements of the `κ = 0.1` and `κ = 0.2` ratios differ (`+20%`
+vs `+15.8%`) and **neither should be quoted as a precise value**: at those `κ` the calibrator's tail
+index is `1/(1-κ) ≈ 1.11–1.25 < 2`, so `Var[e]` is infinite and `E[W_6]` is a heavy-tailed mean
+whose sample estimate converges slowly — the same infinite-variance fact K6.7/K3.1.3 already
+register for the predecessor's `κ = 0.1`. What replicates exactly, and is what this item registers:
+**the dependence is positive; `E[W_6 | null] < 1` at every `κ` measured, so the discrete
+conservativeness of K6E.3 (`O(m^(-κ))`) absorbs it with room to spare; and at the registered `κ*`
+the effect is `+0.05%`, negligible.** **No endpoint, prediction or verdict moves** — and every
+endpoint this would have touched is now cancelled anyway (K6E.17.1).
+
+**Consequence on the T2 accounting, which does move by a stated amount.** Quoted, K6E.10
+(`PREREGISTRATION.md:4322-4323`):
+
+> A crossing needs `S_20 >= (log 20 - 20 log κ*)/(1-κ*) = 55.20` against `E[S_20|null] = 19.64` with
+> `sd = 4.26` — `8.3` sd.
+
+**Correct: `sd(S_20 | null) = 4.46` measured under the shared reference** (verifier; this amendment
+measures `4.4434` on its own seeds), against the i.i.d.-exact `4.2586` this document used — the same
+positive dependence, at the 20-window horizon. **The registered T2 margin is `8.0` sd, not `8.3`**
+(`(55.20 − 19.60)/4.4434 = 8.01`). The T2 prediction (`pooled crossing <= α`, expected `0.0000`) is
+unchanged, and the arm is cancelled by K6E.17.1 in any case; the correction is registered because
+the number was pinned.
+
+**(c) Table 4's `W = 30` row is mislabelled, and its true provenance is worse than a third probe.**
+Quoted, K6E.4 (`PREREGISTRATION.md:4053-4055`):
+
+> **Table 4 — the `W` sensitivity, disclosed (probe 2, `m` held at 200 by extending the B segment to
+> `200*W` rows — a probe-only variation, registered as such, so `W` is isolated from `m`).**
+
+The row reads `-1.09510 ± 0.00733` where probe 2's canonical cell reads `-1.09277 ± 0.00614`, under
+one "probe 2" label. **Correct, checked against the scratch record rather than guessed
+(`c46/cells-and-W.mjs`, part B's `arm({... windows: 2})` against part A's `arm({... windows: 6})`):
+it is neither a third probe nor an independent measurement. Both calls use the identical reference
+seed `3.5e9 + 1000003·rep + 7` and the identical live seed `3.5e9 + 17000041·rep + 23`, and each
+trajectory consumes windows sequentially from that one stream, so part B's `2 × 100 = 200` windows
+per reference are exactly the FIRST 200 of the same 600 windows part A averaged. Table 4's `W = 30`
+row is a NESTED SUBSET — a 40,000-window prefix of probe 2's own canonical arm, not a replication of
+it.** Reproduced to five decimals this session: the first 200 windows per reference average
+`-1.09510 ± 0.00733`, all 600 average `-1.09277 ± 0.00614`. **Registered consequence: the `W = 30`
+row of Table 4 carries no independent evidential weight beyond probe 2's canonical row, and the
+canonical value of record stays the pooled `x = 1.09576 ± 0.00347` (K6E.4).** The `W ∈ {60, 120,
+240, 480}` rows are genuinely separate computations, but they share the same seed families across
+`W`, so they are correlated with each other and with the `W = 30` row — **Table 4 is a disclosed
+sensitivity sweep, never a set of independent measurements**, and nothing in this document's
+registered predictions rests on it.
+
+**(d) Two pinned numbers that were not evaluated at a single `κ`.** Quoted, K6E.6
+(`PREREGISTRATION.md:4112-4114`):
+
+> per-window ceiling = log kappa* + (1-kappa*)*log(m+1) = -0.091448 + 0.0874*5.303305 = 0.372061 nats
+> 6-window ceiling   = 6 * 0.372061 = 2.232366    <    log 20 = 2.995732
+> windows needed for the ceiling to reach log 20   = ceil(2.995732 / 0.372061) = 9
+
+**Correct: `0.372061` is a mixed evaluation** — the `log κ*` term was taken at the unrounded
+`1/x = 0.912608` and the `(1-κ*)` term at the registered literal `0.9126`. **Registered: `κ*` is
+pinned at the literal `0.9126`, and every quantity derived from it is evaluated there:**
+
+```
+per-window ceiling at kappa* = 0.9126:      0.372051 nats        (at 1/x = 0.912608 it is 0.372018)
+6-window ceiling at kappa* = 0.9126:        6 * 0.372051 = 2.232306   <   log 20 = 2.995732
+windows needed:                             ceil(2.995732 / 0.372051) = 9      unchanged
+```
+
+The verifier's own attribution ("0.372061 was evaluated at 0.912608") is likewise not right —
+`0.912608` gives `0.372018`; **`0.372061` corresponds to neither `κ`.** Nothing downstream moves
+(`2.2323` and `2.2324` are both far below `2.9957`; the impossibility and the nine-window figure are
+unchanged), and the correction is registered because this document pins numbers.
+
+Second pinned inconsistency, same class. Quoted, K6E.9 (`PREREGISTRATION.md:4279`):
+
+> `ks_critical_at_alpha = 1.36/sqrt(12000) ≈ 0.012415`
+
+against `0.012417` in the same wave's report text. **Correct and pinned: `1.36/sqrt(12000) =
+0.0124150`** (7 significant figures, node-verified). No endpoint moves; the field is
+`ks_critical_at_alpha` on a row that carries no verdict authority (K6.7's caveat) and is cancelled
+in any case.
+
+**(e) Two cleaner statements, adopted.**
+
+```
+6-window crossing is structurally IMPOSSIBLE for every kappa > 0.8822
+   (6*(log kappa + (1-kappa)*log 201) = log 20 at kappa = 0.8822; ceiling 2.99586 there)
+No substrate split rescues kappa*:  the ceiling reaches log 20 only at m+1 >= 861.88,
+   i.e. m >= 861 blocks = 25,830 B-ticks, against the registered 10,000-row substrate whose
+   maximum possible block count is m = 333 (ceiling 2.4986 < 2.9957 even then)
+```
+
+Both node-verified this session. The first replaces "at `κ*` the crossing is impossible" with the
+whole region it belongs to: **`κ*` is not near the impossibility boundary, it is `0.03` inside it,
+and every `κ` above `0.8822` shares the property.** The second closes the obvious escape — enlarging
+`m` — by arithmetic: the successor would need a `25,830`-tick B segment where the registered
+substrate provides `6,000`, and even spending all `10,000` rows on blocks leaves the ceiling short.
+
+### K6E.17.4 Named-not-done
+
+- **The T2-only CvM validity reading — the one live falsifier this design had.** K6E.10's 20-window
+  ceiling (`7.4412 >= log 20`) means a T2 crossing is possible in principle, so the T2 arm alone
+  could still answer "does the contiguity construction's validity survive independent telemetry",
+  the question that killed `shape-kurtosis-e-value.ts` (C22,
+  `~/concord/knowledge/stats/pages/shape-clustersynth-2026-08-05.md`). **It is not part of this
+  plan and is not registered here.** It needs its own decision: it would require the module and the
+  T2 adapter that K6E.17.1 just declined to build, it can produce no coverage answer (K6 is NO
+  either way), and its value is methodological. **Filed as named-not-done work, not as a
+  recommendation.**
+- **The verifier's replication of the calibration-draw lottery (K6E.7c), recorded because it is a
+  second measurement of a registered number.** Verifier: **12.0%** of 500 references have their own
+  `x <= 1`, per-reference growth median `0.0039`, and **3 of 500** reach the `0.05` nats/window
+  floor. This amendment: **12.5%** of 400, median `0.0038`, **1 of 400**. The two agree on the
+  fraction (`12.0%` vs `12.5%`) and the median (`0.0039` vs `0.0038`); the floor-reaching count is
+  `0.6%` against `0.25%`, both a handful of draws in the far tail of a heavy-tailed statistic and
+  **neither a precise rate**. Registered reading, unchanged from K6E.7c: **roughly one held-out draw
+  in eight is anti-informative at canonical on its own reference, and roughly one in 200–400 would
+  have cleared the marginality floor** — and the structural detection prediction never depended on
+  the draw.
+- **`~/concord/knowledge/methodology/pages/coverage-gap-detectors.md`'s K6 section, the
+  fault-class-coverage-matrix page, and the design page's own outcome-3 clause** all need the
+  write-back K6E.17.1 names. Not done here; the wiki is not this document's to edit.
+
+### K6E.17.5 House rules, mapped
+
+(1) Committed before any artifact — and now before **no** artifact: this amendment's own act is to
+cancel the run, and at this commit nothing of `shape_ecdf_conformal_bet` exists or will.
+(2) A failed endpoint is a publishable result; **a cancelled run is one too, and this is where it is
+published.** Nothing in v2.K6E moves except the five items corrected above, each quoted with the
+original intact. (3) No post-hoc analysis: there is no run to analyse. (4)–(6) Moot for the
+cancelled arms; v2.K6E's registrations stand as the record of what would have been run, deliberately
+not deleted. (7) **Quote-and-correct for text**, which is what K6E.17.2 and K6E.17.3's five items
+do; and the supersession of K6E.17.1 is named, with its authority, rather than applied silently.
+(8) The report states every endpoint's number and verdict — discharged by v2.K6E's prediction table
+plus this amendment: **every endpoint's number is a registered prediction that no run will now
+measure, and the class answer is stated plainly.**
+
+### Amendment summary
+
+Registers **the controller's ruling** (authority: operator directive 2026-08-08 → the controller of
+the C46 plan, taking option 1 of the gate report's own option list): the design page's outcome-3
+clause ("proceed, with the expectation registered as NOT_POWERED-at-floor and the run treated as a
+measurement of the margin") is quoted and **superseded for this construction**, because the gate
+proved that no T1 endpoint a run reads can move any verdict — the falsifier cannot fire at `κ*` and
+detection cannot reach the floor at any `κ`. **The T1 battery run and the T2 clustersynth arm are
+CANCELLED; Tasks 2–5 do not execute; no module, card, adapter or run is created; `K6 = NO`, the
+second registered attempt REFUTED AT DESIGN TIME, no run spent** — with the design page's own
+write-back named as not-done, since a prereg amendment cannot overrule a ratified page (K6E.17.1).
+Adopts, from an **independent adversarial verification** that reproduced every load-bearing number
+of v2.K6E (own code, own seed families `1.7e9`/`2.6e9`, 300,000 windows/cell, verdict
+DERIVATION-SOUND), **a strengthened binding bound in place of K6E.6's mean-against-threshold
+framing**, which is quoted and corrected as controlling no tail: since `t = 1` is unreachable for
+every `κ` (`max S_1 = 5.3033 < b_1 = 5.7439`) and `S_t <= S_6`, any crossing at any `t` under any
+`κ` implies `S_6 >= b_2 = 7.6890`, so **`detection(κ) <= P(S_6 >= 7.6890) = 0.3014 ± 0.0021` for
+every `κ ∈ (0,1)`**, below `COVERAGE_FLOOR = 0.50`; independently reproduced here at
+`0.29975 ± 0.00324` (0.5 SE apart), with the verifier's "95 SE" margin corrected to a
+cluster-robust `≈ 55` SE — this amendment measures the design effect of the shared reference at
+`1.73×` and reads `35.7` cluster-robust SE on its own sample, a correction against this document's
+own interest that leaves the conclusion untouched (K6E.17.2). Five quote-and-correct items, originals
+intact (K6E.17.3): the grid maximum `0.01205` at `κ ≈ 0.35–0.40` → **`0.01272 ± 0.00050` at
+`κ = 0.38`** and `41×` → **`39×`** at all three sites, with the argmax registered as **flat within
+noise across `κ ∈ [0.34, 0.42]`** so the single argmax is not over-read; **"the rank identity is
+exact" narrowed to per-window and marginal** — the six windows share one `{T(B_j)}` draw, so their
+`e`s are positively dependent and **the six-window product is not a martingale in the
+shared-reference filtration** (`E[W_6|null]` above the product of marginals by `+20%`/`+19%`
+verifier, `+15.8%`/`+14.0%` here at `κ = 0.1`/`0.2`, the discrepancy registered as an
+infinite-variance heavy-tailed mean at those `κ` and neither figure quotable as precise; `+0.05%` at
+`κ*`, `E[W] < 1` everywhere, discrete conservativeness absorbing it, no endpoint moved), with the
+T2 margin re-pinned **`8.3` sd → `8.0` sd** on the measured `sd(S_20|null) = 4.46` rather than the
+i.i.d.-exact `4.2586`; **Table 4's `W = 30` row re-provenanced against the scratch record as a
+NESTED 40,000-window prefix of probe 2's own canonical arm** — same reference and live seeds, the
+first 200 of the same 600 windows, reproduced to five decimals — not a third probe and carrying no
+independent weight, with Table 4 as a whole registered as a correlated sensitivity sweep;
+`κ*` **pinned at the literal `0.9126`**, where the per-window ceiling is `0.372051` and the
+six-window ceiling `2.232306` (v2.K6E's `0.372061` was a mixed evaluation at two different `κ`, and
+`0.912608` gives `0.372018` — the verifier's attribution is also not right), and
+`ks_critical_at_alpha` pinned at `0.0124150`; and two cleaner statements adopted — **crossing is
+structurally impossible for every `κ > 0.8822`** (so `κ*` sits `0.03` inside the region, not at its
+edge) and **no substrate split rescues `κ*`** (`m >= 861` blocks = `25,830` B-ticks needed; the
+registered 10,000-row substrate maxes at `m = 333`, ceiling `2.4986 < 2.9957`). Names as
+not-done: the T2-only validity reading, the one live falsifier, as its own future decision and not a
+recommendation; the verifier's replication of the calibration lottery (`12.0%`/500 vs `12.5%`/400
+own-`x <= 1`, growth median `0.0039` vs `0.0038`, `3/500` vs `1/400` at the floor, the counts
+registered as tail handfuls rather than rates); and the three wiki pages the ruling obliges.
+**No endpoint, floor, seed or verdict in §1–14 or in any earlier amendment moves, and no artifact
+was created; the whole content of this amendment is a ruling, a strengthened bound, five corrections
+to this wave's own text, and a K6 class answer of NO reached without spending a run.**

@@ -59,6 +59,17 @@ export const FAULT_CLASSES = Object.freeze({
   K2: { name: 'group-in-unison',            canonical: 'K10-e0.5sigma',   grid: ['K5-e0.25sigma', 'K5-e0.5sigma', 'K10-e0.25sigma', 'K10-e0.5sigma', 'K10-e0.75sigma', 'K20-e0.25sigma', 'K20-e0.5sigma'] },
   K3: { name: 'sub-threshold oscillation',  canonical: 'A0.75sigma-f0.05', grid: ['A0.5sigma-f0.02', 'A0.5sigma-f0.05', 'A0.75sigma-f0.02', 'A0.75sigma-f0.05', 'A0.75sigma-f0.1'] },
   K4: { name: 'far-outside-norm point',     canonical: '5sigma-point',    grid: ['3sigma-point', '5sigma-point', '8sigma-point'] },
-  K5: { name: 'slow drift',                 canonical: 'slope1e-4',       grid: ['slope5e-5', 'slope1e-4', 'slope5e-4'] },
+  // Amendment v2.K5R (2026-08-08). K5's grid was re-registered: `injectDrift` adds
+  // slope*(t-at)*sigma over (t-at) = 0..199, so the original three slopes reach terminal shifts of
+  // only 0.00995 / 0.0199 / 0.0995 sigma and scored-window MEAN shifts of half those -- the
+  // retired canonical `slope1e-4` changed 0 of 14,000 paired e>=20 decisions relative to no
+  // injection at all (K5R.2). The four appended cells reach 0.4975 / 0.995 / 1.99 / 3.98 sigma
+  // terminal while their per-tick increment stays 0.0025-0.02 sigma, 37x-300x below every
+  // registered level-shift severity, which is the class definition's requirement. Canonical is the
+  // 2-sigma-terminal cell, mid-grid among the four, mirroring how the other five classes pick
+  // theirs. The three original entries are KEPT and still measured: they are correct measurements
+  // of a different question (K5R.4), reported and deciding nothing. Grid order is the cell-table
+  // order run-battery.mjs's assertRegistryAgreement compares against string-for-string.
+  K5: { name: 'slow drift',                 canonical: 'slope1e-2',       grid: ['slope5e-5', 'slope1e-4', 'slope5e-4', 'slope2.5e-3', 'slope5e-3', 'slope1e-2', 'slope2e-2'] },
   K6: { name: 'distributional shape change', canonical: 'mix-d1.5',       grid: ['mix-d1.0', 'mix-d1.5', 'mix-d2.0'] },
 });

@@ -54,9 +54,11 @@ const REGISTERED_SEEDS = {
 // Amendment v2.K3 adds `spectral_bet_e_process` on all six K3 fault cells plus its own arm
 // (cell 33, S2+S3+the verdict-free step_blindness_probe_rate row, Amendment v2.K3.3
 // K3.3.3) — 6 fault + 3 arm rows.
+// Amendment v2.K5R, K5R.5: K5 gains five cells (idx 38-42 — four new grid severities plus the
+// new canonical's -ar1 replicate), so K5 contributes 9 rows per scored detector instead of 4.
 const REGISTERED_CENSUS = {
-  safe_t: 30,                        // K1 4 + K2 8 + K3 6 + K4 4 + K5 4 + K6 4
-  universal_inference: 18,           // K1 4 + K3 6 + K5 4 + K6 4
+  safe_t: 35,                        // K1 4 + K2 8 + K3 6 + K4 4 + K5 9 + K6 4
+  universal_inference: 23,           // K1 4 + K3 6 + K5 9 + K6 4
   group_average_e_value: 8,          // every K2 cell
   family_E_conformal_heldout: 4,     // every K4 cell
   family_D_spectral_e_detector: 2,   // K3's canonical and -ar1 cells only
@@ -128,11 +130,12 @@ test('the cell census is exactly the registered (class, detector) assignment', (
   // Amendment v2.K3/v2.K3.3, K3.5/K3.6/K3.3.3: +6 fault rows (all six K3 cells) + 3 arm rows
   // (cell 33 S2/S3/step_blindness_probe_rate) on top of the pre-K3 72-cell census (66 fault
   // + 6 arm). Amendment v2.K6, K6.6/K6.7: +4 fault rows (all four K6 cells) + 2 arm rows
-  // (cell 34 S2/S3) on top of that.
-  assert.equal(summary.cells.length, 87, 'registered census: 76 fault-class rows + 11 arm rows');
+  // (cell 34 S2/S3) on top of that. Amendment v2.K5R, K5R.5: +10 fault rows (five new K5 cells
+  // x safe_t and universal_inference), no new arm — every cell K5R registers is a power cell.
+  assert.equal(summary.cells.length, 97, 'registered census: 86 fault-class rows + 11 arm rows');
 
   const faultCells = summary.cells.filter((c) => c.fault_class != null);
-  assert.equal(faultCells.length, 76);
+  assert.equal(faultCells.length, 86);
   const byDetector = {};
   for (const c of faultCells) byDetector[c.detector] = (byDetector[c.detector] ?? 0) + 1;
   assert.deepEqual(byDetector, REGISTERED_CENSUS);
@@ -174,13 +177,69 @@ test('family_D cells carry the pre-onset firing count as a descriptive secondary
   }
 });
 
-test('every emitted severity is a registered grid entry (or its -ar1 replicate)', () => {
+test('every emitted severity is a registered grid entry (or the -ar1 replicate of one)', () => {
   const { summary } = smoke();
   for (const c of summary.cells.filter((x) => x.fault_class != null)) {
     const { grid, canonical } = FAULT_CLASSES[c.fault_class];
-    const ok = grid.includes(c.severity) || c.severity === `${canonical}-ar1`;
-    assert.ok(ok, `${c.fault_class}: unregistered severity ${c.severity}`);
+    // Amendment v2.K5R, K5R.5: K5 carries two -ar1 rows — its current canonical's
+    // (`slope1e-2-ar1`) and the retired canonical's (`slope1e-4-ar1`, preserved, K5R.4). The
+    // predicate is therefore "replicates SOME registered grid entry", not "replicates the
+    // canonical"; the per-class -ar1 COUNT is what stops that being a loosening (next test).
+    const base = c.severity.replace(/-ar1$/, '');
+    assert.ok(grid.includes(base), `${c.fault_class}: unregistered severity ${c.severity}`);
     assert.equal(c.canonical, c.severity === canonical);
+  }
+});
+
+// Amendment v2.K5R, K5R.5's third clause: the registered per-class count of φ=0.6 replicates.
+// Without this, relaxing the harness's "exactly one -ar1 row" assertion to "the canonical's
+// -ar1 row is present" would let a stray replicate into any class unnoticed.
+const REGISTERED_AR1_ROWS = { K1: 1, K2: 1, K3: 1, K4: 1, K5: 2, K6: 1 };
+
+test('the -ar1 replicate count per class is the registered one, and every replicate is φ=0.6', () => {
+  const { summary } = smoke();
+  for (const [classId, dets] of Object.entries(REGISTERED_PAIRS)) {
+    for (const det of dets) {
+      const rows = summary.cells.filter((c) => c.fault_class === classId && c.detector === det);
+      const ar1 = rows.filter((c) => c.severity.endsWith('-ar1'));
+      assert.equal(ar1.length, REGISTERED_AR1_ROWS[classId],
+        `${classId} x ${det}: ${ar1.length} -ar1 rows, ${REGISTERED_AR1_ROWS[classId]} registered`);
+      for (const c of ar1) assert.equal(c.phi, 0.6, `${classId} ${c.severity}: φ`);
+      // §4/K5R.5 clause 1: the CURRENT canonical's replicate must be one of them.
+      assert.ok(ar1.some((c) => c.severity === `${FAULT_CLASSES[classId].canonical}-ar1`),
+        `${classId} x ${det}: no ${FAULT_CLASSES[classId].canonical}-ar1 replicate`);
+    }
+  }
+});
+
+// Amendment v2.K5R, K5R.5's index table. The cell indices ARE the seed scheme
+// (CELL_SEED = BASE_SEED + idx), so a moved index is a different data set under the same
+// severity label. Indices 35, 36 and 37 are reserved (K6.12's K6_T2_SCENARIO_SEED, K6E.9's
+// cancelled arm, K6E.10's T2 scenario seed) and a cancelled run does not release one, so K5's
+// new cells start at 38.
+test('K5 carries the registered cell indices, and the new cells sit at 38-42 with their CELL_SEEDs', () => {
+  const { summary, manifest } = smoke();
+  assert.deepEqual(manifest.classes.K5, [22, 23, 24, 25, 38, 39, 40, 41, 42],
+    'K5R.5: the three old grid cells + old -ar1 (22-25), then the four new grid cells + new -ar1 (38-42)');
+  const byIndex = new Map(summary.cells
+    .filter((c) => c.fault_class === 'K5' && c.detector === 'safe_t')
+    .map((c) => [c.cell_index, c]));
+  const REGISTERED = [
+    [38, 'slope2.5e-3', 0, 20260845], [39, 'slope5e-3', 0, 20260846],
+    [40, 'slope1e-2', 0, 20260847], [41, 'slope2e-2', 0, 20260848],
+    [42, 'slope1e-2-ar1', 0.6, 20260849],
+  ];
+  for (const [idx, severity, phi, cellSeed] of REGISTERED) {
+    const c = byIndex.get(idx);
+    assert.ok(c, `no K5 cell at index ${idx}`);
+    assert.equal(c.severity, severity, `cell ${idx} severity`);
+    assert.equal(c.phi, phi, `cell ${idx} φ`);
+    assert.equal(manifest.seed_scheme.constants.base_seed + idx, cellSeed,
+      `cell ${idx}: CELL_SEED arithmetic != registered ${cellSeed}`);
+  }
+  assert.equal(byIndex.get(40).canonical, true, 'K5R.5: idx 40 (slope1e-2) is K5\'s canonical cell');
+  for (const idx of [22, 23, 24, 25, 38, 39, 41, 42]) {
+    assert.equal(byIndex.get(idx).canonical, false, `cell ${idx} must not claim canonical`);
   }
 });
 

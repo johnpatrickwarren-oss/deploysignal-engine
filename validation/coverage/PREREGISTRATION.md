@@ -5401,3 +5401,156 @@ delta (`K5 NO -> YES`), every card tuple and every other class answer unchanged.
 formula, window partition, validity endpoint, stop condition or decision rule in §1-14 or in any
 earlier amendment moves.** Names not-done: the two wiki write-backs, `sequential_ui`, any T2/T3 K5
 evidence, and any interpolated detection-threshold slope.
+
+## Amendment v2.K5R.1 — 2026-08-08, three corrections to v2.K5R from an independent review, one of them against this document's own claim
+
+Authority: reviewer of the C42 Task-1 artifact (spec PASS, quality APPROVED, one Important finding),
+2026-08-08. Committed **before** the code change that acts on it and before any run. Nothing in
+v2.K5R's grid, canonical, seeds, probe numbers, predictions or class answer moves.
+
+### K5R.1.1 IMPORTANT — the `-ar1` invariant relaxation IS a loosening, and K5R.5's claim that it is not was false
+
+**Lead with the correction.** K5R.5 states, of the three checks that replaced
+`assertRegistryAgreement`'s "exactly one `-ar1` row per class":
+
+> The third clause is what keeps this from being a loosening — a stray fourth K5 replicate still
+> crashes the run at startup.
+
+**That is false as written**, and the reviewer proved it with a mutation this amendment reproduces
+before quoting it. **Mutation R1:** relabel the preserved cell 25 from `slope1e-4-ar1` to
+`slope5e-4-ar1` — one token, no other edit. Result, measured here: `test:coverage-battery`
+**90 pass / 0 fail**, `test:cert` **171 pass / 0 fail**. **Both suites stay green.** Under the
+pre-K5R assertion (`ar1Rows.length !== 1 || ar1Rows[0].severity !== ${canonical}-ar1`) that same
+mutation crashed the harness at startup.
+
+Why the three checks all pass on R1: the count is still 2 (clause 3 counts rows, it does not name
+them); `slope5e-4` is a registered grid entry, so clause 2 passes; and cell 42 still carries
+`slope1e-2-ar1`, so clause 1 passes. **Cell 42 is pinned by name, φ and `CELL_SEED` in K5R.5's index
+table. Cell 25 was pinned nowhere** — the old assertion had been the only thing naming it, and
+replacing that assertion removed the pin without replacing it. The count clause bounds *how many*
+replicates exist; it says nothing about *which*.
+
+**Registered correction.** K5R.5's index table is extended with the preserved replicate, pinned by
+value on the same four fields:
+
+| idx | fault class | severity | φ | `CELL_SEED` | arithmetic |
+|---|---|---|---|---|---|
+| **25** | K5 | **`slope1e-4-ar1`** | 0.6 | **20260832** | `20260807+25` |
+
+This is the cell §6's own seed table already registers (`| 25 | K5 | slope1e-4-ar1 | 0.6 | 20260832 |`);
+what is new is that the harness and its test now assert it, so a relabelling is a startup crash and a
+test failure rather than a silent re-registration. The corrected sentence reads: **clause 3 bounds
+the number of replicates per class; what stops a replicate being relabelled is the index table, which
+now names both of K5's.**
+
+The correction does not change any cell, seed, grid, canonical, prediction or class answer. It changes
+what the suite can detect.
+
+### K5R.1.2 K5R.1's ramp-sd constant: `57.7345` → `57.734305`
+
+K5R.1 gives the within-window sd of the injected ramp as
+`slope * sqrt((200² - 1)/12) = slope * 57.7345 * sigma`. The constant is
+`sqrt(39999/12) = 57.7343052266155`, so `57.7345` is wrong in its fifth significant digit.
+
+**No figure in any table moves.** Every ramp-sd entry in K5R.1 and K5R.3 was read off `injectDrift`
+itself, not computed from the quoted constant. Checked at the cell where the discrepancy is largest:
+`slope1e-2` reads `0.577343` from the generator, `0.577343` from `57.734305`, and `0.577345` from the
+erroneous `57.7345` — the tables carry `0.577343`, the correct value. `slope2e-2`: generator and
+correct constant both `1.154686`; the erroneous constant gives `1.154690`; the table carries
+`1.154686`. K5R.7's `ramp var` column and the `E[t]` derivation used `(200²-1)/12` in code, not the
+quoted decimal, so `E[t]` and every predicted rate stand unchanged.
+
+### K5R.1.3 Minor — the per-block spread of the probe rates, disclosed, with the direction NOT confirmed
+
+The reviewer records that the `universal_inference` probe's block-to-block spread exceeds binomial,
+citing `chi2 ≈ 4.1`. Measured on this document's own probe data, across all eight blocks
+(4 × 1,000 + 4 × 2,500), Pearson `chi2` at `df = 7`, expected counts from the pooled rate, **reported
+only where the approximation is valid (`min np >= 5`)**:
+
+| cell | detector | pooled fires | min expected | `chi2/df` |
+|---|---|---|---|---|
+| `slope2.5e-3` | `safe_t` | 725 | 51.79 | `0.457` |
+| `slope2.5e-3` | `universal_inference` | 147 | 10.50 | **`1.797`** (`chi2 = 12.58`, `p ≈ 0.08`) |
+| `slope5e-3` | `safe_t` | 8,094 | 578.14 | `0.855` |
+| `slope5e-3` | `universal_inference` | 454 | 32.43 | **`0.588`** (`chi2 = 4.12`) |
+| `slope1e-2` (canonical) | `safe_t` | 13,999 | 999.93 | **`1.857`** (`chi2 = 13.00`, `p ≈ 0.072`) |
+| `slope1e-2-ar1` | `safe_t` | 8,631 | 616.50 | `0.629` |
+| `slope1e-2-ar1` | `universal_inference` | 145 | 10.36 | `0.887` |
+
+Every other (cell, detector) pair has `min np < 5` (the old cells' fires are single digits) or is
+degenerate at 0/n, so no `chi2` is quotable for them and none is quoted.
+
+**Three statements, and one of them is a disagreement this amendment does not resolve.**
+
+1. The largest valid `universal_inference` dispersion is `1.797` at `slope2.5e-3` — above binomial,
+   `p ≈ 0.08`, not significant at `0.05`.
+2. **The `chi2 = 4.12` figure is this document's `slope5e-3` UI row, where `chi2` is BELOW its
+   `df = 7`** — under-dispersed, not over. Read as evidence that UI's spread exceeds binomial,
+   `4.1` points the other way. Whether the reviewer's `≈4.1` is this statistic at a different `df`
+   or a different statistic entirely cannot be determined from what was received.
+3. The excess is **not specific to `universal_inference`**: `safe_t` at the canonical cell reads
+   `1.857`, the largest dispersion in the table, driven by a single miss (`3999/4000` in probe 1
+   against `10000/10000` in probe 2).
+
+**Registered a fortiori, so the disagreement moves nothing.** Inflating **every** registered SE in
+K5R.7's prediction table by `sqrt(1.857) = 1.363` — the largest valid dispersion measured, applied
+uniformly — widens the canonical bands to `safe_t 0.9999 +0.0001/-0.0008` and
+`universal_inference 0.0016 ± 0.0036`, i.e. `[0, 0.0052]`. **No band crosses `COVERAGE_FLOOR = 0.50`,
+no predicted verdict changes, and K5R.10's class answer is unaffected.** The registered tolerances
+stay as K5R.7 wrote them (binomial); this widened band is registered alongside as the disclosed
+alternative reading, and the run's report states the result against both.
+
+### K5R.1.4 Minor — K5R.2's `0 / 14,000` is a measurement on one seed family, not a structural zero
+
+K5R.2 reports 0 of 14,000 paired crossing-decision changes at the retired canonical slope, for both
+detectors, on the `3.70e9` family. The reviewer measured **1 in 4,000** `universal_inference` flips at
+`slope1e-4` on their own seeds. Checked here on two further families, same method, `n = 14,000` each:
+
+| seed family | `safe_t` flips | `universal_inference` flips | max abs Δ log e (UI) |
+|---|---|---|---|
+| `3.70e9` (K5R.2's) | 0 | 0 | `0.8544` |
+| `3.80e9` | **2** | 0 | `0.6624` |
+| `3.90e9` (fresh) | **1** | **1** (`e 19.820 -> 24.354`, seed `3989777703`) | `0.6575` |
+
+**The reviewer is right and K5R.2's phrasing was too strong.** A flip requires a trajectory sitting
+within `|Δ log e| <= 0.85` of `log 20`; such trajectories exist and the retired canonical's drift can
+push one across. Pooled over the three families measured here — `42,000` paired trajectories —
+`safe_t` flips `3` (`7.1e-5`) and `universal_inference` flips `1` (`2.4e-5`).
+
+**The claim that survives, stated quantitatively rather than as a zero:** at the retired canonical
+slope the injection changes the `e >= 20` endpoint on the order of `1` trajectory in `10,000` to
+`40,000` — the same order as, and below, the endpoint's own no-injection exceedance rate of
+`5.7e-4`. The cell's measured detection rate is therefore indistinguishable from the healthy arm's,
+which is what K5R.2 was for, and it is not indistinguishable because the effect is exactly zero.
+K5R.2's table stands as the `3.70e9` measurement it reports; the words "not one trajectory in
+14,000 changes its endpoint" are true of that family and must not be generalized to "no trajectory
+can".
+
+### Amendment summary
+
+Three corrections to v2.K5R from an independent review, none of which moves a cell, seed, grid,
+canonical, probe number, prediction, tolerance or class answer. **Important:** the `-ar1` invariant
+relaxation IS a loosening and K5R.5's sentence claiming otherwise is quoted and corrected —
+reproduced here, the reviewer's one-token mutation R1 (preserved cell 25 relabelled
+`slope1e-4-ar1` → `slope5e-4-ar1`) leaves `test:coverage-battery` at 90/0 and `test:cert` at 171/0,
+where the pre-K5R assertion crashed at startup, because clause 3 counts replicates without naming
+them and cell 25 was pinned nowhere once the old assertion was replaced; the correction extends
+K5R.5's index table with `[25, slope1e-4-ar1, 0.6, 20260832]` so the harness and its test assert the
+preserved replicate by value, and restates the invariant honestly (the count bounds how many
+replicates exist; the index table is what stops one being relabelled). Corrects K5R.1's ramp-sd
+constant `57.7345` → `57.734305` (`sqrt(39999/12) = 57.7343052266155`), with the verification that no
+table figure moves — every entry was read off `injectDrift`, and at the worst cell the tables carry
+the generator's `0.577343`, not the erroneous constant's `0.577345`. Discloses the per-block
+dispersion of the probe rates under a validity filter (`min np >= 5`, five (cell, detector) pairs
+qualify), and **records a disagreement rather than resolving it**: the largest valid
+`universal_inference` dispersion is `1.797` at `slope2.5e-3` (`p ≈ 0.08`), the cited `chi2 ≈ 4.1` is
+this document's `slope5e-3` UI row where the statistic sits BELOW its `df = 7` (under-dispersed), and
+the largest dispersion of all is `safe_t`'s `1.857` at the canonical cell — so the excess is neither
+significant nor specific to UI; registered a fortiori, inflating every SE by `sqrt(1.857) = 1.363`
+widens the canonical bands to `[0.9991, 1]` and `[0, 0.0052]` and crosses no floor. Discloses that
+K5R.2's `0 / 14,000` is a measurement on the `3.70e9` family and not a structural zero: two further
+families measured here give `safe_t` `2` and `1` flips and `universal_inference` `0` and `1`
+(`e 19.820 -> 24.354` at seed `3989777703`), so the surviving claim is quantitative — the retired
+canonical's injection moves the endpoint on the order of `1` trajectory in `10,000`-`40,000`, at or
+below the endpoint's own `5.7e-4` no-injection exceedance — and the phrase "not one trajectory in
+14,000" is true of one family and must not be read as "no trajectory can".

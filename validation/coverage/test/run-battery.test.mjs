@@ -734,7 +734,9 @@ test('K6.9: fault-cell rows carry the registered window-partition fields, params
     assert.equal(c.window_span, '[100,280)', `cell ${c.cell_index}: window_span`);
     assert.equal(c.params, 'heldout-empirical', `cell ${c.cell_index}: params (K6.3 — genuinely empirical calibration)`);
     assert.ok(Number.isInteger(c.degenerate_windows), `cell ${c.cell_index}: degenerate_windows`);
-    assert.equal(c.degenerate_windows, 0, `cell ${c.cell_index}: structurally zero for this candidate (K6.7)`);
+    // degenerate_windows: 0 at these smoke amplitudes (not structurally impossible — see the
+    // dedicated positive-control test below, post-Task-11a review Important 1).
+    assert.equal(c.degenerate_windows, 0, `cell ${c.cell_index}: none observed at these smoke seeds`);
     assert.equal(c.non_finite_wealth, 0, `cell ${c.cell_index}: structurally zero for this candidate (K6.7)`);
     assert.ok(Number.isFinite(c.final_wealth_mean), `cell ${c.cell_index}: final_wealth_mean`);
     assert.ok(Number.isFinite(c.final_wealth_median), `cell ${c.cell_index}: final_wealth_median`);
@@ -821,14 +823,56 @@ test('K6.7: p_uniformity is pooled n*6*2 per-feature p values (kurtosis + absSke
   assert.equal('verdict' in pu, false, 'K6.7: no verdict key of its own');
 });
 
-test('K6.7: degenerate_windows is a non-negative integer on every shape_block_conformal_bet row that carries it, 0 at smoke', () => {
+// K6.7 registers degenerate_windows as "structurally zero" on the reasoning that eAvg stays
+// finite even on a degenerate window (the module's own NaN guard). That reasoning shows eAvg
+// can never underflow the wealth product — it does NOT show a degenerate window can never
+// occur. Amendment v2.K6.2 (K6.2.1) independently establishes the pathway is genuinely
+// reachable at the d=2.0 two-point degeneracy (P ~= 1.9e-9/window that a live 30-tick window
+// draws all-same-sign, making that window's own kurtosis/absSkew m2=0). At the registered
+// amplitudes and these smoke seeds the counter reads 0 (below), not because the event is
+// impossible, but because it has not occurred at this n — the positive control further below
+// proves the counter can actually move when it does.
+test('degenerate_windows is a non-negative integer on every shape_block_conformal_bet row that carries it, 0 at these smoke seeds', () => {
   const { summary } = smoke();
   const rows = summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet');
   assert.equal(rows.length, 6, '4 fault cells + S2 + S3 arm rows');
   for (const c of rows) {
     assert.ok(Number.isInteger(c.degenerate_windows), `${c.fault_class ?? c.arm} ${c.cell_index}: degenerate_windows`);
-    assert.equal(c.degenerate_windows, 0, `${c.fault_class ?? c.arm} ${c.cell_index}: structurally zero (K6.7)`);
+    assert.equal(c.degenerate_windows, 0, `${c.fault_class ?? c.arm} ${c.cell_index}: none observed at these smoke seeds`);
   }
+});
+
+// Positive control (post-Task-11a review, Important 1): the ordinary registered amplitudes
+// essentially never produce a degenerate window (K6.2.1's own P~=1.9e-9/window figure), so a 0
+// reading alone does not prove the counter can move at all — the fix above (reading
+// perFeature[].p instead of eAvg's own always-finite value) is only real if this responds.
+// Same COVERAGE_FORCE_SHAPE_DEGENERATE hook convention as run-battery.mjs's own
+// COVERAGE_FORCE_SPECTRAL_DEGENERATE positive control for spectral_bet_e_process.
+test('degenerate_windows positive control: the counter moves under a forced constant window, stays 0 on the ordinary path', () => {
+  const { summary: ordinary } = smoke();
+  const ordinaryCell26 = ordinary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.cell_index === 26);
+  assert.equal(ordinaryCell26.degenerate_windows, 0, 'ordinary path: no forced condition, no degenerate window');
+
+  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-battery-shape-degen-'));
+  execFileSync(process.execPath, [HARNESS, '--n', '5', '--classes', 'K6'], {
+    env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot, COVERAGE_FORCE_SHAPE_DEGENERATE: '1' },
+    encoding: 'utf8',
+  });
+  const simDir = path.join(outRoot, 'sim');
+  const runDir = path.join(simDir, fs.readdirSync(simDir)[0]);
+  const forced = JSON.parse(fs.readFileSync(path.join(runDir, 'summary.json'), 'utf8'));
+  const manifest = JSON.parse(fs.readFileSync(path.join(runDir, 'manifest.json'), 'utf8'));
+  assert.equal(manifest.shape_force_degenerate_hook, true, 'the hook must be recorded in the manifest');
+  assert.equal(manifest.mode, 'sim', 'a forced-degenerate run must never land under results/live');
+
+  const forcedCell26 = forced.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.cell_index === 26);
+  assert.ok(forcedCell26.degenerate_windows > 0,
+    `degenerate_windows must move under the forced condition; got ${forcedCell26.degenerate_windows}`);
+  assert.equal(forcedCell26.degenerate_windows, 5, 'window 0 is forced degenerate (both features) on all 5 smoke trajectories');
+
+  // The arm-34 rows and every other K6 fault cell see the same forced window 0.
+  const forcedArmS2 = forced.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'healthy');
+  assert.equal(forcedArmS2.degenerate_windows, 5);
 });
 
 test('K6 S3 arm carries no windows/window_len/window_span (K6.7\'s own field list omits them on this row)', () => {
@@ -840,49 +884,47 @@ test('K6 S3 arm carries no windows/window_len/window_span (K6.7\'s own field lis
   assert.equal('window_span' in s3, false);
 });
 
-// Amendment v2.K6.1, K6.1.1: predicted ~0.000 at EVERY registered severity, including
-// d=2.0 (the corrected Step-5 table). At smoke n=20/500, the canonical cell (idx 27,
-// d=1.5) and idx 26/29 read exactly the predicted near-zero — pinned below. idx 28
-// (d=2.0) does NOT: empirically, at these registered seeds (and independently confirmed
-// against the compiled detector module directly, outside this harness), the d=2.0 cell
-// (and the S3 arm, which uses the SAME d=2.0 construction per K6.8) detects at a rate
-// far above the ~0.000 prediction — d=2.0 is `s=0` exactly (injectShapeMix's own
-// `s = sqrt(max(0, 1 - d*d/4))`), a perfectly bimodal +-1sigma series, not a Gaussian
-// mixture with substantial overlap like d=1.0/1.5. This is registered here as a pinned
-// regression value (the K4.5/K3.3.4 mutation-guard convention), NOT as an endorsement of
-// the ~0.000 prediction at d=2.0 — K6.1.1's own falsifier ("detection_rate materially
-// above ~0.000, approaching or exceeding 0.50") is squarely tripped by this reading, and
-// it is reported as a surprise requiring investigation, not tuned around or resolved here
-// (that adjudication is out of this task's scope — the adapter must wire the registered
-// construction faithfully and report what it measures).
-test('canonical (idx 27, mix-d1.5) and idx 26/29 read the predicted near-zero at smoke seeds', () => {
+// Amendment v2.K6.2 (K6.2.1) re-corrects Amendment v2.K6.1's own `~0.000` d=2.0 correction:
+// `injectShapeMix`'s scale factor `s = sqrt(max(0, 1 - d*d/4))` is EXACTLY 0 at d=2.0, so the
+// injected series degenerates to a pure two-point +-1sigma law (not an overlapping mixture
+// like d=1.0/1.5), and the registered, re-derived prediction at this severity is `~0.95-1.0`,
+// expected POWERED — not a surprise, the class's own registered expectation. d=1.0/1.5 (idx
+// 26, 27, 29) are unaffected (`s>0` there, K6.2.1's own closing paragraph) and still predict
+// `~0.000`.
+test('canonical (idx 27, mix-d1.5) and idx 26/29 read the predicted near-zero at smoke seeds (K6.2.1: unaffected by the d=2.0 correction)', () => {
   const { summary } = smoke();
   for (const idx of [26, 27, 29]) {
     const c = summary.cells.find((x) => x.detector === 'shape_block_conformal_bet' && x.cell_index === idx);
     assert.ok(c, `no cell ${idx}`);
-    assert.equal(c.detection_rate, 0, `cell ${idx}: K6.1.1 predicts ~0.000; at n=20 smoke seeds this reads exactly 0`);
+    assert.equal(c.detection_rate, 0, `cell ${idx}: K6.1.1/K6.2.1 predict ~0.000; at n=20 smoke seeds this reads exactly 0`);
   }
 });
 
-test('SURPRISE, registered per K6.1.1\'s own falsifier: idx 28 (mix-d2.0) and arm 34 S3 detect far above the ~0.000 prediction at smoke seeds', () => {
+// K6.2.1: idx 28 (mix-d2.0) and arm 34's S3 (same d=2.0 construction, K6.8) are POWERED — the
+// registered expectation at this severity's two-point degeneracy, not an unresolved finding.
+// K6.2.2 draws the consequence for the card's stage tuple: S3 POWERED (not INERT) removes
+// `overallVerdict`'s valid-but-inert ADVISORY cap (score.mjs:564-568), so the expected overall
+// verdict is USE, not ADVISORY — resolved by the amendment, nothing left for Task 12 to
+// adjudicate on this point. The K6 CLASS answer stays NO regardless (K6.2.2: decided by the
+// canonical cell, idx 27, alone — unaffected by this correction).
+test('K6.2.1/K6.2.2: idx 28 (mix-d2.0) and arm 34 S3 are POWERED at smoke seeds — the registered two-point-degeneracy expectation', () => {
   const { summary } = smoke();
   const c28 = summary.cells.find((x) => x.detector === 'shape_block_conformal_bet' && x.cell_index === 28);
   assert.ok(c28, 'no cell 28');
-  assert.equal(c28.canonical, false, 'idx 28 is grid-only, not the class-deciding canonical cell (idx 27)');
-  // Pinned at the registered smoke seeds — see the block comment above for the finding.
-  assert.equal(c28.detection_rate, 1, 'idx 28 empirically detects at 1.0 at n=20 smoke seeds, not ~0.000');
+  assert.equal(c28.canonical, false, 'idx 28 is grid-only, not the class-deciding canonical cell (idx 27, K6.2.2)');
+  // Pinned at the registered smoke seeds — matches K6.2.1's corrected ~0.95-1.0 prediction.
+  assert.equal(c28.detection_rate, 1, 'K6.2.1 predicts ~0.95-1.0 at d=2.0; at n=20 smoke seeds this reads exactly 1');
   assert.equal(c28.verdict, 'POWERED');
 
   const s3 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'power');
   assert.ok(s3, 'no shape_block_conformal_bet power arm');
-  assert.equal(s3.detection_rate, 1, 'arm 34 S3 (also d=2.0, K6.8) empirically detects at 1.0 at n=20 smoke seeds');
+  assert.equal(s3.detection_rate, 1, 'arm 34 S3 (also d=2.0, K6.8) reads 1.0 at n=20 smoke seeds, matching K6.2.1');
   assert.equal(s3.verdict, 'POWERED',
-    'K6.8/K6.1.1 predict INERT here — empirically this reads POWERED, which would remove the '
-    + '"valid-but-inert" ADVISORY cap (score.mjs:564-568) if it held at the registered N; not '
-    + 'resolved by this adapter task, reported as a finding');
+    'K6.2.1/K6.2.2: POWERED here is the registered, corrected expectation — removes the '
+    + '"valid-but-inert" ADVISORY cap (score.mjs:564-568), expected overall verdict USE (K6.2.2)');
 });
 
-test('K6.10 provenance: independent window-partition + wealth-endpoint recompute matches the harness at smoke n, across the surprise', () => {
+test('K6.10 provenance: independent window-partition + wealth-endpoint recompute matches the harness at smoke n, across the d=2.0 two-point degeneracy', () => {
   const { summary } = smoke();
   const distRequire = createRequire(import.meta.url);
   const shapeBlockBet = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/shape-block-conformal-bet.js'));
@@ -900,7 +942,7 @@ test('K6.10 provenance: independent window-partition + wealth-endpoint recompute
   };
   const cases = [
     { label: 'idx 27 canonical (d=1.5)', idx: 27, d: 1.5 },
-    { label: 'idx 28 (d=2.0, the surprise)', idx: 28, d: 2.0 },
+    { label: 'idx 28 (d=2.0, two-point degeneracy, K6.2.1)', idx: 28, d: 2.0 },
   ];
   for (const { label, idx, d } of cases) {
     const cellSeed = 20260807 + idx;
@@ -920,6 +962,27 @@ test('K6.10 provenance: independent window-partition + wealth-endpoint recompute
     assert.equal(c.fires, crossedCount, `${label}: independently recomputed crossing count`);
     assert.equal(c.detection_rate, crossedCount / N_SMOKE, `${label}: detection_rate`);
   }
+
+  // Minor 6 (post-Task-11a review): arm 34's S3 uses the IDENTICAL d=2.0 construction (K6.8)
+  // on a DIFFERENT trajectory stream (CELL_SEED=20260841, no heldout influence on
+  // generation — only on calibration, regenerated separately below) — so the pinned
+  // detection_rate=1 literal on that row is not resting on cell 28's own guard alone.
+  const ARM34_SEED = 20260807 + 34;
+  const arm34HeldoutSeed = ARM34_SEED + HELDOUT_OFFSET;
+  const arm34Cal = shapeBlockBet.calibrateShapeBlocks(regenHeldout(arm34HeldoutSeed), 30);
+  let arm34Crossed = 0;
+  for (let i = 0; i < N_SMOKE; i++) {
+    const r = rng(ARM34_SEED + TRAJ_STEP * i);
+    const draw = gaussFrom(r);
+    const base = Array.from({ length: T }, draw);
+    const series = injectShapeMix(base, { sigma: 1, at: ONSET, d: 2.0, rng: r });
+    const { log } = shapeBlockBet.shapeBetWealth(sliceWindows(series), arm34Cal);
+    if (log.some((l) => l >= Math.log(20))) arm34Crossed += 1;
+  }
+  const s3 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'power');
+  assert.ok(s3, 'no shape_block_conformal_bet power arm');
+  assert.equal(s3.fires, arm34Crossed, 'arm 34 S3: independently recomputed crossing count');
+  assert.equal(s3.detection_rate, arm34Crossed / N_SMOKE, 'arm 34 S3: detection_rate');
 });
 
 test('K6.7 provenance: cell 34 S2 increment_estimator recomputes from an independently regenerated fixture', () => {

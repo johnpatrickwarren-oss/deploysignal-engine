@@ -119,6 +119,19 @@ const FORCE_THROW = process.env.COVERAGE_FORCE_THROW ?? null;
 // false) and is recorded in the manifest, same convention as COVERAGE_FORCE_THROW.
 const FORCE_SPECTRAL_DEGENERATE = process.env.COVERAGE_FORCE_SPECTRAL_DEGENERATE === '1';
 
+// Test-only hook, named: overwrites shape_block_conformal_bet's window 0 with a constant
+// block on every trajectory, so shapeMoments' m2 is exactly 0 for that window (m3, m4 also
+// 0, so kurtosis = m4/(m2*m2) = 0/0 = NaN and absSkew = |m3|/m2^1.5 = 0/0 = NaN) — the SAME
+// live-side degeneracy pathway featureResult's own NaN guard exists for (shape-block-
+// conformal-bet.ts:262-275: non-finite T -> e=1, p=NaN, "neutral, holds the books"), proving
+// the degenerate_windows counter (K6.7) can actually move. Amendment v2.K6.2 (K6.2.1)
+// registers this pathway is genuinely reachable without forcing at d=2.0 (a live window of
+// 30 iid two-point +-1 draws all landing on the same sign has probability 2*0.5^30 ~= 1.9e-9
+// per window — rare, but the counter must be ABLE to count it if it ever fires). Cannot fire
+// by accident (unset env var leaves it false) and is recorded in the manifest, same
+// convention as COVERAGE_FORCE_SPECTRAL_DEGENERATE.
+const FORCE_SHAPE_DEGENERATE = process.env.COVERAGE_FORCE_SHAPE_DEGENERATE === '1';
+
 // ── the registered cell table (§6, A1), copied literally ──────────────────────
 const F = (idx, fault_class, severity, phi) => ({ idx, fault_class, severity, phi, seed: BASE_SEED + idx });
 const REGISTERED_CELLS = [
@@ -424,12 +437,23 @@ const ADAPTERS = {
         const start = ONSET + w * K6_WINDOW_LEN;
         windows.push(data.series.slice(start, start + K6_WINDOW_LEN));
       }
+      // Test-only positive control (never fires unless COVERAGE_FORCE_SHAPE_DEGENERATE=1):
+      // see the flag's own comment above.
+      if (FORCE_SHAPE_DEGENERATE) {
+        windows[0] = Array.from({ length: K6_WINDOW_LEN }, () => 0);
+      }
       let degenerateWindows = 0;
       const eAvgs = new Array(K6_WINDOWS);
       const ps = [];
       for (let w = 0; w < K6_WINDOWS; w++) {
         const { perFeature, eAvg } = shapeBlockBet.shapeBetWindow(windows[w], ctx.shapeCal);
-        if (!Number.isFinite(eAvg)) degenerateWindows += 1;
+        // Bug fix (post-Task-11a review, Important 1): eAvg is the MEAN of the two per-
+        // feature e-values, and featureResult's own NaN guard (shape-block-conformal-bet.ts)
+        // returns e=1 (finite) for a degenerate feature — so eAvg stays finite even when a
+        // feature genuinely degenerated, and `!Number.isFinite(eAvg)` can never be true. The
+        // mechanical signal a feature degenerated is its own `p` (NaN on the guarded path,
+        // finite otherwise, per featureResult's return shape) — read that directly instead.
+        if (perFeature.some((f) => !Number.isFinite(f.p))) degenerateWindows += 1;
         eAvgs[w] = eAvg;
         for (const f of perFeature) ps.push(f.p);
       }
@@ -1029,7 +1053,7 @@ const outRoot = process.env.COVERAGE_RESULTS_DIR
 // run.mjs:76 convention. This is a property of the run, not a flag the caller passes, so a
 // smoke run cannot opt itself into the evidence path. --classes does NOT force sim: Task 9 may
 // run the registered n class by class (plan step 2), and `classes_run` below records the scope.
-const MODE = (N === REGISTERED_N && FORCE_THROW === null && !FORCE_SPECTRAL_DEGENERATE) ? 'live' : 'sim';
+const MODE = (N === REGISTERED_N && FORCE_THROW === null && !FORCE_SPECTRAL_DEGENERATE && !FORCE_SHAPE_DEGENERATE) ? 'live' : 'sim';
 const stamp = `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}Z`;
 const outDir = path.join(outRoot, MODE, `run-${stamp}`);
 if (fs.existsSync(outDir)) {
@@ -1087,6 +1111,7 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   tier: 'T1',
   force_throw_hook: FORCE_THROW,
   spectral_force_degenerate_hook: FORCE_SPECTRAL_DEGENERATE,
+  shape_force_degenerate_hook: FORCE_SHAPE_DEGENERATE,
   generated_at: stamp,
 }, null, 1)}\n`);
 

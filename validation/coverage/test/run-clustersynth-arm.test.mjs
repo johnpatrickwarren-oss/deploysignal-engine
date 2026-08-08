@@ -216,6 +216,30 @@ test('a smoke run without the hook has zero skips (real synthetic telemetry neve
   assert.equal(pairRows.filter((c) => c.skipped).length, 0);
 });
 
+// Important 4 (post-Task-11a review): t2_verdict on the pooled row previously fell open to
+// 'not-refuted' at n=0 (`n && ... ? 'FAIL' : 'not-refuted'` — a falsy n short-circuits the
+// condition, silently reading as "cleared" when nothing was measured). Forcing EVERY pair to
+// skip (COVERAGE_T2_FORCE_ALL_DEGENERATE) exercises the n=0 pooled row end to end, not merely
+// in isolation, and proves the fix reads NOT-EXECUTABLE instead.
+test('Important 4 fix: t2_verdict reads NOT-EXECUTABLE (not the fail-open not-refuted) when every pair is skipped', () => {
+  const { summary, manifest } = runHarness(['--shards', '2', '--steps', '9060'], { COVERAGE_T2_FORCE_ALL_DEGENERATE: '1' });
+  assert.equal(manifest.t2_force_all_degenerate_hook, true, 'the hook must be recorded in the manifest');
+  assert.equal(manifest.mode, 'sim', 'a forced-all-degenerate run must never land under results/live');
+
+  const pairRows = summary.cells.filter((c) => c.arm === 'T2-clustersynth');
+  assert.equal(pairRows.length, 10, '2 shards x 5 counters');
+  assert.ok(pairRows.every((c) => c.skipped), 'every pair must be skipped under this hook');
+
+  const pooled = summary.cells.find((c) => c.arm === 'T2-clustersynth-pooled');
+  assert.equal(pooled.n, 0);
+  assert.equal(pooled.k, 0);
+  assert.equal(pooled.t2_crossing_rate, null);
+  assert.ok(!Number.isFinite(pooled.t2_pooled_lower_95), 't2_pooled_lower_95 must be non-finite (NaN) at n=0, not a misleading 0');
+  assert.equal(pooled.t2_verdict, 'NOT-EXECUTABLE',
+    'the pre-fix ternary (`n && ... ? FAIL : not-refuted`) would read this as not-refuted — a false clearance');
+  assert.notEqual(pooled.t2_verdict, 'not-refuted');
+});
+
 test('provenance: an independently re-driven (shard, coordinate) pair matches the harness exactly', async () => {
   const { summary, manifest } = smoke();
   const shardId = summary.cells.find((c) => c.arm === 'T2-clustersynth').shard_id;
@@ -240,8 +264,12 @@ test('provenance: an independently re-driven (shard, coordinate) pair matches th
   const reference = series.slice(0, manifest.reference_ticks);
   const live = series.slice(manifest.reference_ticks, manifest.steps);
   const cal = shapeBlockBet.calibrateShapeBlocks(reference, manifest.w);
+  // Minor 5 (post-Task-11a review): aligned with the harness's own full-windows-only
+  // condition ((w+1)*W <= live.length) — the prior `w*W < live.length` form would include a
+  // trailing PARTIAL window when live.length isn't an exact multiple of W, diverging from
+  // what the harness itself scores whenever --steps is overridden to a non-multiple.
   const windows = [];
-  for (let w = 0; w * manifest.w < live.length; w++) windows.push(live.slice(w * manifest.w, w * manifest.w + manifest.w));
+  for (let w = 0; (w + 1) * manifest.w <= live.length; w++) windows.push(live.slice(w * manifest.w, w * manifest.w + manifest.w));
   const { log } = shapeBlockBet.shapeBetWealth(windows, cal);
   const crossed = log.some((l) => l >= Math.log(20));
   assert.equal(row.k, crossed ? 1 : 0, 'independently recomputed crossing must match the harness row exactly');

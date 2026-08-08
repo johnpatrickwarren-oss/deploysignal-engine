@@ -92,6 +92,11 @@ const LIVE_TICKS = STEPS - REFERENCE_TICKS;
 // to suppress"). Cannot fire by accident (unset env var leaves it false), recorded in the
 // manifest, same convention as run-battery.mjs's COVERAGE_FORCE_SPECTRAL_DEGENERATE.
 const FORCE_DEGENERATE = process.env.COVERAGE_T2_FORCE_DEGENERATE === '1';
+// Test-only hook, named: forces EVERY (shard, coordinate) pair's reference into a constant
+// block, so the pooled row's own n===0 path (post-Task-11a review, Important 4: t2_verdict
+// fail-open at n=0) is exercised end to end, not merely asserted in isolation. Cannot fire by
+// accident, recorded in the manifest, same convention as FORCE_DEGENERATE above.
+const FORCE_ALL_DEGENERATE = process.env.COVERAGE_T2_FORCE_ALL_DEGENERATE === '1';
 
 // ── clustersynth resolution, worktree-safe (see module header) ────────────────
 function resolveClustersynthRoot() {
@@ -161,6 +166,9 @@ for (const shardId of shardIds) {
       // every reference block, so calibrateShapeBlocks's assertNonDegenerate throws.
       reference = reference.map(() => reference[0]);
       forcedOnce = true;
+    }
+    if (FORCE_ALL_DEGENERATE) {
+      reference = reference.map(() => reference[0]);
     }
     const live = series.slice(REFERENCE_TICKS, STEPS);
 
@@ -252,8 +260,13 @@ for (const counter of COUNTER_NAMES) {
     t2_crossing_rate: t2CrossingRate,
     t2_pooled_lower_95: t2PooledLower95,
     // K6.13's own T2 stop condition, same vocabulary as K3.1.3/K6.7 (run.mjs:115): a fired
-    // stop condition = REFUTED, filed as 'FAIL'; otherwise 'not-refuted'.
-    t2_verdict: n && t2PooledLower95 > ALPHA ? 'FAIL' : 'not-refuted',
+    // stop condition = REFUTED, filed as 'FAIL'; otherwise 'not-refuted'. Bug fix
+    // (post-Task-11a review, Important 4): n===0 (every pair skipped) previously fell through
+    // to 'not-refuted' via `n && ... ? 'FAIL' : 'not-refuted'` — a falsy `n` short-circuits the
+    // ternary's condition to false, silently reading as "cleared" when nothing was actually
+    // measured. NOT-EXECUTABLE (A3b's vocabulary, run-battery.mjs's own fallback token) is the
+    // honest reading of a vacuous pooled row.
+    t2_verdict: n === 0 ? 'NOT-EXECUTABLE' : (t2PooledLower95 > ALPHA ? 'FAIL' : 'not-refuted'),
     skipped_count: skippedCount,
     substrate_tier: 'T2',
   });
@@ -274,7 +287,7 @@ const outRoot = process.env.COVERAGE_RESULTS_DIR
 // hook engaged, may write to results/live — the loadEvidence evidence path
 // (validation/certification/lib/collect.mjs:138). Anything else (a smaller --shards/--steps
 // smoke, or the forced-degenerate hook) lands in results/sim, run-battery.mjs's own convention.
-const MODE = (REQUESTED_SHARDS === REGISTERED_SHARDS && STEPS === REGISTERED_STEPS && !FORCE_DEGENERATE) ? 'live' : 'sim';
+const MODE = (REQUESTED_SHARDS === REGISTERED_SHARDS && STEPS === REGISTERED_STEPS && !FORCE_DEGENERATE && !FORCE_ALL_DEGENERATE) ? 'live' : 'sim';
 const stamp = `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}Z`;
 const outDir = path.join(outRoot, MODE, `run-t2-${stamp}`);
 if (fs.existsSync(outDir)) {
@@ -314,6 +327,7 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   threshold: THRESHOLD,
   counters: COUNTER_NAMES,
   t2_force_degenerate_hook: FORCE_DEGENERATE,
+  t2_force_all_degenerate_hook: FORCE_ALL_DEGENERATE,
   clustersynth_root: CLUSTERSYNTH_ROOT,
   generated_at: stamp,
 }, null, 1)}\n`);

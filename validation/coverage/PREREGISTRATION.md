@@ -1078,3 +1078,368 @@ content extending K4.5 (cell-32 field names, K4.1.4; card class, K4.1.9), a new 
 prediction (K4.1.8). Files one disagreement for wiki write-back without resolving it (K4.1.10). No
 endpoint, floor, or seed in §1–14, Amendment v1.1, Amendment v1.2, Erratum v1.3, or Amendment v2.K4
 moves.
+
+## Amendment v2.K3 — 2026-08-08, before any K3 candidate run
+
+Registered before any run of the new candidate `spectral_bet_e_process`
+(`detectors/spectral-bet-e-process.ts`, built and unit-tested at Task 6 of
+`docs/superpowers/plans/2026-08-08-coverage-gap-detectors.md`, commit `f843902`, review fix round 1
+at `b8ba0e0`). Sections 1–14 above and Amendments v1.1/v1.2/v2.K4/v2.K4.1 and Erratum v1.3 stay
+intact; this amendment adds. Every extension is cited against the section it extends; nothing here
+supersedes a frozen value. Authority for this candidate, per the plan's own Authority line:
+`~/concord/knowledge/methodology/pages/coverage-gap-detectors.md` (RATIFIED 2026-08-08), K3 section
+— then this document — then the plan.
+
+### K3.1 Registered constants (verbatim, cross-checked against the module's exports)
+
+Copied verbatim from `docs/superpowers/plans/2026-08-08-coverage-gap-detectors.md`'s Global
+Constraints block:
+
+> K3 **W = 30**, Fourier bins **k ∈ {1, 2, 3}** (f = k/30), ordinate `U = I(f_k)/σ²` with `I(f_k) =
+> |Σ_{t<W} x_t · e^(−i2πkt/W)|² / W`, per-window `p = exp(−U)` (exact Uniform(0,1) for iid N(0, σ²),
+> k ∉ {0, W/2}).
+
+κ = 0.1 is the same shared-derivation constant K4.1 already registers (log-optimal κ* derivation,
+not restated).
+
+**Cross-checked against `detectors/spectral-bet-e-process.ts`'s exports — result: no diff.**
+`export const W_K3 = 30` (`:57`); `export const BINS_K3 = [1, 2, 3]` (`:62`); `export const KAPPA_K3
+= 0.1` (`:66`). BINS_K3 avoids both `{0, W/2} = {0, 15}` by construction — the module's own header
+comment names this explicitly (`:57-66`'s doc block, "Neither touches {0, W/2}").
+
+### K3.2 Ordinate/p/e formulas (verbatim from the code, line cites) and the exactness identity's hypotheses
+
+From `spectralBetWindow` (`spectral-bet-e-process.ts:88-114`):
+
+```
+theta = (-2*pi*k*t) / W_K3                                    // :103
+re += window[t]*cos(theta); im += window[t]*sin(theta)        // :104-105, summed over t<W_K3
+I    = (re*re + im*im) / W_K3                                 // :107
+U    = I / (sigma*sigma)                                      // :108
+p    = exp(-U)                                                // :109
+e    = kappa * p^(kappa-1)                                    // :110
+eAvg = mean_k(e), k in BINS_K3                                // :113
+```
+
+**Exactness identity, hypotheses named** (module docstring, `:22-27`, cross-checked against the
+formula above — result: no diff): for iid **N(0, σ²)** noise, **σ known**, at any Fourier frequency
+`k ∉ {0, W/2}`, the real and imaginary DFT sums are iid N(0, σ²·W/2), so `2U_k ~ chi²_2` exactly,
+`U_k ~ Exponential(1)` exactly, and `p_k = exp(−U_k)` is **exactly** Uniform(0,1) — not asymptotic,
+true at every finite W. `BINS_K3 = [1,2,3]` satisfies `k ∉ {0,15}` by construction (K3.1). AR(1)
+colors the spectrum and breaks the per-bin independence this identity assumes (module docstring,
+`:29`), so the `-ar1` cell (idx 17) is out-of-claim by design — K3.14 registers this as measured,
+not a falsifier.
+
+### K3.3 Known-σ regime — genuinely oracle, closing the I1-class gap for this detector
+
+**Registered in advance, distinguishing this candidate from Erratum v1.3's finding.** The battery
+passes the generator's **true σ** (`SIGMA = 1`, §3) directly as `spectralBetWindow`'s `sigma`
+argument, which the function guards and never estimates (`spectral-bet-e-process.ts:96`, `if
+(!(sigma > 0)) throw ...` — a presence/sign guard on a caller-supplied literal, not a fitting step;
+there is no calibration-window read anywhere in `spectralBetWindow`'s or `spectralBetWealth`'s
+bodies). This is **genuinely oracle**, unlike Erratum v1.3's finding that `safe_t`,
+`universal_inference`, and `group_average_e_value`'s `params: 'oracle'` stamps were wrong for
+mu/sigma (estimated from the calibration window despite the label) — `family_D_spectral_e_detector`
+was the one detector Erratum v1.3 confirmed stayed genuinely oracle (§1.3, "Scope — what stays
+valid," item 1: `{ mu: 0, sigma: 1, phi: cell.phi, ... }` passed literally). This candidate shares
+that same pass-through construction and closes the same class of gap for itself: `params: 'oracle'`
+is registered here as **verified accurate for this detector specifically**, not assumed by
+similarity to a sibling candidate — checked directly against the function bodies above, the same
+standard Erratum v1.3 itself sets ("a `0.00` detection rate asserts the detector ran and found
+nothing ... reporting it as `0.00` would be a silent, false claim," applied here to the `params`
+stamp before any run exists to get it wrong, rather than after).
+
+### K3.4 Bin-combination form — registered honestly, the implemented divergence from the design page named (binding obligation)
+
+**The module implements product-over-windows of per-window bin-averages: `wealth = prod_w
+mean_k(e_{k,w})`.** Per window: bins combine by AVERAGING e-values across `k ∈ BINS_K3`, `eAvg =
+mean_k(e_k)` (`:113`, "never max: an average of e-values with `E[e]<=1` each still has
+`E[eAvg]<=1`; a max does not preserve validity," module docstring `:43-45`). Across windows: the
+per-window `eAvg` values combine by **product**, accumulated in the log domain per ADR 0026
+(`spectralBetWealth`, `:128-135`; `logM = advanceLogWealth(logM, Math.log(eAvg), ...)`, `:133`, one
+call per window) — disjoint windows are independent under the null, so this product is a genuine
+test martingale (module docstring `:46-48`).
+
+The design page's own prose (`~/concord/knowledge/methodology/pages/coverage-gap-detectors.md`, K3
+section: "Per-bin wealth is a product over windows — a genuine test martingale. Bins combine by
+**averaging wealths** across the registered frequency grid") reads as the **opposite composition
+order**: an average, across bins, of each bin's OWN product-over-windows wealth — `mean_k(prod_w
+e_{k,w})` — not the module's `prod_w(mean_k e_{k,w})`. **Both are valid e-processes** (a product of
+per-window bin-averages is a martingale because disjoint windows are independent and each window's
+bin-average has `E[e|H0]<=1`; an average of per-bin wealths is valid under arbitrary dependence
+across bins because each per-bin wealth, itself a product over independent windows, has
+`E[wealth|H0]<=1` and averaging preserves that bound) — **but they are not the same statistic** and
+generally take different numeric values on the same data, since averaging and multiplying do not
+commute.
+
+**This battery registers and scores the form the module implements** — `prod_w(mean_k e_{k,w})` —
+because that is the code Task 8 calls, not a re-derivation of the design page's phrasing. **Measured
+canonical-cell delta between the two forms: 1.5 percentage points** (Task 6 code review,
+`f843902..b8ba0e0`, an unregistered review-time probe on the implemented module — the same review
+context K3.11 discloses for its own separate probe number; this is a different measurement, the
+combination-order delta, not the fire-rate probe). **Filed for wiki write-back at Task 12, not
+adjudicated here**, per the top-of-file precedence rule: the design page's "bins combine by
+averaging wealths" sentence either needs correcting to describe what ships (`prod_w mean_k`) or the
+module needs to change to match the page (`mean_k prod_w`) — this document does not choose between
+them.
+
+**The K3 card's guarantee sentence (Task 7's card, this document's companion commit) describes the
+implemented form — `prod_w(mean_k e_{k,w})` — not the design page's prose.**
+
+### K3.5 Detector and cells (extends §7's table)
+
+`spectral_bet_e_process` joins §7 as a new row: **K3 only**, scored on all six of the class's
+registered cells, reusing §6's existing `CELL_SEED`s and N=2000 trajectory streams unchanged (no
+new fault-cell seed registered — §6's paired-comparison convention, already governing
+`family_D_spectral_e_detector`'s shared use of idx 15/17, extended here to all six):
+
+| idx | severity | phi | `CELL_SEED = BASE_SEED + idx` | arithmetic |
+|---|---|---|---|---|
+| 12 | `A0.5sigma-f0.02` | 0 | 20260819 | `20260807 + 12 = 20260819` |
+| 13 | `A0.5sigma-f0.05` | 0 | 20260820 | `20260807 + 13 = 20260820` |
+| 14 | `A0.75sigma-f0.02` | 0 | 20260821 | `20260807 + 14 = 20260821` |
+| 15 | `A0.75sigma-f0.05` (canonical) | 0 | 20260822 | `20260807 + 15 = 20260822` |
+| 16 | `A0.75sigma-f0.1` | 0 | 20260823 | `20260807 + 16 = 20260823` |
+| 17 | `A0.75sigma-f0.05-ar1` | 0.6 | 20260824 | `20260807 + 17 = 20260824` |
+
+Cross-checked against §6's own table — result: no diff. `spectral_bet_e_process` is scored on these
+six cells alongside `safe_t`/`universal_inference` (all six) and `family_D_spectral_e_detector`
+(idx 15/17 only, §7, measured for the record, REFUSE card). Card lands Task 7 of
+`docs/superpowers/plans/2026-08-08-coverage-gap-detectors.md`.
+
+### K3.6 New arm — cell 33, seed arithmetic
+
+No held-out calibration stream is registered for this candidate — K3.3 establishes σ is passed
+directly, with no calibration step anywhere in the call path, so unlike the two K4 candidates this
+detector has nothing analogous to `calibrateTailBet`/`heldoutRows` to seed. New arm cell,
+continuing directly from `point_tail_bet_e_value`'s arm at idx 32 (Amendment v2.K4, K4.4/K4.5):
+
+| cell | class/arm | `CELL_SEED = BASE_SEED + idx` | arithmetic |
+|---|---|---|---|
+| 33 | `spectral_bet_e_process` S2/S3 arm (K3.7) | 20260840 | `20260807 + 33 = 20260840` |
+
+Trajectory seeds: `seed(i) = CELL_SEED + 7919*i`, `i = 0..1999`, §6's formula shape unchanged.
+
+### K3.7 New arm — cell 33, healthy (S2) and S3
+
+**Extends A1/K4.5's pattern to this candidate.** Single iid-Gaussian series (σ=1, §3), `seed(i) =
+20260840 + 7919*i`, `i = 0..1999`. Test span is K3.9's registered 6-window partition of the
+post-onset slice, `t = 100..279` (6 disjoint windows of `W_K3 = 30`), `t = 280..299` unused —
+applied identically to both rows below (same span the fault cells use, K3.9).
+
+- **Healthy (S2) arm.** No injection. Because this detector is a running, window-indexed process
+  (like `family_D_spectral_e_detector`), not a per-point terminal read (unlike
+  `point_tail_bet_e_value`'s K4.5 arm), detection is read the same way K3.9 reads it for the fault
+  cells: a trajectory is detected iff `spectralBetWealth`'s `log[]` array (`spectral-bet-e-process.ts:118-125`,
+  the cumulative log-wealth at each window index) satisfies `wealth >= 20`
+  (`log_M >= Math.log(20)`) at **any** of the 6 window checkpoints — the any-prefix, Ville-inequality
+  reading, martingale time being the window index here rather than the tick index. Per-trajectory
+  denominator (not per-point — this candidate has no per-tick reading the way `point_tail_bet_e_value`
+  does; K3.13's own stop-condition text is "healthy-arm **crossing rate**," a per-trajectory
+  quantity, matching this reading, not K4.7's per-point one).
+- **Power (S3) arm, `shift_sigma: 3`.** Same series/seeds + `injectStep(delta=3)`
+  (`inject.mjs:27-29`), the certification's registered sustained-step shift — the same basic
+  sanity/power check independent of the oscillation class this detector targets, mirroring
+  A1/K4.5's own S3 arms exactly (a step is not an oscillation; this is a construction sanity check,
+  not a K3-class power measurement). Detection: any of the 6 window checkpoints crosses 20.
+
+**Per-cell fields, registered** — chosen to avoid a collision with `CLASS_INSTRUMENTS`' foreign-
+instrument strings (K3.15 explains why this matters for a `test_martingale`-class card):
+
+- S2 row: `detector`, `arm: 'healthy'`, `cell_index: 33`, `null_id`, `phi: 0`, `params: 'oracle'`
+  (K3.3), `alpha: 0.05`, `n: 2000`, `ticks: 300`, `onset: 100`, `windows: 6`, `window_len: 30`,
+  `window_span: '[100,280)'`, `k` (count of trajectories crossing), `trajectory_crossing_rate =
+  k/n`, `lower_95` (Wilson 95% lower bound on `trajectory_crossing_rate`, `k`/`n=2000` — the exact
+  pair K3.13's stop condition tests), `final_wealth_mean`, `final_wealth_median` (wealth
+  descriptives, across the N=2000 trajectories' window-5 wealth), `non_finite_wealth`,
+  `adapter_failures`, `verdict: lower_95 > alpha ? 'FAIL' : 'not-refuted'` (A1's `VERDICT_MAP`
+  token pair, `score.mjs:31`), `not_executable_reason`, `substrate_tier: 'T1'`.
+- S3 row: `detector`, `arm: 'power'`, `cell_index: 33`, `null_id`, `phi: 0`, `params: 'oracle'`,
+  `shift_sigma: 3`, `alpha: 0.05`, `n: 2000`, `ticks: 300`, `onset: 100`, `fires` (count crossing),
+  `detection_rate = fires/n`, `final_wealth_mean`, `final_wealth_median`, `non_finite_wealth`,
+  `adapter_failures`, `verdict: detection_rate >= 0.50 ? 'POWERED' : 'INERT'`,
+  `not_executable_reason`, `substrate_tier: 'T1'`.
+
+### K3.8 Fault-cell field registration (extends §7/A8's emitted-cell-schema convention)
+
+Every fault cell (idx 12–17) scored by `spectral_bet_e_process` carries: `detector`, `fault_class:
+'K3'`, `severity`, `canonical`, `cell_index`, `null_id`, `phi`, `params: 'oracle'` (K3.3), `alpha:
+0.05`, `n: 2000`, `ticks: 300`, `onset: 100`, `windows: 6`, `window_len: 30`, `window_span:
+'[100,280)'` (K3.9), `fires` (count of trajectories crossing 20 at any of the 6 window
+checkpoints), `detection_rate = fires/n`, `final_wealth_mean`, `final_wealth_median`,
+`non_finite_wealth` (A3a's field name), `adapter_failures`, `verdict:
+'POWERED'/'INERT'/'NOT-EXECUTABLE'` (A3b's vocabulary — these are §8/A4 coverage-decision cells,
+not S2/S3 card-protocol cells; K3.15 names the distinction), `not_executable_reason`,
+`substrate_tier: 'T1'`.
+
+### K3.9 Endpoint — window partition, registered exactly (read from run-battery.mjs's existing convention)
+
+Test span is §5's post-onset slice, `[100, 300)`, 200 ticks. `W_K3 = 30` divides 200 into
+`floor(200/30) = 6` complete disjoint windows (180 ticks), with **20 ticks left over**. Registered
+partition, shown exactly: window 0 = `t ∈ [100,130)`, window 1 = `[130,160)`, window 2 =
+`[160,190)`, window 3 = `[190,220)`, window 4 = `[220,250)`, window 5 = `[250,280)` — six windows
+covering `t = 100..279` inclusive. **`t = 280..299` (the last 20 ticks) is unused** — `spectralBetWindow`
+throws unless `window.length === W_K3` exactly (`spectral-bet-e-process.ts:93-95`), so a seventh,
+partial (20-tick) window is not constructible without truncation or padding, and neither is
+registered.
+
+This is the reading run-battery.mjs's existing conventions support: `family_D_spectral_e_detector`'s
+adapter is `kind: 'process'`, a `read(data, cell)` function that builds an instrument and steps it
+(`run-battery.mjs:297-309`), but `spectralBetWealth`'s own interface (Task 6) takes pre-chunked
+`windows: number[][]`, not a per-tick step call — so Task 8's adapter is registered here to slice
+`data.series.slice(100, 280)` into six contiguous length-30 chunks and call
+`spectralBetWealth(windows, SIGMA)` once per trajectory, reading the returned `log[]` array
+(`spectral-bet-e-process.ts:118-125`) for the any-prefix crossing check (`log[i] >= Math.log(20)`
+for any `i = 0..5`) rather than re-deriving crossing from the final wealth alone — the any-time
+(Ville-inequality) property K4's own A2/K4.6 registrations already establish as this study's house
+reading for a running wealth process, applied here at window granularity since the martingale time
+is the window index, not the tick index.
+
+**Class endpoint (decisive): wealth ≥ 20 (`log_M ≥ Math.log(20) ≈ 2.9957`) at any of the 6 window
+checkpoints within `[100,280)`.** `detection_rate` = fraction of N=2000 trajectories crossing.
+
+### K3.10 f = 0.05 leakage note — registered in advance
+
+Canonical severity injects `amp = 0.75σ` at `freq = 0.05` (`injectOscillation`, `inject.mjs:37-41`).
+**`f = 0.05` is not a Fourier frequency of `W = 30`** — the registered grid's frequencies are `f_k =
+k/30` for `k ∈ {1,2,3}`, i.e. `{0.0333, 0.0667, 0.1}`; `0.05` falls strictly between `k=1`
+(`0.0333`) and `k=2` (`0.0667`), on neither grid point. **Spectral leakage across bins `k ∈ {1,2}`
+is expected**, registered here in advance: canonical-cell power is expected to be carried by BOTH
+`k=1` and `k=2`'s contribution to `eAvg` (partial energy split between two neighboring bins, neither
+at the injected frequency exactly), not concentrated at a single bin the way grid cell idx 16
+(`A0.75sigma-f0.1`, `f = 3/30 = 0.1` exactly, a clean hit on `k=3`) would show. **A low
+canonical-cell detection rate alongside strong `k=3`-carrying grid-cell power (idx 16) — or grid
+cell idx 14 (`f=0.02`, likewise off-grid, nearer `k=1`) reading much weaker than idx 13
+(`f=0.05`, same off-grid distance from `k=1`/`k=2` but higher amplitude) — is registered here as a
+**grid-vs-bin finding**: the fault-class table's frequency spacing (registered independently of this
+detector, §1) missing this detector's own registered bins. Reported, not treated as a defect in the
+construction itself.
+
+### K3.11 Review-time power probe — disclosed by name and provenance (binding obligation)
+
+**Register the K3 canonical prediction with the probe that produced it named, not silently absorbed
+as an independent derivation.** During Task 6's code review (commit range `f843902..b8ba0e0`,
+`.superpowers/sdd/2026-08-08-coverage-gap-detectors/review-f843902..b8ba0e0.diff`, carried forward
+in `progress.md`'s Task 6 note), the reviewer ran an **unregistered, review-context probe** of the
+implemented module: 6 windows, N=2000, threshold 20, canonical severity, seeds not the ones this
+document registers (§6/K3.5's `CELL_SEED` formula was not the stream used in review context) —
+**measured fire rate 0.642**. This number is disclosed here **by name and provenance**, not hidden
+behind an independently-derived account: transparency over feigned ignorance.
+
+**Registered prediction: expected YES at canonical** — the probe (0.642) sits well above
+`COVERAGE_FLOOR = 0.50`, and K3.10's leakage note gives a mechanism (power split across two
+neighboring bins, not lost) rather than a reason to expect the registered run to fall far short of
+the probe. **Falsifier: canonical-cell (idx 15) detection rate at the REGISTERED §6 seeds `<
+0.50`.** The probe is evidence toward the direction of this prediction, not a substitute for the
+registered run — a materially different registered-seed result (e.g., far below 0.50) is reported
+as a probe-vs-registered-run discrepancy in its own right, not silently reconciled or tuned away.
+
+### K3.12 Wealth floor — registered, structurally unreachable at this span (binding obligation)
+
+`LOG_WEALTH_FLOOR_K3 = Math.log(1e-12) ≈ -27.631` (`spectral-bet-e-process.ts:71`) binds inside
+`advanceLogWealth` (`detectors/_wealth.ts:31`, `Math.max(logFloor, next)`) only once the running
+cumulative log-wealth would fall below it. **At this document's registered 6-window test span
+(K3.9), the floor is registered here as structurally unreachable** — Task 6 review's own finding
+(carried forward in `progress.md`) is that the floor binds only at window ≥ 12, double this
+battery's span. Registered so a healthy-arm run reading a small final wealth is read as "small, not
+floored" — the floor's presence in the module (shared with every ADR 0026 detector, `_wealth.ts`)
+is not evidence of an active guard at this span. Relevant only if a future variant of this study
+extends the window count past 12; not expected to matter for any endpoint this amendment registers.
+
+### K3.13 Stop condition (verbatim)
+
+Copied verbatim from the plan's Global Constraints:
+
+> Stop conditions (registered per group in the amendment): K3 — healthy-arm crossing rate Wilson LB
+> > α. ... A fired stop condition = REFUTED: record, file, class stays NO.
+
+`α = 0.05` per §3 (unchanged, cited not redefined). Applies to K3.7's S2 arm's
+`trajectory_crossing_rate`/`k`/`n = 2000` (per-trajectory, K3.7's own registration — not per-point;
+this candidate has no per-tick reading). A fired stop condition on this candidate refutes and
+records `spectral_bet_e_process`; per §13/A4, the K3 class stays NO only if every USE detector
+scored on it (canonical-cell idx 15, `safe_t`/`universal_inference`, and now this candidate) fails
+to clear `COVERAGE_FLOOR` — `family_D_spectral_e_detector` is already REFUSE (§7) and its
+card-verdict gate (§8/A4) bars it from ever counting toward YES regardless of any rate measured on
+it, unchanged by this amendment.
+
+### K3.14 Predictions, with falsifiers
+
+- **Healthy crossing rate.** *Prediction:* `<= alpha = 0.05` (validity, per the exactness identity,
+  K3.1/K3.2). *Falsifier:* the stop condition itself (K3.13).
+- **K3 canonical (`A0.75sigma-f0.05`, idx 15) detection.** *Prediction:* `>= 0.50`, expected YES —
+  per K3.11's disclosed probe (0.642) and K3.10's leakage note (power carried across `k=1`/`k=2`,
+  not lost to the off-grid frequency). *Falsifier:* canonical-cell detection rate `< 0.50`.
+- Grid cells (12, 13, 14, 16) are recorded for context; per §8/§10.1, only the canonical cell
+  decides COVERED/NOT_POWERED for this candidate, unchanged by this amendment. Idx 16's clean-hit
+  reading (K3.10) is registered in advance as the comparison point for the grid-vs-bin finding, not
+  as a second decisive cell.
+- **`-ar1` cell (idx 17) — measured out-of-claim.** Same reasoning as K4.9: the exactness identity
+  (K3.2) assumes iid Gaussian noise; AR(1) colors the spectrum and breaks the per-bin independence
+  the identity's `2U_k ~ chi²_2` step relies on (module docstring, `:29`), so cell 17 measures a
+  regime the card's guarantee does not claim. A surprising result on cell 17 is reported, not
+  treated as a falsifier of this section's canonical prediction.
+
+### K3.15 Card-instrument field-name note — a registered gap, not resolved here
+
+**Registered, not solved by this amendment.** The K3 card (Task 7's companion commit) is class
+`test_martingale` (design-page K3 section: "genuine test martingale"; matches
+`family_D_spectral_e_detector`'s own class). `CLASS_INSTRUMENTS['test_martingale'] =
+['increment_estimator']` (`validation/certification/lib/constants.mjs:9-12`) — a validity (S2)
+candidate under this class needs an `increment_estimator: {mean, sd, lower95_one_sided}` field
+(`guards.mjs:25-28`'s shape) to be recognized by `isValidityCell`
+(`validation/certification/lib/score.mjs:11-12`), which checks for `increment_estimator`,
+`stopped_mean`, `exceedance`, `crossing_rate`, or `mean_e` — **not** `detection_rate`. K3.7/K3.8's
+registered field names (`trajectory_crossing_rate`, `detection_rate`, `final_wealth_mean`, etc.) are
+chosen deliberately to avoid the four foreign-instrument strings (`exceedance`, `mean_e`,
+`crossing_rate`, `stopped_mean`) — `applyGuards` (`guards.mjs:14-19`) reads a cell carrying a
+foreign instrument with no instance of its own class's instrument as `VOID`, and the field names
+this document could otherwise have reused by analogy with A1/K4.5 (`exceedance`, `mean_e`) are
+exactly two of those four strings.
+
+**Consequence, registered plainly:** as this amendment's fields stand, arm cell 33's healthy row
+will not be picked up by `isValidityCell` at all (no `increment_estimator`), so S2 is expected to
+read MISSING even after a registered run lands — not just pre-run, unlike the K4 candidates, whose
+`exceedance`/`mean_e` fields are exactly what `terminal_e_value`'s own instrument set names. Per
+`family_C_safe_hotelling`'s own precedent in the golden table (`s2: MISSING, s3: PASS` →
+`NOT_EXECUTABLE`, not `USE`), an S2-MISSING card cannot reach USE regardless of how strongly its S3
+or the study's own registered endpoint (K3.13/K3.14) power out. **This document does not register a
+formula for `increment_estimator`** — computing one (e.g., a mean/sd/one-sided-lower-CI on the
+per-window `eAvg` sample, mirroring `family_D_spectral_e_detector`'s own card-falsifier shape,
+"increment lower95 1.0011") is an adapter-design decision for Task 8, not adjudicated in advance
+here. Flagged so Task 8 is not surprised if a fully successful, powerful registered run leaves this
+card capped at `NOT_EXECUTABLE` — a mechanical consequence of the class/instrument pairing, not of
+the detector's own validity or power.
+
+### K3.16 Fallbacks — inherited from A3, not restated
+
+NOT-EXECUTABLE, non-finite, and vacuity handling for this candidate's cells (fault cells 12–17 and
+arm cell 33) follow A3 unchanged — `non_finite_wealth` field name (A3a), `NOT-EXECUTABLE` verdict
+token with `not_executable_reason` (A3b), and the N=2000-denominator vacuity rule (A3c). No new
+fallback text is registered here; A3 already governs every candidate scored under this study,
+`spectral_bet_e_process` included.
+
+### K3.17 House rules, mapped
+
+Per `~/concord/knowledge/methodology/pages/pre-registration-discipline.md`: (1) committed before any
+run of this candidate — no `spectral_bet_e_process` battery run exists at this commit. (2) A failed
+endpoint (K3.13's stop condition, or K3.14's falsifier) is a publishable result; nothing above moves
+afterward. (3) No post-hoc analysis exists yet; reserved, to be labelled and carry no verdict if
+written. (4) Fallback rule: K3.16, inherited from A3. (5) Does not apply, as §11 rule 5 already
+states for this synthetic battery (quoted in full at K4.1.9's own restoration, not repeated). (6)
+Results append-only: binding on this candidate's future runs, same manifest shape as §11 rule 6 and
+A8's field list. (7) Reruns only for a named code defect, prior run preserved: binding. (8) The
+report states every endpoint's number and verdict: binding on this candidate's task report.
+
+### Amendment summary
+
+Adds, extending the sections named in each subsection above: a new §7 row (K3.5); a new arm at cell
+33 with its own seed arithmetic (K3.6/K3.7); the window-partitioned endpoint (K3.9); the K3 stop
+condition applied to this candidate (K3.13, quoting the plan verbatim); predictions with falsifiers
+(K3.14); the `-ar1` cell's out-of-claim scope (K3.14); fallback inheritance (K3.16, citing A3).
+Registers, without superseding anything: the constants cross-check (K3.1), the formula/exactness-
+identity line cites (K3.2), the genuinely-oracle known-σ finding (K3.3), the bin-combination form
+divergence from the design page with its measured 1.5pp delta (K3.4, filed for wiki write-back), the
+f=0.05 leakage note (K3.10), the disclosed review-time power probe (K3.11), the structurally-
+unreachable wealth floor (K3.12), and the card-instrument field-name gap for `test_martingale`
+(K3.15, not resolved here). No endpoint, floor, or seed in §1–14, Amendment v1.1, Amendment v1.2,
+Erratum v1.3, Amendment v2.K4, or Amendment v2.K4.1 moves.

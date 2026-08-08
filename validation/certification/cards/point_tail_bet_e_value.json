@@ -9,21 +9,21 @@
   "class": "terminal_e_value",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "7bf6372108fb7e12d5ba8b8277dae3c465354be0"
+    "sha": "a48c78784f805fd417cd9936abb3680353d7ca4d"
   },
   "source_files": [
     {
       "path": "detectors/point-tail-bet-e-value.ts",
-      "sha256": "46c5caf862687000f8589d5830a4b042462c628ce7602f08cd306d86cd3cbb73"
+      "sha256": "046e2d1ad786e53796f165df0af81cc9ad02a006e9d8183dfc4c2bd16d1f9a8b"
     }
   ],
   "guarantee": {
-    "sentence": "per-point conformal tail-bet: p = (1+rank)/(n+1) is super-uniform under exchangeability of held-out and live scores (distribution-free, exact); e = 0.1*p^(-0.9) satisfies E[e|H0] <= 1 by the calibrator integral identity",
+    "sentence": "per-point conformal tail-bet: p = (1+rank)/(n+1) is super-uniform under exchangeability of held-out and live scores (distribution-free); under THIS construction's self-fit median/MAD held-out calibration the exchangeability is O(1/n)-approximate and mildly anti-conservative, NOT exact -- see regime.exchangeability_note, which this sentence previously contradicted; e = 0.1*p^(-0.9) satisfies E[e|H0] <= 1 by the calibrator integral identity",
     "quantifiers": [
       {
-        "text": "under exchangeability, any score distribution",
+        "text": "under O(1/n)-approximate exchangeability (self-fit reference), any score distribution",
         "tag": "proof",
-        "proof_artifact": "conformal super-uniformity + integral of kappa*p^(kappa-1) = 1; unit test asserts both"
+        "proof_artifact": "conformal super-uniformity (exact for a FIXED reference) + integral of kappa*p^(kappa-1) = 1; unit test asserts both. The self-fit O(1/n) gap (K4.1.10) is carried in regime.exchangeability_note and is NOT proved away here"
       }
     ],
     "regime": {

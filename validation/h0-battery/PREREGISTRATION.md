@@ -525,3 +525,60 @@ declaring run — own-study-only reach, and no self-erasure — reports registry
 provenance, and keeps every legacy declaration's report line, annotated `covered_by_registry: true`
 rather than removed; `report_format` `4 → 5`. **No endpoint, threshold, α, N, T, null, seed,
 registered expectation or verdict rule in §1–12 moves, and no h0-battery run is re-run.**
+
+## Erratum A1.1 — 2026-08-08, A1.8's "no card is re-frozen" is wrong, and the reason is a gap in the expiry mechanism
+
+Registered before the card re-freeze it authorizes and before the C44 re-score. Corrects one line
+of A1.8 by quote-and-correct; A1.1–A1.7 and the registered expectation in A1.6 stand exactly as
+written, and no verdict, endpoint, threshold, α, N, T, null, seed or registered expectation moves.
+
+**Quote, A1.8:**
+
+> - **Any card content change.** No `validation/certification/cards/*.json` file is edited or
+>   re-frozen.
+
+**The first sentence stands; the second is wrong.** No card's *content* changes — no claim, regime,
+guarantee, alias, prior_evidence or endpoint is touched. But nine of the fourteen cards pin
+`validation/certification/verdict.mjs` by sha256 in their `source_files`, and A1.7's report-provenance
+change edits that file, so `npm run cert:expiry` reports those nine `EXPIRED ... (changed)` and exits
+1 until they are re-stamped. Measured: `validation/certification/expiry-check.mjs:19,35`. The nine are
+`family_A_betting_e_process`, `family_A_mixture_supermartingale`, `family_C_safe_hotelling`,
+`family_D_spectral_e_detector`, `family_E_conformal`, `safe_t_e_value`,
+`sequential_mmd_betting_e_process`, `sequential_ui_e_process`, `universal_inference_e_value`.
+
+**Registered action: run `validation/certification/tools/freeze-cards.mjs` in its own commit after
+the code commit.** `lib/freeze.mjs`'s `stampPins` rewrites exactly two fields — `engine_pin`
+(`{version, sha}`) and each `source_files[].sha256` — and nothing else; verified by stamping all
+fourteen cards in memory against a dummy sha and diffing every top-level key, which reports
+`engine_pin, source_files` and no other field, with `validation/certification/verdict.mjs` the only
+`source_files` entry whose hash moves. This is the same two-step the repo already uses: `7ab3b4d`
+changed the scorer and `77deeb1` re-froze afterwards.
+
+**And the finding that makes this erratum worth more than a bookkeeping note.**
+`validation/certification/lib/collect.mjs` is pinned by **no card**. Tallied across all fourteen
+`source_files` lists: `verdict.mjs` 9, `lib/score.mjs` 9, `detectors/validity-envelope.ts` 9, and
+`lib/collect.mjs` **0**. The collector is what decides which evidence a card is scored on — it is
+the file this whole amendment changes — so **A1.7's substantive change would have expired nothing**.
+Had A1.7 not also touched the report writer, every card would have read "current" while the evidence
+under it changed by 440 cells. Five cards
+(`family_E_conformal_heldout`, `group_average_e_value`, `point_tail_bet_e_value`,
+`shape_block_conformal_bet`, `spectral_bet_e_process`) pin neither `verdict.mjs` nor `score.mjs` and
+so are outside the scorer's expiry set entirely.
+
+**Named, not fixed.** Adding `lib/collect.mjs` to fourteen cards' `source_files` *is* a card content
+change, it would expire every card on every collector edit, and it is a decision about the expiry
+protocol rather than about this study's evidence. It needs the certification protocol's own
+registration, not h0-battery's. Recorded here and owed.
+
+### Erratum summary
+
+A1.8's claim that no card is re-frozen is wrong: nine of fourteen cards pin
+`validation/certification/verdict.mjs` by sha256, A1.7 edits that file, so `cert:expiry` exits 1
+until the cards are re-stamped. Authorizes one `freeze-cards.mjs` commit after the code commit,
+which `stampPins` confines to `engine_pin` and `source_files[].sha256` — verified by stamping all
+fourteen cards against a dummy sha and diffing every key — the same two-step as `7ab3b4d` then
+`77deeb1`. **No card content, claim, regime or endpoint changes and no verdict moves.** Records the
+finding behind it: `lib/collect.mjs` is pinned by **no card**, so the change that actually alters
+which evidence is scored would have expired nothing, and five cards pin neither the scorer nor the
+report writer. Naming that gap, not closing it — it belongs to the certification protocol's own
+pre-registration.

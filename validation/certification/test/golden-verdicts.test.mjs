@@ -60,19 +60,26 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // canonical rate 0.043 < 0.50 floor). Every other card's verdict, tier and four stage
 // statuses are unchanged.
 //
-// Extended 2026-08-08, coverage-gap-detectors Task 3 (card frozen at 7bd2818): a third K4
+// Extended 2026-08-08, coverage-gap-detectors Task 3 (card frozen at 8546bef): a third K4
 // candidate lands, point_tail_bet_e_value (the per-point conformal tail-bet construction,
 // PREREGISTRATION.md Amendments v2.K4/v2.K4.1). Its prior_evidence cites the coverage study
-// (S2, same as the other two K4 cards) and, at stage S1, the ratified design page
-// (methodology/coverage-gap-detectors) -- so S1 reads DECLARED per scoreS1's own rule
-// (lib/score.mjs: DECLARED iff the card cites a stage-S1 entry pointing at a wiki page), the
-// same mechanism family_E_conformal's S1+S2 entry already exercises. No battery run of this
-// candidate exists yet -- Task 4's adapter is what produces one -- so S2/S3 read MISSING, S4
-// PASS (nothing priced against budget yet), overall NOT_EXECUTABLE: the correct, non-tuned
+// (S2, same as the other two K4 cards) and the ratified design page
+// (methodology/coverage-gap-detectors) as supporting evidence. No battery run of this
+// candidate exists yet -- Task 4's adapter is what produces one -- so S1/S2/S3 read MISSING,
+// S4 PASS (nothing priced against budget yet), overall NOT_EXECUTABLE: the correct, non-tuned
 // pre-run verdict, same convention as group_average_e_value's and family_E_conformal_heldout's
 // own NOT_EXECUTABLE entry point above. Expected to move once a battery run lands, at which
 // point this table re-freezes again by the same convention as the deltas above. Test titles
 // renamed eleven -> twelve to match.
+//
+// Corrected 2026-08-08 (card re-frozen at 9f0be14): the design-page prior_evidence entry was
+// first stamped stage 'S1', reading DECLARED. Review adjudicated that wrong -- scoreS1's
+// string-match is a v1 floor standing in for measured dispatch, not a general "any wiki
+// citation" flag, and both existing DECLARED precedents (family_E_conformal's S1+S2 entry,
+// sequential_mmd_betting_e_process's S1 entry) cite source pages backed by real run artifacts,
+// unlike this pre-run design doc; the two sibling K4 cards drawing on the same design page
+// already read MISSING. Relabeled stage 'design' (the citation itself is unchanged); S1 now
+// reads MISSING, matching the card's true pre-run state.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -85,7 +92,7 @@ const GOLDEN = {
   universal_inference_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'INERT', s4: 'PASS' },
   group_average_e_value: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
   family_E_conformal_heldout: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
-  point_tail_bet_e_value: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'DECLARED', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
+  point_tail_bet_e_value: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
 };
 
 function runHarness(t) {

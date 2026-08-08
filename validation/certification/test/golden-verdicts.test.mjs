@@ -1,6 +1,6 @@
 // validation/certification/test/golden-verdicts.test.mjs
 //
-// I5 -- the nine verdicts are frozen here. Any change to the scorer, the guards, the
+// I5 -- the eleven verdicts are frozen here. Any change to the scorer, the guards, the
 // cards, or the evidence corpus that moves a verdict fails this test by name.
 //
 // WHY A GOLDEN TABLE AND NOT A REPORT DIFF. The protocol's own rule is that endpoints and
@@ -36,6 +36,16 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // are unchanged, including safe_t_e_value's: FIX 1 makes the mean rule fire on 5 N4-p09
 // cells instead of 3 (2026-08-07's pair no longer clears), but all 5 sit outside the
 // published estimated-phi-excluded regime, so the stage status itself does not move.
+//
+// Extended 2026-08-07, coverage-matrix-v1 Task 7 (cards frozen at 4c16092): two new
+// candidate cards land, group_average_e_value (Task 6, K2) and
+// family_E_conformal_heldout (Task 7, K4). Both freeze with prior_evidence pointing at
+// coverage/results/live/* (PREREGISTRATION.md), and no run under that study exists yet
+// -- the battery harness that produces it is Task 8/9's job, not this one's. Both
+// therefore read S1/S2/S3 MISSING (no evidence to score), S4 PASS (nothing priced against
+// budget yet), overall NOT_EXECUTABLE -- the correct, non-tuned verdict for a card with no
+// evidence, not a defect. This is expected to move once Task 9's battery run lands, at
+// which point this table re-freezes again by the same convention as the P-A3 update above.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -46,6 +56,8 @@ const GOLDEN = {
   sequential_mmd_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'DECLARED', s2: 'REFUTED', s3: 'MISSING', s4: 'PASS' },
   sequential_ui_e_process: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'PASS', s3: 'MISSING', s4: 'PASS' },
   universal_inference_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'INERT', s4: 'PASS' },
+  group_average_e_value: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
+  family_E_conformal_heldout: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
 };
 
 function runHarness(t) {
@@ -65,7 +77,7 @@ function runHarness(t) {
   return { dir, cards };
 }
 
-test('the nine verdicts are exactly the frozen table', (t) => {
+test('the eleven verdicts are exactly the frozen table', (t) => {
   const { cards } = runHarness(t);
   assert.deepEqual(Object.keys(cards).sort(), Object.keys(GOLDEN).sort(), 'the set of certified detectors changed');
   for (const [id, want] of Object.entries(GOLDEN)) {
@@ -117,7 +129,7 @@ test('universal-inference keeps its N4 cells in regime: its claim quantifies ove
   assert.ok(n4.every((c) => c.out_of_regime === false && c.mapped === 'CLEARED'));
 });
 
-test('the report the harness writes carries the same nine verdicts as its card JSONs', (t) => {
+test('the report the harness writes carries the same eleven verdicts as its card JSONs', (t) => {
   const { dir, cards } = runHarness(t);
   const report = readFileSync(join(dir, 'REPORT.md'), 'utf8');
   assert.ok(existsSync(join(dir, 'MISSING-CELLS.md')));

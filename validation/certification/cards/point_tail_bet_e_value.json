@@ -1,0 +1,63 @@
+{
+  "protocol_version": 1,
+  "detector_id": "point_tail_bet_e_value",
+  "aliases": [
+    "point_tail_bet",
+    "tail_bet"
+  ],
+  "family": null,
+  "class": "terminal_e_value",
+  "engine_pin": {
+    "version": "0.6.6-pre",
+    "sha": "7bd28183aa4b798d9c5211722f828ad37ac8a39e"
+  },
+  "source_files": [
+    {
+      "path": "detectors/point-tail-bet-e-value.ts",
+      "sha256": "46c5caf862687000f8589d5830a4b042462c628ce7602f08cd306d86cd3cbb73"
+    }
+  ],
+  "guarantee": {
+    "sentence": "per-point conformal tail-bet: p = (1+rank)/(n+1) is super-uniform under exchangeability of held-out and live scores (distribution-free, exact); e = 0.1*p^(-0.9) satisfies E[e|H0] <= 1 by the calibrator integral identity",
+    "quantifiers": [
+      {
+        "text": "under exchangeability, any score distribution",
+        "tag": "proof",
+        "proof_artifact": "conformal super-uniformity + integral of kappa*p^(kappa-1) = 1; unit test asserts both"
+      }
+    ],
+    "regime": {
+      "phi_max": 0,
+      "m_min": 10000,
+      "baseline": "held-out empirical",
+      "nulls": "exchangeable/iid",
+      "phi_known": true,
+      "exchangeability_note": "O(1/n)-approximate, anti-conservative, under this construction's self-fit median/MAD held-out calibration (K4.1.10) -- not the exact identity the module docstring and design page state; filed for wiki write-back, unresolved here"
+    }
+  },
+  "shipped_path": {
+    "kind": "per-point conformal tail-bet e-value (K4 point-outlier candidate)",
+    "estimator": null,
+    "notes": "K4 (point-outlier) candidate; not deploysignal's shipped selector path -- see family_E_conformal_heldout.json for the other K4 held-out candidate (bounded-increment wealth process) and family_E_conformal.json for the shipped chi_p route's own unreachability finding"
+  },
+  "budget": {
+    "participating": true,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
+  "falsifier": "healthy-arm per-point exceedance Wilson 95% lower bound > 0.05",
+  "prior_evidence": [
+    {
+      "stage": "S2",
+      "study": "coverage",
+      "runs": "coverage/results/live/*",
+      "wiki": "methodology/fault-class-coverage-matrix"
+    },
+    {
+      "stage": "S1",
+      "study": "coverage-gap-detectors",
+      "runs": null,
+      "wiki": "methodology/coverage-gap-detectors"
+    }
+  ]
+}

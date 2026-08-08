@@ -91,10 +91,12 @@ because its `N4-p09` cells cleared on a 0.016 exceedance while carrying `mean_e`
 That verdict is withdrawn. The current run reaches USE T1 for safe-t on a regime narrowed to
 known phi, with those cells named as excluded.
 
-Each run records a `report_format` in its manifest — the shape of `REPORT.md`, not the
-protocol version, which stays 1. Format 1 has no S1 column and no caveat footer; format 2
-has both. `test/report-consistency.test.mjs` reads that field so a preserved run is checked
-against the shape it was written under.
+Each run records a `report_format` in its manifest — the shape of the run's emitted
+markdown, not the protocol version, which stays 1. Format 1 has no S1 column and no caveat
+footer; format 2 has both; format 3 additionally carries, in `COVERAGE.md`'s detail section,
+one line per YES class naming any card that also measured the class COVERED but is barred
+from carrying it by its own non-USE verdict. `test/report-consistency.test.mjs` reads that
+field so a preserved run is checked against the shape it was written under.
 
 ### Card pins, and why the sha moved four times
 

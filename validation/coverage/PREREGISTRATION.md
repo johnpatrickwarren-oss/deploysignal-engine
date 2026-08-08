@@ -590,3 +590,57 @@ name the defect it fixes.
 
 No other text in §1–14 or Amendment v1.1 changes. This amendment's three items are corrections to
 v1.1's own text, not new rulings — v1.1's design decisions (A1–A8) stand as registered.
+
+## Erratum v1.3 — 2026-08-08 (post-run, discloses, changes nothing)
+
+This is an **erratum, not an amendment**: it postdates the runs it describes
+(`run-20260808T010208Z`, scored into `validation/certification/results/run-20260808T011035Z`),
+so it cannot register anything. It **changes no endpoint, no floor, no threshold, no seed, no
+grid, no falsifier, and no verdict.** Nothing in §1–14, Amendment v1.1, or Amendment v1.2 is
+superseded. It records one defect in what §4 says the run did.
+
+**The defect.** §4 registers the baseline as "iid Gaussian, oracle parameters … (`mu:0, sigma:1`
+passed directly — no calibration-window estimation)", and every emitted cell carries
+`params: 'oracle'`. For three of the five detectors that description is wrong: the parameters are
+**estimated from the 100-tick calibration window**, not passed.
+
+- `safeTwoSampleTEValue(values, cal, test, opts?)` (`detectors/safe-t-e-value.ts:103-108`) accepts
+  no `mu` and no `sigma`. Its only relevant option is `ar1Phi`
+  (`detectors/safe-t-e-value.ts:55-62`), documented as defaulting to the engine's
+  Kendall-corrected `computePerSignalAr1Phi` estimated on the calibration window. The harness
+  passes `safeTOpts(phi) = (phi > 0 ? { ar1Phi: phi } : undefined)`
+  (`validation/coverage/harness/run-battery.mjs:215`), so at **φ=0 — every canonical cell — `opts`
+  is `undefined` and φ is estimated**, not oracle-known. Only the four `-ar1` cells (φ=0.6) pass a
+  known φ.
+- `universalInferenceMeanShiftEValue(values, cal, test)`
+  (`detectors/universal-inference-e-value.ts:186-190`) accepts nothing beyond the two windows;
+  means, φ, and variance are all fit from the data by `fitAR1`.
+- `group_average_e_value` is K per-series `safeTwoSampleTEValue` calls
+  (`run-battery.mjs:230-236`) and inherits the same estimation.
+
+**Scope — which cells.** Every cell scored by `safe_t`, `universal_inference`, or
+`group_average_e_value`: all of K1, K2, K3, K5, K6, `safe_t`'s A6 rows on K4, and A1's arm 30. The
+`params: 'oracle'` stamp on those rows is wrong and is **left as committed** (results are
+append-only, §11 rule 6); this erratum is the correction.
+
+**Scope — what stays valid.**
+
+1. `family_D_spectral_e_detector` is **genuinely oracle**: `{ mu: 0, sigma: 1, phi: cell.phi,
+   alpha: 0.05, windows: 'disjoint' }` is passed at `run-battery.mjs:263`, exactly as A5 registers.
+2. `family_E_conformal_heldout` is neither: it uses a fixed `Σ = [[1]]` (A2) with an empirical
+   held-out calibration set (§6's K4 block, A7's T1 substrate).
+3. **The endpoint numbers are unaffected as measured quantities.** Each cell's detection rate is
+   what the named detector did to the named data at the registered seeds; how the detector obtained
+   its nuisance parameters does not change what it did. No rate, verdict, or class answer moves.
+4. **Flagged, not resolved: the `phi_known` regime question.** K1's and K2's YES were measured with
+   φ estimated, while `safe_t_e_value`'s card narrows its regime to known φ —
+   `guarantee.regime.phi_known: true` (`validation/certification/cards/safe_t_e_value.json:51`).
+   The mu/sigma half of this erratum does not conflict with that card: the same regime block
+   already records `"baseline": "estimated"` (`:49`), so on mu/sigma only §4's own text was wrong.
+   The φ half is a genuine mismatch between the card's declared regime and the regime the coverage
+   cells were measured in. Whether a `phi_known` card may be credited with coverage measured at
+   estimated φ is a question about the certification protocol, not about this battery, and it is
+   reported here for the wiki write-back rather than answered.
+
+Recorded in full, with the affected cell list, at
+`validation/coverage/results/live/run-20260808T010208Z/REPORT.md` §4 (I1).

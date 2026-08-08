@@ -644,3 +644,235 @@ append-only, §11 rule 6); this erratum is the correction.
 
 Recorded in full, with the affected cell list, at
 `validation/coverage/results/live/run-20260808T010208Z/REPORT.md` §4 (I1).
+
+## Amendment v2.K4 — 2026-08-08, before any K4 candidate run
+
+Registered before any run of the new candidate `point_tail_bet_e_value`
+(`detectors/point-tail-bet-e-value.ts`, built and unit-tested at Task 1 of
+`docs/superpowers/plans/2026-08-08-coverage-gap-detectors.md`). Sections 1–14 above and Amendments
+v1.1/v1.2 and Erratum v1.3 stay intact; this amendment adds. Every extension is cited against the
+section it extends; nothing here supersedes a frozen value. Authority for this candidate, per the
+plan's own Authority line: `~/concord/knowledge/methodology/pages/coverage-gap-detectors.md`
+(RATIFIED 2026-08-08), K4 section — then this document — then the plan.
+
+### K4.1 Registered constants (verbatim, from the plan's Global Constraints)
+
+Copied verbatim from `docs/superpowers/plans/2026-08-08-coverage-gap-detectors.md`'s Global
+Constraints block:
+
+> κ = 0.1 for every κp^(κ−1) calibrator (derivation registered: log-optimal κ\* = −1/E_alt[log p];
+> at the registered alternatives p ≈ 1e-4 → κ\* ≈ 0.108, registered as 0.1); K4 calibration n =
+> 10,000 held-out scores, score s = |x − median_ref| / MAD_ref.
+
+**Cross-checked against `detectors/point-tail-bet-e-value.ts`'s exports — result: no diff.**
+`export const KAPPA = 0.1` (`point-tail-bet-e-value.ts:38`). `calibrateTailBet` throws unless
+`rows.length >= 10_000` (`:66-68`), matching the registered `n = 10,000` floor exactly (not
+approximately — the module's guard is `< 10_000`, i.e. `>= 10,000` is the accepted floor). Score
+computed at `pointTailBetEValue:88`, `const score = Math.abs(x - cal.median) / cal.mad;` — the
+identical formula, `cal.median`/`cal.mad` being this module's names for `median_ref`/`MAD_ref`
+(computed at `calibrateTailBet:70,72`, raw MAD with no consistency constant, per the module's own
+docstring at `:9-14`: "the score is rank-based through the conformal p-value below, so any monotone
+rescaling of the score ... leaves every rank and therefore every p-value unchanged").
+
+### K4.2 Score and p formulas (verbatim from the code; tie direction is a validity property)
+
+From `pointTailBetEValue` (`point-tail-bet-e-value.ts:83-93`):
+
+```
+score = |x - cal.median| / cal.mad                                  // :88
+p      = (1 + #{s in cal.sortedScores : s >= score}) / (n + 1)      // :89-90, countGte
+e      = kappa * p^(kappa - 1)                                       // :91
+```
+
+`countGte` (`:53-60`) counts calibration scores **greater than or equal to** the live score —
+inclusive of exact ties. This is a validity property, not an implementation detail: the conformal
+p-value's super-uniformity guarantee (K4.1's `∫₀¹ κp^(κ−1)dp = 1` calibrator identity depends on a
+super-uniform input) requires the tie-inclusive `>=` rank; excluding ties (`>`) would make `p`
+occasionally too small under exchangeability, breaking `E[e|H0] <= 1`. A regression test added at
+this candidate's HEAD (`9c9c006`, "Add tie-direction regression test for K4 conformal rank count")
+confirms this directly: a symmetric-integer fixture (`rows = 0..9999`) constructs an exact tie by
+design and asserts `p` against the `>=`-derived count, checked to fail under a `>` mutation
+(`test/point-tail-bet-e-value.test.ts:41-59`). Registered here because ties have probability 0 on
+the continuous Gaussian draws this battery otherwise uses — the property is invisible on canonical
+data and must be pinned by statement, not by the numeric endpoints alone.
+
+### K4.3 Detector and cells (extends §7's table)
+
+`point_tail_bet_e_value` joins §7 as a new row: **K4 only**, scored on the class's four frozen
+fault cells — §6 indices 18 (`3sigma-point`), 19 (`5sigma-point`, canonical), 20 (`8sigma-point`),
+21 (`5sigma-point-ar1`, φ=0.6) — reusing those cells' existing `CELL_SEED`s and N=2000 trajectory
+streams unchanged. No new fault-cell seed is registered: this follows §6's paired-comparison
+convention ("the same N=2000 trajectories ... are generated once and shared across every detector
+scored on that cell") extended to this second K4 candidate exactly as it already governs
+`family_E_conformal_heldout`'s and (per A6) `safe_t`'s shared use of the same cells. Card lands
+Task 3 of this plan (`docs/superpowers/plans/2026-08-08-coverage-gap-detectors.md`) — a separate
+document from the plan §7 originally cited for other detectors' task numbers.
+
+### K4.4 Held-out calibration streams — enumerated with arithmetic shown
+
+Per K4.1/A7, the fallback substrate is this battery's own generator (T1), not clustersynth: A7's
+finding — clustersynth's shipped shard output is multivariate per-tick telemetry with no existing
+1-D reduction in this repo — applies without modification to this candidate, since
+`point_tail_bet_e_value` is likewise 1-D (`calibrateTailBet(rows: number[])` takes scalar rows,
+same as `family_E_conformal_heldout`'s 1×1 special case in A2). Cited, not restated: this
+candidate's held-out tier is **T1**, for the same reason A7 already established.
+
+**On the four fault cells (18–21), this candidate reuses the identical held-out stream already
+registered for `family_E_conformal_heldout` on those same cells** (§6: "K4 held-out calibration ...
+`HELDOUT_SEED = CELL_SEED + 500000`") — both detectors take the same `n=10,000` scalar rows, drawn
+from the cell's healthy (pre-fault) null, as input; only what each detector computes from those
+rows differs (covariance-based conformal state vs. median/MAD conformal score). This extends §6's
+own "shared across every detector" convention from the N=2000 live-trajectory stream to the
+held-out stream, registered explicitly here because §6 only stated it for the former.
+
+**On the new arm (K4.5), a fresh held-out stream is registered**, `HELDOUT_SEED = CELL_SEED +
+500000`, following the identical formula A1 already used for `family_E_conformal_heldout`'s own
+arm — continuing the `+500000` pattern, not reusing another cell's stream, since cell 32 is a new
+series with its own `CELL_SEED`.
+
+Every value below is shown by arithmetic, per the v1.2 precedent (v1.1's `HELDOUT_SEED` literal for
+`family_E_conformal_heldout`'s arm did not match its own stated formula, corrected in v1.2 item 1):
+
+| cell | class/arm | `CELL_SEED` | `HELDOUT_SEED = CELL_SEED + 500000` | arithmetic |
+|---|---|---|---|---|
+| 18 | K4 `3sigma-point` | 20260825 | 20760825 | `20260825 + 500000 = 20760825` |
+| 19 | K4 `5sigma-point` (canonical) | 20260826 | 20760826 | `20260826 + 500000 = 20760826` |
+| 20 | K4 `8sigma-point` | 20260827 | 20760827 | `20260827 + 500000 = 20760827` |
+| 21 | K4 `5sigma-point-ar1` (φ=0.6) | 20260828 | 20760828 | `20260828 + 500000 = 20760828` |
+| 32 | `point_tail_bet_e_value` S2/S3 arm (K4.5) | 20260839 | 20760839 | `20260839 + 500000 = 20760839` |
+
+`CELL_SEED` for cell 32 follows §6's own formula, `CELL_SEED = BASE_SEED + cellIndex`, continuing
+directly from A1's last-used index (31, `family_E_conformal_heldout`'s arm): `20260807 + 32 =
+20260839`. For every row: `n = 10,000`; `seed(j) = HELDOUT_SEED + 7919*j`, `j = 0..9999`; drawn
+from the cell's healthy (pre-fault) null distribution (iid N(0,1) for φ=0 cells 18/19/20/32; AR(1)
+φ=0.6 for cell 21) — the same seed-formula shape §6 and A1 already register, applied here with
+every literal shown rather than left to be trusted.
+
+### K4.5 New arm — cell 32, healthy (S2) and S3
+
+**Extends A1's pattern to this candidate.** `point_tail_bet_e_value`, cell index 32, `CELL_SEED =
+20260839`. Single iid-Gaussian series, `seed(i) = CELL_SEED + 7919*i`, `i = 0..1999`. Calibration
+(`calibrateTailBet`) built once per cell from the K4.4 held-out stream, reused across all N=2000
+trajectories — per the plan's Task 4 adapter description ("build calibration once per cell from the
+registered held-out stream").
+
+- *Healthy (S2) arm.* No injection. Test window is §5's post-onset slice, `[100, 300)` (200 ticks),
+  applied per trajectory. Because this detector is a per-point terminal read with no running
+  process (unlike `family_E_conformal_heldout`'s wealth process), the A1 exceedance/mean_e/verdict
+  triple is computed **per point**, not per trajectory: `N_points = N * 200 = 2000 * 200 =
+  400,000`. `exceedance = k / N_points` where `k` = count of points with `e >= 20`; `mean_e` = mean
+  of `e` across all `N_points`; `verdict = lower95(k, N_points) > alpha ? 'FAIL' : 'not-refuted'`
+  (`alpha = 0.05` per §3, `lower95` per the study's existing Wilson-bound convention, A1's
+  verdict-token vocabulary via `VERDICT_MAP`, `score.mjs:31` per v1.2 item 2). This per-point
+  denominator, rather than A1's per-trajectory `n=2000`, is required by the stop condition's own
+  text (K4.7) — "healthy-arm **per-point** exceedance" — and is registered here as the explicit
+  extension A1 did not need for a process-based detector.
+- *Power (S3) arm, `shift_sigma: 3`.* Same series (same seeds as S2) + `injectStep(delta=3)`
+  (`inject.mjs:27-29`), identical to A1's `family_E_conformal_heldout` S3 arm — the certification's
+  registered sustained-step shift, applied here as the same basic sanity/power check independent of
+  the point-outlier class this detector is built for. Detection is per-trajectory, mirroring A1's
+  own "fires iff ... anywhere in the post-onset window" reading: a trajectory is detected iff **any**
+  of its 200 post-onset ticks has `e >= 20`. `detection_rate` = fraction of N=2000 trajectories
+  detected; `verdict: detection_rate >= 0.50 ? 'POWERED' : 'INERT'`, A1's own token pair.
+
+### K4.6 K4 fault-cell endpoint — per-point-at-injected-tick detection is the class endpoint
+
+**Extends §5's windowing and A2's descriptive-secondary pattern; does not alter §5's endpoint for
+any other detector.** `injectPoint` (`inject.mjs:44-46`) touches exactly one tick, `t === at = 100`
+— the first tick of the post-onset test window. For the four fault cells (K4.3):
+
+- **Class endpoint (decisive): per-point `e >= 20` at the injected tick.** For each trajectory,
+  compute `pointTailBetEValue(x_100, cal)` at the single injected tick only. `detection_rate` =
+  fraction of N=2000 trajectories with that one point's `e >= 20`. This is the design page's
+  one-point-decisive property, registered as this candidate's terminal read — because `injectPoint`
+  places exactly one non-null tick per trajectory, "per-point at the injected tick" and
+  "per-trajectory" are the same statistic here, unlike the S2 arm's necessarily per-point framing
+  (K4.5) where every one of 200 ticks is independently null.
+- **Window-crossing (descriptive secondary, no verdict).** Also recorded: the fraction of
+  trajectories where **any** of the 200 post-onset ticks (not only the injected one) has `e >= 20`.
+  This number conflates the single injected-tick signal with false-alarm noise from the other 199
+  null ticks — at the K4.8 healthy per-point rate (≈0.0028), a 200-tick window carries a
+  non-trivial compounded false-alarm chance on its own (≈0.56 expected false crossings per
+  trajectory from noise alone, `200 * 0.0028`). Recording it separately, undecisive, keeps that
+  multiple-testing exposure from being silently absorbed into the class endpoint — mirroring A2's
+  registered distinction between the indicator-flag-at-the-injected-tick reading and the
+  whole-window crossing reading for `family_E_conformal_heldout`, applied here in the opposite
+  direction (there, the injected-tick read was the descriptive secondary; here, it is the class
+  endpoint, because this construction's validity claim is specifically about a single point).
+
+### K4.7 Stop condition (verbatim)
+
+Copied verbatim from the plan's Global Constraints:
+
+> Stop conditions (registered per group in the amendment): K4 — healthy-arm per-point exceedance
+> Wilson 95% lower bound > α. ... A fired stop condition = REFUTED: record, file, class stays NO.
+
+`α = 0.05` per §3 (unchanged, cited not redefined). Applies to K4.5's S2 arm's `exceedance`/`k`/
+`N_points=400,000` (Wilson lower bound computed on that per-point count, not on any per-trajectory
+count). A fired stop condition on this candidate refutes and records `point_tail_bet_e_value`;
+K4 as a class stays NO only if every candidate scored on it (this one and
+`family_E_conformal_heldout`) fails to cover — per A4's decision rule, unchanged here.
+
+### K4.8 Predictions, with falsifiers
+
+- **Healthy per-point exceedance.** *Prediction:* `≈ 200^(−1/0.9) ≈ 0.0028`, at or below `α = 0.05`
+  — derived exactly as Task 1's own validity test derives it (`test/point-tail-bet-e-value.test.ts`,
+  "validity: healthy exceedance at alpha=0.05 within binomial tolerance": `E[1{e>=20}] = P(p <=
+  (20/kappa)^(1/(kappa-1))) = (200)^(-1/0.9) ≈ 0.00279`), applied here to the K4.5 S2 arm's
+  400,000-point count rather than that unit test's own N=4000. *Falsifier:* the stop condition
+  itself (K4.7) — Wilson 95% lower bound on the measured per-point exceedance exceeds `α = 0.05`.
+- **K4 canonical (`5sigma-point`, cell 19) detection.** *Prediction:* `>= 0.50`, expected YES. A
+  genuine 5σ point under the Gaussian null has tail probability on the order of `1e-6`, which ranks
+  beyond essentially all `n=10,000` calibration scores (`p ≈ 1/10,001 ≈ 1e-4`), giving `e ≈
+  0.1*(1e-4)^(-0.9) ≈ 398` — the same order Task 1's "beyond-calibration" test measures directly
+  (`e > 300 && e < 500` for an extreme point) — far above the `e >= 20` bar, so canonical-severity
+  detection is expected to clear `COVERAGE_FLOOR = 0.50` with room. This is the design page's "why
+  one point can be decisive" argument, registered as this candidate's own prediction rather than
+  restated from `family_E_conformal_heldout`'s A2 derivation — A2's `NOT_POWERED` ceiling is
+  specific to the hedged indicator's fixed ≈1.95× per-tick multiplier and does not apply here: this
+  construction's per-point increment is unbounded in rank, which is precisely the design page's
+  named contrast between the two K4 candidates. *Falsifier:* canonical-cell (idx 19) detection rate
+  `< 0.50`.
+- Grid cells (18, 20) and the `-ar1` cell (21) are recorded for context; per §8/§10.1, only the
+  canonical cell decides COVERED/NOT_POWERED for this candidate, unchanged by this amendment.
+
+### K4.9 `-ar1` cell — measured out-of-claim (exchangeability regime)
+
+Cell 21 (`5sigma-point-ar1`, φ=0.6) is scored and recorded but decides nothing, per §8/§10.1's
+existing rule that the `-ar1` replicate never independently decides coverage. Specific to this
+candidate: the validity argument in K4.1/K4.2 rests on **exchangeability** of the (calibration,
+live) scores — the conformal super-uniformity step. Serial dependence under AR(1) breaks that
+exchangeability premise, so cell 21 measures the construction's behavior under a regime the card's
+guarantee does not claim, exactly as the design page states ("the `-ar1` cell measures marginal
+validity under serial dependence and is out-of-claim (reported, not gated)"). A surprising result
+on cell 21 is reported, not treated as a falsifier of K4.8's canonical prediction.
+
+### K4.10 Fallbacks — inherited from A3, not restated
+
+NOT-EXECUTABLE, non-finite, and vacuity handling for this candidate's cells (fault cells 18–21 and
+arm cell 32) follow A3 unchanged — `non_finite_wealth` field name (A3a), `NOT-EXECUTABLE` verdict
+token with `not_executable_reason` (A3b), and the N=2000-denominator vacuity rule (A3c). No new
+fallback text is registered here; A3 already governs every candidate scored under this study,
+`point_tail_bet_e_value` included.
+
+### K4.11 House rules, mapped
+
+Per `~/concord/knowledge/methodology/pages/pre-registration-discipline.md`: (1) committed before
+any run of this candidate — no `point_tail_bet_e_value` run exists at this commit. (2) A failed
+endpoint (K4.7's stop condition, or K4.8's falsifier) is a publishable result; nothing above moves
+afterward. (3) No post-hoc analysis exists yet; reserved, to be labelled and carry no verdict if
+written. (4) Fallback rule: K4.10, inherited from A3. (5) Does not apply, as §11 rule 5 already
+states for this synthetic battery. (6) Results append-only: binding on this candidate's future
+runs, same manifest shape as §11 rule 6 and A8's field list. (7) Reruns only for a named code
+defect, prior run preserved: binding. (8) The report states every endpoint's number and verdict:
+binding on this candidate's task report.
+
+### Amendment summary
+
+Adds, extending the sections named in each subsection above: a new §7 row (K4.3); held-out stream
+reuse on the four fault cells plus a fresh stream on a new cell 32 (K4.4, extending §6/A1/A7); a new
+arm at cell 32 (K4.5, extending A1); the per-point-at-injected-tick class endpoint with a
+descriptive window-crossing secondary (K4.6, extending §5/A2); the K4 stop condition applied to this
+candidate's own per-point count (K4.7, quoting the plan verbatim); predictions with falsifiers
+(K4.8); the `-ar1` cell's out-of-claim scope (K4.9); fallback inheritance (K4.10, citing A3). Nothing
+in §1–14, Amendment v1.1, Amendment v1.2, or Erratum v1.3 is superseded.

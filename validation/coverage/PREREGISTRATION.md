@@ -1963,3 +1963,665 @@ notes (K3.3.3). Corrects K3.1.8's S3 prediction, quoted and replaced with the os
 own independently-derived near-certain expectation (K3.3.4). Registers the adapter/smoke field-set
 deltas Task 8 must satisfy (K3.3.5). No endpoint, floor, or seed in §1–14 or any earlier amendment
 moves; K3.13's stop condition and K3.9's window partition are unchanged.
+
+## Amendment v2.K6 — 2026-08-08, before any K6 candidate run
+
+Registered before any run of the new candidate `shape_block_conformal_bet`
+(`detectors/shape-block-conformal-bet.ts`, built and unit-tested at Task 9 of
+`docs/superpowers/plans/2026-08-08-coverage-gap-detectors.md`, commit `b1ab444`, review fix round 1
+at `a947668`; ledger `.superpowers/sdd/2026-08-08-coverage-gap-detectors/progress.md`, Task 9's
+rulings section, binding on this amendment). Sections 1–14 above and Amendments
+v1.1/v1.2/v2.K4/v2.K4.1/v2.K3/v2.K3.1/v2.K3.2/v2.K3.3 and Erratum v1.3 stay intact; this amendment
+adds. Every extension is cited against the section it extends; nothing here supersedes a frozen
+value. Authority for this candidate, per the plan's own Authority line:
+`~/concord/knowledge/methodology/pages/coverage-gap-detectors.md` (RATIFIED 2026-08-08), K6 section
+— then this document — then the plan.
+
+**This amendment is unusual, registered plainly.** Task 9's review round derived, before any
+battery run, that this construction is NOT_POWERED at the class's canonical geometry (K6.4 below).
+K6's class answer is therefore a **derivation the registered run confirms**, not a discovery the
+run makes — the run still executes in full (T1 battery + T2 clustersynth arm, K6.12/K6.13), and a
+result materially above the derived ceiling is a **surprise to investigate**, not a target.
+
+### K6.1 Registered constants (verbatim, cross-checked against the module's exports)
+
+Copied verbatim from `docs/superpowers/plans/2026-08-08-coverage-gap-detectors.md`'s Global
+Constraints block:
+
+> K6 **W = 30**, features **{sample kurtosis, |sample skew|}**, **m = 300** disjoint contiguous
+> reference blocks, distance-rank conformal p per feature `p = (1 + #{ref blocks with |T_ref −
+> med_T| ≥ |T_live − med_T|}) / (m + 1)` where `med_T` is the reference-block median of that
+> feature.
+
+κ = 0.1 is the same shared-derivation constant K4.1/K3.1 already register (log-optimal κ*
+derivation, not restated).
+
+**Cross-checked against `detectors/shape-block-conformal-bet.ts`'s exports — result: no diff on
+W and κ; `m = 300` is not an exported constant and is resolved explicitly at K6.3, below.**
+`export const W_K6 = 30` (`:87`). `export const KAPPA_K6 = 0.1` (`:91`, "shared derivation with
+K3/K4"). `export const M_MIN_K6 = 100` (`:96`) — the module's own registered FLOOR on `m`, not a
+target value; the plan's Global Constraints `m = 300` is a specific calibration size, checked
+against actual usage at K6.3. `LOG_WEALTH_FLOOR_K6 = Math.log(1e-12)` (`:100`), identical value to
+`LOG_WEALTH_FLOOR_K3` (K3.12), same ADR 0026 convention (`_wealth.ts`).
+
+### K6.2 Formulas (verbatim from the code, line cites)
+
+Per reference block or live window (`shapeMoments`, `:157-174`):
+
+```
+mean = (1/n) * sum(x)                                          // :159-161
+m2 = mean((x-mean)^2); m3 = mean((x-mean)^3); m4 = mean((x-mean)^4)   // :162-170, population moments, divide by n
+kurtosis = m4 / (m2*m2)                                         // :171, RAW convention (Gaussian = 3)
+absSkew  = |m3| / m2^1.5                                        // :172
+```
+
+Per feature, calibration (`buildFeatureCalibration`, `:176-180`): `median` of the m reference
+blocks' own statistic; `sortedAbsDev` = the m `|stat − median|` values, ascending.
+
+Per feature, per live window (`featureResult`, `:255-281`):
+
+```
+dev   = |T_live - median_ref|                                   // :276
+count = #{ref |dev| >= dev}  (tie-inclusive >=, countGte, :142-152)  // :277
+p     = (1 + count) / (m + 1)                                   // :278
+e     = kappa * p^(kappa - 1)                                   // :279
+```
+
+Non-finite `T_live` (a degenerate window, e.g. a constant block) contributes `e = 1` explicitly
+(`:262-275`) — neutral, holds the books, matching K3's registered NaN pathway, not a fall-through
+to the `dev`/`countGte` path (module comment `:262-274` explains why the fall-through would be
+silently wrong: `Math.abs(NaN - median)` is `NaN`, and `countGte`'s binary search on a `NaN` query
+converges to "0 excluded, all m counted", a real, wrong `p=1`).
+
+Per window (`shapeBetWindow`, `:287-302`): `eAvg = mean(e_kurtosis, e_absSkew)` (`:300`, "never
+max" — same argument K3/K4's docstrings give, cited not restated). Across windows
+(`shapeBetWealth`, `:309-318`): `logM = advanceLogWealth(logM, log(eAvg), LOG_WEALTH_FLOOR_K6)`
+per window (`:314`), product of per-window `eAvg` in the log domain, same ADR 0026 pattern K3/K4
+already use.
+
+**Validity argument, hypotheses named** (module docstring `:43-53`, cross-checked against the code
+above — result: no diff): under block exchangeability of the `m` reference blocks' own statistic
+together with the live window's own distance-to-median statistic — the registered regime is
+**stationarity across the calibration+test span**, not independence within a block — `p` is
+super-uniform, `∫₀¹ κp^(κ-1)dp = 1` makes `e` a valid e-value with `E[e|H0] <= 1` per feature per
+window, exactly the K4 conformal-rank argument applied to block-level statistics. Contiguous
+reference blocks (not overlapping, not a synthesized single-φ null) is this construction's
+answer to C22 (module header `:1-16`, `~/concord/knowledge/stats/pages/shape-clustersynth-2026-08-05.md`):
+each block carries its own within-block serial dependence, so validity does not require knowing φ
+— it requires calibration and live to share the SAME dependence structure (K6.11 registers the
+qualifier this buys and does not buy).
+
+### K6.3 Held-out arithmetic — `m` resolved explicitly, the plan/page discrepancy named
+
+**Neither the design page nor the plan is silently followed here; both are checked against the
+actual arithmetic, per this document's own precedence rule (page > this document > plan).**
+
+The ratified design page (`~/concord/knowledge/methodology/pages/coverage-gap-detectors.md`, K6
+section) states: "a held-out reference segment (**n >= 10,000** contiguous ticks, registered
+stream)" — an `n`, not an `m`. The plan's Global Constraints (K6.1, above) states "**m = 300**
+disjoint contiguous reference blocks" directly — an `m`, not an `n`, and does not show the
+arithmetic that produced it. **These two do not obviously agree**: `calibrateShapeBlocks` computes
+`m = Math.floor(rows.length / W)` (`:234`, the module's own remainder-dropping rule, docstring
+`:224`, "the remainder, if any, is dropped, not padded") — at `n = 10,000`, `W = 30`:
+`Math.floor(10000/30) = 333`, not `300` (`333*30 = 9990`; the last **10** of the 10,000 rows are
+unused, per the module's own rule).
+
+**Registered resolution, checked against where each figure actually originates, not silently
+picked:**
+
+- **The T1 (this battery's own) held-out stream follows K4.4's already-frozen convention exactly**
+  — `HELDOUT_SEED = CELL_SEED + 500000`, `n = 10,000` rows, `seed(j) = HELDOUT_SEED + 7919*j`,
+  `j = 0..9999` — reusing the identical `n = 10,000` literal the design page's own "n >= 10,000"
+  sentence names and the K4/K3 precedent already established for every held-out stream in this
+  study. **Registered: `m = 333` for every T1 K6 calibration** (fault cells 26–29 and arm cell 34,
+  K6.6/K6.7), `333*30 = 9990 <= 10000`, arithmetic shown, not asserted. `333 >= M_MIN_K6 = 100`
+  (K6.1) with wide margin.
+- **The T2 clustersynth arm's own registered per-coordinate reference (K6.12) is each coordinate's
+  first 9,000 ticks** — a DIFFERENT, independently registered slice, chosen for T2's own reasons
+  (a round per-shard tick budget against clustersynth's own `window.steps` parameter, not this
+  study's `n = 10,000` convention). `Math.floor(9000/30) = 300` **exactly** — no remainder dropped.
+  **This is registered here as the origin of the plan's "m = 300" figure**: it is T2's own exact
+  block count, not T1's. The plan's Global Constraints paragraph states a single `m = 300` without
+  distinguishing the two arms, conflating T2's own exact figure with T1's, which is 333, not 300.
+- **Filed, not silently corrected in the plan text itself** (this document's precedence rule): the
+  plan's bare "m = 300" is read here as T2's figure, generalized to the class in error. T1's
+  registered `m` is 333, T2's is 300, both shown by arithmetic above and both `>= M_MIN_K6 = 100`
+  — the discrepancy is a documentation-provenance question, not a validity question, and neither
+  reading was ever at risk of the module's own floor. Consequence, registered: the `κ* >= 0.175`
+  floor-bound figure disclosed at K6.5, below, is recomputed at `m = 333` (T1's registered value,
+  not the plan's `m = 300`), since T1 is what the registered run actually calibrates against.
+
+### K6.4 THE DERIVED NOT_POWERED PREDICTION — the closed-form chain
+
+**Registered before any run, per Task 9's ledger ruling** (`progress.md`: "W ADJUDICATED: keep
+W=30, register DERIVED NOT_POWERED"). Every step below is either (a) independently re-derived in
+this document (marked CLOSED-FORM, verified here, not assumed), or (b) a disclosed, unregistered
+probe from Task 9's review, named with provenance and NOT independently re-run here (marked
+DISCLOSED, same convention K3.11/K3.1.3/K3.3.1 already use in this document). The closed-form
+chain stands alone; the disclosed probes corroborate it.
+
+**Step 1 — the mixture's exact fourth moment at d=1.5 (CLOSED-FORM, re-derived here).**
+`injectShapeMix` (`inject.mjs:60-70`, §2) draws `Z = M + W*s`, `M = +d/2` w.p. 1/2, `-d/2` w.p.
+1/2 (independent of `W ~ N(0,1)`), `s = sqrt(max(0, 1 - d^2/4))`. Since `M` and `W` are
+independent and `E[W]=E[W^3]=0`:
+
+```
+E[Z^4] = E[M^4] + 6*E[M^2]*E[(Ws)^2] + E[(Ws)^4]           (odd-power cross terms vanish)
+       = (d/2)^4 + 6*(d/2)^2*s^2 + 3*s^4                    (E[W^2]=1, E[W^4]=3; M^2=(d/2)^2 always)
+```
+
+At `d = 1.5`: `d/2 = 0.75`, `(d/2)^2 = 0.5625`, `(d/2)^4 = 0.31640625`; `s^2 = 1 - 2.25/4 =
+0.4375`, `s^4 = 0.19140625`.
+
+```
+E[Z^4] = 0.31640625 + 6*0.5625*0.4375 + 3*0.19140625
+       = 0.31640625 + 1.4765625 + 0.57421875
+       = 2.3671875                                          exact, verified by direct arithmetic
+```
+
+Variance check (also exact): `E[Z] = 0` (both terms symmetric/mean-zero); `E[Z^2] = (d/2)^2 + s^2
+= 0.5625 + 0.4375 = 1` — confirms `inject.mjs`'s own "matched mean 0, variance 1" comment (§2)
+exactly, so raw kurtosis = `E[Z^4]/Var(Z)^2 = E[Z^4] = 2.3671875` directly, no rescaling needed.
+
+**Step 2 — raw-kurtosis deficit (CLOSED-FORM).** Gaussian raw kurtosis = 3 exactly. **Deficit:
+`3 - 2.3671875 = 0.6328125 ≈ 0.6328`.** The mixture at d=1.5 is *platykurtic* relative to the
+Gaussian reference — a genuine, exact population-level departure `shapeMoments`'s `kurtosis`
+feature (K6.2) is built to see.
+
+**Step 3 — plug-in sampling noise at W=30 swamps the deficit (DISCLOSED, Task 9 review, not
+re-run here).** The standard asymptotic variance of the sample (raw) kurtosis estimator under
+normality is `Var(b2) ≈ 24/n`; at `W=30`, `sqrt(24/30) = sqrt(0.8) ≈ 0.8944` — this asymptotic
+figure **overstates** the true small-sample sd (re-derived here as a standard large-sample result,
+not itself in question). **Measured (disclosed): sd ≈ 0.7031** at `W=30`. **Median separation:
+0.59 sd** — disclosed together with the sd measurement, not independently recomputed from the
+raw deficit/sd ratio here: at finite `n=30` the sampling distribution of raw kurtosis is skewed,
+so a median-based separation is not simply `deficit/sd`, and this document registers the
+review's own measured figure rather than a mismatched analytic proxy for it.
+
+**Step 4 — the growth criterion, measured (DISCLOSED, Task 9 review round 1, carried forward in
+`progress.md`; per-seed table relayed in this task's own dispatch, not independently re-run
+here).** `E[log eAvg]` under the mixture alternative, by registered `W`:
+
+| `W` | `E[log eAvg \| alt]` | draws positive | reading |
+|---|---|---|---|
+| 30 (registered) | **-1.414 ± 0.047** | 0/40 | **anti-informative** |
+| 300 | **+0.012 ± 0.251** | 1/20 clears the floor | coin-flip |
+
+**Break-even (where growth turns reliably positive): W ≈ 400–600** (disclosed, not independently
+re-run).
+
+**The anti-informative regime, named explicitly.** In LINEAR wealth space (not log): `E[eAvg |
+alt] ≈ 0.265 < E[eAvg | null] ≈ 0.398` — the mixture's own average per-window bet payout is
+LOWER than a genuinely null (Gaussian) window's, at `W=30`. Disclosed mechanism (the review's own
+account, not verified by simulation in this document): **the mixture compresses the sample
+kurtosis/|skew| estimates into the reference bulk** at this window length — the finite-sample
+noise structure at `n=30` happens to pull the mixture's typical `|deviation from the reference
+median|` statistic CLOSER to the reference's own bulk than a fresh Gaussian draw's typical
+deviation, which is the opposite of what the raw-moment deficit (Step 2) alone would suggest. This
+is registered as a genuinely counter-intuitive, disclosed finding — the closed-form population
+deficit (Step 2) establishes that a real departure exists; it does not by itself establish that
+the RANK-based, small-sample conformal statistic detects it in the informative direction at
+`W=30`. Both are true simultaneously, and the growth-criterion measurement is what shows the
+second fact the first does not imply.
+
+**Step 5 — the predicted detection grid (registered).** Consistent with Steps 1–4:
+
+| severity | `d` | predicted canonical-cell detection rate |
+|---|---|---|
+| idx 26 | 1.0 | **~0.000** |
+| idx 27 (canonical) | 1.5 | **~0.000** |
+| idx 28 | 2.0 | **~0.03** |
+
+**Registered prediction: `shape_block_conformal_bet` reads NOT_POWERED at K6's canonical severity
+(idx 27, `mix-d1.5`), well below `COVERAGE_FLOOR = 0.50`, DERIVED before the run rather than
+discovered by it.** Falsifier: K6.14, below.
+
+### K6.5 The kappa misfit — registered design limitation, not a tuning license
+
+**Registered as a successor-design input.** The shared `κ = 0.1` calibrator (K6.1) is log-optimal
+for the K4/K3 candidates' own registered alternatives, not derived for K6's. Two effects, both
+disclosed:
+
+**Floor bound (CLOSED-FORM, re-derived here at the K6.3-registered `m = 333`).** Since `p >=
+1/(m+1)` always (the rank cannot exceed `m`), `log(p) >= log(1/(m+1)) = -log(m+1)` always, so
+`E[log p] >= -log(m+1)`. Log-optimal `κ* = -1/E[log p]`, and since `E[log p] <= 0`: `κ* =
+1/(-E[log p]) >= 1/log(m+1)`. At `m = 333`: `log(334) ≈ 5.81124`, `1/5.81124 ≈ 0.1721`.
+**Registered: `κ* >= 0.172` at this document's registered `m = 333`** — recomputed from the
+K6.3 resolution, not the plan's `m = 300` value (which would give `1/log(301) ≈ 0.175`, the
+figure this task's own dispatch named; the ~0.003 difference is a direct, checked consequence of
+the K6.3 `m` resolution, registered here rather than silently carried over).
+
+**Measured at the alternative (DISCLOSED, Task 9 review, not re-run here): `κ* ≈ 0.32–0.4`** — the
+alternative-optimal calibrator constant, well above both the floor bound and the registered
+`κ = 0.1`. **Cost of using `κ = 0.1` instead: -1.30 nats/window** (disclosed growth-rate gap,
+relative to the alternative-optimal `κ*`, at the registered `W = 30`).
+
+**Registered scope.** This is filed as a **successor-design input** — a different κ, chosen for
+K6's own alternative rather than inherited from K3/K4, is a candidate for a future registered
+attempt, per this study's one-attempt rule (a second attempt at THIS construction with a
+retuned κ would be a new design, ratified separately, not a patch to this run). It is **not** a
+tuning license for this run: `κ = 0.1` stays fixed for the run this amendment registers (K6.1),
+and a misfit already visible in the closed-form floor bound is exactly the kind of finding this
+document exists to carry forward, not to quietly correct before the run that would have exposed
+it.
+
+### K6.6 Fault cells + new arm — seed arithmetic (extends §6/§7)
+
+`shape_block_conformal_bet` joins §7 as a new row: **K6 only**, scored on the class's four
+registered fault cells, reusing §6's existing `CELL_SEED`s unchanged (§6's paired-comparison
+convention, extended to this fourth candidate exactly as it already governs the other three):
+
+| idx | severity | phi | `CELL_SEED = BASE_SEED + idx` | `HELDOUT_SEED = CELL_SEED + 500000` |
+|---|---|---|---|---|
+| 26 | `mix-d1.0` | 0 | 20260833 | 20760833 |
+| 27 | `mix-d1.5` (canonical) | 0 | 20260834 | 20760834 |
+| 28 | `mix-d2.0` | 0 | 20260835 | 20760835 |
+| 29 | `mix-d1.5-ar1` | 0.6 | 20260836 | 20760836 |
+
+Arithmetic: `20260807 + {26,27,28,29} = {20260833, 20260834, 20260835, 20260836}` (matches §6's
+own table, cross-checked, no diff); `+ 500000` per cell, per K6.3/K4.4's registered pattern. Every
+`HELDOUT_SEED`'s `n = 10,000`, `seed(j) = HELDOUT_SEED + 7919*j`, `j = 0..9999`, drawn from the
+cell's healthy (pre-fault, pre-`at=100`) null distribution — iid N(0,1) for idx 26/27/28, AR(1)
+φ=0.6 for idx 29 — `m = 333` per cell (K6.3).
+
+**New arm, continuing directly from `spectral_bet_e_process`'s arm at idx 33 (Amendment v2.K3,
+K3.6):**
+
+| cell | class/arm | `CELL_SEED = BASE_SEED + idx` | `HELDOUT_SEED` | arithmetic |
+|---|---|---|---|---|
+| 34 | `shape_block_conformal_bet` S2/S3 arm | 20260841 | 20760841 | `20260807+34=20260841`; `+500000=20760841` |
+
+Trajectory seeds: `seed(i) = 20260841 + 7919*i`, `i = 0..1999`, §6's formula shape unchanged.
+
+### K6.7 Arm cell 34 — healthy (S2) and S3, fields registered up front (mirrors K3.1.1/K3.1.2/K3.1.4, not deferred to a correction round)
+
+**Registered directly here, not left for a post-review amendment** — Task 9's ledger already
+carries the K3.15 lesson (a `test_martingale`-class card needs `increment_estimator` on its S2
+row to be seen by `isValidityCell` at all, `validation/certification/lib/score.mjs:11-12`,
+`CLASS_INSTRUMENTS.test_martingale`, `constants.mjs:10`), so this amendment applies that lesson to
+`shape_block_conformal_bet` (also class `test_martingale`, K6's card, this document's companion
+commit) up front rather than waiting for a review to catch the same gap twice.
+
+Single iid-Gaussian series (idx 26/27/28-shaped), `seed(i) = 20260841 + 7919*i`, `i = 0..1999`.
+Test span is K3.9's already-registered 6-window partition of the post-onset slice — `t =
+100..279` (six disjoint `W=30` windows), `t = 280..299` unused — cited, not re-derived: identical
+arithmetic (`W = 30`, span `[100,300)`), reused here because it is the same construction shape
+(disjoint-window product martingale), not restated.
+
+**S2 row (healthy, no injection):**
+
+- `crossing_rate` (the class-recognized field name, K3.1.2's precedent applied here directly
+  rather than via a later rename), `k` (count of trajectories crossing 20 at any of the 6 window
+  checkpoints), `n = 2000`, `lower_95` (Wilson 95% lower bound on `crossing_rate`) — the exact
+  triple K6.13's stop condition tests.
+- `increment_estimator: {n, mean, sd, se, lower95_one_sided, upper95_one_sided}` — per trajectory,
+  the increment sample is the trajectory's six per-window `eAvg` values (identically
+  `exp(log[i]-log[i-1])`, `log[-1]=0`; `shapeBetWealth`'s own product-of-`eAvg` construction,
+  K6.2, means `eAvg_w` **is** the martingale's per-window multiplicative increment by
+  construction). Per-trajectory increment MEAN is the mean of its six `eAvg` values; `summarise()`
+  over the N=2000 trajectory means (K3.1.1's exact function, reused verbatim, not restated):
+  `mean`, `sd`, `se = sd/sqrt(n)`, `lower95_one_sided = mean - 1.645*se`, `upper95_one_sided =
+  mean + 1.645*se`. Satisfies `CLASS_INSTRUMENTS.test_martingale` directly.
+- **Verdict stays `crossing_rate`-derived, NOT `increment_estimator`-derived** — `verdict:
+  lower_95 > alpha ? 'FAIL' : 'not-refuted'` (`VERDICT_MAP`, `score.mjs:31`). Same reason as
+  K3.1.3, cited not re-derived: the calibrator `e = κ*p^(κ-1)` at `κ=0.1` (K6.1, shared with
+  K3/K4) has Pareto-type tail index `1/(1-κ) = 1/0.9 ≈ 1.111 < 2`, so `Var[e]` is infinite and a
+  Wald interval (`mean ± 1.645*se`) is not safely CLT-backed at N=2000 — K3.1.3/K3.1.2's
+  disclosed 9-of-40-blocks undercoverage measurement is the same formula's own failure mode,
+  registered here by reference, not re-measured for this candidate. **Registered reporting
+  rule, identical to K3.1.3:** a future `increment_estimator.lower95_one_sided > 1` on cell 34's
+  S2 row is filed to `~/concord/knowledge/stats/pages/terminal-mean-rule-contested.md` as
+  additional Claim-B-side evidence at Task 12's write-back, not scored, and does not move this
+  card's S2 verdict.
+- `p_uniformity: {n, decile_counts, ks_statistic, ks_critical_at_alpha}` (K3.1.7's pattern, applied
+  here): every individual per-feature `p` (kurtosis + absSkew) across 2000 trajectories × 6
+  windows × 2 features = **24,000** values, pooled. `ks_critical_at_alpha = 1.36/sqrt(24000) ≈
+  0.008780`. **Reported, no verdict authority** — same registered caveat as K3.1.7: `p` is
+  DISCRETE at this `m` (K4.1.9-style; `m=333` gives `n+1=334` attainable values, K6.11 registers
+  this as the O(1/m) qualifier), so a KS statistic against continuous Uniform(0,1) is a
+  diagnostic approximation, not a certified test; pooling across the two features is a
+  diagnostic convenience, not an independence claim (this document registers per-window,
+  per-feature super-uniformity, K6.2, and independence ACROSS windows, not across the 2
+  features within a window).
+- `degenerate_windows`, `non_finite_wealth` — registered STRUCTURALLY ZERO for this candidate, a
+  stronger claim than K3.1.6's "not expected to fire": `p` is bounded in `(1/(m+1), 1]` by
+  construction (`countGte`'s range, K6.2), so `e = κ*p^(κ-1)` is bounded in `[κ, κ*(m+1)^(1-κ)]`
+  — at `m=333`, `κ=0.1`: `[0.1, 0.1*334^0.9] ≈ [0.1, 18.69]` — always finite, with no `p=0`
+  underflow pathway (unlike K3's `p=exp(-U)`, which CAN underflow to exactly 0 for large `U`).
+  The module's own explicit NaN-guard (`featureResult`, `e=1` on non-finite `T`, K6.2) further
+  guarantees `eAvg` is always finite even on a degenerate window. Both fields are carried for
+  uniformity with `applyGuards`'s literal field-name match (`guards.mjs:12`), and are expected
+  identically `0` on every cell this candidate scores, not merely on this arm.
+- `null_id: 'K6-arm-heldout'` — an out-of-grammar literal (K3.1.5's defensive-hygiene precedent,
+  adapted: K3's arm was genuinely oracle, so it used `'K3-arm-oracle'`; this arm's calibration is
+  EMPIRICAL, K6.7's own `params` stamp below, so the analogous literal names that instead).
+  `params: 'heldout-empirical'` (K4.1.5's literal, reused: this candidate's calibration is
+  neither oracle nor a plug-in fit on the scored trajectory's own window — it is empirical
+  statistics of an independent held-out sample, K6.6). `phi: 0`.
+- `alpha: 0.05`, `n: 2000`, `ticks: 300`, `onset: 100`, `windows: 6`, `window_len: 30`,
+  `window_span: '[100,280)'`, `final_wealth_mean`, `final_wealth_median`, `adapter_failures`,
+  `not_executable_reason`, `substrate_tier: 'T1'`.
+
+**S3 row — the class-appropriate severity-3 probe (K6.8, below, registers the construction).**
+`detector`, `arm: 'power'`, `cell_index: 34`, `null_id: 'K6-arm-heldout'`, `phi: 0`, `params:
+'heldout-empirical'`, `shift_sigma: 3` (the scorer's severity-3 key, K3.3.2's convention, realized
+per class at K6.8 — not a literal sigma-shift), `alpha: 0.05`, `n: 2000`, `ticks: 300`, `onset:
+100`, `fires` (count crossing), `detection_rate = fires/n`, `final_wealth_mean`,
+`final_wealth_median`, `non_finite_wealth` (structurally 0, K6.7), `degenerate_windows`
+(structurally 0), `adapter_failures`, `verdict: detection_rate >= 0.50 ? 'POWERED' : 'INERT'`,
+`not_executable_reason`, `substrate_tier: 'T1'`.
+
+**Binding adapter constraint (K3.1.4's pattern, applied here directly, up front):** the S3 row and
+all four fault cells (idx 26–29) carry **none** of the five instrument-named fields
+(`increment_estimator`, `crossing_rate`, `stopped_mean`, `exceedance`, `mean_e`) — the same
+"one offending cell VOIDs the whole run's S2 evidence" mechanism K3.1.4 derives
+(`score.mjs`'s `mismatchVoidedRuns`, keyed on `cell.__run`). Task 11's adapter and its smoke test
+must satisfy this by construction, checked the same way K3.1.4/K3.3.5 require for
+`spectral_bet_e_process`.
+
+### K6.8 S3 construction — the class-appropriate probe, registered honestly (not a stronger probe chosen to dodge the inert outcome)
+
+**The S3 arm's job is "can this detector detect SOMETHING at severity 3" — a basic sanity/power
+check, not a K6-canonical-severity power measurement (A1/K4.5/K3.7's own convention, restated for
+this class).** For K1/K2/K4 candidates, severity 3 is realized as a `3σ` level/group shift
+(`injectStep`/`injectUnison`); for the K3 candidate, as an on-grid `3σ` oscillation
+(`injectOscillation`, K3.3.2). **For this K6 candidate, the class has no `3σ`-shaped severity
+axis at all** — `injectShapeMix`'s own severity parameter is `d`, a moment-matched mixture
+separation, not a sigma-multiplier (§2), and the class's own registered grid tops out at `d =
+2.0` (idx 28, the class's own maximal registered severity).
+
+**Registered S3 construction: `injectShapeMix(series, {sigma:1, at:100, d:2.0})` (`inject.mjs:60-70`),
+sustained across the full test span** — the same series/seeds as K6.7's S2 row (`CELL_SEED =
+20260841`), the class's OWN maximal registered severity (idx 28's own `d`), not a stronger,
+invented probe chosen to avoid the outcome K6.4's derivation predicts. **The cell keeps
+`shift_sigma: 3`** (K3.3.2's convention: the scorer's severity-3 key, realized per class — here as
+`d=2.0`, the class's own analogue of "severity 3," not a literal sigma-shift).
+
+**Registered prediction, honest, not tuned around: `detection_rate ≈ 0.03`** (K6.4's own Step-5
+grid, idx 28's own predicted rate, directly — the S3 arm uses the identical construction the
+fault-class grid's own strongest registered cell uses, so the two predictions are the SAME
+number, not independently derived). At `0.03 < INERTNESS_FLOOR = 0.10`
+(`validation/certification/lib/constants.mjs:19`), `scoreS3` (`score.mjs:340-345`) reads this
+cell **INERT**, not `PASS` — registered here explicitly, before any run, as the expected outcome:
+**S3 is expected to read INERT, and this document does not treat that as a defect to route
+around.** Per `overallVerdict`'s own "valid-but-inert" rule (`score.mjs:564-568`: `s3Powered.length
+=== 0` → `ADVISORY`, not `USE`, regardless of how strongly S2 clears), a card whose only claimed
+S3 evidence is INERT caps at ADVISORY — **registered explicitly: this card's expected overall
+verdict, absent a fired stop condition, is ADVISORY, not USE, per K6.14/K6.16.**
+
+**Falsifier, registered:** `detection_rate` materially above `0.03` (approaching or exceeding
+`0.50`) at `d=2.0` would itself be a surprise requiring investigation — either a defect in the
+K6.4 derivation or in this construction's wiring — not a target to reach by strengthening the
+probe further. **This document does NOT register a stronger d, or any other adjustment, chosen
+to avoid the inert reading** — the derivation says the detector is inert at this class's own
+maximal registered geometry, and the certification is registered to say so plainly.
+
+### K6.9 Fault-cell field registration (extends §7/K3.8's convention)
+
+Every fault cell (idx 26–29) scored by `shape_block_conformal_bet` carries: `detector`,
+`fault_class: 'K6'`, `severity`, `canonical`, `cell_index`, `null_id` (`'N1'`/`'N3-p06'`, the
+shared per-cell convention every other detector on these cells already carries, per
+`run-battery.mjs:497`, cited via K3.1.5's own reconciliation finding — NOT the out-of-grammar arm
+literal, which is cell-34-only), `phi`, `params: 'heldout-empirical'`, `alpha: 0.05`, `n: 2000`,
+`ticks: 300`, `onset: 100`, `windows: 6`, `window_len: 30`, `window_span: '[100,280)'`, `fires`
+(count crossing 20 at any of the 6 window checkpoints — K3.9's endpoint reading, reused directly,
+K6.10), `detection_rate = fires/n`, `final_wealth_mean`, `final_wealth_median`,
+`non_finite_wealth` (structurally 0, K6.7), `degenerate_windows` (structurally 0, K6.7),
+`adapter_failures`, `verdict: 'POWERED'/'INERT'/'NOT-EXECUTABLE'` (A3b's vocabulary — coverage
+cells, not S2/S3 card-protocol cells, K3.8's own distinction, unchanged here), `not_executable_reason`,
+`substrate_tier: 'T1'`. **No `shift_sigma` field** (K3.8's own convention: fault cells carry no
+`shift_sigma`, so `scoreS3` never admits them as S3 candidates — belt-and-suspenders with K6.7's
+binding instrument-field exclusion).
+
+### K6.10 Endpoint — window partition reused from K3.9, class endpoint stated
+
+**Test span and partition are IDENTICAL arithmetic to K3.9** (`W=30` over the post-onset
+`[100,300)` slice: six disjoint windows `t ∈ [100,130), [130,160), [160,190), [190,220),
+[220,250), [250,280)`, `t=280..299` unused) — cited by reference, not re-derived, because the
+construction shape (disjoint-window product martingale, `shapeBetWealth`'s `windows: number[][]`
+interface, K6.2) is the same as `spectralBetWealth`'s.
+
+**Class endpoint (decisive): wealth `>= 20` (`log_M >= Math.log(20) ≈ 2.9957`) at any of the 6
+window checkpoints within `[100,280)`, the any-prefix Ville-inequality reading** (K3.9/K4's own
+house convention for a running wealth process, applied here at window granularity). `detection_rate`
+= fraction of N=2000 trajectories crossing (K6.9).
+
+### K6.11 The O(1/m) qualifier + the phi-mismatch out-of-claim measurements
+
+**O(1/m) qualifier on the proof tag, registered (the formula is unchanged; only the finite-sample
+qualifier is named).** At finite `m`, `p` is drawn from a DISCRETE distribution over `{1/(m+1),
+..., (m+1)/(m+1)}` under exchangeability, not the continuous Uniform(0,1) the calibrator identity
+(K6.2) integrates over exactly — the same discretization K4.1.9 registers for
+`point_tail_bet_e_value`'s own conformal rank, applied here. The deviation from continuous
+uniformity is `O(1/m)`. **Disclosed measurement (Task 9 review, not re-run here): healthy
+per-feature exceedance at `alpha=0.05`, `m` in the ~300 class, measures **+0.0010** above nominal**
+— a small, `O(1/m)`-consistent discretization effect, not a validity defect (same reading K4.1.9
+gives its own discretization gap). `M_MIN_K6 = 100` (K6.1) is the module's own registered floor
+below which this coarseness would widen past an acceptable qualifier; both this study's registered
+`m` values (333 T1, 300 T2, K6.3) sit well above it.
+
+**Phi-mismatch, OUT OF CLAIM, measured for the record (Task 9's own fix-round measurement,
+`task-9-report.md` "Phi-mismatch numbers, reproduced," reproduced here verbatim from that report,
+not re-derived independently in this document):**
+
+| scenario | mean of kurtosis + absSkew exceedance rates | out-of-claim because |
+|---|---|---|
+| cal φ=0.6 / live φ=0 | **0.0584–0.0589** (two seeds) | calibration and live drawn from DIFFERENT processes |
+| cal φ=0.9 / live φ=0.6 | **0.0532–0.0577** (two seeds) | calibration and live drawn from DIFFERENT processes |
+
+Pooled methodology (K=30 replicate (calibration, live) pairs, `N_LIVE=2000` each, sample SE
+across replicates, per `task-9-report.md`'s Important-6 fix). **Asymmetric per feature, not
+visible in the pooled figure:** mismatch consistently **inflates** the kurtosis exceedance rate
+and **mildly deflates** the absSkew rate below nominal — the averaged figure above masks this
+split; both directions are named here so a future reader does not read the pooled number as
+"kurtosis and absSkew equally affected." **This construction's own registered regime is matched
+process** (K6.2's validity argument: calibration and live must share the SAME dependence
+structure, not merely the same numeric φ label) — these two scenarios are explicitly **out of
+that claim**, measured only so a future mismatch is not mistaken for a fresh finding.
+
+### K6.12 THE T2 CLUSTERSYNTH ARM, VALIDITY-ONLY (the ruling)
+
+**Per Task 9's ledger ruling (`progress.md`): "T2 clustersynth arm runs VALIDITY-ONLY (the C22-fix
+vindication test — the predecessor's graveyard)." Registered here, before any run, following the
+plan's own instruction (Task 10: "READ [`validation/shape-battery`'s csui harness] for the
+shard-realization call") and `~/concord/knowledge/stats/pages/shape-clustersynth-2026-08-05.md`'s
+own history (the predecessor, `shape-kurtosis-e-value.ts`, fired on 82% of healthy clustersynth
+shards, root cause C22: per-coordinate φ spanning two orders of magnitude within one calibration
+window — the diagnosis this construction's own CONTIGUITY answer is built to fix).**
+
+**Shard-realization call, checked against `validation/shape-battery/harness/run-clustersynth.mjs`
+(the only existing clustersynth-driving harness in this repo — the plan's own citation for "how
+the engine consumes it"):** `cs.buildScenario({family, pods, seed, window:{steps, dt_s}, faults})`
+→ `sc.gpuIds` (shard ids) → per shard, `cs.realizeShard(sc.seed, gid, sc.ctx, sc.graph,
+sc.applier, undefined, heavyTailsDf)` → a named-counter row per tick (`COUNTERS`,
+`clustersynth/dist/harness/factor-model.js:28-33`: `gpu_temp_c`, `power_w`, `sm_util`,
+`hbm_bw_gbps`, `nvlink_tx_gbps` — **p=5 coordinates**, checked directly against the export).
+
+**Registered T2 construction:**
+
+- Scenario: `cs.buildScenario({family: 'gb200', pods: 1, seed: K6_T2_SCENARIO_SEED, window:
+  {steps: 9600, dt_s: 30}, faults: false})` — **healthy only** (`faults: false`, matching the
+  predecessor's own C1 healthy-arm convention, `CLUSTERSYNTH-PREREG.md`), no fault injection of
+  any kind: this arm answers ONE question, whether the construction's own validity survives
+  independent telemetry, not a power question (K6's own T2-YES-bar is moot given K6.4's derived
+  NO, per this section's own closing paragraph).
+  `K6_T2_SCENARIO_SEED = BASE_SEED + 35 = 20260807 + 35 = 20260842` — continuing this study's own
+  `BASE_SEED + idx` arithmetic for traceability, consumed as `cs.buildScenario`'s own `seed`
+  parameter (a different namespace from this battery's per-trajectory `rng`/`gaussFrom`, named
+  explicitly so the two are never confused).
+- **Shards: `sc.gpuIds.slice(0, 120)`** — 120, matching `CLUSTERSYNTH-PREREG.md`'s own registered
+  default shard count for its C1–C3 arms, reused here rather than an independently chosen number.
+- `T = 9600` ticks per shard (`window.steps = 9600`, `dt_s = 30`) — **reference (calibration) =
+  each coordinate's own first 9,000 ticks; live = the remaining 600 ticks.** `Math.floor(9000/30)
+  = 300` reference blocks per coordinate per shard (K6.3's own registered origin for the plan's
+  "m=300" figure); `Math.floor(600/30) = 20` disjoint live windows per coordinate per shard.
+- **Per coordinate, per shard: `calibrateShapeBlocks(coordinate_reference_9000_ticks, W=30)`**,
+  independently per coordinate (5 independent calibrations per shard, one per counter) — the
+  construction's own registered unit of calibration (K6.2), not a pooled or cross-coordinate
+  calibration.
+- **Registered behavior on the degenerate-reference guard (`assertNonDegenerate`, K6.2 module
+  cite `:206-222`), on quantized telemetry — registered as a finding to make, not assumed away.**
+  clustersynth's counters are continuous-valued in the harness's own model (no explicit
+  quantization in `COUNTERS`, checked against `factor-model.js:28-33`), but any coordinate whose
+  9,000-tick reference happens to trip the guard (a constant block within some 30-tick slice, or
+  zero spread across all 300 reference blocks for either feature) is **recorded skipped-with-
+  reason, not scored** — `calibrateShapeBlocks` THROWS (K6.2), so Task 11's adapter must catch
+  that throw per `(shard, coordinate)` and record it, not let it abort the whole arm. **The guard
+  firing on real (independently-generated) telemetry is itself a registered finding, not an
+  error to suppress** — this is the SAME predecessor's-mechanism probe C22 exposed
+  (`shape-clustersynth-2026-08-05.md`: "per-coordinate φ spanning two orders of magnitude"), now
+  checked directly against this construction's own guard rather than inferred after an 82%
+  false-alarm rate. A nonzero skip count is disclosed in the eventual report by name, per
+  coordinate, not folded into the crossing-rate denominator.
+
+**Endpoint: healthy crossing rate vs `alpha=0.05`, per coordinate AND pooled. NO power claim** —
+no fault is ever injected in this arm (`faults: false` above), so there is no `detection_rate`,
+no `shift_sigma`, and no S3 candidacy of any kind for these cells. Per `(shard, coordinate)`: a
+crossing iff wealth `>= 20` at any of the 20 disjoint live-window checkpoints (K6.10's own
+any-prefix reading, reused at this arm's own 20-window span rather than K6.10's 6). Per-coordinate
+crossing rate = crossings / (shards not skipped by the degenerate guard, that coordinate). Pooled
+crossing rate = total crossings / total (shard, coordinate) pairs scored.
+
+**Binding field-name constraint, registered before Task 11 builds the adapter (K3.1.4/K6.7's
+convention, extended one arm earlier than K3 needed it):** T2's emitted cells carry a field named
+**`t2_crossing_rate`** (NOT the literal `crossing_rate`) and, if a verdict-shaped field is
+useful for the eventual report, **`t2_verdict`** (NOT `verdict`) — deliberately avoiding all
+five instrument-named strings (`increment_estimator`, `crossing_rate`, `stopped_mean`,
+`exceedance`, `mean_e`), the same reason K3.1.4/K6.7 register for the S3/fault-cell rows: `cellsFor`
+(`validation/certification/lib/collect.mjs`) matches cells to this card purely by `detector` field,
+regardless of study directory, so a T2 cell carrying the literal `crossing_rate` with no
+`increment_estimator` present would read `ownPresent=[]`, `foreignPresent=['crossing_rate']` under
+`applyGuards` (`guards.mjs:14-19`) — a `VOID`, which would exclude T2's own evidence from the
+card's S2 stage with a confusing "instrument-class mismatch" reason that misdescribes a
+deliberately out-of-instrument arm. Naming the field distinctly keeps T2 invisible to
+`isValidityCell`/`isPowerCell` (`score.mjs:11-16`) entirely — matching K3.3.3's
+`step_blindness_probe_rate` precedent exactly: T2 is descriptive evidence for the record and the
+wiki write-back, not S2/S3 card-scoring evidence. Emitted cells: `{detector:
+'shape_block_conformal_bet', arm: 'T2-clustersynth', counter, shard_id, n_reference_blocks: 300,
+n_live_windows: 20, k, n, t2_crossing_rate, skipped: bool, skip_reason: string|null,
+substrate_tier: 'T2'}` per (coordinate, shard), plus a pooled summary row per coordinate and one
+overall pooled row.
+
+**K6 T2-required-for-YES rule, and why the arm still runs.** Per Global Constraints (K6.1's
+sibling line, quoted at §Amendment-summary K6.13, below): "K6 — healthy crossing Wilson LB > α on
+the T1 battery **or** on the T2 clustersynth arm; T2 is required for a K6 YES." **This bar is
+moot given K6.4's derived NO** — a construction already predicted NOT_POWERED at canonical cannot
+reach YES regardless of T2's outcome (A4/§8's decision rule: COVERED requires the canonical cell
+`>= 0.50`, independent of T2; T2 only ever ADDS a second way to REFUTE). **The arm runs anyway,
+registered explicitly as the C22-fix vindication test**, with its own stop condition (K6.13):
+**does this construction's validity — the entire reason it was built, not its power — survive
+independent telemetry, where its predecessor did not?** This is filed as its own finding
+regardless of K6's already-derived class answer.
+
+### K6.13 Stop conditions (verbatim, T1 and T2 separately)
+
+Copied verbatim from the plan's Global Constraints:
+
+> K6 — healthy crossing Wilson LB > α on the T1 battery **or on the T2 clustersynth arm**; T2 is
+> required for a K6 YES. A fired stop condition = REFUTED: record, file, class stays NO.
+
+`α = 0.05` per §3 (unchanged, cited not redefined).
+
+- **T1 stop condition.** Applies to K6.7's arm-34 S2 row's `crossing_rate`/`k`/`n=2000`
+  (per-trajectory, same shape as K3.13). A fired T1 stop condition REFUTES `shape_block_conformal_bet`
+  on the record; per §13/A4, K6 as a class stays NO regardless (every K1–K6 detector this study
+  scores on K6's canonical cell is already 0.0000 or NOT_POWERED per the existing corpus, and
+  K6.4 already derives this candidate's own canonical rate at ~0.000).
+- **T2 stop condition.** Applies to K6.12's pooled `t2_crossing_rate` (Wilson 95% lower bound on
+  the pooled crossing rate across all scored (shard, coordinate) pairs, computed on the pooled
+  `k`/`n`, NOT on any single coordinate's own rate — matching the "pooled healthy shards" wording
+  this task's own dispatch registers). **If the T2 stop condition fires: the construction's
+  validity is refuted on independent telemetry — filed as a REFUTED record, the same
+  vindication-test outcome the predecessor's own 82% false-alarm history warns is live for any
+  shape-class construction until checked directly.** If it does NOT fire: filed as the positive
+  vindication result (validity survives telemetry a synthetic battery alone cannot speak to, per
+  `~/concord/knowledge/stats/pages/simulation-validates-instances-not-statements.md`, cited by the
+  design page's own T2-bar reasoning, K6 authority section).
+
+A fired stop condition on EITHER arm REFUTES `shape_block_conformal_bet` on the record; K6 as a
+class stays NO either way, since K6.4's derived NOT_POWERED already independently accounts for
+the canonical-cell answer regardless of T1/T2's own validity readings.
+
+### K6.14 Predictions, with falsifiers
+
+- **T1 healthy crossing rate.** *Prediction:* `<= alpha = 0.05` (validity, per the block-conformal
+  exactness argument, K6.2, subject to K6.11's O(1/m) qualifier). *Falsifier:* the T1 stop
+  condition itself (K6.13).
+- **K6 canonical (`mix-d1.5`, idx 27) detection.** *Prediction:* **`~0.000`, expected NOT_POWERED**
+  — K6.4's derived chain (Steps 1–5), corroborated by the disclosed growth-criterion measurement
+  (`E[log eAvg|alt] = -1.414 ± 0.047` at `W=30`, anti-informative). *Falsifier:* canonical-cell
+  detection rate materially above the derived ceiling (approaching or exceeding `0.50`) — reported
+  as a surprise requiring investigation of the derivation or the wiring, not tuned toward.
+- **Grid cells.** idx 26 (`d=1.0`): predicted `~0.000`. idx 28 (`d=2.0`): predicted `~0.03`
+  (INERT-floor-adjacent, K6.4 Step 5). idx 29 (`mix-d1.5-ar1`, φ=0.6): matched-process regime
+  (K6.2/K6.11), so — UNLIKE K3/K4's own `-ar1` cells — this is not automatically out-of-claim;
+  registered prediction is the SAME `~0.000` as idx 27 (the construction's validity argument does
+  not distinguish φ=0 from matched φ=0.6, only mismatched φ is out-of-claim, K6.11). Per §8/§10.1,
+  only the canonical cell (idx 27) decides COVERED/NOT_POWERED; grid and `-ar1` cells are recorded
+  for context.
+- **S3 arm (cell 34).** *Prediction:* `~0.03`, expected INERT (K6.8). *Falsifier:* materially
+  above `0.03` — a surprise, not a target (K6.8's own closing paragraph).
+- **T2 pooled crossing rate.** *Prediction:* `<= alpha = 0.05` — the construction's own validity
+  claim, unqualified by T1's own registered regime restrictions, since T2's whole purpose is to
+  test that claim against telemetry the design was never fit to. *Falsifier:* the T2 stop
+  condition (K6.13). **No power prediction is registered for T2** (K6.12: NO power claim, by
+  design).
+
+A failed endpoint is a publishable result on this candidate exactly as it is everywhere else in
+this document (§0/rule 2); the DERIVED NOT_POWERED prediction being confirmed rather than
+falsified is not this document treating the run as unnecessary — every falsifier above stands,
+and a surprise on any of them is reported in full.
+
+### K6.15 Fallbacks — inherited from A3, not restated
+
+NOT-EXECUTABLE, non-finite, and vacuity handling for this candidate's T1 cells (fault cells 26–29
+and arm cell 34) follow A3 unchanged — `non_finite_wealth` field name (A3a, structurally 0 here
+per K6.7), `NOT-EXECUTABLE` verdict token with `not_executable_reason` (A3b), and the
+N=2000-denominator vacuity rule (A3c). The T2 arm (K6.12) is NOT a coverage-battery cell in A3's
+sense (no `CELL_SEED`, no N=2000 trajectory stream) and carries its own registered fallback: a
+`(shard, coordinate)` pair whose calibration throws (the degenerate-reference guard, K6.12) is
+recorded `skipped: true` with `skip_reason`, excluded from both the per-coordinate and pooled
+crossing-rate denominators, never silently folded into a `0` reading.
+
+### K6.16 House rules, mapped
+
+Per `~/concord/knowledge/methodology/pages/pre-registration-discipline.md`: (1) committed before
+any run of this candidate — no `shape_block_conformal_bet` battery or T2 run exists at this
+commit. (2) A failed endpoint (K6.13's stop conditions, or K6.14's falsifiers) is a publishable
+result; nothing above moves afterward — **including the DERIVED NOT_POWERED prediction itself**,
+which is registered as a prediction to be confirmed or falsified by the run, not as a
+pre-decided answer that makes the run optional. (3) No post-hoc analysis exists yet; reserved, to
+be labelled and carry no verdict if written. (4) Fallback rule: K6.15, inherited from A3 (T1) plus
+a new registered rule for T2. (5) Does not apply, as §11 rule 5 already states for this synthetic
+battery (T1) — the T2 arm draws from clustersynth, an independent generator this study does not
+control the seeds of beyond its own registered `seed` parameter (K6.12), which is this document's
+equivalent freeze for that arm. (6) Results append-only: binding on this candidate's future runs
+(T1 and T2), same manifest shape as §11 rule 6 and A8's field list, extended with K6.12's own T2
+field set. (7) Reruns only for a named code defect, prior run preserved: binding, both arms. (8)
+The report states every endpoint's number and verdict, both arms: binding on Task 11's report.
+
+### Amendment summary
+
+Registers, without superseding anything: the constants cross-check with `m` explicitly resolved
+against the plan/page discrepancy (K6.1/K6.3: T1's `m=333`, T2's `m=300`, arithmetic shown for
+both, the plan's bare "m=300" read as T2's own figure conflated into the class); the formula/
+validity-argument line cites (K6.2); the derived NOT_POWERED prediction's full closed-form chain
+(K6.4: mixture `E[Z^4]=2.3671875` exact at d=1.5, re-derived here; raw-kurtosis deficit `0.6328`;
+the disclosed growth-criterion table, anti-informative at `W=30`, coin-flip at `W=300`,
+break-even `W≈400-600`; the predicted detection grid `d=1.0→~0.000, d=1.5→~0.000, d=2.0→~0.03`);
+the kappa misfit as a registered design limitation for a successor design, not a tuning license
+(K6.5: floor bound `κ*>=0.172` at the registered `m=333`, measured `κ*≈0.32-0.4` at the
+alternative, cost `-1.30` nats/window at the registered `κ=0.1`); a new §7 row on the four fault
+cells (K6.6/K6.9) plus a new arm at cell 34 with `increment_estimator`/`crossing_rate` registered
+up front rather than deferred to a correction round (K6.7, applying the K3.15/K3.1.1/K3.1.2
+lesson directly); the class-appropriate S3 probe honestly registered at the class's own maximal
+severity (d=2.0) with its expected INERT/ADVISORY outcome stated plainly, not routed around
+(K6.8); the window-partitioned endpoint reused from K3.9 (K6.10); the O(1/m) qualifier and the
+phi-mismatch out-of-claim measurements (K6.11); the T2 clustersynth arm, validity-only, with the
+shard-realization call, the degenerate-reference-guard-on-telemetry finding registered as a
+finding to make, the binding field-name constraint keeping T2 invisible to card scoring, and the
+T2-required-for-YES bar named moot given the already-derived NO (K6.12); stop conditions for both
+arms (K6.13); predictions with falsifiers for every cell and both arms (K6.14); fallback
+inheritance plus a new T2-specific rule (K6.15). No endpoint, floor, or seed in §1–14, Amendment
+v1.1, Amendment v1.2, Erratum v1.3, Amendment v2.K4, Amendment v2.K4.1, Amendment v2.K3, Amendment
+v2.K3.1, Amendment v2.K3.2, or Amendment v2.K3.3 moves.

@@ -1,4 +1,5 @@
-// validation/coverage/test/heldout-substrate.test.mjs — the C1 substrate property.
+// validation/coverage/test/heldout-substrate.test.mjs — SPEC-DOCUMENTATION of both held-out
+// row schemes. Read the scope note below before relying on this file for anything.
 //
 // PREREGISTRATION.md Amendment v2.C1 registers the held-out row generator as a named code
 // defect (house rule 7, §11:249) and registers its replacement. The defect was NOT a wrong
@@ -7,14 +8,31 @@
 // `seed(j) = HELDOUT_SEED + 7919*j` with one gaussian read per stream makes both uniforms
 // `gaussFrom` consumes affine in `j`, so the 10,000 rows walk a rank-1 Kronecker lattice.
 //
-// That is why the tests here assert a DISTRIBUTIONAL property and not a re-implementation of
-// the seeding arithmetic. The two pre-existing provenance tests in run-battery.test.mjs
-// (K4.4's cal_median/cal_mad recompute, K6.10's window/wealth recompute) re-implemented the
-// scheme, so they agreed with the harness while the harness was wrong — a re-implementation
-// test cannot see a defect in the thing it re-implements. They are updated to the corrected
-// scheme there; the mechanical kill lives here, as an autocorrelation bound that the OLD
-// scheme fails by a factor of 7.5 on iid cells and by 0.33-0.68 in absolute deviation on the
-// AR(1) cells.
+// WHAT THIS FILE IS, AND WHAT IT IS NOT. It characterizes BOTH schemes side by side — it
+// re-implements each locally and imports nothing but `../lib/inject.mjs`. It never invokes the
+// harness. **So it is NOT the mechanical kill: a regression of `heldoutRows` back to the spaced-
+// seed draw would leave every test here passing**, because these tests assert properties of two
+// local functions, not of the code under registration. Its value is (a) deriving and pinning the
+// `0.10` bound the harness's own guard uses, (b) recording that the marginals do not separate the
+// two schemes, so a future reader cannot substitute a moment check for the autocorrelation one,
+// and (c) fixing the lattice's measured signature so the defect stays identifiable.
+//
+// THE MECHANICAL KILL IS ELSEWHERE, and it is two things:
+//   1. `assertHeldoutSerialStructure` in `validation/coverage/harness/run-battery.mjs` — the
+//      harness THROWS on rows whose autocorrelation does not match their own phi, so the pre-C1
+//      draw cannot produce a run at all. `COVERAGE_FORCE_HELDOUT_LATTICE=1` is its positive
+//      control, asserted in run-battery.test.mjs.
+//   2. The seven value pins in run-battery.test.mjs that a regression moves: cell 28's and arm
+//      34 S3's `detection_rate` + INERT verdict (C1.5), `p_uniformity`'s pinned KS statistic and
+//      decile histogram, `cal_fingerprint`'s re-derivation, K4.4's cal_median/cal_mad
+//      re-derivation, K6.10's window/wealth recompute, K6.7's increment_estimator recompute, and
+//      the manifest's `heldout` prose.
+//
+// The two pre-existing provenance tests in run-battery.test.mjs (K4.4's cal_median/cal_mad
+// recompute, K6.10's window/wealth recompute) re-implemented the scheme, so they agreed with the
+// harness while the harness was wrong — a re-implementation test cannot see a defect in the thing
+// it re-implements. They are updated to the corrected scheme there, which is what makes them
+// regression-bearing now rather than merely confirmatory.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { rng, gaussFrom } from '../lib/inject.mjs';

@@ -115,7 +115,7 @@ const supersededLines = evidence.runs
 
 // Amendment v2.C1.1: legacy `supersedes: {priorRun, defect}` declarations, recognized and
 // reported, deliberately NOT acted on. Silence here would have been the status quo — which is
-// how 144 h0-battery cells stayed in the corpus for a week after being declared defective.
+// how 148 h0-battery cells stayed in the corpus for a week after being declared defective.
 const unhonouredLines = (evidence.unhonoured_supersessions ?? [])
   .map((u) => `- ${u.target} — declared superseded by ${u.declared_by}, STILL SCORED. `
     + `Stated defect: ${u.defect}`);

@@ -381,9 +381,14 @@ test('K6.9 params positive scope: every shape_block_conformal_bet row stamps hel
 // continuous stream per held-out draw. This test's own limitation is worth naming where it lives:
 // it re-implements the seeding scheme, so while the harness drew a rank-1 lattice this test agreed
 // with it and passed. A re-implementation test cannot see a defect in the thing it re-implements.
-// The DISTRIBUTIONAL kill that can see it lives in test/heldout-substrate.test.mjs (an
-// autocorrelation bound the old scheme fails by 7.5x), and the harness itself now refuses to run
-// on rows that violate that bound. What this test still earns is wrong-stream provenance: a
+// What catches it now is the harness's own guard — assertHeldoutSerialStructure THROWS on rows
+// whose autocorrelation does not match their phi, so the pre-C1 draw cannot produce a run at all,
+// and this test fails at the harness invocation rather than at its assertions. (Its positive
+// control is the COVERAGE_FORCE_HELDOUT_LATTICE test further down.) The bound that guard uses is
+// derived and pinned in test/heldout-substrate.test.mjs, which characterizes both schemes but
+// invokes nothing — it is spec-documentation, not the kill. Recomputing against the CORRECTED
+// scheme here is what makes this test regression-bearing: it now disagrees with a reverted harness
+// instead of agreeing with it. It also still earns wrong-stream provenance, as it always did: a
 // heldoutSeed off by one, or a cell sharing another cell's draw, still moves median/mad here.
 test('K4.4 provenance: cal_median/cal_mad are re-derivable from lib/inject.mjs at the registered heldout seed', () => {
   const { summary } = smoke();

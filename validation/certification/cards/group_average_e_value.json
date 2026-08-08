@@ -7,17 +7,17 @@
   "family": null,
   "class": "terminal_e_value",
   "engine_pin": {
-    "version": null,
-    "sha": null
+    "version": "0.6.6-pre",
+    "sha": "4c16092c86653f61ed6097597adb92bea73adc85"
   },
   "source_files": [
     {
       "path": "detectors/group-average-e-value.ts",
-      "sha256": null
+      "sha256": "bec4b51e734d0bf44b6fa934de393a9292398ef4b8131f32d9e7385e5ac55a3e"
     },
     {
       "path": "detectors/safe-t-e-value.ts",
-      "sha256": null
+      "sha256": "8a5103401ab08215f376453cad49528842a6024901564191a96441035991573b"
     }
   ],
   "guarantee": {

@@ -18,7 +18,7 @@ const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * 
     const r = lcg(20260808);
     const ps = [];
     for (let w = 0; w < 4000; w++) {
-        const win = Array.from({ length: 30 }, () => 2 * gauss(r));
+        const win = Array.from({ length: spectral_bet_e_process_1.W_K3 }, () => 2 * gauss(r));
         for (const b of (0, spectral_bet_e_process_1.spectralBetWindow)(win, 2).perBin)
             ps.push(b.p);
     }
@@ -37,7 +37,7 @@ const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * 
     for (let i = 0; i < N; i++) {
         const windows = [];
         for (let w = 0; w < 6; w++) {
-            windows.push(Array.from({ length: 30 }, () => 2 * gauss(r)));
+            windows.push(Array.from({ length: spectral_bet_e_process_1.W_K3 }, () => 2 * gauss(r)));
         }
         const { log } = (0, spectral_bet_e_process_1.spectralBetWealth)(windows, 2);
         if (log.some((l) => l >= logThreshold))
@@ -59,7 +59,7 @@ const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * 
     for (let i = 0; i < N; i++) {
         const windows = [];
         for (let w = 0; w < 6; w++) {
-            const win = Array.from({ length: 30 }, (_, t) => amp * Math.sin(2 * Math.PI * freq * t) + sigma * gauss(r));
+            const win = Array.from({ length: spectral_bet_e_process_1.W_K3 }, (_, t) => amp * Math.sin(2 * Math.PI * freq * t) + sigma * gauss(r));
             windows.push(win);
         }
         const { wealth } = (0, spectral_bet_e_process_1.spectralBetWealth)(windows, sigma);
@@ -69,11 +69,63 @@ const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * 
     strict_1.default.ok(avgWealth > 1, `average wealth ${avgWealth}`);
 });
 (0, node_test_1.test)('sigma and window-length guards throw', () => {
-    const win30 = new Array(30).fill(0);
-    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(new Array(29).fill(0), 1), /window\.length/);
-    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(new Array(31).fill(0), 1), /window\.length/);
-    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(win30, 0), /sigma/);
-    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(win30, -1), /sigma/);
-    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWealth)([new Array(29).fill(0)], 1));
+    const win = new Array(spectral_bet_e_process_1.W_K3).fill(0);
+    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(new Array(spectral_bet_e_process_1.W_K3 - 1).fill(0), 1), /window\.length/);
+    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(new Array(spectral_bet_e_process_1.W_K3 + 1).fill(0), 1), /window\.length/);
+    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(win, 0), /sigma/);
+    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(win, -1), /sigma/);
+    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWealth)([new Array(spectral_bet_e_process_1.W_K3 - 1).fill(0)], 1));
+});
+// Review fix (round 1): the never-max combination rule had no test. Fixture
+// is a pure cos(2*pi*t/W_K3) at exactly bin k=1, amp 1, sigma 1 — an
+// analytic oracle, not a value copied from one run of the module: the DFT
+// basis vectors are orthogonal at integer periods over a length-W_K3
+// window, so a pure k=1 signal has Re_1 = W_K3/2 exactly, Im_1 = 0 exactly,
+// and Re_2 = Im_2 = Re_3 = Im_3 = 0 exactly (no floating-point coincidence —
+// verified against the module's own output before writing this fixture).
+(0, node_test_1.test)('bins combine by averaging, never max (mutation-bound fixture)', () => {
+    const sigma = 1;
+    const window = Array.from({ length: spectral_bet_e_process_1.W_K3 }, (_, t) => Math.cos((2 * Math.PI * t) / spectral_bet_e_process_1.W_K3));
+    const { perBin, eAvg } = (0, spectral_bet_e_process_1.spectralBetWindow)(window, sigma, spectral_bet_e_process_1.KAPPA_K3);
+    // Independent oracle for k=1: Re_1 = W_K3/2, Im_1 = 0 ⇒ U_1 = (W_K3/2)^2 / W_K3 / sigma^2 = W_K3/4.
+    const U1 = (spectral_bet_e_process_1.W_K3 * spectral_bet_e_process_1.W_K3) / 4 / spectral_bet_e_process_1.W_K3 / (sigma * sigma);
+    const p1 = Math.exp(-U1);
+    const e1 = spectral_bet_e_process_1.KAPPA_K3 * Math.pow(p1, spectral_bet_e_process_1.KAPPA_K3 - 1); // pins kappa=0.1 inside the calibrator
+    strict_1.default.ok(Math.abs(e1 - 85.4059) < 1e-3, `oracle e1 ${e1}`);
+    strict_1.default.ok(Math.abs(perBin[0].e - e1) < 1e-6, `module e1 ${perBin[0].e} vs oracle ${e1}`);
+    // k=2, k=3: orthogonal to a pure-k=1 signal ⇒ zero amplitude ⇒ p=1 ⇒ e=kappa.
+    strict_1.default.ok(Math.abs(perBin[1].e - spectral_bet_e_process_1.KAPPA_K3) < 1e-9, `e2 ${perBin[1].e}`);
+    strict_1.default.ok(Math.abs(perBin[2].e - spectral_bet_e_process_1.KAPPA_K3) < 1e-9, `e3 ${perBin[2].e}`);
+    const expectedAvg = (perBin[0].e + perBin[1].e + perBin[2].e) / 3;
+    strict_1.default.equal(eAvg, expectedAvg, 'eAvg is the mean, not the max — mutation eAvg->max fails this');
+    strict_1.default.ok(Math.abs(eAvg - 28.5353) < 1e-3, `eAvg ${eAvg}`);
+    strict_1.default.ok(eAvg < Math.max(...perBin.map((b) => b.e)), 'never-max: eAvg is strictly below the largest bin e');
+});
+// Review fix (round 1, Minor 2): the ADR 0026 NaN pathway, pinned for K3.
+// A NaN in a window makes every bin's e NaN, so eAvg is NaN; the log
+// increment is NaN, which advanceLogWealth holds at the prior log-wealth
+// (0, i.e. wealth 1) rather than propagating to NaN/JSON null.
+(0, node_test_1.test)('a NaN-containing window holds wealth at 1 (log 0) — ADR 0026 NaN pathway', () => {
+    const nanWindow = new Array(spectral_bet_e_process_1.W_K3).fill(0);
+    nanWindow[5] = NaN;
+    const { wealth, log } = (0, spectral_bet_e_process_1.spectralBetWealth)([nanWindow], 1);
+    strict_1.default.equal(log[0], 0, 'NaN window holds the log-wealth at its starting value');
+    strict_1.default.equal(wealth, 1, 'and the linear view stays at 1, not NaN');
+});
+// Review fix (round 1, Minor 2): a p-underflow-to-0 ordinate (an
+// astronomically large periodogram value, sigma held fixed) drives e to
+// +Infinity through the calibrator (kappa * 0^(kappa-1) = Infinity), and
+// the log-domain wealth accumulator saturates the linear view at
+// Number.MAX_VALUE, never Infinity — the ADR 0026 saturation guarantee.
+(0, node_test_1.test)('a p-underflow-to-0 ordinate saturates the wealth view at Number.MAX_VALUE, not Infinity', () => {
+    const sigma = 1;
+    // amp 1000 at exactly bin k=1: U_1 = (1000*W_K3/2)^2 / W_K3 / sigma^2, astronomically large.
+    const hugeWindow = Array.from({ length: spectral_bet_e_process_1.W_K3 }, (_, t) => 1000 * Math.cos((2 * Math.PI * t) / spectral_bet_e_process_1.W_K3));
+    const { perBin } = (0, spectral_bet_e_process_1.spectralBetWindow)(hugeWindow, sigma);
+    strict_1.default.equal(perBin[0].p, 0, 'the ordinate underflows p to exactly 0');
+    strict_1.default.equal(perBin[0].e, Infinity, 'the calibrator sends p=0 to e=Infinity, pre-accumulation');
+    const { wealth, log } = (0, spectral_bet_e_process_1.spectralBetWealth)([hugeWindow], sigma);
+    strict_1.default.equal(wealth, Number.MAX_VALUE, 'the linear view saturates finite, never Infinity');
+    strict_1.default.ok(Number.isFinite(log[0]), 'log books stay exact and finite');
 });
 //# sourceMappingURL=spectral-bet-e-process.test.js.map

@@ -1,6 +1,6 @@
 // validation/certification/test/golden-verdicts.test.mjs
 //
-// I5 -- the twelve verdicts are frozen here. Any change to the scorer, the guards, the
+// I5 -- the thirteen verdicts are frozen here. Any change to the scorer, the guards, the
 // cards, or the evidence corpus that moves a verdict fails this test by name.
 //
 // WHY A GOLDEN TABLE AND NOT A REPORT DIFF. The protocol's own rule is that endpoints and
@@ -104,6 +104,23 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // other two K4 candidates' canonical rates are unchanged and still below the floor
 // (family_E_conformal_heldout 0.0430 NOT_POWERED, safe_t_e_value 0.0005 NOT_POWERED).
 // Every other card's verdict, tier and four stage statuses are unchanged.
+//
+// Extended 2026-08-08, coverage-gap-detectors Task 7 (card frozen at ebf34c5): a fourth new
+// candidate lands, spectral_bet_e_process (the periodogram betting e-process K3 construction,
+// PREREGISTRATION.md Amendment v2.K3). Its prior_evidence cites the coverage study (S2, same
+// pattern as the other three new candidates) and the ratified design page at stage 'design' --
+// not 'S1', per the point_tail_bet_e_value precedent above (dfe7536: a pre-run design-doc
+// citation does not satisfy scoreS1's DECLARED reading). No battery run of this candidate exists
+// yet -- Task 8's adapter is what produces one -- so S1/S2/S3 read MISSING, S4 PASS (nothing
+// priced against budget yet), overall NOT_EXECUTABLE: the correct, non-tuned pre-run verdict,
+// same convention as every other new-candidate entry point above. Amendment v2.K3 K3.15 registers
+// a further, structural point this table does not resolve: this card's class is test_martingale,
+// whose CLASS_INSTRUMENTS entry (increment_estimator) the amendment's registered coverage-battery
+// fields do not populate -- so S2 is expected to stay MISSING even after a registered run lands,
+// absent a Task 8 adapter addition, unlike the three terminal_e_value-class candidates above
+// (whose exceedance/mean_e fields are exactly their class's own instrument). Expected to move only
+// if Task 8's adapter closes that gap; flagged here so a future NOT_EXECUTABLE reading post-run is
+// not mistaken for a defect in this test.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -117,6 +134,7 @@ const GOLDEN = {
   group_average_e_value: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
   family_E_conformal_heldout: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
   point_tail_bet_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
+  spectral_bet_e_process: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
 };
 
 function runHarness(t) {
@@ -136,7 +154,7 @@ function runHarness(t) {
   return { dir, cards };
 }
 
-test('the twelve verdicts are exactly the frozen table', (t) => {
+test('the thirteen verdicts are exactly the frozen table', (t) => {
   const { cards } = runHarness(t);
   assert.deepEqual(Object.keys(cards).sort(), Object.keys(GOLDEN).sort(), 'the set of certified detectors changed');
   for (const [id, want] of Object.entries(GOLDEN)) {
@@ -188,7 +206,7 @@ test('universal-inference keeps its N4 cells in regime: its claim quantifies ove
   assert.ok(n4.every((c) => c.out_of_regime === false && c.mapped === 'CLEARED'));
 });
 
-test('the report the harness writes carries the same twelve verdicts as its card JSONs', (t) => {
+test('the report the harness writes carries the same thirteen verdicts as its card JSONs', (t) => {
   const { dir, cards } = runHarness(t);
   const report = readFileSync(join(dir, 'REPORT.md'), 'utf8');
   assert.ok(existsSync(join(dir, 'MISSING-CELLS.md')));

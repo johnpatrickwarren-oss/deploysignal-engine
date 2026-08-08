@@ -185,6 +185,15 @@ const REGISTERED_CELLS = [
   F(21, 'K4', '5sigma-point-ar1', 0.6),
   F(22, 'K5', 'slope5e-5', 0), F(23, 'K5', 'slope1e-4', 0), F(24, 'K5', 'slope5e-4', 0), F(25, 'K5', 'slope1e-4-ar1', 0.6),
   F(26, 'K6', 'mix-d1.0', 0), F(27, 'K6', 'mix-d1.5', 0), F(28, 'K6', 'mix-d2.0', 0), F(29, 'K6', 'mix-d1.5-ar1', 0.6),
+  // Amendment v2.K5R, K5R.5: K5's re-registered grid. Indices START AT 38 because 35, 36 and 37
+  // are already registered seeds -- K6_T2_SCENARIO_SEED (K6.12, 20260842, asserted in
+  // run-clustersynth-arm.mjs:67-68), K6E.9's shape_ecdf_conformal_bet arm (20260843) and
+  // K6E.10's K6E_T2_SCENARIO_SEED (20260844). v2.K6E.17 cancelled that run; a cancelled run does
+  // not release a registered index, so reusing 36 or 37 would make two registrations share a
+  // seed. Appended (not interleaved with cells 22-25) so every earlier cell keeps its index, and
+  // therefore its CELL_SEED and its trajectory stream, bit-for-bit.
+  F(38, 'K5', 'slope2.5e-3', 0), F(39, 'K5', 'slope5e-3', 0), F(40, 'K5', 'slope1e-2', 0),
+  F(41, 'K5', 'slope2e-2', 0), F(42, 'K5', 'slope1e-2-ar1', 0.6),
 ];
 // A1: the two new candidates' own healthy/power arms. `hint` is the fault class whose
 // geometry the arm borrows (K=10 for the group arm, the 1-D stream for the conformal arm);
@@ -206,6 +215,10 @@ const ARM_CELLS = [
   { idx: 34, arm_detector: 'shape_block_conformal_bet', hint: 'K6', phi: 0, seed: BASE_SEED + 34 },
 ];
 
+// Amendment v2.K5R, K5R.5 clause 3: the registered per-class count of φ=0.6 replicates. K5 is the
+// one class with two, because a preserved cell is not deleted when the canonical moves.
+const REGISTERED_AR1_ROWS = Object.freeze({ K1: 1, K2: 1, K3: 1, K4: 1, K5: 2, K6: 1 });
+
 // The constants module is normative (§1); this table mirrors it. Disagreement is a defect,
 // so it is a crash at startup rather than a run nobody can interpret.
 function assertRegistryAgreement() {
@@ -215,15 +228,59 @@ function assertRegistryAgreement() {
     if (JSON.stringify(grid) !== JSON.stringify(spec.grid)) {
       throw new Error(`run-battery: ${classId} grid ${JSON.stringify(grid)} != FAULT_CLASSES ${JSON.stringify(spec.grid)}`);
     }
+    // §4 gives each class the φ=0.6 replicate of its own canonical. Amendment v2.K5R (K5R.5)
+    // makes K5 carry TWO: the current canonical's (`slope1e-2-ar1`) and the retired canonical's
+    // (`slope1e-4-ar1`, preserved as evidence of a different question, K5R.4). The registered
+    // invariant is therefore three checks, not "exactly one row": the current canonical's
+    // replicate is present, every replicate replicates a registered grid entry, and the per-class
+    // count equals K5R.5's literal table. The third clause is what keeps this from being a
+    // loosening -- a stray extra replicate in any class still crashes at startup.
     const ar1Rows = rows.filter((c) => c.phi === 0.6);
-    if (ar1Rows.length !== 1 || ar1Rows[0].severity !== `${spec.canonical}-ar1`) {
-      throw new Error(`run-battery: ${classId} has no single ${spec.canonical}-ar1 replicate (§4)`);
+    if (!ar1Rows.some((c) => c.severity === `${spec.canonical}-ar1`)) {
+      throw new Error(`run-battery: ${classId} has no ${spec.canonical}-ar1 replicate (§4)`);
+    }
+    for (const c of ar1Rows) {
+      const base = c.severity.replace(/-ar1$/, '');
+      if (!spec.grid.includes(base)) {
+        throw new Error(`run-battery: ${classId} replicate ${c.severity} replicates ${base}, which is not a registered grid entry (§4, K5R.5)`);
+      }
+    }
+    if (ar1Rows.length !== REGISTERED_AR1_ROWS[classId]) {
+      throw new Error(`run-battery: ${classId} has ${ar1Rows.length} φ=0.6 replicates, K5R.5 registers ${REGISTERED_AR1_ROWS[classId]}`);
     }
   }
   for (const c of REGISTERED_CELLS) {
     if (c.seed !== BASE_SEED + c.idx) throw new Error(`run-battery: cell ${c.idx} seed ${c.seed} != CELL_SEED formula`);
   }
-  if (REGISTERED_CELLS.length !== 30) throw new Error(`run-battery: ${REGISTERED_CELLS.length} fault cells, §4 registers 30`);
+  if (REGISTERED_CELLS.length !== 35) throw new Error(`run-battery: ${REGISTERED_CELLS.length} fault cells, §4 + Amendment v2.K5R register 35`);
+  // Amendment v2.K5R, K5R.5's index table, pinned by value: the cell indices ARE the seed scheme,
+  // so a moved index is a different data set under the same severity label. Indices 35-37 are
+  // reserved by K6.12/K6E.9/K6E.10 and must stay absent from the fault-cell table.
+  //
+  // Amendment v2.K5R.1, K5R.1.1: cell 25 joins this table. The three -ar1 checks above bound HOW
+  // MANY replicates a class carries, not WHICH ones -- so relabelling the preserved replicate from
+  // `slope1e-4-ar1` to any other grid severity's `-ar1` passed all three (the reviewer's mutation
+  // R1: both suites green, where the pre-K5R "exactly one, and it is the canonical's" assertion
+  // crashed here). Cell 42 was pinned by this table; cell 25 was pinned by nothing once that
+  // assertion was replaced. §6's seed table already registers cell 25 as slope1e-4-ar1 / 20260832;
+  // this makes the harness assert it.
+  for (const [idx, severity, phi, seed] of [
+    [25, 'slope1e-4-ar1', 0.6, 20260832],
+    [38, 'slope2.5e-3', 0, 20260845], [39, 'slope5e-3', 0, 20260846], [40, 'slope1e-2', 0, 20260847],
+    [41, 'slope2e-2', 0, 20260848], [42, 'slope1e-2-ar1', 0.6, 20260849],
+  ]) {
+    const cell = REGISTERED_CELLS.find((c) => c.idx === idx);
+    if (!cell) throw new Error(`run-battery: no fault cell at index ${idx}, K5R.5 registers ${severity}`);
+    if (cell.fault_class !== 'K5' || cell.severity !== severity || cell.phi !== phi || cell.seed !== seed) {
+      throw new Error(`run-battery: cell ${idx} is ${cell.fault_class} ${cell.severity} φ=${cell.phi} seed=${cell.seed}, `
+        + `K5R.5 registers K5 ${severity} φ=${phi} seed=${seed}`);
+    }
+  }
+  for (const idx of [35, 36, 37]) {
+    if (REGISTERED_CELLS.some((c) => c.idx === idx)) {
+      throw new Error(`run-battery: fault cell at index ${idx}, which K6.12/K6E.9/K6E.10 already registered as a seed`);
+    }
+  }
   if (REGISTERED_CELLS[29].seed !== 20260836) throw new Error('run-battery: cell 29 seed != registered 20260836');
   // Every seed constant against its registered literal (§6, A5). These are the numbers the
   // seed formulas are made of; a formula that still parses with a changed constant produces a

@@ -18,9 +18,50 @@ test('registry: six classes, frozen shape', () => {
   assert.equal(FAULT_CLASSES.K2.canonical, 'K10-e0.5sigma');
   assert.equal(FAULT_CLASSES.K3.canonical, 'A0.75sigma-f0.05');
   assert.equal(FAULT_CLASSES.K4.canonical, '5sigma-point');
-  assert.equal(FAULT_CLASSES.K5.canonical, 'slope1e-4');
+  // Amendment v2.K5R (K5R.3/K5R.5): K5's canonical moved from `slope1e-4` (terminal shift
+  // 0.0199σ over the 200-tick window, a cell whose injection changed 0 of 14,000 paired
+  // crossing decisions) to the 2σ-terminal cell `slope1e-2`. The three old grid entries are
+  // KEPT — preserved evidence of a different question (K5R.4), reported and deciding nothing.
+  assert.equal(FAULT_CLASSES.K5.canonical, 'slope1e-2');
+  assert.deepEqual(FAULT_CLASSES.K5.grid,
+    ['slope5e-5', 'slope1e-4', 'slope5e-4', 'slope2.5e-3', 'slope5e-3', 'slope1e-2', 'slope2e-2'],
+    'K5R.5 registers the old three grid entries followed by the four new ones, in cell-table order');
   assert.equal(FAULT_CLASSES.K6.canonical, 'mix-d1.5');
   assert.equal(COVERAGE_FLOOR, 0.50);
+  // Every class's canonical must be a member of its own grid — the invariant `canonicalOf`
+  // (run-battery.mjs) and `coverageFor`'s `canonical === true` filter both rest on. A canonical
+  // outside the grid emits no canonical cell at all and the class silently reads NOT_POWERED.
+  for (const [classId, spec] of Object.entries(FAULT_CLASSES)) {
+    assert.ok(spec.grid.includes(spec.canonical),
+      `${classId}: canonical ${spec.canonical} is not in its own grid`);
+  }
+});
+
+// Amendment v2.K5R, K5R.6: the mechanism the registered supersession exists for. `coverageFor`
+// keys COVERED on `canonical === true` and nothing else, so two rows from two pooled runs can
+// both claim to be a class's canonical at DIFFERENT severities (`loadEvidence` pools every run
+// under results/live with no cross-run dedup). This test pins both halves of that behaviour: a
+// covering cell is found whatever the array order, and when nothing covers, the REPORTED
+// canonical is simply `canonicalCells[0]` — order-dependent, which is why the corpus must carry
+// one canonical, not two.
+test('two canonical cells at different severities: .find covers, but the reported canonical is order-dependent', () => {
+  const stale = pcell({ fault_class: 'K5', severity: 'slope1e-4', canonical: true, detection_rate: 0.0 });
+  const current = pcell({ fault_class: 'K5', severity: 'slope1e-2', canonical: true, detection_rate: 0.9999 });
+
+  for (const order of [[stale, current], [current, stale]]) {
+    const cov = coverageFor(card, order);
+    assert.equal(cov.K5.status, 'COVERED', 'a covering canonical cell is found in either order');
+    assert.equal(cov.K5.canonical.severity, 'slope1e-2');
+    assert.equal(cov.K5.canonical.rate, 0.9999);
+  }
+
+  const bothBelow = [
+    pcell({ fault_class: 'K5', severity: 'slope1e-4', canonical: true, detection_rate: 0.0 }),
+    pcell({ fault_class: 'K5', severity: 'slope1e-2', canonical: true, detection_rate: 0.4 }),
+  ];
+  assert.equal(coverageFor(card, bothBelow).K5.canonical.severity, 'slope1e-4');
+  assert.equal(coverageFor(card, [...bothBelow].reverse()).K5.canonical.severity, 'slope1e-2',
+    'with nothing covering, the reported canonical follows array order — two canonicals is not a readable corpus');
 });
 
 test('COVERED when canonical cell at or above floor', () => {

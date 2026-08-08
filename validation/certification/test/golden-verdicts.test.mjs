@@ -213,6 +213,35 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // lattice had been UNDERSTATING that card's false-alarm rate). Class answers unchanged: K1 YES,
 // K2 YES, K3 YES 0.654, K4 YES (point_tail_bet_e_value, canonical 0.9780), K5 NO, K6 NO -- K6 now
 // a fortiori, its canonical cell reading 0.0000 where it read 0.0005.
+//
+// UNCHANGED 2026-08-08, C42 (coverage PREREGISTRATION.md Amendments v2.K5R + v2.K5R.1; cert run
+// run-20260808T201836Z, consuming battery run-20260808T201635Z). This table does NOT move, and the
+// entry is here because the CLASS answer does: COVERAGE.md's K5 row goes NO -> YES, carried by
+// safe_t_e_value at T1, canonical rate 0.9995. K5's grid was re-registered because the old one
+// tested a drift no detector could reach -- injectDrift's slope*(t-at)*sigma over (t-at) = 0..199
+// gave the retired canonical `slope1e-4` a terminal shift of 0.0199sigma, and 0 of 14,000 paired
+// trajectories changed their e >= 20 decision when that drift was applied. The new canonical
+// `slope1e-2` (idx 40) reaches 1.99sigma cumulative while its per-tick increment stays 0.01sigma,
+// 75x below K1's smallest step. safe_t_e_value measures 0.9995 there and universal_inference_e_value
+// 0.0030 (K5R.7 predicted 0.9999 and 0.0016 from a disclosed probe on non-registered seeds; all 18
+// prediction rows landed inside their registered +-3 SE bands).
+//
+// WHY NO CARD TUPLE MOVES, and why that is the correct outcome rather than a missed delta:
+// `coverageFor` is a grouping layer over the same S3 power evidence the four stage scores already
+// read (lib/score.mjs coverageFor's own doc comment), so a class answer is a function of the cells,
+// never of the card statuses. safe_t_e_value's S3 was already PASS on other evidence and stays PASS;
+// universal_inference_e_value's S3 was already INERT and stays INERT (its K5 canonical row at 0.0030
+// is one more sub-floor power cell in a status that was already INERT, so nothing moves).
+// group_average_e_value keeps REFUSE: its arm-30 healthy row is BIT-IDENTICAL to the superseded
+// run's (mean_e 1.9140717432761356 > TERMINAL_MEAN_BOUND 1), which is the registered
+// cancel-and-refile check for this run and it passed. Class answers now: K1 YES, K2 YES,
+// K3 YES 0.654, K4 YES 0.9780, **K5 YES 0.9995**, K6 NO.
+//
+// The corpus also changed shape under this run, which the table is deliberately blind to and
+// REPORT.md is not: the new run's manifest supersedes coverage/run-20260808T010208Z for safe_t
+// (30 cells), universal_inference (18) and group_average_e_value (10) -- without which that run's
+// `canonical: true` row at the RETIRED severity would still be pooled and K5 would carry two
+// canonical cells at two severities (Amendment v2.K5R, K5R.6).
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },

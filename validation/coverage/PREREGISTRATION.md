@@ -3739,3 +3739,101 @@ existing field, earning per-detector granularity (needed because `coverage/run-2
 mixes defective `family_E_conformal_heldout` rows with five classes of sound rows) and
 cross-study addressing. **No endpoint, floor, seed, or verdict moves as a result of this
 amendment; one disclosure section is added to a report that previously carried none.**
+
+## Amendment v2.C1.2 — 2026-08-08, three transcription corrections to v2.C1 and v2.C1.1
+
+Registered after the two reruns and the certification re-score, and it moves **no** endpoint, floor,
+seed, prediction, or verdict. All three items are wrong numbers or wrong words in this wave's own
+amendment text, corrected by quote-and-correct per rule 7. Every corrected figure was recomputed
+this session against the committed artifacts named beside it.
+
+### C1.2.1 C1.12's expected class-answer list says `K1 NO`. K1 is YES, and always was.
+
+**Quote, C1.12 (`PREREGISTRATION.md:3592`):**
+
+> **Registered expected class answers, unchanged:** K1 NO, K2 YES, K3 YES (0.654), K4 YES
+> (`point_tail_bet_e_value`, 0.9780), K5 NO, K6 NO.
+
+**Correct: `K1 YES`.** Verified in both certification runs that bracket this wave —
+`validation/certification/results/run-20260808T122216Z/COVERAGE.md` (before the reruns) and
+`run-20260808T133943Z/COVERAGE.md` (after) — each reading, character for character:
+
+```
+| K1 | YES | safe_t_e_value, universal_inference_e_value | T1 | 1, 0.9875 |
+```
+
+carried by `safe_t_e_value` at `detection_rate 1.0000` and `universal_inference_e_value` at
+`0.9875` on canonical cell 1 (`1.5sigma`), both far above `COVERAGE_FLOOR = 0.50`, tier T1. The rest
+of C1.12's list is correct as registered.
+
+**The error contradicted this same wave's own golden-table comment**, which was written from the
+run and reads "Class answers unchanged: K1 YES, K2 YES, K3 YES 0.654, K4 YES
+(point_tail_bet_e_value, canonical 0.9780), K5 NO, K6 NO"
+(`validation/certification/test/golden-verdicts.test.mjs`, committed at `2638650`). So the wave
+carried both the right list and the wrong one, one commit apart, and the machine-checked artifact
+was the right one. Recorded that way rather than as a bare typo: the amendment text was the only
+place the error lived, and nothing downstream of it consumed the wrong value — `coverageFor`
+computes the K1 answer from evidence and never reads this document.
+
+### C1.2.2 C1.4's own count, restated in the Amendment summary as `thirty` instead of `thirty-nine`
+
+**Quote, the v2.C1 Amendment summary (`PREREGISTRATION.md:3613`):**
+
+> Discloses, with provenance and a validation that reproduces all thirty committed T1 endpoints
+> exactly under the old scheme, ...
+
+**Correct: `thirty-nine`.** C1.4 enumerates the endpoints it cross-checked and the figure there is
+thirty-nine; the summary's `thirty` disagrees with the section it is summarizing. The enumeration
+stands: 10 K6 endpoints (four grid `detection_rate`s, arm 34's `k`, `crossing_rate`,
+`increment_estimator.mean`, `p_uniformity.ks_statistic`, first decile count, and S3
+`detection_rate`) plus 29 K4 endpoints (four `point_tail` grid rates with all four `cal_median` and
+all four `cal_mad`, four `family_E` grid rates with all four
+`indicator_rate_at_injected_tick`, arm 31's `exceedance`/`mean_e`/`lower_95`/S3, and arm 32's
+`k`/`exceedance`/`mean_e`/`lower_95`/S3). C1.4's own "not cross-checked" list is unchanged and still
+binding: `final_wealth_mean`/`final_wealth_median`, `p_uniformity.decile_counts` beyond the first
+decile, and `window_crossing_rate`.
+
+### C1.2.3 C1.1.1's per-detector count: 148 scored is 37 each, not 36
+
+**Quote, C1.1.1 (`PREREGISTRATION.md:3667-3670`):**
+
+> `run-20260801T062824Z` contributes **148 cells** to every certification run — 144 from its
+> `endpoints.json` plus 4 more that `scanCellsDirExtras` merges from its `cells/` directory —
+> across `family_A_betting_e_process`, `family_A_mixture_supermartingale`,
+> `family_C_safe_hotelling` and `family_D_spectral_e_detector`, 36 each in the aggregate.
+
+The `148` and the `144 + 4` split are correct. **"36 each" is the aggregate's per-detector count and
+was placed where the scored total belongs**, so the sentence's own two halves do not reconcile:
+`36 x 4 = 144`, not 148. Correct, stating both counts explicitly rather than one:
+
+> **148 cells scored, 37 per detector** across the four cards — of which 144 (**36 per detector**)
+> come from `endpoints.json` and 4 (**one per detector**) are merged from `cells/` by
+> `scanCellsDirExtras`.
+
+Recomputed this session by loading the real corpus through
+`validation/certification/lib/collect.mjs`: total 148, and
+`family_A_betting_e_process=37  family_A_mixture_supermartingale=37  family_C_safe_hotelling=37
+family_D_spectral_e_detector=37`. The same slip is corrected in the two code comments that carried
+it (`collect.mjs`'s supersession docstring, `verdict.mjs`'s `unhonouredLines` comment) in the
+commit that follows this amendment.
+
+**C1.1.2's registered decision is unaffected**: the count was never the reason for it. The
+declaration stays recognized, reported and NOT acted on, and the write-back obligation in C1.1.4
+stands as registered.
+
+### Amendment summary
+
+Three transcription corrections to this wave's own amendment text, no endpoint or verdict touched.
+C1.12's expected class-answer list said `K1 NO`; K1 is **YES**, carried by `safe_t_e_value` (1.0000)
+and `universal_inference_e_value` (0.9875) at canonical cell 1 in **both** bracketing certification
+runs — and the same wave's golden-table comment, written from the run one commit later, already said
+K1 YES, so the document carried both readings and the machine-checked one was right (C1.2.1). The
+v2.C1 Amendment summary said the disclosed refuter reproduced `thirty` committed T1 endpoints where
+C1.4 enumerates **thirty-nine**; the enumeration is restated (10 K6 + 29 K4) and C1.4's
+"not cross-checked" list is unchanged and still binding (C1.2.2). C1.1.1 gave the superseded
+h0-battery run's per-detector count as 36 where 148 scored is **37 each**; corrected to state both
+counts — 148 scored / 37 per detector, of which 144 / 36 per detector from `endpoints.json` and 4 /
+one per detector merged from `cells/` — recomputed by loading the real corpus through
+`collect.mjs`, with the same slip fixed in the two code comments that carried it (C1.2.3).
+**C1.1.2's ruling that the legacy declaration is reported and not acted on is unaffected, and
+C1.1.4's write-back obligation stands as registered.**

@@ -1788,3 +1788,174 @@ coordinator's own account). Registered here, not assigned as a defect to the pro
 No endpoint, floor, or seed moves. No card field registered by K3.1.1–K3.1.9 changes shape or
 name; this amendment corrects one mistranscribed sentence's numbers and adds the metric it
 conflated, nothing else.
+
+## Amendment v2.K3.3 — 2026-08-08, S3 probe corrected before any run
+
+Registered before any run of `spectral_bet_e_process`. The adapter review derived that K3.7's
+registered S3 arm cannot work as constructed: `injectStep`'s constant offset is invisible to every
+bin this detector scores. Sections K3.1–K3.17 and Amendments v2.K3.1/v2.K3.2 stay intact except
+where named below.
+
+### K3.3.1 DC-blindness, derived and disclosed
+
+**Derivation, independently re-verified here, not merely relayed.** `injectStep(series, {sigma, at,
+delta})` (`inject.mjs:27-29`) adds a **constant** `delta*sigma` to every tick `t >= at`. Every one
+of K3.9's six registered windows starts at or after `at = 100 = ONSET`
+(`t ∈ {100,130,160,190,220,250}`), so **every window is entirely inside the shifted region** — the
+step contributes the identical constant to all 30 ticks of every window, not a partial-window
+discontinuity. For a constant `c` added to a window, the DFT at bin `k`:
+
+```
+Σ_{τ=0}^{29} c · e^(−i2πkτ/30) = c · Σ_{τ=0}^{29} e^(−i2πkτ/30) = c · (1 − e^(−i2πk))/(1 − e^(−i2πk/30)) = c · 0
+```
+
+for any integer `k` not a multiple of `30` — the geometric-series sum over one full period is
+exactly zero (checked: `e^(−i2πk) = 1` for integer `k`, so the numerator is exactly `0`, and the
+denominator is nonzero for `k ∈ {1,...,29}`). **`BINS_K3 = [1,2,3]`** (K3.1) excludes `k = 0` by
+the **same registration** that makes the exactness identity exact — `k ∉ {0, W/2}` is the identity's
+own hypothesis (K3.2) — so the step's entire contribution lands exactly on the one bin this
+detector never scores. `I(f_k)`, `U_k`, `p_k`, `e_k` for `k ∈ {1,2,3}` are therefore **identical, in
+exact arithmetic, between the healthy and step-shifted series on every registered window** — not
+approximately robust to the step, structurally blind to it.
+
+**The reviewer's diagnostic probe, disclosed in full, with provenance** — arm 33's own registered
+seeds (`CELL_SEED = 20260840`, K3.6), run at `N = 2000` as a diagnostic (not the registered run):
+**`max |log_healthy − log_stepped| = 2.3e-14`** across all `2000 × 6 = 12,000` window reads (checked:
+`12,000` matches K3.6/K3.9's own registered trajectory-and-window count) — the residual is
+floating-point rounding noise at roughly double-precision epsilon scale, consistent with the exact
+theoretical zero above, not a real signal. **Healthy fires `6/2000`** (checked: `6/2000 = 0.003`,
+matches the stated crossing rate exactly) — the step arm's own fire count is not reported separately
+because the derivation above says it cannot differ from the healthy arm's, and the probe's own
+near-zero log-difference confirms that directly.
+
+**Disclosed as the reviewer's own measurement, not independently re-run here** — same convention as
+K3.11's 0.642 probe and K3.1.3's 40-block probe. **The registered run's own stop-condition reading
+(K3.13) stands independently of this diagnostic** — this disclosure exists only so no number in a
+future run's report surprises anyone, the same reason K3.11's probe was disclosed rather than left
+implicit.
+
+### K3.3.2 S3 arm superseded: the class-appropriate severity-3 waveform (named supersession of K3.7)
+
+**Supersedes K3.7's S3 bullet only** ("Power (S3) arm, `shift_sigma: 3`. Same series/seeds +
+`injectStep(delta=3)` ... a step is not an oscillation; this is a construction sanity check, not a
+K3-class power measurement.") — K3.7's S2 bullet, the seed arithmetic, and the field list (K3.7's
+own closing paragraph, extended by K3.1.1/K3.1.2/K3.1.6) are unchanged.
+
+**Registered S3 construction:** `injectOscillation(series, {sigma: 1, at: 100, amp: 3, freq:
+3/30})` (`inject.mjs:37-41`, `v + amp*sigma*sin(2*pi*freq*(t-at))` for `t >= at`) — same series,
+same seeds as K3.6/K3.7 (`CELL_SEED = 20260840`, `seed(i) = 20260840 + 7919*i`). `freq = 3/30`
+lands **exactly** on bin `k = 3` (`BINS_K3`'s own registered third bin, K3.1) — checked directly
+against `injectOscillation`'s formula: within window `w` (local index `τ = 0..29`, absolute tick
+`t = 100 + 30w + τ`), the injected term is `3·sin(2π·(3/30)·(30w+τ)) = 3·sin(2π·3τ/30 + 2π·3w) =
+3·sin(2π·3τ/30)` (`sin` is `2π`-periodic and `3w` is always an integer, so the `2π·3w` term drops
+exactly) — the window-local waveform is a pure period-`10`-tick sinusoid at exactly bin `3`,
+**identical** across all six windows, not merely same-magnitude-different-phase. Registered more
+generally, independent of that stronger fact: **the periodogram ordinate `I(f_k) = |Σ x_t
+e^(−i2πkt/W)|²/W` depends only on the DFT coefficient's magnitude, never its phase** — so even where
+a window's start introduces a nonzero phase offset relative to the injection's own clock (the
+general on-grid case, `freq = k/30` for any `k`), `I(f_k)` for a pure on-grid sinusoid at that `k`
+is phase-invariant by construction. This candidate's own on-grid case additionally has zero phase
+drift (previous paragraph); the phase-invariance-of-the-ordinate fact is registered as the robust
+claim that does not depend on that stronger, more specific one.
+
+**The cell keeps `shift_sigma: 3`.** Registered explicitly: `shift_sigma` is not a literal
+sigma-shift magnitude, it is the **certification scorer's severity-3 key** — `scoreS3`
+(`score.mjs`) filters candidates on `cell.shift_sigma === INERTNESS_SHIFT_SIGMA`
+(`INERTNESS_SHIFT_SIGMA = 3`, `constants.mjs:21`) — **realized per class**: A1/K4.5's own S3 arms
+already realize "severity 3" as `injectStep(delta=3)` (a K1-shaped 3σ level shift, appropriate for
+their terminal/point-outlier constructions) and `injectUnison(eps=3)` (K2-shaped, A1). This
+candidate's own class is K3 (sub-threshold oscillation), so its severity-3 realization is `amp = 3σ`
+**oscillation**, not a level shift — the scorer's `shift_sigma: 3` key is unchanged and still means
+"the registered severity-3 power probe," carried by the construction each class's own detector can
+actually see.
+
+**Cross-reference, named:** probing a spectral (K3, oscillation-only) detector's power arm with a
+step is the class this study's own `WORKLIST.md` C26 finding names — "the class determines the
+instrument," there about a scoring instrument mismatched to a detector's class (`increment_estimator`
+scored against an `e_process` cell it cannot speak about); here the same lesson recurs one stage
+earlier, at **injection** rather than instrument: a fault-class waveform (K1's step) mismatched to
+the detector-class (K3's oscillation-only construction) it is meant to power-test. Registered as the
+same category of error, not the identical finding.
+
+### K3.3.3 The original step probe, retained as a verdict-free descriptive row
+
+**Not deleted — retained, relabeled.** The same construction K3.7 originally registered for S3
+(`injectStep(delta=3)`, arm 33's same seeds) is kept as an **additional, verdict-free descriptive
+row**, documenting the K3.3.1 finding directly against a run rather than only in prose:
+
+- Field name: **`step_blindness_probe_rate`** (not `detection_rate` — deliberately, so `isPowerCell`
+  (`score.mjs:16`, `'detection_rate' in c || 'rate_e_ge_20' in c`) does not pick this row up as an
+  S3 candidate at all). `k` (count crossing, expected `6` per K3.3.1's disclosed probe), `n: 2000`,
+  `step_blindness_probe_rate = k/n`.
+- **No `shift_sigma` field** — not merely a different value, its **absence** is the registration:
+  with no `shift_sigma`, `scoreS3` cannot filter this row into or out of the `INERTNESS_SHIFT_SIGMA`
+  gate at all, because `isPowerCell` never admits it as a candidate in the first place (previous
+  bullet) — belt-and-suspenders with K3.1.4's already-registered instrument-name exclusion.
+- **No `verdict` field, no instrument-named field** (`increment_estimator`, `crossing_rate`,
+  `stopped_mean`, `exceedance`, `mean_e`) — K3.1.4's binding adapter constraint, extended explicitly
+  to this new row: it must carry none of the five, on the same "one offending cell VOIDs the whole
+  run's S2 evidence" reasoning.
+- **Filed for the coverage matrix's cross-class notes at Task 12's write-back**: documentation that
+  `spectral_bet_e_process` is structurally blind to K1-type (step) faults by the same construction
+  that makes its own null exact — a scope statement about the detector, not a K3 or K1 coverage
+  finding, carrying no verdict of its own.
+
+### K3.3.4 K3.1.8 corrected: the S3 expectation rides the oscillation probe
+
+**K3.1.8 read:** "**S3 PASS** (arm 33's power row, K3.7, `shift_sigma: 3` `injectStep`, expected
+`detection_rate` near-certain given a sustained 3σ step against a `wealth >= 20` bar over 6
+windows)". **Corrected: impossible as registered**, per K3.3.1's derivation — a sustained step
+contributes exactly zero energy to `BINS_K3`'s bins on every window fully inside the shifted region
+(all six registered windows are), so `detection_rate` on the **original** S3 construction cannot
+exceed the healthy arm's own false-alarm rate (disclosed at `0.003`, K3.3.1) — nowhere near
+`near-certain`, and nowhere near `POWERED` (`>= 0.50`) either. That sentence's prediction was never
+reachable by the construction it named.
+
+**Corrected prediction, registered:** S3 PASS now rides **K3.3.2's on-grid oscillation probe**
+(`amp = 3σ`, `freq = 3/30`, bin `k = 3` exactly), expected **near-certain** — independently derived
+here, not merely asserted: a pure on-grid sinusoid of amplitude `A = 3σ` over a `W = 30` window
+contributes periodogram ordinate `I(f_3) = (A·W/2)²/W = A²W/4 = 9·30/4 = 67.5` exactly (checked by
+direct DFT-orthogonality computation — bins `k=1,2` receive exactly zero of this energy, by the same
+orthogonality argument K3.3.1 uses), giving `U_3 = 67.5` (`σ = 1`), `p_3 = e^{-67.5}` (astronomically
+small, order `10^{-30}`), and `e_3 = 0.1·p_3^{-0.9}` of order `10^{25}` — a single window's `eAvg`
+this large saturates `wealthView` at `Number.MAX_VALUE` (`_wealth.ts:16`) on effectively every
+trajectory's very first window, far above the `20` crossing bar. This is **far above** the
+K3-battery's own already-disclosed smoke rate at the weaker, off-grid canonical amplitude — K3.11's
+`0.642` probe (`amp = 0.75σ`, `f = 0.05`, off-grid, leaking across two bins) — since this probe is
+`4×` the amplitude and lands exactly on-grid with no leakage loss. **Falsifier, registered:** S3
+`detection_rate < 0.50` on the corrected oscillation construction would itself be a surprise
+requiring investigation (a defect in the DFT-orthogonality reasoning above, or in the harness's
+wiring of the injection), not a tuning target.
+
+### K3.3.5 Adapter/smoke constraint deltas — Task 8's fix must satisfy
+
+**Extends K3.1.4/K3.7; registers exactly what changes and what does not.**
+
+- **The descriptive step row (K3.3.3), new:** fields `step_blindness_probe_rate`, `k`, `n: 2000`,
+  plus the row's own `detector`/`arm`/`cell_index: 33`/`null_id`/`phi: 0`/`params: 'oracle'`/
+  `alpha: 0.05`/`ticks: 300`/`onset: 100`/`substrate_tier: 'T1'` identification fields (K3.1.5's
+  `null_id` literal applies here too — same cell, same out-of-grammar value). **No** `shift_sigma`,
+  **no** `verdict`, **no** instrument-named field (K3.1.4's five-string set) — checked by Task 8's
+  smoke the same way K3.1.4 already requires for the fault cells and the oscillation S3 row.
+- **The oscillation S3 row (K3.3.2), unchanged in shape:** every field K3.7's original S3 bullet and
+  K3.1.6 already registered — `fires`, `detection_rate`, `final_wealth_mean`, `final_wealth_median`,
+  `non_finite_wealth`, `adapter_failures`, `verdict: detection_rate >= 0.50 ? 'POWERED' : 'INERT'`,
+  `not_executable_reason`, `substrate_tier: 'T1'`, `shift_sigma: 3`, `degenerate_windows` (K3.1.6) —
+  **only the injection call underneath changes**, `injectOscillation({amp:3, freq: 3/30, at:100,
+  sigma:1})` in place of `injectStep({delta:3, at:100, sigma:1})`. K3.1.4's exclusion of the five
+  instrument-named strings from this row is unaffected and still binding.
+
+### Amendment summary
+
+Derives and discloses the S3 step arm's DC-blindness (K3.3.1: exact zero energy at every registered
+bin, `BINS_K3`'s own `k ≠ 0` hypothesis; the reviewer's diagnostic probe in full, `2.3e-14` max
+log-difference, `6/2000` healthy fires — disclosed, the registered stop condition unaffected).
+Supersedes K3.7's S3 bullet only with a class-appropriate on-grid oscillation construction, `amp =
+3σ` at `freq = 3/30` (bin `k=3`), registering `shift_sigma: 3` as the scorer's severity-3 key
+realized per class, and naming the cross-reference to `WORKLIST.md`'s C26 class-instrument lesson
+(K3.3.2). Retains the original step construction as a new, verdict-free `step_blindness_probe_rate`
+row excluded from S2/S3 scoring by field-name absence, filed for the coverage matrix's cross-class
+notes (K3.3.3). Corrects K3.1.8's S3 prediction, quoted and replaced with the oscillation probe's
+own independently-derived near-certain expectation (K3.3.4). Registers the adapter/smoke field-set
+deltas Task 8 must satisfy (K3.3.5). No endpoint, floor, or seed in §1–14 or any earlier amendment
+moves; K3.13's stop condition and K3.9's window partition are unchanged.

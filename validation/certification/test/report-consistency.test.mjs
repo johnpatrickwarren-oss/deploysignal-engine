@@ -272,15 +272,34 @@ test('C1.9: every NO row names every detector tied at the best (status, canonica
 });
 
 // C1.1: the unhonoured-supersession section is not optional decoration. h0-battery declared
-// run-20260801T062824Z superseded for a named code defect and its cells are still scored, so a
+// run-20260801T062824Z superseded for a named code defect and its cells were still scored, so a
 // format-4 report that omits the disclosure is a report that hides a known gap.
-test('C1.1: a format-4 report discloses every declared-but-still-scored supersession', (t) => {
+//
+// LEAD WITH THE CORRECTION (h0-battery Amendment A1). This test asserted "Declared superseded but
+// STILL SCORED" on every format >= 4 report. A1 registered a supersession registry and the cells
+// are no longer scored, so on a format-5 report that heading would be a false statement, and the
+// declaration moves to a section naming what closed it. Both shapes are checked, each against the
+// format it was written under — committed format-4 runs are never rewritten, which is what
+// append-only means. What is asserted in BOTH cases is the property the test exists for: the
+// 2026-08-01 declaration is named in the report, whatever the scorer does about it.
+test('C1.1 / A1: every format-4+ report discloses the 2026-08-01 declaration, in the shape its format uses', (t) => {
   const dirs = formatFourDirs(t);
   assert.ok(dirs.length > 0, 'no format-4 certification run to check');
   for (const dir of dirs) {
     const report = readFileSync(join(dir, 'REPORT.md'), 'utf8');
-    assert.match(report, /Declared superseded but STILL SCORED/,
-      `${dir}: REPORT.md must carry the C1.1 disclosure section`);
+    if (reportFormat(dir) >= 5) {
+      assert.match(report, /Declared superseded in the legacy shape, and now closed by a registry/,
+        `${dir}: REPORT.md must say what closed the legacy declaration`);
+      assert.match(report, /NOW DROPPED by a supersession registry/,
+        `${dir}: and the per-declaration line must say the cells are gone`);
+      assert.match(report, /Superseded evidence by study registry \(h0-battery Amendment A1\)/,
+        `${dir}: and the registry-declared drops need their own provenance section`);
+      assert.doesNotMatch(report, /run-20260801T062824Z — declared superseded by .*STILL SCORED/,
+        `${dir}: a format-5 report must not claim the dropped cells are still scored`);
+    } else {
+      assert.match(report, /Declared superseded but STILL SCORED/,
+        `${dir}: REPORT.md must carry the C1.1 disclosure section`);
+    }
     assert.match(report, /run-20260801T062824Z/, `${dir}: and name the run it applies to`);
   }
 });

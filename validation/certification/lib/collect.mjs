@@ -155,24 +155,73 @@ function loadRunCells(dir) {
 // and are bit-identical under the fix. Dropping the whole directory would delete four classes'
 // worth of sound evidence in order to correct one detector's rows.
 //
-// TWO SHAPES, ONE FIELD NAME, AND ONLY ONE OF THEM IS HONOURED. `supersedes` is NOT a new field:
-// h0-battery's run-20260801T064237Z and run-20260801T064627Z manifests have carried
+// TWO SHAPES, ONE FIELD NAME, AND ONLY ONE OF THEM IS HONOURED IN A MANIFEST. `supersedes` is NOT
+// a new field: h0-battery's run-20260801T064237Z and run-20260801T064627Z manifests have carried
 // `supersedes: {priorRun, defect}` since 2026-08-01, declaring run-20260801T062824Z superseded
 // for a named code defect (oracle phi never threaded into the detector config, so N3/N4 ran with
-// AR(1) pre-whitening disabled). Nothing ever read it: all 148 of that run's scored cells
+// AR(1) pre-whitening disabled). Nothing ever read it: all 148 of that run's cells
 // (family_A_betting_e_process, family_A_mixture_supermartingale, family_C_safe_hotelling,
 // family_D_spectral_e_detector, 37 each -- 144 from endpoints.json at 36 each, plus 4 that
-// scanCellsDirExtras merges from cells/, one per detector) have been scored alongside their own
-// correction ever since. That is a real gap, and it is REPORTED here rather than closed: honouring it could move
-// four cards' verdicts, which is outside coverage Amendment v2.C1's registered scope and needs
-// h0-battery's own pre-registration to authorize. See coverage Amendment v2.C1.1.
+// scanCellsDirExtras merges from cells/, one per detector) stayed in the pool alongside their own
+// correction ever since.
 //   - LEGACY OBJECT `{priorRun, defect}`: recognized, recorded as declared-but-not-honoured,
 //     reported, NOT applied.
 //   - ARRAY of `{study, run, detectors, reason}` (C1.6): applied.
-// Every drop and every unhonoured declaration is reported on the returned `runs` entry, so
-// neither is ever silent.
-function supersessionIndex(manifests) {
-  const dropped = new Map();      // "study/run" -> Map(detector -> {by, reason})
+//
+// THAT GAP IS NOW CLOSED, AND NOT BY THE MANIFEST PATH. Corrected in place rather than deleted,
+// because the reason it stayed open is the point. This block used to read: "That is a real gap, and
+// it is REPORTED here rather than closed: honouring it could move four cards' verdicts, which is
+// outside coverage Amendment v2.C1's registered scope and needs h0-battery's own pre-registration
+// to authorize. See coverage Amendment v2.C1.1." That was true when written. h0-battery
+// PREREGISTRATION.md **Amendment A1** (2026-08-08) is the authorization it was waiting for, and it
+// closes the gap through a THIRD shape rather than by promoting the legacy object:
+//   - PER-STUDY REGISTRY `<study>/results/live/SUPERSESSIONS.json`, an array of
+//     `{study, run, detectors, reason, declared_by}` (C1.6's shape plus `declared_by`): applied.
+// The legacy object is STILL not applied and still reported -- editing a superseded manifest to
+// add an array would break the append-only guarantee that makes it citable, and a run cannot
+// retroactively declare what it did not declare. A registry entry does not silence the legacy
+// declaration it covers; the declaration keeps its report line and gains `covered_by_registry`.
+//
+// WHY A FILE AND NOT A RUN. Amendment A1 supersedes three runs, two of which no later run ever
+// declared (run-20260801T062612Z is byte-identical to run-20260801T062824Z at the same sha and
+// seed; run-20260801T064237Z is 24 defective mixture rows plus 124 cells byte-identical to the
+// canonical run). There is no new run to carry the declaration and inventing one would be
+// fabricating an artifact. The authority is a pre-registration amendment, so `declared_by` names
+// the amendment.
+//
+// TWO RULES A REGISTRY NEEDS THAT A MANIFEST DOES NOT (Amendment A1, A1.7). The self-supersession
+// check below compares a declaration's target against the DECLARING RUN's own locator, which is
+// vacuous for a file that is not a run. Registered in its place, both fail-closed:
+//   1. OWN-STUDY ONLY -- an entry's `study` must be one a run under this registry's own
+//      results/live/ declares. A registry's authority is one study's pre-registration.
+//   2. NO SELF-ERASURE -- for every (study, detector) a registry names, at least one run of that
+//      study must survive un-superseded for that detector. A registry that drops the replacement
+//      along with the defect is the failure the field exists to prevent.
+//
+// Every drop carries its `source` ('manifest' | 'registry') so REPORT.md can show provenance, and
+// every drop and every unhonoured declaration is reported on the returned `runs` entry, so neither
+// is ever silent.
+export const SUPERSESSIONS_FILE = 'SUPERSESSIONS.json';
+
+// Shape check shared by both paths, so the manifest array and the registry cannot drift into two
+// different notions of a well-formed entry.
+function assertEntryShape(d, where) {
+  if (!d?.study || !d?.run || !Array.isArray(d.detectors) || d.detectors.length === 0 || !d.reason) {
+    throw new Error(`${where}: each supersedes entry needs study, run, a non-empty `
+      + 'detectors array, and a reason');
+  }
+}
+
+const inCorpus = (manifests, target) => manifests.some((m) => `${m.studyName}/${m.runName}` === target);
+
+function applyDrop(dropped, target, detectors, by, reason, source) {
+  const perDetector = dropped.get(target) ?? new Map();
+  for (const det of detectors) perDetector.set(det, { by, reason, source });
+  dropped.set(target, perDetector);
+}
+
+function supersessionIndex(manifests, registries = []) {
+  const dropped = new Map();      // "study/run" -> Map(detector -> {by, reason, source})
   const unhonoured = [];          // legacy declarations, reported not applied
   for (const { studyName, runName, manifest } of manifests) {
     const decls = manifest.supersedes;
@@ -190,23 +239,70 @@ function supersessionIndex(manifests) {
         + `{priorRun, defect} object, or null — got ${JSON.stringify(decls)}`);
     }
     for (const d of decls) {
-      if (!d?.study || !d?.run || !Array.isArray(d.detectors) || d.detectors.length === 0 || !d.reason) {
-        throw new Error(`${studyName}/${runName}: each supersedes entry needs study, run, a non-empty `
-          + 'detectors array, and a reason');
-      }
+      assertEntryShape(d, `${studyName}/${runName}`);
       const target = `${d.study}/${d.run}`;
       if (target === `${studyName}/${runName}`) {
         throw new Error(`${studyName}/${runName}: a run cannot supersede itself`);
       }
       // A declaration naming a run this scorer cannot see would silently supersede nothing, which
       // is exactly the failure mode the field exists to prevent. Fail closed.
-      if (!manifests.some((m) => `${m.studyName}/${m.runName}` === target)) {
+      if (!inCorpus(manifests, target)) {
         throw new Error(`${studyName}/${runName}: manifest.supersedes names ${target}, which is not `
           + 'in the evidence corpus');
       }
-      const perDetector = dropped.get(target) ?? new Map();
-      for (const det of d.detectors) perDetector.set(det, { by: `${studyName}/${runName}`, reason: d.reason });
-      dropped.set(target, perDetector);
+      applyDrop(dropped, target, d.detectors, `${studyName}/${runName}`, d.reason, 'manifest');
+    }
+  }
+
+  // Registries apply AFTER the manifests, so when both name the same (target, detector) the
+  // registry's reason is the one reported. That ordering is deliberate: a registry is an
+  // amendment-authorized statement about a run and a manifest declaration is a run's own, and the
+  // amendment is the later and more specific artifact.
+  for (const reg of registries) {
+    if (!Array.isArray(reg.entries)) {
+      throw new Error(`${reg.path}: a supersession registry must be an array of `
+        + `{study, run, detectors, reason, declared_by} entries — got ${JSON.stringify(reg.entries)}`);
+    }
+    for (const d of reg.entries) {
+      assertEntryShape(d, reg.path);
+      if (!d.declared_by) {
+        throw new Error(`${reg.path}: each registry entry needs declared_by — a registry has no `
+          + 'declaring run, so the authorizing amendment must name itself');
+      }
+      if (!reg.studyNames.has(d.study)) {
+        throw new Error(`${reg.path}: names study ${d.study}, which no run under ${reg.liveDir} `
+          + `declares (this registry governs ${[...reg.studyNames].join(', ') || '(no study)'}) — a `
+          + "registry's reach is the study whose pre-registration authorized it");
+      }
+      const target = `${d.study}/${d.run}`;
+      if (!inCorpus(manifests, target)) {
+        throw new Error(`${reg.path}: names ${target}, which is not in the evidence corpus`);
+      }
+      applyDrop(dropped, target, d.detectors, d.declared_by, d.reason, 'registry');
+    }
+  }
+
+  // Rule 2, checked once every drop is in: a registry may not leave a detector with no scoring run
+  // in the study it just superseded.
+  for (const reg of registries) {
+    for (const d of reg.entries) {
+      const runsOfStudy = manifests.filter((m) => m.studyName === d.study);
+      for (const det of d.detectors) {
+        const survives = runsOfStudy.some((m) => !dropped.get(`${m.studyName}/${m.runName}`)?.has(det));
+        if (!survives) {
+          throw new Error(`${reg.path}: superseding ${d.study}/${d.run} for ${det} leaves no run of `
+            + `${d.study} scoring ${det} — a registry may not drop the replacement along with the defect`);
+        }
+      }
+    }
+  }
+
+  // A legacy declaration a registry covers is annotated, never removed: the reader of a report
+  // needs to see both that the 2026-08-01 declaration existed and that it is now acted on.
+  for (const u of unhonoured) {
+    const perDetector = dropped.get(u.target);
+    if (perDetector && [...perDetector.values()].some((v) => v.source === 'registry')) {
+      u.covered_by_registry = true;
     }
   }
   return { dropped, unhonoured };
@@ -216,19 +312,30 @@ export function loadEvidence(validationRoot) {
   const cells = [];
   const runs = [];
   // Pass 1: read every manifest first, so a supersession declared by a run that appears LATER in
-  // directory order still applies to one that appears earlier.
+  // directory order still applies to one that appears earlier. A study's SUPERSESSIONS.json
+  // registry (Amendment A1) is read in the same pass and for the same reason -- it sits beside the
+  // run directories, so it is discovered whenever the study is, whatever order readdir returns.
   const manifests = [];
+  const registries = [];
   for (const study of readdirSync(validationRoot, { withFileTypes: true }).filter((d) => d.isDirectory())) {
     const live = join(validationRoot, study.name, 'results', 'live');
     if (!existsSync(live)) continue;
+    const studyNames = new Set();
     for (const run of readdirSync(live, { withFileTypes: true }).filter((d) => d.isDirectory())) {
       const dir = join(live, run.name);
       const mPath = join(dir, 'manifest.json');
       const manifest = existsSync(mPath) ? readJson(mPath) : { study: study.name, git_sha: null };
-      manifests.push({ dir, runName: run.name, studyName: manifest.study ?? study.name, manifest });
+      const studyName = manifest.study ?? study.name;
+      studyNames.add(studyName);
+      manifests.push({ dir, runName: run.name, studyName, manifest });
     }
+    // The registry names studies by the value the runs' own manifests carry (h0-battery's runs
+    // declare study '2026-07-h0-battery', not the directory name), which is the same locator
+    // supersessionIndex builds -- hence studyNames, collected from the manifests just read.
+    const regPath = join(live, SUPERSESSIONS_FILE);
+    if (existsSync(regPath)) registries.push({ path: regPath, liveDir: live, studyNames, entries: readJson(regPath) });
   }
-  const { dropped, unhonoured } = supersessionIndex(manifests);
+  const { dropped, unhonoured } = supersessionIndex(manifests, registries);
 
   // Pass 2: load cells, skipping the declared (study, run, detector) rows.
   for (const { dir, runName, studyName, manifest } of manifests) {
@@ -254,7 +361,7 @@ export function loadEvidence(validationRoot) {
         if (drop) {
           const already = superseded.find((s) => s.detector === ec.detector);
           if (already) already.cells += 1;
-          else superseded.push({ detector: ec.detector, cells: 1, superseded_by: drop.by, reason: drop.reason });
+          else superseded.push({ detector: ec.detector, cells: 1, superseded_by: drop.by, reason: drop.reason, source: drop.source });
           continue;
         }
         cells.push(annotatePhi({ ...ec, __study: studyName, __run: runName, __git_sha: gitSha, __tier: tier }));

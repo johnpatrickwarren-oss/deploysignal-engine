@@ -333,8 +333,11 @@ test('C1.6: an array supersedes declaration drops exactly the named (study, run,
   // a run holds sound rows alongside the defective ones.
   assert.equal(ev.cells.filter((c) => c.detector === 'safe_t').length, 1);
   const old = ev.runs.find((r) => r.run === 'run-old');
+  // `source` (Amendment A1) distinguishes a drop a later run's manifest declared from one a study
+  // registry declared, so REPORT.md cannot attribute an amendment's decision to a run.
   assert.deepEqual(old.superseded, [{
     detector: 'shape_block_conformal_bet', cells: 1, superseded_by: 'coverage/run-new', reason: 'C1',
+    source: 'manifest',
   }], 'the drop must be reported on the run entry, never silent');
 });
 
@@ -404,7 +407,13 @@ test('C1.1: the legacy {priorRun, defect} shape is reported and NOT applied', ()
   }], 'REPORTED: the declaration must reach the caller so the report can carry it');
 });
 
-test('C1.1: the real corpus carries exactly the two h0-battery legacy declarations, unhonoured', () => {
+// LEAD WITH THE CORRECTION. This test used to assert the other half of the C1.1 gap — that
+// run-20260801T062824Z's cells were "still scored", with `assert.ok(still.length >= 144)`. That was
+// true when written and is now false: h0-battery PREREGISTRATION.md Amendment A1 registered
+// validation/h0-battery/results/live/SUPERSESSIONS.json and the collector honours it. Both halves
+// still hold, in their corrected form: the two 2026-08-01 declarations are still REPORTED (they are
+// still not the mechanism that acts), and each now carries covered_by_registry.
+test('C1.1 / A1: the real corpus still reports the two h0-battery legacy declarations, now covered by the registry', () => {
   const ev = loadEvidence(join(HERE, '..', '..'));
   const u = ev.unhonoured_supersessions;
   assert.equal(u.length, 2, `expected the two 2026-08-01 h0-battery declarations, got ${JSON.stringify(u)}`);
@@ -413,13 +422,11 @@ test('C1.1: the real corpus carries exactly the two h0-battery legacy declaratio
     // manifests declare study '2026-07-h0-battery'.
     assert.equal(d.target, '2026-07-h0-battery/run-20260801T062824Z');
     assert.match(d.defect, /oracle phi was never threaded/);
+    assert.equal(d.covered_by_registry, true,
+      'a legacy declaration a registry covers is annotated, never removed from the report');
   }
-  // And the superseded run's cells ARE still present — the gap this reports is real, not latent.
-  // 148 = endpoints.json's 144 plus the 4 additional cells/ entries the aggregate omitted
-  // (scanCellsDirExtras); floor rather than an exact count, for the same append-only reason
-  // golden-verdicts.test.mjs uses floors.
-  const still = ev.cells.filter((c) => c.__run === 'run-20260801T062824Z');
-  assert.ok(still.length >= 144, `the declared-defective cells are still scored; got ${still.length}`);
+  assert.equal(ev.cells.filter((c) => c.__run === 'run-20260801T062824Z').length, 0,
+    'the declared-defective cells are no longer pooled');
 });
 
 test('C1.6: an unrecognized supersedes shape is a crash, not a silently ignored field', () => {
@@ -428,4 +435,152 @@ test('C1.6: an unrecognized supersedes shape is a crash, not a silently ignored 
       { cells: [cell('d', 0)] }],
   ]);
   assert.throws(() => loadEvidence(root), /must be an array, a legacy/);
+});
+
+// ── h0-battery PREREGISTRATION.md Amendment A1: per-study supersession registries ─────────────
+// A registry closes the gap C1.1 reported without promoting the legacy shape. It exists because
+// Amendment A1 supersedes three runs, two of which NO later run ever declared, so there is no
+// manifest to carry the declaration and inventing a run to carry it would fabricate an artifact.
+// The authority is a pre-registration amendment, named in each entry's `declared_by`.
+function withRegistry(root, studyDir, entries) {
+  writeFileSync(join(root, studyDir, 'results', 'live', 'SUPERSESSIONS.json'), JSON.stringify(entries));
+  return root;
+}
+const regEntry = (over = {}) => ({
+  study: 'h0-battery', run: 'run-old', detectors: ['family_A_betting_e_process'],
+  reason: 'Amendment A1: byte-identical to the canonical run', declared_by: 'Amendment A1', ...over,
+});
+// Two runs, three detectors in the old one, two in the new. Enough to show the registry drops
+// exactly what it names and leaves the rest, and enough for the no-self-erasure rule to have
+// something to protect.
+const twoRunStudy = () => supersedeFixture([
+  ['h0-battery', 'run-old', { study: 'h0-battery', git_sha: 'a' },
+    { cells: [cell('family_A_betting_e_process', 1), cell('family_C_safe_hotelling', 1), cell('safe_t', 0)] }],
+  ['h0-battery', 'run-new', { study: 'h0-battery', git_sha: 'b' },
+    { cells: [cell('family_A_betting_e_process', 0.5), cell('family_C_safe_hotelling', 0.5)] }],
+]);
+
+test('A1: a registry drops exactly the (run x detector) cells it names, and nothing else', () => {
+  const root = withRegistry(twoRunStudy(), 'h0-battery', [
+    regEntry({ detectors: ['family_A_betting_e_process', 'family_C_safe_hotelling'] }),
+  ]);
+  const ev = loadEvidence(root);
+  assert.equal(ev.cells.filter((c) => c.__run === 'run-old' && c.detector === 'family_A_betting_e_process').length, 0);
+  assert.equal(ev.cells.filter((c) => c.__run === 'run-old' && c.detector === 'family_C_safe_hotelling').length, 0);
+  // safe_t was NOT named, so it survives — the granularity is per detector even when the
+  // amendment happens to name every detector a run carries.
+  assert.equal(ev.cells.filter((c) => c.__run === 'run-old' && c.detector === 'safe_t').length, 1);
+  assert.equal(ev.cells.filter((c) => c.__run === 'run-new').length, 2, 'the canonical run is untouched');
+  const old = ev.runs.find((r) => r.run === 'run-old');
+  assert.deepEqual(old.superseded.map((s) => [s.detector, s.cells, s.superseded_by, s.source]), [
+    ['family_A_betting_e_process', 1, 'Amendment A1', 'registry'],
+    ['family_C_safe_hotelling', 1, 'Amendment A1', 'registry'],
+  ], 'registry drops are reported with source: registry, so REPORT.md can show provenance');
+});
+
+test('A1: the real corpus census — the registry drops 440 h0-battery cells and leaves 064627Z whole', () => {
+  const ev = loadEvidence(join(HERE, '..', '..'));
+  const dropped = Object.fromEntries(ev.runs
+    .filter((r) => r.study === '2026-07-h0-battery' && r.superseded)
+    .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]));
+  // Exact counts, not floors: results/ is append-only, so these three run directories are frozen
+  // and their cell counts cannot change. 144 = the 4 x 12 x 3 endpoint grid (run-20260801T062612Z
+  // has no P2 cells at all); 148 = the same grid plus 4 P2__<detector>.json cells from cells/.
+  assert.deepEqual(dropped, {
+    'run-20260801T062612Z': 144,
+    'run-20260801T062824Z': 148,
+    'run-20260801T064237Z': 148,
+  }, 'exactly the three runs Amendment A1 names, at the counts A1.1 registers');
+  assert.equal(ev.cells.filter((c) => c.__study === '2026-07-h0-battery').length, 148,
+    'run-20260801T064627Z is the sole scored h0-battery run, at its full 148 cells');
+  for (const r of ev.runs.filter((r) => r.study === '2026-07-h0-battery' && r.superseded)) {
+    assert.equal(r.superseded.length, 4, `${r.run}: all four detectors named`);
+    assert.ok(r.superseded.every((s) => s.source === 'registry'));
+    assert.ok(r.superseded.every((s) => /Amendment A1/.test(s.superseded_by)));
+  }
+});
+
+test('A1: a registry entry that is malformed fails closed', () => {
+  const notArray = withRegistry(twoRunStudy(), 'h0-battery', { study: 'h0-battery', run: 'run-old' });
+  assert.throws(() => loadEvidence(notArray), /supersession registry must be an array/);
+
+  const noReason = withRegistry(twoRunStudy(), 'h0-battery', [{ ...regEntry(), reason: undefined }]);
+  assert.throws(() => loadEvidence(noReason), /needs study, run, a non-empty/);
+
+  const noDetectors = withRegistry(twoRunStudy(), 'h0-battery', [regEntry({ detectors: [] })]);
+  assert.throws(() => loadEvidence(noDetectors), /needs study, run, a non-empty/);
+
+  // `declared_by` is required of a registry entry and of nothing else: a manifest entry's declarer
+  // is the run carrying it, and a registry has no run, so the authorizing amendment must sign.
+  const noDeclarer = withRegistry(twoRunStudy(), 'h0-battery', [{ ...regEntry(), declared_by: undefined }]);
+  assert.throws(() => loadEvidence(noDeclarer), /needs declared_by/);
+});
+
+test('A1: a registry naming a run outside the evidence corpus fails closed', () => {
+  const root = withRegistry(twoRunStudy(), 'h0-battery', [regEntry({ run: 'run-nonexistent' })]);
+  assert.throws(() => loadEvidence(root), /not in the evidence corpus/);
+});
+
+// The registry's stand-in for supersessionIndex's self-supersession check, which compares a
+// target against the DECLARING RUN's locator and is vacuous for a file that is not a run
+// (Amendment A1, A1.7). Rule 1: a registry's reach is the study whose pre-registration authorized
+// it. Rule 2: it may not drop the replacement along with the defect.
+test('A1 rule 1: a registry may not reach into another study', () => {
+  const root = supersedeFixture([
+    ['h0-battery', 'run-old', { study: 'h0-battery', git_sha: 'a' }, { cells: [cell('d', 1)] }],
+    ['h0-battery', 'run-new', { study: 'h0-battery', git_sha: 'b' }, { cells: [cell('d', 0)] }],
+    ['coverage', 'run-cov', { study: 'coverage', git_sha: 'c' }, { cells: [cell('d', 1)] }],
+    ['coverage', 'run-cov2', { study: 'coverage', git_sha: 'd' }, { cells: [cell('d', 0)] }],
+  ]);
+  withRegistry(root, 'h0-battery', [regEntry({ study: 'coverage', run: 'run-cov', detectors: ['d'] })]);
+  assert.throws(() => loadEvidence(root), /registry's reach is the study whose pre-registration authorized it/);
+});
+
+test('A1 rule 2: a registry may not leave a detector with no scoring run in the study', () => {
+  const root = withRegistry(twoRunStudy(), 'h0-battery', [
+    regEntry({ detectors: ['family_A_betting_e_process'] }),
+    regEntry({ run: 'run-new', detectors: ['family_A_betting_e_process'] }),
+  ]);
+  assert.throws(() => loadEvidence(root),
+    /leaves no run of h0-battery scoring family_A_betting_e_process/);
+});
+
+test('A1: a registry annotates the legacy declaration it covers rather than silencing it', () => {
+  const root = supersedeFixture([
+    ['h0-battery', 'run-old', { study: 'h0-battery', git_sha: 'a' }, { cells: [cell('d', 1)] }],
+    ['h0-battery', 'run-new', {
+      study: 'h0-battery', git_sha: 'b',
+      supersedes: { priorRun: 'run-old', defect: 'oracle phi was never threaded' },
+    }, { cells: [cell('d', 0)] }],
+  ]);
+  // Nothing covers it yet: the C1.1 behaviour is unchanged where no registry exists.
+  assert.equal(loadEvidence(root).unhonoured_supersessions[0].covered_by_registry, undefined);
+  assert.equal(loadEvidence(root).cells.filter((c) => c.__run === 'run-old').length, 1);
+
+  withRegistry(root, 'h0-battery', [regEntry({ detectors: ['d'] })]);
+  const ev = loadEvidence(root);
+  assert.deepEqual(ev.unhonoured_supersessions, [{
+    declared_by: 'h0-battery/run-new',
+    target: 'h0-battery/run-old',
+    defect: 'oracle phi was never threaded',
+    covered_by_registry: true,
+  }], 'still reported, now annotated — the legacy shape is covered, not honoured');
+  assert.equal(ev.cells.filter((c) => c.__run === 'run-old').length, 0, 'and the cells are gone');
+  assert.equal(ev.runs.find((r) => r.run === 'run-old').superseded[0].source, 'registry',
+    'the drop is attributed to the registry, not to the run that declared it in the legacy shape');
+});
+
+test('A1: a registry wins over a manifest array naming the same (run, detector)', () => {
+  const root = supersedeFixture([
+    ['h0-battery', 'run-old', { study: 'h0-battery', git_sha: 'a' }, { cells: [cell('d', 1)] }],
+    ['h0-battery', 'run-new', {
+      study: 'h0-battery', git_sha: 'b',
+      supersedes: [{ study: 'h0-battery', run: 'run-old', detectors: ['d'], reason: 'the run says so' }],
+    }, { cells: [cell('d', 0)] }],
+  ]);
+  withRegistry(root, 'h0-battery', [regEntry({ detectors: ['d'], reason: 'the amendment says so' })]);
+  const s = loadEvidence(root).runs.find((r) => r.run === 'run-old').superseded[0];
+  assert.equal(s.source, 'registry');
+  assert.equal(s.reason, 'the amendment says so',
+    'the amendment is the later and more specific artifact, so its reason is the reported one');
 });

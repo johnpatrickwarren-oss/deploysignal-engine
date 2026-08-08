@@ -1,0 +1,53 @@
+{
+  "study": "detector-certification",
+  "protocol_version": 1,
+  "report_format": 3,
+  "git_sha": "597a97cf75fd04230d75f00e9c8f0931ce6354b0",
+  "node": "v25.9.0",
+  "cards": [
+    {
+      "file": "family_A_betting_e_process.json",
+      "sha256": "6e3f203ff046eb6654cd8eb7df5b9ecd0094ed079dffdee618b25a4aaefc72d7"
+    },
+    {
+      "file": "family_A_mixture_supermartingale.json",
+      "sha256": "eb3eb4ecf0ac9dd37e22df3bc2cd4e0e909c16dd1f5dd6f7eb42140cb6424fc3"
+    },
+    {
+      "file": "family_C_safe_hotelling.json",
+      "sha256": "5116bad7f8d9709e60ef034997d12ae3ce24e53bc04b53e800effc7a14e11470"
+    },
+    {
+      "file": "family_D_spectral_e_detector.json",
+      "sha256": "74663f5bafbdea4d9aa34b4ade1f37d210ea324dde87eb5663942022dc1d42ed"
+    },
+    {
+      "file": "family_E_conformal.json",
+      "sha256": "4d453c31dfa333dc042ac51c08631e97545abd4b41e7bef5701373053f74eca2"
+    },
+    {
+      "file": "family_E_conformal_heldout.json",
+      "sha256": "cfb7e57c65bfeed9d7c5d25c32308632fac677bea2eb2fa91a9b85cbd4f0e484"
+    },
+    {
+      "file": "group_average_e_value.json",
+      "sha256": "311a316a8bf17d56d0e2e4cd12571d66b68b34094bc4e1da5bbef523dc6ff8db"
+    },
+    {
+      "file": "safe_t_e_value.json",
+      "sha256": "a0dc04064168628774295b34cfbfd7426797be1ee5dd0cf0de6c53bf50b212df"
+    },
+    {
+      "file": "sequential_mmd_betting_e_process.json",
+      "sha256": "afd83fdcf9490b8be50bf33709759c77e6684c0dd82c53e8a60bac64f53f8cc4"
+    },
+    {
+      "file": "sequential_ui_e_process.json",
+      "sha256": "b78530b583aea97a4112eda7596f4375310064a729bf9c8d6ea0470e6915f273"
+    },
+    {
+      "file": "universal_inference_e_value.json",
+      "sha256": "d4d10ebd3b027a3cc19505d30ae8ad58a2374d2745ae4c234dd7b7781b0926cf"
+    }
+  ]
+}

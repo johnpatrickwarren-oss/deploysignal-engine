@@ -66,11 +66,14 @@ const gitSha = execSync('git rev-parse HEAD', { cwd: repoRoot }).toString().trim
 // format 3 added COVERAGE.md's per-YES-row "also COVERED" detail lines (I4); format 4 names
 // EVERY detector tied at the best (status, canonical rate) on a NO row instead of the single
 // lexicographic winner (coverage Amendment v2.C1 C1.9) and adds REPORT.md's superseded-evidence
-// sections (C1.6, C1.1). Preserved runs written under an earlier format are never rewritten --
+// sections (C1.6, C1.1); format 5 splits those sections by provenance -- a registry-declared drop
+// gets its own section, and a legacy declaration a registry covers moves out of "STILL SCORED"
+// (which is no longer true of it) into a section that says what closed it (h0-battery Amendment
+// A1). Preserved runs written under an earlier format are never rewritten --
 // results/ is append-only -- so the machine check in test/report-consistency.test.mjs reads this
 // field to know which columns and which detail lines to expect.
 writeFileSync(join(outDir, 'manifest.json'), JSON.stringify({
-  study: 'detector-certification', protocol_version: 1, report_format: 4, git_sha: gitSha,
+  study: 'detector-certification', protocol_version: 1, report_format: 5, git_sha: gitSha,
   node: process.version, cards: cardFiles.map((f) => ({ file: f, sha256: fileSha256(join(here, 'cards', f)) })),
 }, null, 2) + '\n');
 
@@ -108,16 +111,37 @@ const STANDING_CAVEATS = [
 // scoring, so it has to be visible in the report -- an unreported exclusion is
 // indistinguishable from a scorer that lost rows. One line per (superseded run, detector), with
 // the row count, the declaring run, and the declared reason.
-const supersededLines = evidence.runs
+//
+// Amendment A1 (h0-battery) splits these by PROVENANCE. A drop a later run declared in its own
+// manifest and a drop a pre-registration amendment authorized through a study registry are not the
+// same act, and one section listing both would let a reader attribute an amendment's decision to a
+// run that never made it. `source` comes off lib/collect.mjs's dropped map.
+const supersededLine = (r, s) => `- ${r.study}/${r.run} — ${s.detector}: ${s.cells} `
+  + `cell${s.cells === 1 ? '' : 's'} dropped, superseded by ${s.superseded_by} (${s.reason})`;
+const supersededBySource = (source) => evidence.runs
   .filter((r) => r.superseded)
-  .flatMap((r) => r.superseded.map((s) => `- ${r.study}/${r.run} — ${s.detector}: ${s.cells} `
-    + `cell${s.cells === 1 ? '' : 's'} dropped, superseded by ${s.superseded_by} (${s.reason})`));
+  .flatMap((r) => r.superseded.filter((s) => (s.source ?? 'manifest') === source).map((s) => supersededLine(r, s)));
+const supersededLines = supersededBySource('manifest');
+const registryLines = supersededBySource('registry');
 
 // Amendment v2.C1.1: legacy `supersedes: {priorRun, defect}` declarations, recognized and
 // reported, deliberately NOT acted on. Silence here would have been the status quo — which is
-// how 148 h0-battery cells stayed in the corpus for a week after being declared defective.
-const unhonouredLines = (evidence.unhonoured_supersessions ?? [])
+// how 148 h0-battery cells stayed in the pool for a week after being declared defective.
+//
+// Amendment A1 closed that gap through a registry rather than by promoting the legacy shape, so
+// these declarations split in two. One that no registry covers is STILL SCORED and keeps the
+// original section verbatim -- the sentence is still true of it. One a registry covers is now acted
+// on, and gets its own section rather than vanishing: a reader has to be able to see both that the
+// 2026-08-01 declaration existed and that something finally read it.
+const legacy = evidence.unhonoured_supersessions ?? [];
+const unhonouredLines = legacy
+  .filter((u) => !u.covered_by_registry)
   .map((u) => `- ${u.target} — declared superseded by ${u.declared_by}, STILL SCORED. `
+    + `Stated defect: ${u.defect}`);
+const coveredLegacyLines = legacy
+  .filter((u) => u.covered_by_registry)
+  .map((u) => `- ${u.target} — declared superseded by ${u.declared_by} in the legacy `
+    + `\`{priorRun, defect}\` shape, and NOW DROPPED by a supersession registry. `
     + `Stated defect: ${u.defect}`);
 
 writeFileSync(join(outDir, 'REPORT.md'), [
@@ -130,6 +154,24 @@ writeFileSync(join(outDir, 'REPORT.md'), [
       'Rows a later run\'s manifest declared superseded. The prior run directories are preserved '
       + 'byte-for-byte; only their scoring is withdrawn, per the reason each declaring run states.', '',
       ...supersededLines, '']
+    : []),
+  ...(registryLines.length
+    ? ['## Superseded evidence by study registry (h0-battery Amendment A1)', '',
+      'Rows a study\'s `results/live/SUPERSESSIONS.json` declares superseded. No later run '
+      + 'declared these: the authority is the study\'s own pre-registration amendment, named in '
+      + 'each line\'s `declared_by`. The superseded run directories are preserved byte-for-byte '
+      + 'and the registry is a new file beside them, never inside one.', '',
+      ...registryLines, '']
+    : []),
+  ...(coveredLegacyLines.length
+    ? ['## Declared superseded in the legacy shape, and now closed by a registry (Amendment v2.C1.1 reported it; h0-battery Amendment A1 closed it)', '',
+      'These runs declared a prior run superseded for a named code defect in the legacy '
+      + '`supersedes: {priorRun, defect}` manifest shape. That shape is still not acted on — '
+      + 'editing a preserved manifest to upgrade it would break the append-only guarantee that '
+      + 'makes it citable. What acts on it is the registry above, authorized by the declaring '
+      + 'study\'s own pre-registration. The declaration is kept here rather than removed, so the '
+      + 'gap and its closure are both readable.', '',
+      ...coveredLegacyLines, '']
     : []),
   ...(unhonouredLines.length
     ? ['## Declared superseded but STILL SCORED (Amendment v2.C1.1 — a reported gap, not a decision)', '',

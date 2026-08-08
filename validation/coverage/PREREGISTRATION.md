@@ -5554,3 +5554,816 @@ families measured here give `safe_t` `2` and `1` flips and `universal_inference`
 canonical's injection moves the endpoint on the order of `1` trajectory in `10,000`-`40,000`, at or
 below the endpoint's own `5.7e-4` no-injection exceedance — and the phrase "not one trajectory in
 14,000" is true of one family and must not be read as "no trajectory can".
+
+## Amendment v2.K6A — 2026-08-08, the design gate for the K6-slow accumulator: REFUTED at design time inside the design page's own sweep box
+
+Registered before any artifact of the third registered K6 candidate exists: no detector module, no
+card, no adapter, no harness change, no constants-table entry, no run — and, after this amendment,
+there will be none. Authority, per this document's own precedence rule:
+`~/concord/knowledge/methodology/pages/k6-accumulator.md` (RATIFIED 2026-08-08, the binding design
+and the source of every constant this gate was allowed to move) — then this document. Sections 1–14
+and every earlier amendment stay intact. **This amendment moves no endpoint, floor, seed,
+prediction or verdict belonging to `shape_block_conformal_bet`, to `shape_ecdf_conformal_bet`, or to
+any other candidate, and — because the gate fails — it registers no cell, no seed, no scenario, no
+golden row and no prediction of its own.** It files a refutation and nothing else, which is what the
+design page instructs for this outcome.
+
+**What this amendment is for.** The design page requires a *design gate* computed before anything is
+built, and states the bar and its two outcomes in advance. This amendment computes the gate,
+registers the sweep verbatim, and states the verdict. **The verdict is the page's own second gate
+outcome: no swept configuration inside the page's design space reaches the bar, so the accumulator
+claim is refuted at design time and nothing is built.** K6A.7 states that in full, including what it
+does and does not refute — and K6A.8 states, with the measurements that decide it, the two specific
+changes that would clear the bar, both of which are design-page decisions this document cannot take.
+
+### K6A.1 The claim and the bar, quoted verbatim
+
+From the design page, §"The design gate":
+
+> - **YES requires: predicted detection ≥ 0.50 within H = 3,000 post-onset ticks at the
+>   canonical cell** (equivalently, median time-to-cross ≤ H), with the full time-to-detection
+>   curve reported. At 1–10 s tick cadence H is roughly 1–8 hours — the operator's stated
+>   envelope.
+
+and the outcome rule, same section:
+
+> - Gate outcomes: best-achievable median time-to-cross ≤ H → freeze and build; > H at every
+>   swept configuration → the accumulator claim is refuted at design time, filed, nothing
+>   built — same discipline that closed the last candidate for free.
+
+and the design space the sweep is authorized to cover, same section:
+
+> The derivation **sweeps the design space** the deploy-gate geometry never let matter:
+> window length W (30–150; longer windows see bimodality better), reference block count m
+> (with the A/B split and, if needed, an enlarged registered held-out substrate for this
+> class — n is a registered constant, not a law), κ chosen for growth, and the feature (CvM
+> against Anderson–Darling-weighted and energy-distance variants; one winner registered).
+> The known tension is W vs m on a fixed substrate; enlarging the substrate is the honest
+> resolution if the derivation needs it.
+
+**The bar this gate is measured against, restated as the single decisive number:** detection of
+`wealth >= 20` (`log >= log 20 = 2.995732`) within `H = 3,000` post-onset ticks at the canonical cell
+`mix-d1.5`, `>= 0.50`. The healthy budget is `α = 0.05`. `W ∈ {30, 60, 90, 120, 150}` is the page's
+range and is treated here as binding: `n` is explicitly *not* a law and was enlarged; `W`'s range is
+stated as a range and was not exceeded inside the gate's own verdict (out-of-box `W` is measured and
+reported at K6A.8 as disclosed sensitivity, never as a swept configuration the verdict rests on).
+
+### K6A.2 The construction swept, frozen exactly
+
+Same family as `shape_ecdf_conformal_bet` (Amendment v2.K6E): block-conformal rank of a
+distribution-distance feature against a held-out reference ECDF fitted on a disjoint segment. What
+this gate varies is `W`, the substrate `(n, n_A, m)`, `κ`, and the feature. What it does not vary:
+the injection, the calibrator, the rank rule, and the endpoint.
+
+```
+substrate      n rows, ONE continuously advanced stream (the post-C1 draw, run-battery.mjs:650-653)
+segment A      rows 1..n_A            ->  fixed reference ECDF Fhat_A(x) = (1/n_A)*#{a in A : a <= x}
+segment B      rows n_A+1..n_A+m*W    ->  m contiguous DISJOINT blocks of W
+live           the post-onset stream, consumed in disjoint W-blocks: N = floor(H/W) windows
+p              (1 + #{j : T(B_j) >= T(live)}) / (m + 1)                 tie-inclusive >=, K6.2's rule
+e              kappa * p^(kappa - 1),  kappa in (0,1)
+log wealth     after t windows = t*log(kappa) + (1-kappa)*S_t,  S_t = SUM_{w<=t}(-log p_w)
+detection      P( max_{t <= N} log wealth_t >= log 20 )
+```
+
+**The three candidate features, each frozen as an explicit formula.** `x_(1) <= ... <= x_(W)` are
+the live window's ascending order statistics; `u_i = Fhat_A(x_(i))`; `A` sorted ascending.
+
+```
+CvM      T_cvm(w)    = SUM_{i=1..W} ( i/W - u_i )^2
+                       the frozen v2.K6E K6E.2 discrete form, verbatim, i/W convention included
+
+AD       T_ad(w)     = SUM_{i=1..W} ( i/W - u_i )^2 / ( uc_i * (1 - uc_i) )
+                       uc_i = min(max(u_i, c), 1-c),  c = 1/(2*n_A)     the Anderson-Darling weight
+                       1/(F(1-F)); c is a registered clamp, needed because Fhat_A is exactly 0 or 1
+                       for live values outside A's range
+
+energy   T_energy(w) = (2/(W*n_A)) * SUM_{i,j} |x_i - a_j|  -  (1/W^2) * SUM_{i,k} |x_i - x_k|
+                       the two-sample energy distance against A with the constant
+                       -(1/n_A^2)*SUM|a-a'| term DROPPED: it is identical for every object ranked
+                       against the same A, and only the rank is used
+```
+
+**Why dropping that term, and the three v2.K6E departures from Anderson (1962), cannot matter here
+is unchanged and is not re-derived:** the only use made of `T` is its rank among the `m+1`
+exchangeable values, which no additive constant or strictly monotone transformation changes
+(K6E.2). **The AD clamp `c` is a real choice, not a rank-irrelevant one** — it is registered as
+part of the feature's definition, and the AD variant lost on the endpoint by a wide margin
+(K6A.5), so no verdict turns on it.
+
+**Exchangeability, and therefore the null law, is identical for all three features.** Conditional on
+`A`, `T(B_1) … T(B_m)` and `T(live)` are i.i.d. under the null (each is the same functional of `W`
+draws from the same stationary law against the same fixed `Fhat_A`), so `p` is exactly uniform on the
+`m+1` point grid and K6E.3's closed forms hold at every `m` used here:
+
+```
+E[log p | null] = ( SUM_{k=1..m+1} log k ) / (m+1) - log(m+1)
+E[e | null]     = kappa * (m+1)^(-kappa) * SUM_{k=1..m+1} k^(kappa-1)      < 1 strictly, O(m^(-kappa))
+```
+
+### K6A.3 Method, seeds, replicate counts, and the C1 guard on every candidate substrate
+
+**A disclosed probe on non-registered seeds** (this document's DISCLOSED convention, K6.4/K3.11).
+Scripts live outside the repo (scratchpad `c49/lib.mjs`, `anchor.mjs`, `box.mjs`, `boundary.mjs`,
+`cell.mjs`, `final.mjs`, `headline.mjs`, `hfine.mjs`, `horizon.mjs`, `validity.mjs`, `paired.mjs`);
+every number below is reproducible from what this section states.
+
+**Generators, copied verbatim rather than re-derived.** `rng` (the Numerical-Recipes LCG) and
+`gaussFrom` from `inject.mjs:14-24`; `ar1`/`drawFor` from `run-battery.mjs:302-308,365`; the
+alternative's per-tick draw from `injectShapeMix` (`inject.mjs:60-70`), i.e.
+`z = (b ? +d/2 : -d/2) + w*s`, `s = sqrt(max(0, 1 - d^2/4))`, three raw uniforms per tick, at
+`SIGMA = 1`; the substrate as ONE continuously advanced stream (`run-battery.mjs:650-653`).
+
+**Seed provenance.** Fresh bands, disjoint from everything already used: substrate
+`6.00e8 + 300007*rep + 7919*cfg`, canonical alt live `7.50e8 + …`, healthy live `9.00e8 + …`; the
+K6E-reproduction anchor of K6A.4 additionally uses `1.1e9 + {1000003, 7000019, 13000027}*rep`.
+Registered seeds are all `<= 1e8` (K6E.4's arithmetic, unchanged); earlier K6 probes used
+`1.7e9`/`2.5e9`/`2.6e9`/`3.0e9`/`3.5e9`/`3.7e9`/`3.8e9`/`4.1e9`. **All seeds used here are below
+`2^32`, so the LCG's `seed >>> 0` performs no wrap and the stated band is the band actually used.**
+
+**Trajectories come from ONE continuously advanced stream per (reference, arm)**, consumed as
+consecutive disjoint blocks — never from arithmetically spaced per-trajectory seeds, which would
+rebuild exactly the rank-1 Kronecker lattice Amendment v2.C1 (C1.1) rejects.
+
+**The C1.2 serial-structure guard was RUN on every candidate substrate draw, not assumed.**
+`acfAt` and the `HELDOUT_ACF_BOUND = 0.10` bound copied from `run-battery.mjs:595-611`; the guard
+throws rather than counting a fallback, and no draw at any `n` from `10,000` to `625,000` was
+rejected. Representative readings at the cells the verdict rests on: `n = 100,000` over 250 draws,
+mean `acf(1) = -0.00021`, `acf(2) = 0.00020`; `n = 275,000` over 150 draws, `0.00028` / `0.00005`;
+`n = 10,000` over 250 draws, `-0.00066` / `0.00002`. **The enlarged draws' lattice-freedom is
+checked, not inherited.**
+
+**Standard errors are cluster-robust over references** — the unit of independence is the reference
+draw, since every window sharing one reference is dependent through it (the C1.7
+calibration-draw lottery) — computed as `sd(per-reference means)/sqrt(R)`.
+
+**Replicate counts.** Sweep box: `R = 100` references × `25` trajectories = **2,500 trajectories per
+arm per cell**. Isolated boundary sweeps: `R = 40 × 25 = 1,000`. High-precision cells:
+`R = 250 × 20 = 5,000`. **The headline endpoint: 4 disjoint seed offsets × `R = 250 × 20` =
+20,000 trajectories per arm** (K6A.6). The design page's bar is a detection rate, so the brief's
+`SE <= 0.01` floor is met on the headline by a wide margin and is stated with the between-offset
+spread as well as the within-offset SE.
+
+**One disclosed limitation of the registered generator, which no number here rests on.** The
+registered `rng` is a 32-bit LCG with a single full-period orbit, so distinct seeds are offsets into
+one sequence rather than independent streams. At this probe's consumption (of order `1e8` uniforms
+per script against an orbit of `2^32 ≈ 4.3e9`) a small number of segment overlaps among the ~750
+streams of a high-precision cell is expected — of order tens of pairs out of ~280,000 — and the
+cluster-robust SEs treat references as independent. **Registered as a limitation, not corrected:
+it is the harness's own generator, the effect on the variance is of order `1e-4` of the pairs, and
+the verdict margin (K6A.7) is a factor of two, not a standard error.**
+
+### K6A.4 Sanity anchors — both required, both passed
+
+**(a) v2.K6E's canonical reading, reproduced inside this harness before any other cell was
+trusted.** Same geometry (`W = 30`, `m = 200`, `n_A = 4,000`, CvM, canonical `d = 1.5`), two
+independent readings on two different seed bands:
+
+| reading | `x = -E[log p \| alt]` | `κ* = 1/x` | growth `x - 1 - log x` |
+|---|---|---|---|
+| **v2.K6E, registered (pooled, 360,000 windows)** | **`1.09576 ± 0.00347`** | **`0.9126`** | **`+0.004312`**, CI `[0.003738, 0.004926]` |
+| this gate, band `6.0e8`, 250 refs × 20 × 100 windows | `1.09574 ± 0.00514` | `0.912627` | `+0.004310` |
+| this gate, band `1.1e9`, 400 refs × 600 windows | `1.08995 ± 0.00434` | `0.917472` | `+0.003818` |
+
+The first reading agrees with the registered value to `2e-5` and the second to `1.05` SE. **The
+`2e-5` agreement is coincidence at this precision and is not quoted as a tighter reproduction than
+the SEs support; the honest statement is that both readings reproduce `x` within one SE and both
+growths sit inside v2.K6E's registered 95% CI.** The anchor passes, so the rest of the sweep is
+trusted.
+
+**(b) The exact discrete null law, checked against the closed form rather than against 1**
+(K6E.3/K6E.7b's convention: a measured `E[e|null] = 1` would indicate a defect, not health).
+At `m = 200`, `W = 30`, 240,000 healthy windows on band `1.1e9`:
+
+| quantity | measured | exact |
+|---|---|---|
+| mean `p` | `0.501870` | `0.502488` |
+| `P(p <= 0.05)` | `0.048100` | `0.049751` |
+| `P(p = 1/(m+1))` | `0.004812` | `0.004975` |
+| `E[log p]` | `-0.98074 ± 0.00384` | `-0.982234` |
+| `E[e]` at `κ = 0.1` | `0.441455` | `0.445371` |
+| `E[e]` at `κ = 0.5` | `0.947113` | `0.949741` |
+| `E[e]` at `κ* = 0.9126` | `0.997844` | `0.998021` |
+
+Every marginal matches its exact value and **every measured mean `e` sits slightly BELOW the exact
+discrete value** (by `0.0002`–`0.004`), i.e. on the conservative side. The same check at the cell the
+verdict rests on (`m = 500`, `κ = 0.6820`): exact `E[e|null] = 0.991433`, MC `0.990241`. **`E[e|null]
+<= 1` holds by the closed form at every `m` and `κ` this gate considered, so the per-window
+calibrator identity is not where this candidate fails.**
+
+### K6A.5 THE SWEEP — the registered box
+
+`H = 3,000`; `N = floor(H/W)` disjoint live windows; canonical cell `mix-d1.5`; `κ*` is the closed
+form `1/x` where `x > 1` and "none in (0,1)" where `x <= 1` (K6E.4's structural fact: `x <= 1` means
+`E[log e] < 0` at every `κ`, and no calibrator rescues that cell). `drift over H` is
+`N * growth` in nats, against `log 20 = 2.995732`. "median t-t-c" is the median time-to-cross in
+ticks, and reads `> H` whenever detection `< 0.50` — the two are the same statement, per the page's
+own "equivalently".
+
+**Three substrates: `S1` the registered `n = 10,000` with `A = 4,000` unchanged; `S2` the brief's
+candidate `n = 40,000` with `A = 10,000 / B = 30,000`; `S3` a further disclosed enlargement
+`n = 100,000` with `A = 25,000 / B = 75,000`.** On a fixed substrate `m = floor(B/W)`, which is the
+`W`-vs-`m` tension in its exact form. **At `W = 90` the block arithmetic leaves a remainder** —
+`floor(6000/90) = 66` blocks consume `5,940` of `S1`'s `6,000` B-rows, so `n` reads `9,940` and 60
+rows go unused; the same at `S2`/`S3` (`39,970`, `99,970`). Recorded rather than rounded away, since
+v2.K6E registered "no remainder dropped" as a property of its own arithmetic and this sweep cannot
+claim it at every `W`.
+
+**Table 1 — the registered box: `W` × substrate × feature, `H = 3,000`, canonical `d = 1.5`, `R = 100` references × 25 trajectories = 2,500 trajectories per arm per cell.**
+
+| substrate | `n` | `n_A` | `W` | `m` | `N` | feature | `x = −E[log p\|alt]` | `κ*` | growth | drift over `H` | detection@`κ*` | median t-t-c | healthy@`κ*` | best on grid |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| S1 | 10000 | 4000 | 30 | 200 | 100 | cvm | 1.09028 ± 0.00826 | 0.9172 | 0.00385 | 0.385 | 0.0100 ± 0.0040 | > H | 0.0008 | 0.1440 @ 0.75 |
+| S1 | 10000 | 4000 | 30 | 200 | 100 | ad | 0.96665 ± 0.00778 | none in (0,1) | ≤ 0 | — | — | > H | — | 0.0156 @ 0.7 |
+| S1 | 10000 | 4000 | 30 | 200 | 100 | energy | 1.08367 ± 0.00774 | 0.9228 | 0.00332 | 0.332 | 0.0052 ± 0.0017 | > H | 0.0004 | 0.1340 @ 0.75 |
+| S1 | 10000 | 4000 | 60 | 100 | 50 | cvm | 1.15066 ± 0.01130 | 0.8691 | 0.01032 | 0.516 | 0.0280 ± 0.0051 | > H | 0.0012 | 0.1448 @ 0.7 |
+| S1 | 10000 | 4000 | 60 | 100 | 50 | ad | 1.05999 ± 0.01050 | 0.9434 | 0.00173 | 0.087 | 0.0000 ± 0.0000 | > H | 0.0000 | 0.0652 @ 0.65 |
+| S1 | 10000 | 4000 | 60 | 100 | 50 | energy | 1.14286 ± 0.01116 | 0.8750 | 0.00933 | 0.466 | 0.0196 ± 0.0038 | > H | 0.0004 | 0.1420 @ 0.7 |
+| S1 | 9940 | 4000 | 90 | 66 | 33 | cvm | 1.21162 ± 0.01560 | 0.8253 | 0.01966 | 0.649 | 0.0524 ± 0.0112 | > H | 0.0032 | 0.1552 @ 0.65 |
+| S1 | 9940 | 4000 | 90 | 66 | 33 | ad | 1.13723 ± 0.01455 | 0.8793 | 0.00863 | 0.285 | 0.0028 ± 0.0013 | > H | 0.0000 | 0.0928 @ 0.65 |
+| S1 | 9940 | 4000 | 90 | 66 | 33 | energy | 1.20832 ± 0.01545 | 0.8276 | 0.01909 | 0.630 | 0.0512 ± 0.0104 | > H | 0.0040 | 0.1500 @ 0.65 |
+| S1 | 10000 | 4000 | 120 | 50 | 25 | cvm | 1.26586 ± 0.01719 | 0.7900 | 0.03011 | 0.753 | 0.0644 ± 0.0139 | > H | 0.0032 | 0.1444 @ 0.6 |
+| S1 | 10000 | 4000 | 120 | 50 | 25 | ad | 1.20844 ± 0.01672 | 0.8275 | 0.01911 | 0.478 | 0.0232 ± 0.0065 | > H | 0.0004 | 0.1076 @ 0.6 |
+| S1 | 10000 | 4000 | 120 | 50 | 25 | energy | 1.27308 ± 0.01724 | 0.7855 | 0.03164 | 0.791 | 0.0736 ± 0.0135 | > H | 0.0028 | 0.1612 @ 0.6 |
+| S1 | 10000 | 4000 | 150 | 40 | 20 | cvm | 1.36911 ± 0.02189 | 0.7304 | 0.05495 | 1.099 | 0.1208 ± 0.0191 | > H | 0.0088 | 0.1904 @ 0.6 |
+| S1 | 10000 | 4000 | 150 | 40 | 20 | ad | 1.32438 ± 0.01996 | 0.7551 | 0.04344 | 0.869 | 0.0748 ± 0.0153 | > H | 0.0040 | 0.1484 @ 0.6 |
+| S1 | 10000 | 4000 | 150 | 40 | 20 | energy | 1.37930 ± 0.02144 | 0.7250 | 0.05772 | 1.154 | 0.1388 ± 0.0209 | > H | 0.0076 | 0.1996 @ 0.55 |
+| S2 | 40000 | 10000 | 30 | 1000 | 100 | cvm | 1.11228 ± 0.00454 | 0.8991 | 0.00587 | 0.587 | 0.0292 ± 0.0045 | > H | 0.0020 | 0.1660 @ 0.75 |
+| S2 | 40000 | 10000 | 30 | 1000 | 100 | ad | 0.98347 ± 0.00460 | none in (0,1) | ≤ 0 | — | — | > H | — | 0.0168 @ 0.7 |
+| S2 | 40000 | 10000 | 30 | 1000 | 100 | energy | 1.10245 ± 0.00434 | 0.9071 | 0.00492 | 0.492 | 0.0184 ± 0.0031 | > H | 0.0008 | 0.1564 @ 0.75 |
+| S2 | 40000 | 10000 | 60 | 500 | 50 | cvm | 1.19018 ± 0.00602 | 0.8402 | 0.01608 | 0.804 | 0.0696 ± 0.0064 | > H | 0.0016 | 0.1848 @ 0.7 |
+| S2 | 40000 | 10000 | 60 | 500 | 50 | ad | 1.07898 ± 0.00671 | 0.9268 | 0.00296 | 0.148 | 0.0000 ± 0.0000 | > H | 0.0000 | 0.0652 @ 0.65 |
+| S2 | 40000 | 10000 | 60 | 500 | 50 | energy | 1.18581 ± 0.00622 | 0.8433 | 0.01538 | 0.769 | 0.0676 ± 0.0068 | > H | 0.0024 | 0.1804 @ 0.7 |
+| S2 | 39970 | 10000 | 90 | 333 | 33 | cvm | 1.27688 ± 0.00952 | 0.7832 | 0.03246 | 1.071 | 0.1292 ± 0.0128 | > H | 0.0040 | 0.2096 @ 0.65 |
+| S2 | 39970 | 10000 | 90 | 333 | 33 | ad | 1.19027 ± 0.00972 | 0.8401 | 0.01609 | 0.531 | 0.0164 ± 0.0033 | > H | 0.0004 | 0.1172 @ 0.65 |
+| S2 | 39970 | 10000 | 90 | 333 | 33 | energy | 1.27721 ± 0.00933 | 0.7830 | 0.03253 | 1.074 | 0.1260 ± 0.0125 | > H | 0.0052 | 0.2192 @ 0.65 |
+| S2 | 40000 | 10000 | 120 | 250 | 25 | cvm | 1.34966 ± 0.00914 | 0.7409 | 0.04981 | 1.245 | 0.1504 ± 0.0107 | > H | 0.0084 | 0.2216 @ 0.6 |
+| S2 | 40000 | 10000 | 120 | 250 | 25 | ad | 1.28279 ± 0.00989 | 0.7796 | 0.03375 | 0.844 | 0.0720 ± 0.0076 | > H | 0.0028 | 0.1724 @ 0.6 |
+| S2 | 40000 | 10000 | 120 | 250 | 25 | energy | 1.35716 ± 0.00913 | 0.7368 | 0.05177 | 1.294 | 0.1636 ± 0.0109 | > H | 0.0084 | 0.2348 @ 0.6 |
+| S2 | 40000 | 10000 | 150 | 200 | 20 | cvm | 1.43187 ± 0.01243 | 0.6984 | 0.07289 | 1.458 | 0.2076 ± 0.0136 | > H | 0.0068 | 0.2620 @ 0.55 |
+| S2 | 40000 | 10000 | 150 | 200 | 20 | ad | 1.38420 ± 0.01215 | 0.7224 | 0.05908 | 1.182 | 0.1420 ± 0.0105 | > H | 0.0068 | 0.2280 @ 0.55 |
+| S2 | 40000 | 10000 | 150 | 200 | 20 | energy | 1.44801 ± 0.01279 | 0.6906 | 0.07782 | 1.556 | 0.2356 ± 0.0148 | > H | 0.0084 | 0.2868 @ 0.55 |
+| S3 | 100000 | 25000 | 30 | 2500 | 100 | cvm | 1.11915 ± 0.00317 | 0.8935 | 0.00658 | 0.658 | 0.0448 ± 0.0045 | > H | 0.0016 | 0.1852 @ 0.75 |
+| S3 | 100000 | 25000 | 30 | 2500 | 100 | ad | 0.98714 ± 0.00314 | none in (0,1) | ≤ 0 | — | — | > H | — | 0.0136 @ 0.75 |
+| S3 | 100000 | 25000 | 30 | 2500 | 100 | energy | 1.11136 ± 0.00329 | 0.8998 | 0.00578 | 0.578 | 0.0336 ± 0.0039 | > H | 0.0008 | 0.1696 @ 0.75 |
+| S3 | 100000 | 25000 | 60 | 1250 | 50 | cvm | 1.20438 ± 0.00481 | 0.8303 | 0.01842 | 0.921 | 0.0936 ± 0.0072 | > H | 0.0040 | 0.2044 @ 0.65 |
+| S3 | 100000 | 25000 | 60 | 1250 | 50 | ad | 1.09089 ± 0.00461 | 0.9167 | 0.00390 | 0.195 | 0.0000 ± 0.0000 | > H | 0.0000 | 0.0596 @ 0.65 |
+| S3 | 100000 | 25000 | 60 | 1250 | 50 | energy | 1.19863 ± 0.00477 | 0.8343 | 0.01745 | 0.873 | 0.0880 ± 0.0066 | > H | 0.0024 | 0.1996 @ 0.65 |
+| S3 | 99970 | 25000 | 90 | 833 | 33 | cvm | 1.29092 ± 0.00650 | 0.7746 | 0.03556 | 1.174 | 0.1416 ± 0.0090 | > H | 0.0060 | 0.2252 @ 0.65 |
+| S3 | 99970 | 25000 | 90 | 833 | 33 | ad | 1.19886 ± 0.00663 | 0.8341 | 0.01749 | 0.577 | 0.0256 ± 0.0036 | > H | 0.0020 | 0.1140 @ 0.6 |
+| S3 | 99970 | 25000 | 90 | 833 | 33 | energy | 1.29205 ± 0.00635 | 0.7740 | 0.03582 | 1.182 | 0.1476 ± 0.0087 | > H | 0.0052 | 0.2328 @ 0.65 |
+| S3 | 100000 | 25000 | 120 | 625 | 25 | cvm | 1.36365 ± 0.00740 | 0.7333 | 0.05349 | 1.337 | 0.1672 ± 0.0100 | > H | 0.0080 | 0.2372 @ 0.6 |
+| S3 | 100000 | 25000 | 120 | 625 | 25 | ad | 1.29243 ± 0.00751 | 0.7737 | 0.03591 | 0.898 | 0.0736 ± 0.0065 | > H | 0.0040 | 0.1660 @ 0.6 |
+| S3 | 100000 | 25000 | 120 | 625 | 25 | energy | 1.37074 ± 0.00734 | 0.7295 | 0.05539 | 1.385 | 0.1784 ± 0.0099 | > H | 0.0072 | 0.2504 @ 0.6 |
+| S3 | 100000 | 25000 | 150 | 500 | 20 | cvm | 1.43763 ± 0.00795 | 0.6956 | 0.07464 | 1.493 | 0.1912 ± 0.0102 | > H | 0.0060 | 0.2468 @ 0.6 |
+| S3 | 100000 | 25000 | 150 | 500 | 20 | ad | 1.38026 ± 0.00843 | 0.7245 | 0.05799 | 1.160 | 0.1248 ± 0.0091 | > H | 0.0032 | 0.1932 @ 0.55 |
+| S3 | 100000 | 25000 | 150 | 500 | 20 | energy | 1.45377 ± 0.00813 | 0.6879 | 0.07961 | 1.592 | 0.2184 ± 0.0105 | > H | 0.0064 | 0.2724 @ 0.55 |
+
+**Reading Table 1, registered.** Detection at `κ*` rises monotonically in `W` at every substrate and
+monotonically in the substrate at every `W`, and **the maximum anywhere in the box is at `S3`,
+`W = 150`, energy** — the box's own 2,500-trajectory reading of that cell is `0.2184 ± 0.0105` at its
+sample's `κ* = 0.6879`, with the maximum over the whole `κ` grid at that cell `0.2724`. **That same
+cell is re-measured at 20,000 trajectories with `κ` frozen in K6A.6, where it reads
+`0.2493 ± 0.0052`; the `2.6` SE gap between the two is the `κ*`-re-estimation coupling K6A.6
+documents and removes, and the higher figure is the one the verdict is stated against.** **The median
+time-to-cross reads `> H` in all 45 rows of the box.**
+
+**The scaling that decides the gate, measured and stated as arithmetic.** The `d = 1.5` mixture's
+per-window evidence at `W = 30` is the `1.0958` nats v2.K6E already registered; at `W = 150` it is
+`1.45`–`1.48` nats. **The design page's offered hypothesis — "`E[log p|alt]` grows superlinearly in
+`W`" — is measured here and is NOT confirmed: `x - 1` grows very slightly SUBlinearly in `W`.** On the
+isolated-`W` sweep the ratio `(x-1)/W` *declines* monotonically-in-trend across a 25× range of `W`,
+from `3.63e-3` to `2.65e-3` (CvM) and `3.23e-3` to `2.90e-3` (energy); the `W = 150 / W = 30` ratio of
+`x - 1` is `4.22` (CvM) and `4.91` (energy) against the `5.0` exact linearity would give. What *is*
+superlinear is the growth criterion built from it, because `g(κ*) = x - 1 - log x ≈ (x-1)²/2` near
+`x = 1`, so `g` grows about quadratically in `W`. Against that, the window count `N = floor(H/W)`
+falls as `1/W`. **Net: the total drift available in a fixed horizon, `N·g`, grows roughly LINEARLY in
+`W`** — measured `0.441, 0.859, 1.028, 1.552, 1.730` nats at `W = 30, 60, 90, 120, 150` (energy),
+continuing `2.015, 2.361, 2.515, 2.811, 3.231` at `W = 200, 250, 300, 400, 500`. **The endpoint needs
+`log 20 = 2.9957`. At the top of the page's `W` range the drift available is `1.73` nats — short by a
+factor of `1.73` — and the drift first reaches `log 20` at `W ≈ 445`.** That is the gate, in one
+line: the accumulator is not short of horizon-per-window or of reference, it is short of window
+length, and the page's range stops at `150`.
+
+**The `W`-vs-`m` trade, as measured rather than asserted.** On the registered substrate `S1` the
+trade is severe: `m = floor(6000/W)` falls from `200` at `W = 30` to `40` at `W = 150`, and the rank
+floor `1/(m+1)` coarsens with it. At `W = 150` the registered substrate reads `x = 1.37930 ± 0.02144`
+with detection `0.1388 ± 0.0209` (energy), against `x = 1.45377 ± 0.00813` and detection
+`0.2184 ± 0.0105` at the same `W` on `S3`'s `m = 500`. **So enlarging the substrate is worth roughly
+`+0.08` in `x` and `+0.08` in detection at `W = 150` — real, and nowhere near the factor of two the
+bar needs.** Table `m` isolates it: `x` saturates by `m ≈ 500` (`1.4884`, `1.4861`, `1.4686`,
+`1.4771` at `m = 500, 1000, 2000, 4000`, flat within their SEs), so **`B >= 500W = 75,000` rows
+exhausts what reference count can buy at `W = 150`, and `m` beyond that buys nothing.** Table `nA`
+isolates the reference size: `x` moves from `1.4659` at `n_A = 2,000` to `1.4678` at
+`n_A = 100,000`, **flat across a 50× range** — the reference ECDF's own estimation error is not a
+binding constraint at these `W`. **Registered consequence: the substrate is not the reason this
+candidate fails.** The design page anticipated the opposite failure mode — "the sweep may find the
+substrate cannot supply enough reference at the W the fault needs" — and that is not the mechanism
+that fired; `n = 100,000` with `A = 25,000 / B = 75,000` saturates the design, and the binding
+constraint is `W` against `H`. The page's own text needs that correction at write-back (K6A.11).
+
+**The feature winner, on a paired comparison.** All three features are evaluated on the IDENTICAL
+substrate draws and the IDENTICAL trajectories, so the difference is a paired per-reference quantity
+and its SE is far smaller than the difference of the two marginal SEs. At the in-box best cell
+(`n_A = 25,000`, `m = 500`, `W = 150`, 250 refs × 20):
+
+| comparison | at `κ = 0.55` | at `κ* = 0.6807` |
+|---|---|---|
+| energy − CvM | `+0.0222 ± 0.0038` (`t = 5.87`) | `+0.0212 ± 0.0040` (`t = 5.34`) |
+| CvM − AD | `+0.0462 ± 0.0051` (`t = 9.12`) | `+0.0480 ± 0.0051` (`t = 9.49`) |
+| energy − AD | `+0.0684 ± 0.0053` (`t = 12.99`) | `+0.0692 ± 0.0050` (`t = 13.74`) |
+
+**Registered feature ordering inside the box: energy > CvM > AD, and the energy-over-CvM margin is
+real rather than a tie** (`t = 5.3`–`5.9` paired), so the design page's tie-break toward CvM does not
+apply and is not invoked. **The Anderson–Darling-weighted variant is the worst of the three at every
+in-box cell, and at `W = 30` it is anti-informative outright** (`x = 0.96665 ± 0.00778 < 1` on `S1`,
+`0.98347` on `S2`, `0.98714` on `S3`: no `κ ∈ (0,1)` has positive growth). Mechanism, registered:
+the `d = 1.5` mixture at matched mean and variance has *thinner* tails than its Gaussian reference
+(components `N(±0.75, 0.6614²)`, so `P(|Z| > 3) = 1.7e-4` against the normal's `1.35e-3`) and its
+departure is concentrated in the shoulders and the central dip, which is exactly where AD's
+`1/(F(1-F))` weight is smallest. **The ordering reverses out of box at `W >= 400`** (Table `W`: AD
+`0.4540` vs energy `0.4550` at `W = 400`; AD `0.5710` vs energy `0.5480` at `W = 500`), where a
+window is long enough for its extreme order statistics to carry the tail difference. Disclosed
+because it is the one place the feature ranking is not stable, and no verdict rests on it.
+
+**Table 2 — `W` isolated (`m = 500`, `n_A = 25,000` held fixed, so `W` is separated from `m`; `R = 40 × 25 = 1,000`). `W > 150` is OUT OF BOX and is disclosed sensitivity, not a swept configuration the verdict rests on.**
+
+| `n_A` | `m` | `W` | `n` | `N` | feature | `x = −E[log p\|alt]` | `κ*` | growth | drift over `H` | detection@`κ*` | median t-t-c | healthy@`κ*` | best on grid |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 25000 | 500 | 30 | 40000 | 100 | cvm | 1.10895 ± 0.00677 | 0.9018 | 0.00554 | 0.554 | 0.0230 ± 0.0057 | > H | 0.0040 | 0.1610 @ 0.75 |
+| 25000 | 500 | 30 | 40000 | 100 | ad | 0.97767 ± 0.00652 | none in (0,1) | ≤ 0 | — | — | > H | — | 0.0140 @ 0.7 |
+| 25000 | 500 | 30 | 40000 | 100 | energy | 1.09683 ± 0.00676 | 0.9117 | 0.00441 | 0.441 | 0.0100 ± 0.0031 | > H | 0.0010 | 0.1410 @ 0.75 |
+| 25000 | 500 | 60 | 55000 | 50 | cvm | 1.19634 ± 0.00894 | 0.8359 | 0.01707 | 0.854 | 0.0640 ± 0.0089 | > H | 0.0020 | 0.1770 @ 0.7 |
+| 25000 | 500 | 60 | 55000 | 50 | ad | 1.09195 ± 0.00864 | 0.9158 | 0.00398 | 0.199 | 0.0000 ± 0.0000 | > H | 0.0000 | 0.0520 @ 0.65 |
+| 25000 | 500 | 60 | 55000 | 50 | energy | 1.19701 ± 0.00957 | 0.8354 | 0.01718 | 0.859 | 0.0670 ± 0.0115 | > H | 0.0050 | 0.1800 @ 0.65 |
+| 25000 | 500 | 90 | 70000 | 33 | cvm | 1.27065 ± 0.01046 | 0.7870 | 0.03112 | 1.027 | 0.1080 ± 0.0140 | > H | 0.0060 | 0.1760 @ 0.65 |
+| 25000 | 500 | 90 | 70000 | 33 | ad | 1.17609 ± 0.01089 | 0.8503 | 0.01389 | 0.458 | 0.0090 ± 0.0034 | > H | 0.0000 | 0.0860 @ 0.65 |
+| 25000 | 500 | 90 | 70000 | 33 | energy | 1.27077 ± 0.01014 | 0.7869 | 0.03115 | 1.028 | 0.1030 ± 0.0137 | > H | 0.0060 | 0.1900 @ 0.65 |
+| 25000 | 500 | 120 | 85000 | 25 | cvm | 1.38727 ± 0.01243 | 0.7208 | 0.05993 | 1.498 | 0.2220 ± 0.0183 | > H | 0.0110 | 0.2950 @ 0.55 |
+| 25000 | 500 | 120 | 85000 | 25 | ad | 1.31422 ± 0.01148 | 0.7609 | 0.04098 | 1.024 | 0.1010 ± 0.0124 | > H | 0.0030 | 0.2060 @ 0.6 |
+| 25000 | 500 | 120 | 85000 | 25 | energy | 1.39484 ± 0.01353 | 0.7169 | 0.06206 | 1.552 | 0.2530 ± 0.0211 | > H | 0.0110 | 0.3040 @ 0.6 |
+| 25000 | 500 | 150 | 100000 | 20 | cvm | 1.46000 ± 0.01400 | 0.6849 | 0.08156 | 1.631 | 0.2420 ± 0.0164 | > H | 0.0070 | 0.2920 @ 0.6 |
+| 25000 | 500 | 150 | 100000 | 20 | ad | 1.40465 ± 0.01345 | 0.7119 | 0.06486 | 1.297 | 0.1730 ± 0.0148 | > H | 0.0060 | 0.2440 @ 0.55 |
+| 25000 | 500 | 150 | 100000 | 20 | energy | 1.47553 ± 0.01400 | 0.6777 | 0.08651 | 1.730 | 0.2710 ± 0.0166 | > H | 0.0090 | 0.3100 @ 0.55 |
+| 25000 | 500 | 200 | 125000 | 15 | cvm | 1.57836 ± 0.01632 | 0.6336 | 0.12197 | 1.830 | 0.2730 ± 0.0202 | > H | 0.0050 | 0.3140 @ 0.55 |
+| 25000 | 500 | 200 | 125000 | 15 | ad | 1.55870 ± 0.01733 | 0.6416 | 0.11485 | 1.723 | 0.2630 ± 0.0199 | > H | 0.0060 | 0.3070 @ 0.55 |
+| 25000 | 500 | 200 | 125000 | 15 | energy | 1.61148 ± 0.01655 | 0.6205 | 0.13433 | 2.015 | 0.3270 ± 0.0204 | > H | 0.0090 | 0.3560 @ 0.55 |
+| 25000 | 500 | 250 | 150000 | 12 | cvm | 1.71509 ± 0.01699 | 0.5831 | 0.17563 | 2.108 | 0.3340 ± 0.0192 | > H | 0.0030 | 0.3590 @ 0.5 |
+| 25000 | 500 | 250 | 150000 | 12 | ad | 1.72692 ± 0.01708 | 0.5791 | 0.18058 | 2.167 | 0.3580 ± 0.0214 | > H | 0.0030 | 0.3820 @ 0.5 |
+| 25000 | 500 | 250 | 150000 | 12 | energy | 1.76470 ± 0.01760 | 0.5667 | 0.19672 | 2.361 | 0.3930 ± 0.0212 | > H | 0.0050 | 0.4100 @ 0.5 |
+| 25000 | 500 | 300 | 175000 | 10 | cvm | 1.83034 ± 0.02147 | 0.5463 | 0.22584 | 2.258 | 0.3370 ± 0.0221 | > H | 0.0070 | 0.3530 @ 0.5 |
+| 25000 | 500 | 300 | 175000 | 10 | ad | 1.86923 ± 0.02192 | 0.5350 | 0.24370 | 2.437 | 0.4120 ± 0.0234 | > H | 0.0090 | 0.4170 @ 0.5 |
+| 25000 | 500 | 300 | 175000 | 10 | energy | 1.88598 ± 0.02139 | 0.5302 | 0.25153 | 2.515 | 0.4080 ± 0.0221 | > H | 0.0090 | 0.4100 @ 0.5 |
+| 25000 | 500 | 400 | 225000 | 7 | cvm | 2.10383 ± 0.02568 | 0.4753 | 0.36007 | 2.521 | 0.3920 ± 0.0232 | > H | 0.0090 | 0.3950 @ 0.4 |
+| 25000 | 500 | 400 | 225000 | 7 | ad | 2.18046 ± 0.02796 | 0.4586 | 0.40092 | 2.806 | 0.4540 ± 0.0244 | > H | 0.0090 | 0.4550 @ 0.4 |
+| 25000 | 500 | 400 | 225000 | 7 | energy | 2.18171 ± 0.02655 | 0.4584 | 0.40160 | 2.811 | 0.4550 ± 0.0241 | > H | 0.0090 | 0.4550 @ 0.4584 |
+| 25000 | 500 | 500 | 275000 | 6 | cvm | 2.32296 ± 0.02662 | 0.4305 | 0.48012 | 2.881 | 0.4560 ± 0.0206 | > H | 0.0030 | 0.4580 @ 0.4 |
+| 25000 | 500 | 500 | 275000 | 6 | ad | 2.44173 ± 0.02817 | 0.4095 | 0.54903 | 3.294 | 0.5710 ± 0.0208 | 3000 | 0.0030 | 0.5720 @ 0.4 |
+| 25000 | 500 | 500 | 275000 | 6 | energy | 2.42393 ± 0.02854 | 0.4126 | 0.53854 | 3.231 | 0.5480 ± 0.0208 | 3000 | 0.0050 | 0.5480 @ 0.4126 |
+| 25000 | 500 | 600 | 325000 | 5 | cvm | 2.63782 ± 0.03554 | 0.3791 | 0.66786 | 3.339 | 0.5710 ± 0.0266 | 3000 | 0.0090 | 0.5710 @ 0.3791 |
+| 25000 | 500 | 600 | 325000 | 5 | ad | 2.81405 ± 0.03615 | 0.3554 | 0.77942 | 3.897 | 0.6740 ± 0.0229 | 2400 | 0.0100 | 0.6740 @ 0.3554 |
+| 25000 | 500 | 600 | 325000 | 5 | energy | 2.78078 ± 0.03699 | 0.3596 | 0.75805 | 3.790 | 0.6540 ± 0.0250 | 3000 | 0.0110 | 0.6540 @ 0.3596 |
+| 25000 | 500 | 750 | 400000 | 4 | cvm | 2.98587 ± 0.03776 | 0.3349 | 0.89198 | 3.568 | 0.6190 ± 0.0258 | 3000 | 0.0090 | 0.6190 @ 0.3349 |
+| 25000 | 500 | 750 | 400000 | 4 | ad | 3.21840 ± 0.03859 | 0.3107 | 1.04951 | 4.198 | 0.7380 ± 0.0233 | 2250 | 0.0100 | 0.7400 @ 0.4 |
+| 25000 | 500 | 750 | 400000 | 4 | energy | 3.17171 ± 0.03798 | 0.3153 | 1.01744 | 4.070 | 0.7220 ± 0.0215 | 3000 | 0.0100 | 0.7230 @ 0.4 |
+
+**Table 3 — `m` isolated (`W = 150`, `n_A = 25,000` held fixed; `R = 40 × 25 = 1,000`).**
+
+| `n_A` | `m` | `W` | `n` | `N` | feature | `x = −E[log p\|alt]` | `κ*` | growth | drift over `H` | detection@`κ*` | median t-t-c | healthy@`κ*` | best on grid |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 25000 | 40 | 150 | 31000 | 20 | cvm | 1.36728 ± 0.03966 | 0.7314 | 0.05446 | 1.089 | 0.1580 ± 0.0383 | > H | 0.0070 | 0.2240 @ 0.6 |
+| 25000 | 40 | 150 | 31000 | 20 | ad | 1.30563 ± 0.03558 | 0.7659 | 0.03895 | 0.779 | 0.0880 ± 0.0254 | > H | 0.0040 | 0.1730 @ 0.55 |
+| 25000 | 40 | 150 | 31000 | 20 | energy | 1.37855 ± 0.03734 | 0.7254 | 0.05752 | 1.150 | 0.1830 ± 0.0367 | > H | 0.0060 | 0.2380 @ 0.6 |
+| 25000 | 100 | 150 | 40000 | 20 | cvm | 1.39397 ± 0.02410 | 0.7174 | 0.06181 | 1.236 | 0.1440 ± 0.0214 | > H | 0.0090 | 0.2160 @ 0.6 |
+| 25000 | 100 | 150 | 40000 | 20 | ad | 1.35289 ± 0.02561 | 0.7392 | 0.05065 | 1.013 | 0.1090 ± 0.0215 | > H | 0.0110 | 0.1810 @ 0.6 |
+| 25000 | 100 | 150 | 40000 | 20 | energy | 1.41121 ± 0.02444 | 0.7086 | 0.06676 | 1.335 | 0.1720 ± 0.0258 | > H | 0.0090 | 0.2280 @ 0.6 |
+| 25000 | 200 | 150 | 55000 | 20 | cvm | 1.42321 ± 0.01725 | 0.7026 | 0.07029 | 1.406 | 0.1900 ± 0.0232 | > H | 0.0060 | 0.2350 @ 0.55 |
+| 25000 | 200 | 150 | 55000 | 20 | ad | 1.36867 ± 0.01626 | 0.7306 | 0.05483 | 1.097 | 0.1030 ± 0.0154 | > H | 0.0040 | 0.1900 @ 0.55 |
+| 25000 | 200 | 150 | 55000 | 20 | energy | 1.43712 ± 0.01661 | 0.6958 | 0.07448 | 1.490 | 0.2120 ± 0.0241 | > H | 0.0100 | 0.2640 @ 0.55 |
+| 25000 | 500 | 150 | 100000 | 20 | cvm | 1.47344 ± 0.01373 | 0.6787 | 0.08584 | 1.717 | 0.2510 ± 0.0182 | > H | 0.0080 | 0.3040 @ 0.55 |
+| 25000 | 500 | 150 | 100000 | 20 | ad | 1.42509 ± 0.01319 | 0.7017 | 0.07086 | 1.417 | 0.1880 ± 0.0156 | > H | 0.0070 | 0.2580 @ 0.55 |
+| 25000 | 500 | 150 | 100000 | 20 | energy | 1.48837 ± 0.01472 | 0.6719 | 0.09069 | 1.814 | 0.2810 ± 0.0197 | > H | 0.0100 | 0.3250 @ 0.55 |
+| 25000 | 1000 | 150 | 175000 | 20 | cvm | 1.47183 ± 0.01214 | 0.6794 | 0.08532 | 1.706 | 0.2610 ± 0.0157 | > H | 0.0090 | 0.2990 @ 0.6 |
+| 25000 | 1000 | 150 | 175000 | 20 | ad | 1.41539 ± 0.01158 | 0.7065 | 0.06799 | 1.360 | 0.1890 ± 0.0145 | > H | 0.0060 | 0.2540 @ 0.55 |
+| 25000 | 1000 | 150 | 175000 | 20 | energy | 1.48606 ± 0.01177 | 0.6729 | 0.08993 | 1.799 | 0.2810 ± 0.0162 | > H | 0.0100 | 0.3240 @ 0.55 |
+| 25000 | 2000 | 150 | 325000 | 20 | cvm | 1.45047 ± 0.01134 | 0.6894 | 0.07858 | 1.572 | 0.2280 ± 0.0162 | > H | 0.0040 | 0.2870 @ 0.55 |
+| 25000 | 2000 | 150 | 325000 | 20 | ad | 1.40040 ± 0.01299 | 0.7141 | 0.06364 | 1.273 | 0.1650 ± 0.0152 | > H | 0.0040 | 0.2400 @ 0.55 |
+| 25000 | 2000 | 150 | 325000 | 20 | energy | 1.46860 ± 0.01126 | 0.6809 | 0.08429 | 1.686 | 0.2640 ± 0.0169 | > H | 0.0030 | 0.3200 @ 0.55 |
+| 25000 | 4000 | 150 | 625000 | 20 | cvm | 1.45638 ± 0.01075 | 0.6866 | 0.08043 | 1.609 | 0.2270 ± 0.0132 | > H | 0.0100 | 0.2830 @ 0.55 |
+| 25000 | 4000 | 150 | 625000 | 20 | ad | 1.40473 ± 0.01260 | 0.7119 | 0.06488 | 1.298 | 0.1590 ± 0.0128 | > H | 0.0030 | 0.2320 @ 0.55 |
+| 25000 | 4000 | 150 | 625000 | 20 | energy | 1.47707 ± 0.01090 | 0.6770 | 0.08701 | 1.740 | 0.2670 ± 0.0142 | > H | 0.0070 | 0.3190 @ 0.55 |
+
+**Table 4 — `n_A` isolated (`W = 150`, `m = 500` held fixed; `R = 40 × 25 = 1,000`).**
+
+| `n_A` | `m` | `W` | `n` | `N` | feature | `x = −E[log p\|alt]` | `κ*` | growth | drift over `H` | detection@`κ*` | median t-t-c | healthy@`κ*` | best on grid |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2000 | 500 | 150 | 77000 | 20 | cvm | 1.45222 ± 0.02474 | 0.6886 | 0.07913 | 1.583 | 0.2480 ± 0.0268 | > H | 0.0070 | 0.2790 @ 0.6 |
+| 2000 | 500 | 150 | 77000 | 20 | ad | 1.40593 ± 0.02542 | 0.7113 | 0.06523 | 1.305 | 0.1880 ± 0.0249 | > H | 0.0030 | 0.2530 @ 0.55 |
+| 2000 | 500 | 150 | 77000 | 20 | energy | 1.46594 ± 0.02605 | 0.6822 | 0.08344 | 1.669 | 0.2760 ± 0.0297 | > H | 0.0080 | 0.3110 @ 0.6 |
+| 4000 | 500 | 150 | 79000 | 20 | cvm | 1.42899 ± 0.01744 | 0.6998 | 0.07202 | 1.440 | 0.1860 ± 0.0187 | > H | 0.0070 | 0.2440 @ 0.55 |
+| 4000 | 500 | 150 | 79000 | 20 | ad | 1.40068 ± 0.01752 | 0.7139 | 0.06372 | 1.274 | 0.1620 ± 0.0174 | > H | 0.0060 | 0.2340 @ 0.55 |
+| 4000 | 500 | 150 | 79000 | 20 | energy | 1.44544 ± 0.01728 | 0.6918 | 0.07703 | 1.541 | 0.2130 ± 0.0206 | > H | 0.0080 | 0.2620 @ 0.6 |
+| 10000 | 500 | 150 | 85000 | 20 | cvm | 1.43736 ± 0.01336 | 0.6957 | 0.07455 | 1.491 | 0.1970 ± 0.0177 | > H | 0.0060 | 0.2510 @ 0.6 |
+| 10000 | 500 | 150 | 85000 | 20 | ad | 1.39280 ± 0.01346 | 0.7180 | 0.06148 | 1.230 | 0.1410 ± 0.0127 | > H | 0.0040 | 0.2020 @ 0.55 |
+| 10000 | 500 | 150 | 85000 | 20 | energy | 1.45263 ± 0.01248 | 0.6884 | 0.07925 | 1.585 | 0.2170 ± 0.0171 | > H | 0.0060 | 0.2730 @ 0.55 |
+| 25000 | 500 | 150 | 100000 | 20 | cvm | 1.47344 ± 0.01373 | 0.6787 | 0.08584 | 1.717 | 0.2510 ± 0.0182 | > H | 0.0080 | 0.3040 @ 0.55 |
+| 25000 | 500 | 150 | 100000 | 20 | ad | 1.42509 ± 0.01319 | 0.7017 | 0.07086 | 1.417 | 0.1880 ± 0.0156 | > H | 0.0070 | 0.2580 @ 0.55 |
+| 25000 | 500 | 150 | 100000 | 20 | energy | 1.48837 ± 0.01472 | 0.6719 | 0.09069 | 1.814 | 0.2810 ± 0.0197 | > H | 0.0100 | 0.3250 @ 0.55 |
+| 50000 | 500 | 150 | 125000 | 20 | cvm | 1.47877 ± 0.01498 | 0.6762 | 0.08756 | 1.751 | 0.2740 ± 0.0209 | > H | 0.0130 | 0.3090 @ 0.55 |
+| 50000 | 500 | 150 | 125000 | 20 | ad | 1.43028 ± 0.01647 | 0.6992 | 0.07241 | 1.448 | 0.2100 ± 0.0201 | > H | 0.0100 | 0.2610 @ 0.55 |
+| 50000 | 500 | 150 | 125000 | 20 | energy | 1.49365 ± 0.01518 | 0.6695 | 0.09243 | 1.849 | 0.3030 ± 0.0225 | > H | 0.0120 | 0.3350 @ 0.6 |
+| 100000 | 500 | 150 | 175000 | 20 | cvm | 1.45327 ± 0.01748 | 0.6881 | 0.07945 | 1.589 | 0.2340 ± 0.0224 | > H | 0.0030 | 0.2880 @ 0.55 |
+| 100000 | 500 | 150 | 175000 | 20 | ad | 1.39785 ± 0.01553 | 0.7154 | 0.06292 | 1.258 | 0.1440 ± 0.0171 | > H | 0.0050 | 0.2190 @ 0.55 |
+| 100000 | 500 | 150 | 175000 | 20 | energy | 1.46780 ± 0.01761 | 0.6813 | 0.08404 | 1.681 | 0.2650 ± 0.0240 | > H | 0.0030 | 0.3090 @ 0.6 |
+
+
+**Provenance of Tables 2–4, stated so no row is double-counted as independent evidence** (the defect
+v2.K6E.17.3(c) corrected in the previous wave, avoided here by checking rather than by assuming).
+The three isolated sweeps were separate invocations that assign their seed offsets by position
+within their own sweep. **Table 3's `m = 500` row and Table 4's `n_A = 25,000` row are therefore the
+IDENTICAL sample, not two measurements of it** — same substrate, alt and healthy streams, reading
+`x = 1.48837 ± 0.01472` (energy) in both. Table 2's `W = 150` row is a different offset
+(`x = 1.47553 ± 0.01400`), and the box's `S3`/`W = 150` row a third (`1.45377 ± 0.00813`). **Every
+row within one table is a genuinely separate computation, and rows across tables that name the same
+`(n_A, m, W)` are related as stated above and nowhere else.** No verdict rests on Tables 2–4: they
+locate the boundaries, and the verdict rests on K6A.6's own 20,000-trajectory measurement.
+
+### K6A.6 The best-achievable cell, measured at the precision the verdict needs
+
+**The best-achievable configuration inside the design page's sweep box**, on the endpoint the page's
+coverage rule actually tests:
+
+```
+W       = 150            the top of the page's registered range
+n       = 100,000        enlarged substrate (the page: "n is a registered constant, not a law")
+A / B   = 25,000 / 75,000
+m       = 500            = floor(75000/150), and m is SATURATED here (Table m)
+feature = energy distance against Fhat_A, the form frozen at K6A.2
+kappa*  = 0.6820         = 1/x, closed form, chosen for GROWTH, on the x pooled over three earlier
+                           independent-offset samples of this cell (1.4884 +- 0.0147, 1.4538 +- 0.0081,
+                           1.46902 +- 0.00588 -> 1.4662 +- 0.0071 after inflating for a chi2 of 4.85
+                           on 2 df, i.e. the over-dispersion is carried rather than assumed away)
+H       = 3,000  ->  N = 20 disjoint windows of 150
+```
+
+**`κ*` is frozen as a literal from the pooled `x` BEFORE the headline endpoint was measured, and the
+headline was then measured on four fresh, disjoint seed offsets at that fixed `κ`.** This is
+deliberate: re-estimating `κ*` from the same sample that reports the detection rate couples the two,
+and an earlier pass of this gate saw `det@κ*` move `0.218`–`0.281` across samples whose own
+cluster-robust SEs were `0.008`–`0.011`, purely because `κ*` moved with the sampled `x`. **The
+headline below has that circularity removed.** The headline sample's own `x = 1.46793` implies
+`1/x = 0.68123`, `0.0008` from the frozen literal; the `κ` grid's local slope is about `-0.85` per
+unit `κ`, so the difference is worth `< 0.001` in detection — disclosed, not corrected.
+
+| offset | `x` | detection-within-`H` | healthy `H`-crossing |
+|---|---|---|---|
+| 1001 | `1.46851 ± 0.00602` | `0.2548 ± 0.0091` | `0.0104 ± 0.0014` |
+| 1002 | `1.45831 ± 0.00610` | `0.2350 ± 0.0084` | `0.0088 ± 0.0013` |
+| 1003 | `1.47656 ± 0.00578` | `0.2586 ± 0.0083` | `0.0072 ± 0.0013` |
+| 1004 | `1.46834 ± 0.00602` | `0.2488 ± 0.0086` | `0.0096 ± 0.0014` |
+| **all four, 20,000 trajectories/arm** | **`1.46793`** | **`0.2493`** | **`0.0090`** |
+
+**Registered headline, with the wider of the two uncertainties quoted:** cluster-robust SE over all
+1,000 references is `0.0043`; the between-offset sd is `0.0104`, giving SE of the mean `0.0052`, a
+`1.5×` over-dispersion on the cluster-robust figure. **Detection-within-`H` = `0.2493 ± 0.0052`.**
+The same cell's CvM reading at its own frozen `κ = 0.6931` is `0.2177 ± 0.0033`.
+
+**Median time-to-cross: `> H = 3,000`, censored — 4,986 of 20,000 trajectories crossed at all, so the
+median trajectory never crosses inside the horizon.** Of those that did cross, the crossing tick
+quartiles are `p25 = 1,650`, `p50 = 2,250`, `p75 = 2,700`. **The full time-to-detection curve at
+`κ*`** (ticks : detection, 5,000 trajectories):
+
+```
+ 150:0.000   300:0.000   450:0.000   600:0.001   750:0.003   900:0.009  1050:0.013  1200:0.023
+1350:0.034  1500:0.050  1650:0.066  1800:0.082  1950:0.101  2100:0.123  2250:0.145  2400:0.165
+2550:0.188  2700:0.211  2850:0.231  3000:0.254
+```
+
+**Two structural facts about this cell, registered because they distinguish it from both earlier K6
+candidates.** (1) **The wealth ceiling is NOT binding.** Per-window ceiling
+`log κ* + (1-κ*)·log(m+1) = -0.382668 + 0.318 × 6.216606 = 1.594213` nats, so over `N = 20` windows
+the ceiling is `31.88` nats against `log 20 = 2.9957`; a crossing is arithmetically possible from
+window 2 onward (`t = 1` is unreachable — `max S_1 = log 501 = 6.2166 < c_1(κ*) = 10.62` — and
+`c_2(κ*) = 11.83 <= max S_2 = 12.43`), which the time-to-detection curve confirms by being nonzero
+from `450`–`600` ticks. **Neither v2.K6 nor v2.K6E died of insufficient evidence rate; both died of
+an arithmetic ceiling at a 6-window horizon. This candidate has no ceiling problem and dies of the
+evidence rate itself** — a different refutation, reached on a different quantity, and the reason the
+over-all-`κ` ceiling bound machinery of K6E.17.2 is not the argument here. (2) **The drift-only
+estimate is pessimistic and is not what was reported.** `ceil(log 20 / g) = ceil(2.995732/0.084064)
+= 36` windows `= 5,400` ticks on drift alone, whereas the measured horizon at which detection reaches
+`0.50` is `≈ 4,650` ticks (K6A.8) — variance brings the median crossing in earlier than the drift
+line, so **quoting `log 20 / g` as a time-to-detection would have understated this candidate**, and
+every number in this amendment's verdict is a measured first-passage distribution, not a drift
+extrapolation.
+
+**The `κ` grid at that cell, so no reader concludes another `κ` would have delivered the floor**
+(detection / healthy, 5,000 trajectories, energy):
+
+```
+0.05:0.001/0.000  0.1:0.012/0.002  0.2:0.052/0.005  0.3:0.140/0.010  0.4:0.219/0.014
+0.5:0.280/0.015   0.55:0.294/0.017 0.6:0.293/0.015  0.65:0.276/0.012 0.6807:0.254/0.009
+0.7:0.234/0.008   0.75:0.168/0.004 0.8:0.085/0.001  0.85:0.016/0.000 0.88:0.003/0.000
+0.9:0.000/0.000   0.92:0.000/0.000 0.94:0.000/0.000 0.96:0.000/0.000 0.98:0.000/0.000
+```
+
+**The grid maximum is `0.294 ± 0.0087` at `κ = 0.55`** (an independent sample of the same cell reads
+`0.3046 ± 0.0089`), attained on a plateau that is flat within noise across `κ ∈ [0.5, 0.6]` and
+`0.05`-spaced through the maximum — so no unswept `κ` plausibly hides a factor-of-1.7 improvement.
+**Registered: over the whole admissible `κ` range, the best in-box detection is `≈ 0.30`, against
+`COVERAGE_FLOOR = 0.50`.** Choosing `κ = 0.55` over the growth-derived `κ* = 0.6820` would be
+selecting a constant on the endpoint after seeing the numbers, which the design page's own rule
+forbids ("κ chosen for growth"); it is reported and not adopted, exactly as v2.K6E.11 reported and
+declined its own `κ ≈ 0.35`. **The class answer is the same under either rule.**
+
+### K6A.7 THE GATE VERDICT — refuted at design time, nothing built
+
+Mapped against the design page's two registered outcomes, verbatim:
+
+1. *"best-achievable median time-to-cross ≤ H → freeze and build"* — **NOT the measured result.**
+   The median time-to-cross is `> H` at **every one of the 45 configurations in the box**, and at the
+   best-achievable cell it is censored with detection `0.2493 ± 0.0052` against the required `0.50`.
+2. *"> H at every swept configuration → the accumulator claim is refuted at design time, filed,
+   nothing built"* — **THIS IS THE MEASURED RESULT. REGISTERED GATE VERDICT: FAIL.**
+
+**REGISTERED RULING: the K6-slow accumulator claim is REFUTED AT DESIGN TIME inside the design
+page's own sweep box. No detector module, card, adapter, harness change, constants-table entry, run
+or result is created; no cell, seed, scenario, golden row or prediction is registered by this
+amendment. The K6-slow row does not enter the coverage matrix. `K6` stays `NO`, and no run was
+spent to learn it.** The design page's coverage rule for this row ("YES iff card USE and canonical
+detection `>= 0.50` within `H`") has a determined answer before any artifact exists: **NO**, by a
+factor of `2.0` on detection at the growth-derived `κ*` and `1.7` at the grid maximum.
+
+**What this refutes, stated precisely, and what it does not.**
+
+- **Refuted:** that this construction family, swept over `W ∈ {30…150}`, any substrate up to
+  `n = 625,000`, any `κ ∈ (0,1)` and the three registered features, reaches detection `0.50` within
+  `H = 3,000` post-onset ticks at the canonical cell.
+- **NOT refuted, and explicitly not claimed:** that the construction is uninformative. It is
+  strongly informative — `x = 1.468`, i.e. `x − 1` at `125` SE on the pooled between-offset SE `0.0037`, growth `+0.0841` nats/window, `19.5×` the
+  growth v2.K6E measured at its own geometry and `1.7×` the design page's own `0.05` nats/window
+  marginality floor. The mechanism claim the design page rests on (a CvM-type statistic accumulates
+  where a kurtosis statistic cancels) is confirmed, and confirmed more strongly than at `W = 30`.
+- **NOT refuted:** that an accumulator in this family can reach the bar at all. **It can, and this
+  gate located where** — two measured routes, K6A.8, both outside what the page authorizes.
+- **Untouched:** the deploy-gate K6 answer (`NO`, two attempts, `k6-ecdf-successor`), every K6/K6E
+  registration, and every other candidate's endpoints.
+
+**The one-attempt rule is satisfied by this refutation exactly as it would have been by a run.** A
+fourth K6 candidate — or this construction at a wider `W` range or a longer `H` — is a new decision
+page, not a retune of this one.
+
+### K6A.8 What would have to change, measured rather than speculated
+
+Two routes reach the bar. Both are changes to constants the design page fixes, so **neither is taken
+here and neither is registered**; they are recorded because a refutation that cannot say what would
+have worked is not a finding.
+
+**Route 1 — the same configuration, a longer horizon. `H ≈ 4,650` ticks instead of `3,000`
+(`1.55×`).** Detection and the healthy page rate read at the same `H` on the same 5,000 trajectories
+(`W = 150`, `m = 500`, `n_A = 25,000`, energy, `κ* = 0.6807`):
+
+| `H` (ticks) | detection (`d = 1.5`) | healthy page rate |
+|---|---|---|
+| 3,000 | `0.2678 ± 0.0089` | `0.0076 ± 0.0013` |
+| 3,900 | `0.3982 ± 0.0105` | `0.0110 ± 0.0016` |
+| 4,350 | `0.4620 ± 0.0110` | `0.0126 ± 0.0017` |
+| **4,800** | **`0.5146 ± 0.0113`** | `0.0144 ± 0.0018` |
+| 5,700 | `0.6106 ± 0.0117` | `0.0164 ± 0.0019` |
+| 7,500 | `0.7472 ± 0.0109` | `0.0218 ± 0.0024` |
+
+Linear interpolation puts detection `= 0.50` at `H ≈ 4,675` ticks. **At `1–10 s` cadence that is
+`1.3`–`13` hours against the page's stated `1`–`8` hour envelope, and the healthy page rate at that
+`H` is `0.013`, comfortably inside `α = 0.05`.** So the bar is missed by a factor of `1.56` in
+horizon, not by an order of magnitude — the closest any K6 candidate has come.
+
+**Route 2 — the same horizon, a longer window. `W ≈ 500` instead of `150` (`3.3×` the page's upper
+bound), on a `275,000`-row substrate.** High-precision (`R = 150 × 34 = 5,100` trajectories/arm,
+`n_A = 25,000`, `m = 500`, `H = 3,000`):
+
+| `W` | `n` | `N` | feature | `x` | `κ*` | detection-within-`H` | median t-t-c | healthy |
+|---|---|---|---|---|---|---|---|---|
+| 500 | 275,000 | 6 | CvM | `2.36109 ± 0.01541` | `0.4235` | `0.5029 ± 0.0128` | **3,000** | `0.0088 ± 0.0014` |
+| 500 | 275,000 | 6 | energy | `2.47219 ± 0.01592` | `0.4045` | `0.5851 ± 0.0123` | **3,000** | `0.0102 ± 0.0015` |
+| 500 | 275,000 | 6 | AD | `2.48824 ± 0.01599` | `0.4019` | `0.5918 ± 0.0119` | **3,000** | `0.0098 ± 0.0014` |
+| 600 | 325,000 | 5 | AD | `2.77683 ± 0.01858` | `0.3601` | `0.6594 ± 0.0120` | **2,400** | `0.0043 ± 0.0010` |
+| 600 | 325,000 | 5 | energy | `2.74756 ± 0.01818` | `0.3640` | `0.6445 ± 0.0125` | 3,000 | `0.0039 ± 0.0009` |
+
+**All three features clear `0.50` at `W = 500` with the healthy rate at `≈ 0.01`.** Three costs are
+registered with it, none of them dismissable: the substrate is `275,000` rows per metric per
+coordinate (`27.5×` the registered `10,000`; at `1–10 s` cadence, `3`–`32` days of clean history);
+the horizon holds only `N = 6` windows, so the time-to-detection curve has six points and the
+earliest possible page is at `1,000` ticks (window 2); and `κ* ≈ 0.40` puts the calibrator's tail
+index `1/(1-κ*) ≈ 1.67 < 2`, so `Var[e]` is infinite and the terminal-mean estimator has no CLT
+backing — the same infinite-variance fact K6.7/K3.1.3 register for `κ = 0.1`, which is why the
+verdict field on such an arm would have to stay `crossing_rate`-derived.
+
+**Both routes are design-page decisions.** `H = 3,000` and `W ∈ [30, 150]` are the page's, this
+document cannot overrule a ratified page (the precedence rule, and v2.K6E.17.1's precedent), and
+adopting either after seeing these numbers would be selecting a constant on the endpoint. **Filed as
+the two things that would have to change, with their measured numbers and their costs, and with the
+write-back named at K6A.11.**
+
+### K6A.9 A second, independent obstacle the sweep surfaced: the α = 0.05 unbounded-horizon claim does not hold at κ near 1
+
+The design page's claim for this class is anytime validity: *"the 5% false-page budget holds over an
+unbounded horizon with no repeated-look penalty."* **That claim is not established for a
+block-conformal accumulator with a single fixed reference, and at the `κ` the growth rule selects at
+small `W` it is measurably false.** This is registered as a finding of the gate, independent of the
+detection verdict.
+
+**The mechanism, stated as arithmetic.** Ville's inequality needs a nonnegative supermartingale.
+Conditional on the substrate `S` — the one held-out draw the whole run shares — the live windows are
+i.i.d. with per-window mean `mu(S) = E[e | null, S]`, so `E[W_t] = E_S[ mu(S)^t ]`. **`E[e|null] <= 1`
+marginally, exactly, by the discrete law (K6A.2/K6A.4b) — but that is `E_S[mu(S)]`, and
+`E_S[mu(S)^t] -> infinity` whenever `P(mu(S) > 1) > 0`.** Worse for the page rate: whenever a
+reference's own null GROWTH `log κ + (1-κ)·E[-log p | null, S]` is positive, the wealth process on
+that reference drifts up and crosses any threshold with probability `1` given enough windows. This is
+v2.K6E.17.3(b)'s "the six-window product is not a martingale in the shared-reference filtration",
+measured at the horizon an always-on accumulator actually runs at.
+
+**Measured (250 references × 2 healthy trajectories, crossing of `20` tracked to 90,000 ticks):**
+
+| cell | refs with `mu_hat(S) > 1` | refs with own null growth `> 0` | healthy crossing by 3,000 | 9,000 | 30,000 | 90,000 |
+|---|---|---|---|---|---|---|
+| **`W=30, m=200, n_A=4000`, CvM, `κ* = 0.9126`** (v2.K6E's own geometry) | 97/250 | **48/250** | `0.0080` | **`0.0480`** | **`0.1580`** | **`0.2080`** |
+| `W=150, m=500, n_A=25000`, energy, `κ* = 0.6807` | 70/250 | **0/250** | `0.0100` | `0.0180` | `0.0220` | `0.0220` |
+| `W=150, m=500, n_A=25000`, energy, `κ = 0.55` | 68/250 | **0/250** | `0.0140` | `0.0180` | `0.0180` | `0.0180` |
+
+**Registered readings.** (1) **At `κ* = 0.9126`, `W = 30`, `m = 200` the healthy page rate reaches
+`α = 0.05` by `9,000` ticks and `0.208` by `90,000`, still rising, against a claimed budget of
+`0.05` over an UNBOUNDED horizon — `4.2×` over budget and not a bounded excess.** The limiting rate
+is governed by `P(null growth > 0) = 48/250 = 19.2%`, and the mean healthy log wealth at that cell
+still *falls* (`-15.48` at 90,000), so the paging is entirely the unlucky-substrate tail, not a
+drift the average run shows. (2) **At the `κ ≈ 0.55–0.68` the winning cell selects, `0/250`
+references have positive null growth** (margin `-0.070`, per-reference sd `0.017`, `4.1` sd) **and the
+healthy crossing saturates at `0.018`–`0.022 <= α`.** The obstacle is a `κ → 1` phenomenon:
+`-log κ/(1-κ) -> 1` as `κ -> 1` while `E[-log p|null] -> 1` from below, so the margin that keeps the
+null drift negative vanishes and the per-reference spread swamps it. (3) **Consequence for the
+obvious successor idea, registered so it is not proposed as free:** "take v2.K6E's configuration,
+which had positive growth `+0.0043` nats/window, and just run it for `21,000` ticks" **does not
+work** — the horizon probe reads detection `0.5750 ± 0.0417` at 21,000 ticks on that cell against a
+healthy page rate of `0.1240 ± 0.0250` at the same horizon, i.e. it buys power by spending `2.5×` the
+whole false-page budget. (4) The correct repairs are a larger `m`, a `κ` bounded away from `1`, or a
+reference that is re-drawn rather than fixed; **the third changes the construction and is not in this
+family. None is adopted here.**
+
+**This finding does not change the gate verdict** (the winning cell's null side is intact, `0/250`
+and `<= α`), and it moves no registered endpoint of any candidate: v2.K6E's arms were cancelled by
+v2.K6E.17.1 before any run, so there is no `shape_ecdf_conformal_bet` validity number on the record
+for this to correct. **It is registered as the reason a κ-selection rule that reads only growth is
+unsafe for an always-on accumulator, and as a write-back obligation (K6A.11).**
+
+### K6A.10 Limitations of this gate, disclosed
+
+- **The sweep is at the canonical cell only.** `d = 1.5`, `φ = 0`. No `d = 1.0`, `d = 2.0` or
+  `-ar1` grid was run: the gate's bar is stated at the canonical cell, the gate failed there, and
+  measuring the rest of a grid for a refuted candidate would spend compute to no verdict. v2.K6E's
+  own per-cell findings (`d = 1.0` anti-informative at `W = 30`; `d = 2.0` a two-point boundary
+  artifact at `s = 0` exactly; `-ar1` strongly anti-informative because `injectShapeMix` replaces
+  AR(1) values with i.i.d. draws while the reference stays AR(1)) are cited, not re-derived, and
+  none of them is a reason the canonical bar was missed.
+- **No T2 clustersynth arm was run**, and none is registered. The T2 validity question — whether the
+  contiguity construction survives independent telemetry, the question that killed
+  `shape-kurtosis-e-value.ts` (C22) — remains exactly where v2.K6E.17.4 left it: named-not-done, its
+  own decision, and now with K6A.9 as an additional reason it matters.
+- **The AD clamp `c = 1/(2 n_A)` and the dropped constant term in the energy statistic are
+  registered choices**, not derivations. The energy term is provably rank-irrelevant; the AD clamp is
+  not, and the AD variant lost by `t = 9`–`14` paired, so no verdict depends on it.
+- **Cluster-robust SEs treat reference draws as independent**, which the single-orbit LCG makes
+  approximately rather than exactly true (K6A.3). The headline quotes the wider between-offset
+  spread for this reason.
+- **`E[log p|null]` was measured against its exact value at every cell and matched**, but the
+  measured values sit systematically `0.001`–`0.004` *below* the exact discrete `E[e|null]`, i.e.
+  conservative. Not diagnosed further; the direction cannot inflate a detection rate.
+
+### K6A.11 House rules, mapped
+
+Per `~/concord/knowledge/methodology/pages/pre-registration-discipline.md`: (1) **committed before
+any artifact it authorizes** — at this commit there is no K6-slow module, card, adapter, harness
+change, run or result, and this amendment authorizes none; the amendment is the only change in its
+commit. (2) A failed endpoint is a publishable result, **and a design-time refutation is one too;
+this is where it is published.** Nothing above moves afterward, including the gate verdict itself.
+(3) No post-hoc analysis: there is no run to analyse — the sweep of K6A.5–K6A.6 is a
+pre-registration-time derivation disclosed with its provenance, seeds, and replicate counts.
+(4)–(6) Moot: no arm, no fallback rule, no seed and no result is registered, so there is nothing to
+freeze or to append to. (7) **Reruns only for a named code defect; and quote-and-correct for
+text — this amendment corrects no earlier text and files no rider**, deliberately: the design page's
+three claims that this gate bears on (the superlinear-`W` hypothesis, the anticipated
+substrate-starvation failure mode, and the unbounded-horizon `α` claim) live in a **ratified wiki
+page that this document cannot overrule**, and the correct instrument is a write-back to that page,
+named below and not done here. (8) The report states every endpoint's number and verdict — discharged
+by K6A.5–K6A.8: every quantity this gate measured is stated with its SE, and the class answer is
+stated plainly.
+
+**Write-back obligations, named and NOT done here** (the wiki is not this document's to edit):
+
+- `~/concord/knowledge/methodology/pages/k6-accumulator.md` — the gate verdict FAIL and the
+  refutation; that its superlinear-`W` hypothesis is measured and not confirmed (K6A.5); that its
+  anticipated failure mode (substrate cannot supply enough reference) is **not** the one that fired,
+  the substrate saturating at `m ≈ 500` while `W` against `H` binds (K6A.5); the two measured routes
+  that clear the bar and their costs (K6A.8); and that its unbounded-horizon `α` claim needs the
+  qualifier of K6A.9.
+- `~/concord/knowledge/methodology/pages/coverage-gap-detectors.md` and
+  `~/concord/knowledge/methodology/pages/fault-class-coverage-matrix.md` — that the K6-slow row does
+  not enter the matrix, and why.
+- A page for K6A.9's shared-reference result, which is a property of the whole block-conformal
+  betting family and not of this candidate: `E[e|null] <= 1` marginally does not make the product a
+  supermartingale, and at `κ → 1` the unbounded-horizon false-page rate approaches
+  `P(per-reference null growth > 0)` rather than `α`.
+
+### K6A.12 Named-not-done
+
+- **The three routes of K6A.8/K6A.9 that would clear the bar** (`H ≈ 4,675`; `W ≈ 500` on a
+  `275,000`-row substrate; a re-drawn rather than fixed reference). Measured, costed, **not
+  recommended and not registered** — each needs a design-page decision, and the third leaves this
+  construction family.
+- **The T2-only validity reading**, still the family's one live falsifier (v2.K6E.17.4), still
+  unbuilt, now with K6A.9 as a second reason it is the interesting measurement.
+- **The full severity grid and the `-ar1` cell at long span** for this construction — not run, per
+  K6A.10.
+
+### Amendment summary
+
+Registers, superseding nothing and registering no cell, seed, scenario, prediction, golden row or
+artifact: **the design gate for the third K6 candidate, the K6-slow accumulator, computed before any
+artifact exists — and its FAILURE.** The bar is quoted verbatim from the ratified design page
+(detection `>= 0.50` within `H = 3,000` post-onset ticks at canonical `mix-d1.5`, equivalently median
+time-to-cross `<= H`), as is the outcome rule that a median `> H` at every swept configuration
+refutes the claim at design time with nothing built (K6A.1). The construction is frozen with all
+three candidate features written as explicit formulas — the v2.K6E K6E.2 CvM discrete form verbatim,
+an Anderson–Darling-weighted variant with its clamp `c = 1/(2 n_A)` named as a registered choice, and
+the two-sample energy distance with its rank-irrelevant constant term dropped — and the exact
+discrete null law shown to be feature-independent by exchangeability (K6A.2). Method, seeds and
+guards: fresh disclosed seed bands `6.0e8`/`7.5e8`/`9.0e8` (registered seeds are `<= 1e8`; earlier
+probes used `1.7e9`–`4.1e9`), all below `2^32` so the LCG does not wrap; trajectories drawn from one
+continuously advanced stream per (reference, arm) rather than spaced seeds, which would rebuild
+Amendment v2.C1's rank-1 lattice; **the C1.2 serial-structure guard RUN on every candidate substrate
+draw from `n = 10,000` to `n = 625,000` and passed by all of them** (`n = 100,000`: mean
+`acf(1) = -0.00021`, `acf(2) = 0.00020` over 250 draws); cluster-robust SEs over reference draws
+(K6A.3). **Both required anchors pass:** v2.K6E's canonical reading reproduced inside this harness at
+`x = 1.09574 ± 0.00514` and `1.08995 ± 0.00434` on two bands against its registered
+`1.09576 ± 0.00347`, with growth `+0.004310`/`+0.003818` inside its registered CI `[0.003738,
+0.004926]` — the `2e-5` agreement of the first explicitly disclaimed as coincidence at that
+precision — and the exact discrete null law matched at every marginal, with every measured `E[e|null]`
+on the conservative side of its closed form (K6A.4). **The sweep: 45 in-box configurations
+(`W ∈ {30,60,90,120,150}` × three substrates `n = 10,000`/`40,000`/`100,000` × three features) plus
+three isolated one-dimensional sweeps (`W` to 750, `m` to 4,000, `n_A` to 100,000), 2,500 trajectories
+per arm per cell.** Findings registered off it: **the median time-to-cross reads `> H` in all 45 box
+rows**; the design page's superlinear-`W` hypothesis is measured and **not confirmed** (`x − 1` grows
+slightly *sub*linearly, `(x−1)/W` falling from `3.63e-3` to `2.65e-3` over a 25× range), while the
+growth criterion `≈ (x−1)²/2` does grow quadratically, so total drift `N·g` grows roughly **linearly**
+in `W` and reaches `log 20` only at `W ≈ 445`; `m` **saturates by `m ≈ 500`** (`x` flat at
+`1.47`–`1.49` for `m = 500…4,000`) and `n_A` is **flat across a 50× range**, so **the substrate is not
+why this fails** — the page's anticipated failure mode is not the one that fired; and the feature
+ordering is **energy > CvM > AD** on a paired comparison (`+0.0212 ± 0.0040`, `t = 5.3`;
+`+0.0480 ± 0.0051`, `t = 9.5`), with AD anti-informative outright at `W = 30` (`x = 0.967 < 1`) for a
+stated reason (the matched-moment mixture has thinner tails than its reference, where AD's weight is
+smallest) and the ordering reversing only out of box at `W >= 400` (K6A.5). **The best-achievable
+in-box cell, measured with the `κ*`-estimation circularity removed — `κ*` frozen as the literal
+`0.6820` from a pooled `x` before the endpoint was measured, then 20,000 trajectories on four
+disjoint offsets: `W = 150`, `n = 100,000`, `A/B = 25,000/75,000`, `m = 500` (saturated), energy
+distance, `κ* = 0.6820`. Detection-within-`H` = `0.2493 ± 0.0052` (between-offset spread, `1.5×` the
+cluster-robust `0.0043`); median time-to-cross `> H = 3,000`, CENSORED — 4,986 of 20,000 crossed at
+all, quartiles of the crossing tick `1,650 / 2,250 / 2,700`; healthy `H`-crossing `0.0090 <= α`; full
+time-to-detection curve reported; grid maximum `≈ 0.30` at `κ = 0.55` on a plateau flat across
+`[0.5, 0.6]`, reported and NOT adopted since the page's rule selects `κ` by growth.** Registered
+alongside it: unlike both earlier K6 candidates **this one has no binding wealth ceiling** (per-window
+ceiling `1.5942` nats, `31.88` over the horizon against `log 20`; crossing possible from window 2, and
+observed from `450` ticks), so it dies of evidence rate rather than of arithmetic, and the over-all-`κ`
+ceiling bound of v2.K6E.17.2 is not the argument; and the drift-only figure `ceil(log 20/g) = 36`
+windows `= 5,400` ticks is **pessimistic** against the measured `≈ 4,650`, so no verdict here rests on
+a drift extrapolation (K6A.6). **REGISTERED GATE VERDICT: FAIL — outcome 2 of the page's two
+registered outcomes. The K6-slow accumulator claim is REFUTED AT DESIGN TIME inside the page's own
+sweep box; nothing is built; the K6-slow row does not enter the coverage matrix; `K6` stays `NO`; no
+run was spent** — short by a factor of `2.0` on detection at the growth-derived `κ*` and `1.7` at the
+grid maximum, with what is NOT refuted stated as plainly as what is: the construction is strongly
+informative at `W = 150` (`x = 1.468`, i.e. `x − 1` at `125` SE on the pooled between-offset SE `0.0037`, growth `+0.0841` nats/window, `19.5×`
+v2.K6E's reading at `W = 30` and `1.7×` the page's own marginality floor), the page's mechanism claim
+is confirmed more strongly than before, and an accumulator in this family **can** reach the bar
+(K6A.7). What would have to change, measured rather than speculated, and adopted nowhere: **`H ≈ 4,675`
+ticks instead of `3,000`** (`1.56×`; detection `0.4620 ± 0.0110` at `4,350` and `0.5146 ± 0.0113` at
+`4,800`, healthy `0.013` at that horizon), **or `W ≈ 500` instead of `150`** (`3.3×` the page's upper
+bound, on a `275,000`-row substrate: CvM `0.5029 ± 0.0128`, energy `0.5851 ± 0.0123`, AD
+`0.5918 ± 0.0119`, all with healthy `≈ 0.01`, at the costs of `27.5×` the registered substrate, only
+`N = 6` windows in the horizon, and `κ* ≈ 0.40` where `1/(1−κ) < 2` makes `Var[e]` infinite) — both
+being changes to constants a ratified page fixes, hence write-backs and operator decisions, not this
+document's to take (K6A.8). **A second, independent obstacle the sweep surfaced and registered as a
+family-level finding: the design page's `α = 0.05`-over-an-unbounded-horizon claim is not established
+for a block-conformal accumulator on a single FIXED reference, and at `κ` near `1` it is measurably
+false.** `E[e|null] <= 1` holds marginally and exactly, but `E[W_t] = E_S[mu(S)^t]` diverges when
+`P(mu(S) > 1) > 0`, and a reference whose own null growth is positive crosses a.s.: at v2.K6E's own
+geometry (`W = 30`, `m = 200`, `κ* = 0.9126`) **48/250 references have positive null growth and the
+healthy page rate runs `0.0080 → 0.0480 → 0.1580 → 0.2080` at `3,000 → 9,000 → 30,000 → 90,000`
+ticks, `4.2×` over budget and still rising**, which kills the obvious "run v2.K6E's configuration
+longer" successor (detection `0.575 ± 0.042` at 21,000 ticks bought with a healthy rate of
+`0.124 ± 0.025`); at the winning cell's `κ ≈ 0.55–0.68` it is `0/250` and the healthy rate saturates
+at `0.018`–`0.022 <= α`, so **the verdict's null side is intact and the obstacle is specifically a
+`κ → 1` phenomenon** (K6A.9). Limitations disclosed: canonical cell only, no T2 arm, the AD clamp as
+a registered choice, cluster-robust SEs against a single-orbit LCG, and the conservative direction of
+the measured-vs-exact `E[e|null]` gap (K6A.10). House rules mapped, with **no rider and no
+quote-and-correct filed** — the three page claims this gate bears on are in a ratified wiki page and
+the instrument is a write-back, named as not-done (K6A.11); named-not-done also covers the three
+clearing routes, the T2-only validity reading, and the unrun severity grid (K6A.12). **No endpoint,
+floor, seed, prediction or verdict in §1–14 or in any earlier amendment moves; no artifact was
+created; the whole content of this amendment is a gate, a refutation, the two measured changes that
+would clear it, and one family-level validity finding — reached without spending a run.**

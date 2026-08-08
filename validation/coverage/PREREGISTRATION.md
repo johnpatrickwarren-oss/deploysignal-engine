@@ -876,3 +876,205 @@ descriptive window-crossing secondary (K4.6, extending §5/A2); the K4 stop cond
 candidate's own per-point count (K4.7, quoting the plan verbatim); predictions with falsifiers
 (K4.8); the `-ar1` cell's out-of-claim scope (K4.9); fallback inheritance (K4.10, citing A3). Nothing
 in §1–14, Amendment v1.1, Amendment v1.2, or Erratum v1.3 is superseded.
+
+## Amendment v2.K4.1 — 2026-08-08, corrections before any K4 run
+
+Closes a review verdicted NEEDS-AMENDMENT-BEFORE-RUN on Amendment v2.K4. Registered before any run
+of `point_tail_bet_e_value`. Amendment v2.K4's text (K4.1–K4.11) stays intact; every item below
+names the exact subsection it corrects or extends, per rule 7. All items are registrations: no
+endpoint, floor, or seed moves.
+
+### K4.1.1 A4's K4 falsifier scoped to `family_E_conformal_heldout` (Critical 1)
+
+**Names a supersession of A4's K4 row.** A4 states: "K4: falsified iff any K4 severity cell's
+detection rate is materially above the A2-derived ≈0.20 ceiling." That ceiling is specific to
+`family_E_conformal_heldout`'s bounded-increment (≈1.95× per-tick) construction — A2 derives it
+from that construction's fixed multiplier, not from anything general to K4. **Supersedes A4's K4
+row for `point_tail_bet_e_value`:** the ≈0.20-ceiling falsifier applies to
+`family_E_conformal_heldout` only; `point_tail_bet_e_value`'s K4 falsifier is K4.8's own (canonical
+detection `< 0.50`), unbounded-increment and unrelated to the Ville-derived ceiling. A4's K4 row
+for `family_E_conformal_heldout` is otherwise unchanged.
+
+### K4.1.2 §6's "family_E_conformal_heldout only" scoping superseded, named (Important 1)
+
+K4.4 registers `point_tail_bet_e_value` reusing the same held-out stream §6 states is for
+"`family_E_conformal_heldout` only" (cells 18–21). That reuse **supersedes §6's *only* scoping**
+for those four cells — named explicitly here, since K4.4's own text called this an "extension" of
+§6's sharing convention, not a supersession of §6's literal restrictive wording, and the two are
+different claims. §6's `HELDOUT_SEED` formula, `n`, and `seed(j)` formula are unchanged; only the
+"only" qualifier is superseded, and only for cells 18–21.
+
+### K4.1.3 K4 candidate set corrected to three (Important 2)
+
+**Corrects K4.7's closing paragraph.** K4.7 read: "K4 as a class stays NO only if every candidate
+scored on it (this one and `family_E_conformal_heldout`) fails to cover." That omits the third row
+already registered on these same cells: A6 additionally scores `safe_t` on K4 (idx 18–21) and, per
+A4's decision rule, "a `safe_t` row that happens to clear `COVERAGE_FLOOR` on a ... K4 canonical
+cell would independently cover that class." **Corrected:** the K4 candidate set is three —
+`point_tail_bet_e_value` (this amendment), `family_E_conformal_heldout` (A1/A2), and `safe_t` (A6)
+— and a K4 class-level NO requires all three below `COVERAGE_FLOOR = 0.50` at the canonical cell
+(idx 19). K4.7's stop condition and α = 0.05 are unchanged; only the candidate-set sentence is
+corrected.
+
+### K4.1.4 Cell-32 emitted fields, registered (Important 3)
+
+**Extends K4.5; names the exact fields Task 4 must emit**, not stated as field names in K4.5:
+
+- `n`: **2000** — trajectory count, unchanged shape from A1/A3(c).
+- `n_points`: **400000** (new field) — the per-point denominator, `N * 200` (K4.5).
+- `exceedance`: per-**point** rate, `k / n_points` (not `k / n`).
+- `lower_95`: per-**point** Wilson 95% lower bound on `exceedance` (new field name for this
+  candidate's healthy arm; distinct from A1's per-trajectory `k, n` pair, which this cell does not
+  carry).
+- `verdict`: derived directly from `lower_95` vs. `alpha` (`lower_95 > 0.05 ? 'FAIL' :
+  'not-refuted'`) — not from `lower95(k, n)` computed fresh, since `lower_95` is already the
+  registered field.
+- `mean_e`: unchanged from K4.5 (mean of `e` across all `n_points`).
+
+Task 4's adapter must emit exactly this field set for cell 32's S2 row; the S3 row keeps A1's
+per-trajectory `detection_rate`/`verdict` pair (K4.5), which this item does not change.
+
+### K4.1.5 `params` literal registered (Important 4)
+
+**Registers a new `params` literal, closing the v1.3 defect class for this detector before it
+ships.** Every `point_tail_bet_e_value` cell and arm (fault cells 18–21, arm cell 32) stamps
+`params: 'heldout-empirical'` — a literal not used elsewhere in this study's registered vocabulary
+(`oracle`, `estimated-moments`, `oracle-phi`, `estimated-phi`, `moment-matched`, per
+`validation/certification/lib/nulls.mjs:60-86`). This is deliberately accurate rather than reusing
+`'oracle'` (Erratum v1.3's defect): this candidate's `median_ref`/`MAD_ref` are neither oracle
+constants nor a plug-in fit on the scored trajectory's own calibration window — they are empirical
+statistics of an independent held-out sample (K4.4).
+
+**Checked, not assumed:** `phiIsEstimated` (`validation/certification/lib/nulls.mjs:94-98`) reads
+`cell.phi_source` first, then `cell.params === 'estimated-phi'` literally, then falls back to
+`derivePhiParams(cell.null_id)`. Coverage-battery cells (this study's schema, A8) carry neither
+`phi_source` nor `null_id` (those are fields the `NULL_ID` pattern in `nulls.mjs:60-86` reads for a
+different study's cells — `guards.mjs`'s own comment names `N4-p09` as an example of that id
+shape), and `'heldout-empirical'` does not equal `'estimated-phi'` — so `phiIsEstimated` reads
+`false` for every `point_tail_bet_e_value` cell regardless of which literal is stamped. Registering
+`'heldout-empirical'` is therefore not required to protect the `phi_known` regime check (it is
+already mechanically inert on this schema either way); it is registered for accuracy of the stamp
+itself, per Erratum v1.3's own standard ("a `0.00` detection rate asserts the detector ran and
+found nothing ... reporting it as `0.00` would be a silent, false claim" — the same reasoning
+applied here to `params`, not detection rate).
+
+### K4.1.6 Non-finite fallback reading for this detector (Important 5)
+
+**Extends A3 (K4.10); does not contradict it.** A3(a)'s `non_finite_wealth` field and guard apply
+unchanged. §9's per-`(detector,cell)` adapter-throw fallback is unchanged: an adapter throw is
+still counted per trajectory. Registered addition: once `calibrateTailBet` succeeds (mad ≠ 0, `n
+>= 10,000`, per `point-tail-bet-e-value.ts:66,73`), every `pointTailBetEValue` call returns a
+finite `e` in the closed interval **`[0.1, 398.14]`** — `p` ranges over `{1/10001, ..., 10001/10001}`
+(never 0), so `e = 0.1 * p^(-0.9)` ranges from `0.1 * 1^(-0.9) = 0.1` (at `p = 1`) to `0.1 *
+(10001)^0.9 ≈ 398.143` (at `p = 1/10001`) — both endpoints finite and computed directly (verified
+here, not asserted). **`non_finite_wealth` is therefore identically 0 for every
+`point_tail_bet_e_value` cell** once calibration succeeds — non-finiteness is structurally
+impossible for this construction, unlike a running wealth process where multiplication can
+overflow. The field name is a misnomer for a per-point (non-accumulating) detector — no "wealth" is
+multiplied here — kept only so `applyGuards`' literal pattern-match (`guards.mjs:12`) continues to
+apply uniformly across all cells regardless of detector shape.
+
+### K4.1.7 Wilson interval caveat — anti-narrow, a trigger not a confidence statement (Important 6)
+
+**Extends K4.7's stop condition; the trigger mechanics (K4.1.3) are unchanged.** The S2 healthy
+arm's `n_points = 400,000` (K4.1.4) are **not** 400,000 independent draws against a fresh
+reference each — every one is scored against the **same single** calibration draw (K4.4's `n =
+10,000` held-out rows, drawn once per cell). The event `{e >= 20}` is `{score ranks in the top 27
+of the calibration set}`, i.e. `{score <= q_27}` for a fixed empirical quantile `q_27` that is
+itself a random variable of that one calibration draw: for `n = 10,000` iid calibration rows, the
+CDF value at the 27th order statistic (of the absolute-deviation scores) is `Beta(27, 9974)`-
+distributed (verified here): mean `27/10001 ≈ 0.0027`, sd `≈ 0.000519`. The binomial sd of the
+exceedance proportion at `n_points = 400,000`, computed as if each point were an independent fresh
+draw against the population quantile, is `sqrt(p(1-p)/400000) ≈ 0.0000820` — the calibration-draw
+sd is **≈6.3×** larger (verified: `0.000519 / 0.0000820 ≈ 6.32`). **Registered caveat:** the Wilson
+95% interval as computed on `(k, n_points)` treats all 400,000 points as independent given the
+population quantile, which understates the true between-run uncertainty by roughly this factor —
+it is **anti-narrow**, not a valid 95% confidence statement on the true exceedance probability. It
+remains registered as **the stop-condition trigger exactly as K4.7 defines it** — a mechanical
+threshold test on the recorded number, not a claim of calibrated coverage — and an anti-narrow
+(too-tight) interval is the **harder-to-pass** reading per §10 (a tighter interval is more, not
+less, likely to cross `alpha` on noise, so this choice does not favor a false NOT-REFUTED). Given
+the ≈40×+ gap between the predicted rate (K4.1.9, `≈0.0027`) and `alpha = 0.05`, this caveat is not
+expected to change any outcome; it is registered so the interval is never quoted as a calibrated
+confidence statement in the eventual report.
+
+### K4.1.8 `mean_e` prediction, registered (Important 7)
+
+**Extends K4.5/K4.8.** Under continuous `p ~ Uniform(0,1)`, `∫₀¹ κp^(κ-1)dp = 1` (module docstring,
+`point-tail-bet-e-value.ts:31-32`) — but this candidate's `p` is **discrete**, uniform over the
+`n+1 = 10001` attainable values `{1/10001, ..., 10001/10001}` (K4.1.9), and the calibrator's steep
+`p^(-0.9)` term is clipped at the discretization's minimum attainable `p = 1/10001`, capping the
+maximum single-point `e` at `≈398.14` (K4.1.6) rather than letting it diverge as the continuous
+integral implicitly allows arbitrarily close to `p=0`. On this registered `n = 10,000` grid, the
+exact discretized expectation (verified here, summed directly over all 10001 attainable values,
+each equally likely) is **`E[e] ≈ 0.6246`**, below the continuous integral's 1 because the grid's
+clipped tail contributes less mass than the continuum's unclipped tail removes elsewhere. The naive
+per-point sd (ignoring the K4.1.7 calibration-draw correlation) is `≈5.425`, giving a naive
+standard error over `n_points = 400,000` of **`≈0.0086`**. **Prediction:** the healthy arm's
+`mean_e` is expected near `0.6246 ± ~0.03` (3-sd band on the naive se), well under
+`TERMINAL_MEAN_BOUND = 1` (`validation/certification/lib/constants.mjs:18`). `meanRule`
+(`validation/certification/lib/guards.mjs:72-88`) applies to this candidate — its card class is
+`terminal_e_value` (K4.5) — and overrides only if `mean_e` (or a recorded `mean_e_lower_95`)
+exceeds `1`; **meanRule's override is not expected to fire**, and a fired override is registered
+here as a surprise to report, not tuned away.
+
+### K4.1.9 Minor corrections
+
+- **K4.8's healthy per-point exceedance, corrected.** K4.8 registered `≈ 200^(-1/0.9) ≈ 0.0028` —
+  the continuous approximation. **Corrected, exact:** `p` is discrete, uniform over `{k/10001 : k =
+  1..10001}` under exchangeability (rank of the live point among 10001 exchangeable scores). The
+  largest attainable `k` with `e = 0.1*(k/10001)^(-0.9) >= 20` is `k = 27` (verified by direct
+  enumeration over all 10001 attainable values): `p = 27/10001 ≈ 0.0026997`. **Registered exact
+  prediction: `27/10001 ≈ 0.002700`**, replacing the continuous `0.0027752` figure — this is exact
+  under the registered discretization, not an approximation, and is the lower (harder-to-pass, per
+  §10) of the two figures. Corrected in place at K4.8; no other text there changes.
+- **K4.6's window-crossing arithmetic, corrected.** K4.6 estimated "≈0.56 expected false crossings
+  ... `200 * 0.0028`" — both the multiplier and the rate were imprecise: the window-crossing count
+  is over the **199** non-injected ticks (`t = 101..299`; the 200th tick, `t = 100`, is the injected
+  one and is excluded from the false-alarm reading by construction), and the rate is the corrected
+  exact `0.0027` above, not `0.0028`. **Corrected: `199 * 0.0027 ≈ 0.537` expected false crossings;
+  `P(>= 1 false crossing) = 1 - e^{-0.537} ≈ 0.416`** (Poisson approximation to a 199-trial
+  low-rate Bernoulli sum, verified here). This is a descriptive-secondary number only (K4.6); it
+  decides nothing.
+- **K4.11's rule-5 mapping, wording restored.** K4.11 paraphrased §11 rule 5 as "does not apply, as
+  §11 rule 5 already states." **Restored to §11's own wording**, which this document's rule-5 row
+  states in full: "Does not apply as written — this is a synthetic injection battery, not a
+  raw-data fetch. Its equivalent freeze is this document itself (the grid, floor, and seed table
+  above) plus the engine git SHA each run's manifest records (rule 6)." K4.11's rule-5 line is
+  corrected to quote this in full rather than paraphrase it.
+- **K4.2's citation, corrected.** K4.2 cited the `p` formula as `:89-90, countGte`. The `p`
+  assignment itself is at `point-tail-bet-e-value.ts:90`; `countGte` is defined separately at
+  `:53-60` and merely called at `:90`. Corrected: `p` at `:90`; `countGte` at `:53-60`, cited
+  separately.
+- **K4.5's card class, stated explicitly.** K4.5 did not name the card class its emitted fields
+  serve. Registered explicitly: `point_tail_bet_e_value`'s card class is `terminal_e_value`, per
+  the design page (`~/concord/knowledge/methodology/pages/coverage-gap-detectors.md`, K4 section:
+  "Card. Class `terminal_e_value`"), matching the class `meanRule` (K4.1.8) and A1's
+  exceedance/mean_e/verdict instrument set both already assume.
+
+### K4.1.10 Exactness nuance — reported for wiki write-back, not resolved here (Minor 1)
+
+**One sentence, registered for the eventual wiki write-back (Task 12), not adjudicated in this
+document.** `calibrateTailBet` computes `median_ref`/`MAD_ref` from the same `n = 10,000` held-out
+rows whose own scores (`cal.sortedScores`) are then built using those statistics
+(`point-tail-bet-e-value.ts:69-77`) — each calibration row's score is computed against a reference
+that included that row itself, while a live point's score is computed against a reference it never
+contributed to; this asymmetry makes calibration-vs-live exchangeability **`O(1/n)`-approximate and
+anti-conservative** (calibration scores run systematically slightly smaller than a same-sized
+fresh-split reference would produce, since each is measured against a median/MAD pulled slightly
+toward itself), not the exact identity K4.2 and the design page both state. This is a disagreement
+with the design page's "exact" to **file**, per this document's own precedence rule (top of file),
+not to silently repeat — flagged here for Task 12's wiki write-back, unresolved in this amendment.
+
+### Amendment summary
+
+Supersedes, named against the row each corrects: A4's K4 falsifier row, scoped to
+`family_E_conformal_heldout` only (K4.1.1); §6's "`family_E_conformal_heldout` only" scoping on
+cells 18–21 (K4.1.2). Corrects, named against the subsection each fixes: K4.7's candidate-set
+sentence (K4.1.3); K4.8's healthy per-point exceedance figure (K4.1.9); K4.6's window-crossing
+arithmetic (K4.1.9); K4.11's rule-5 wording (K4.1.9); K4.2's citation (K4.1.9). Registers new
+content extending K4.5 (cell-32 field names, K4.1.4; card class, K4.1.9), a new `params` literal
+(K4.1.5), a non-finite fallback reading (K4.1.6), a Wilson-interval caveat (K4.1.7), and a `mean_e`
+prediction (K4.1.8). Files one disagreement for wiki write-back without resolving it (K4.1.10). No
+endpoint, floor, or seed in §1–14, Amendment v1.1, Amendment v1.2, Erratum v1.3, or Amendment v2.K4
+moves.

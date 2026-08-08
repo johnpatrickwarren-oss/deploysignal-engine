@@ -9,7 +9,7 @@
   "class": "terminal_e_value",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "a48c78784f805fd417cd9936abb3680353d7ca4d"
+    "sha": "3fe4acd3c7400d8a0f1e6f27210444f1cf7766db"
   },
   "source_files": [
     {
@@ -32,7 +32,7 @@
       "baseline": "held-out empirical",
       "nulls": "exchangeable/iid",
       "phi_known": true,
-      "exchangeability_note": "O(1/n)-approximate, anti-conservative, under this construction's self-fit median/MAD held-out calibration (K4.1.10) -- not the exact identity the module docstring and design page state; filed for wiki write-back, unresolved here"
+      "exchangeability_note": "O(1/n)-approximate, anti-conservative, under this construction's self-fit median/MAD held-out calibration (K4.1.10) -- not the exact identity the DESIGN PAGE (methodology/coverage-gap-detectors) still states; filed for wiki write-back, unresolved here. The module docstring's own 'exact' claim was corrected at coverage Amendment v2.C1 C1.9 and no longer overstates it, so this note no longer cites it."
     }
   },
   "shipped_path": {

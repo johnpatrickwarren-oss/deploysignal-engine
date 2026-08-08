@@ -21,17 +21,19 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { FAULT_CLASSES } from '../../certification/lib/constants.mjs';
-import { rng, gaussFrom } from '../lib/inject.mjs';
+import { rng, gaussFrom, injectOscillation } from '../lib/inject.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const HARNESS = path.join(HERE, '..', 'harness', 'run-battery.mjs');
 
 // PREREGISTRATION.md §7 + Amendment A6 + Amendment v2.K4/v2.K4.1: which detectors are
 // scored on which class. K4 gains `point_tail_bet_e_value` at Amendment v2.K4 (K4.3).
+// Amendment v2.K3, K3.5: spectral_bet_e_process joins K3 as a new row, scored on all six
+// K3 cells (unlike family_D_spectral_e_detector, which stays canonical + -ar1 only).
 const REGISTERED_PAIRS = {
   K1: ['safe_t', 'universal_inference'],
   K2: ['group_average_e_value', 'safe_t'],
-  K3: ['safe_t', 'universal_inference', 'family_D_spectral_e_detector'],
+  K3: ['safe_t', 'universal_inference', 'family_D_spectral_e_detector', 'spectral_bet_e_process'],
   K4: ['family_E_conformal_heldout', 'safe_t', 'point_tail_bet_e_value'],
   K5: ['safe_t', 'universal_inference'],
   K6: ['safe_t', 'universal_inference'],
@@ -55,6 +57,7 @@ const REGISTERED_CENSUS = {
   family_E_conformal_heldout: 4,     // every K4 cell
   family_D_spectral_e_detector: 2,   // K3's canonical and -ar1 cells only
   point_tail_bet_e_value: 4,         // K4's four fault cells (Amendment v2.K4 K4.3)
+  spectral_bet_e_process: 6,         // every K3 cell (Amendment v2.K3, K3.5) — 6 fault + 2 arm rows
 };
 
 function runHarness(args = ['--n', '20'], env = {}) {
@@ -117,21 +120,24 @@ test('every registered (class, detector) pair emits cells with complete fields',
 
 test('the cell census is exactly the registered (class, detector) assignment', () => {
   const { summary } = smoke();
-  assert.equal(summary.cells.length, 72, 'registered census: 66 fault-class rows + 6 arm rows');
+  // Amendment v2.K3, K3.5/K3.6: +6 fault rows (all six K3 cells) + 2 arm rows (cell 33
+  // S2/S3) on top of the pre-K3 72-cell census (66 fault + 6 arm).
+  assert.equal(summary.cells.length, 80, 'registered census: 72 fault-class rows + 8 arm rows');
 
   const faultCells = summary.cells.filter((c) => c.fault_class != null);
-  assert.equal(faultCells.length, 66);
+  assert.equal(faultCells.length, 72);
   const byDetector = {};
   for (const c of faultCells) byDetector[c.detector] = (byDetector[c.detector] ?? 0) + 1;
   assert.deepEqual(byDetector, REGISTERED_CENSUS);
 
   const armCells = summary.cells.filter((c) => c.arm != null);
-  assert.equal(armCells.length, 6);
+  assert.equal(armCells.length, 8);
   assert.deepEqual(
     armCells.map((c) => `${c.detector}:${c.arm}`).sort(),
     ['family_E_conformal_heldout:healthy', 'family_E_conformal_heldout:power',
       'group_average_e_value:healthy', 'group_average_e_value:power',
-      'point_tail_bet_e_value:healthy', 'point_tail_bet_e_value:power'],
+      'point_tail_bet_e_value:healthy', 'point_tail_bet_e_value:power',
+      'spectral_bet_e_process:healthy', 'spectral_bet_e_process:power'],
   );
   assert.equal(faultCells.length + armCells.length, summary.cells.length,
     'every cell is either a fault-class cell or an arm — no third shape');
@@ -382,6 +388,201 @@ test('K4.1.6 (Minor): point_non_finite is 0 on every point_tail_bet_e_value row 
     assert.equal(c.point_non_finite, 0,
       `${c.fault_class ?? c.arm} ${c.severity ?? ''}: point_non_finite (K4.1.6 — structurally impossible once calibration succeeds)`);
   }
+});
+
+// Amendment v2.K3 / v2.K3.1 / v2.K3.2 — the third K3 candidate, `spectral_bet_e_process`.
+const FIVE_INSTRUMENT_FIELDS = ['increment_estimator', 'crossing_rate', 'stopped_mean', 'exceedance', 'mean_e'];
+
+test('K3.5: spectral_bet_e_process is scored on all six K3 fault cells (unlike family_D)', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'spectral_bet_e_process' && c.fault_class === 'K3');
+  assert.equal(rows.length, 6);
+  assert.deepEqual(rows.map((c) => c.cell_index).sort((a, b) => a - b), [12, 13, 14, 15, 16, 17]);
+});
+
+test('K3.8: fault-cell rows carry the registered window-partition fields and params=oracle', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'spectral_bet_e_process' && c.fault_class === 'K3');
+  assert.equal(rows.length, 6);
+  for (const c of rows) {
+    assert.equal(c.windows, 6, `cell ${c.cell_index}: windows`);
+    assert.equal(c.window_len, 30, `cell ${c.cell_index}: window_len`);
+    assert.equal(c.window_span, '[100,280)', `cell ${c.cell_index}: window_span`);
+    assert.equal(c.params, 'oracle', `cell ${c.cell_index}: params (K3.3 — genuinely oracle sigma)`);
+    assert.ok(Number.isInteger(c.degenerate_windows), `cell ${c.cell_index}: degenerate_windows`);
+    assert.equal(c.degenerate_windows, 0, `cell ${c.cell_index}: no degenerate window expected at these amplitudes (K3.1.6)`);
+    assert.ok(Number.isFinite(c.final_wealth_mean), `cell ${c.cell_index}: final_wealth_mean`);
+    assert.ok(Number.isFinite(c.final_wealth_median), `cell ${c.cell_index}: final_wealth_median`);
+    assert.equal(c.null_id, c.phi === 0 ? 'N1' : 'N3-p06', `cell ${c.cell_index}: null_id keeps the shared fault-cell convention (K3.1.5)`);
+  }
+});
+
+test('K3.1.4 (Critical, binding): the S3 power row and all six fault cells carry NONE of the five instrument-named fields', () => {
+  const { summary } = smoke();
+  const scoped = [
+    ...summary.cells.filter((c) => c.detector === 'spectral_bet_e_process' && c.fault_class === 'K3'),
+    summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'power'),
+  ];
+  assert.equal(scoped.length, 7, '6 fault cells + 1 S3 arm row');
+  for (const c of scoped) {
+    for (const field of FIVE_INSTRUMENT_FIELDS) {
+      assert.equal(field in c, false,
+        `${c.fault_class ?? c.arm} cell ${c.cell_index}: must not carry foreign instrument field "${field}" `
+        + '(K3.1.4) — a single such field would VOID the entire run\'s S2 evidence for this card');
+    }
+  }
+});
+
+test('K3.1.1/K3.1.2: cell 33 S2 arm carries increment_estimator AND crossing_rate, no foreign fields', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'healthy');
+  assert.ok(s2, 'no spectral_bet_e_process healthy arm');
+  assert.equal(s2.cell_index, 33);
+  assert.equal(s2.windows, 6);
+  assert.equal(s2.window_len, 30);
+  assert.equal(s2.window_span, '[100,280)');
+  assert.ok(Number.isInteger(s2.k), 'k: count of trajectories crossing (K3.7)');
+  assert.ok(Number.isFinite(s2.crossing_rate), 'crossing_rate (K3.1.2 supersedes trajectory_crossing_rate)');
+  assert.equal(s2.crossing_rate, s2.k / s2.n, 'crossing_rate must equal k/n exactly');
+  assert.ok(Number.isFinite(s2.lower_95), 'lower_95: Wilson bound on crossing_rate');
+  assert.equal('exceedance' in s2, false, 'S2 must not additionally carry the terminal_e_value instrument');
+  assert.equal('mean_e' in s2, false, 'S2 must not additionally carry the terminal_e_value instrument');
+  const inc = s2.increment_estimator;
+  assert.ok(inc, 'K3.1.1: increment_estimator, resolving K3.15');
+  assert.equal(inc.n, s2.n, 'K3.1.1: n expected 2000 (registered)/20 (smoke) absent a degenerate window');
+  for (const f of ['mean', 'sd', 'se', 'lower95_one_sided', 'upper95_one_sided']) {
+    assert.ok(Number.isFinite(inc[f]), `increment_estimator.${f}`);
+  }
+  // K3.1.3: the verdict is crossing_rate-derived, NOT increment_estimator-derived.
+  assert.equal(s2.verdict, s2.lower_95 > 0.05 ? 'FAIL' : 'not-refuted');
+});
+
+test('K3.1.5: cell 33 (both S2 and S3) stamps the out-of-grammar null_id literal', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'healthy');
+  const s3 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'power');
+  assert.equal(s2.null_id, 'K3-arm-oracle');
+  assert.equal(s3.null_id, 'K3-arm-oracle');
+});
+
+test('K3.1.7: p_uniformity is pooled n*6*3 per-bin p values with decile counts and a KS statistic', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'healthy');
+  const pu = s2.p_uniformity;
+  assert.ok(pu, 'K3.1.7: p_uniformity, reported with no verdict authority');
+  assert.equal(pu.n, s2.n * 6 * 3, 'pooled across n trajectories x 6 windows x 3 bins');
+  assert.equal(pu.decile_counts.length, 10);
+  assert.equal(pu.decile_counts.reduce((a, b) => a + b, 0), pu.n, 'decile counts must exhaust the pooled sample');
+  for (const count of pu.decile_counts) assert.ok(Number.isInteger(count) && count >= 0);
+  assert.ok(Number.isFinite(pu.ks_statistic) && pu.ks_statistic >= 0 && pu.ks_statistic <= 1);
+  const expectedCritical = 1.36 / Math.sqrt(pu.n);
+  assert.ok(Math.abs(pu.ks_critical_at_alpha - expectedCritical) < 1e-9,
+    'ks_critical_at_alpha must be the standard asymptotic 1.36/sqrt(n), computed at the actual pooled n');
+  assert.equal('verdict' in pu, false, 'K3.1.7: no verdict key of its own');
+});
+
+test('K3.1.6: degenerate_windows is a non-negative integer on every spectral_bet_e_process row, 0 at smoke', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'spectral_bet_e_process');
+  assert.equal(rows.length, 8, '6 fault cells + S2 + S3 arm rows');
+  for (const c of rows) {
+    assert.ok(Number.isInteger(c.degenerate_windows), `${c.fault_class ?? c.arm} ${c.cell_index}: degenerate_windows`);
+    assert.equal(c.degenerate_windows, 0, `${c.fault_class ?? c.arm} ${c.cell_index}: none expected at registered amplitudes (K3.1.6)`);
+  }
+});
+
+test('K3.7: cell 33 S3 (power) arm fires on any of the 6 window checkpoints, shift_sigma=3, no S2 instrument fields', () => {
+  const { summary } = smoke();
+  const s3 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'power');
+  assert.ok(s3, 'no spectral_bet_e_process power arm');
+  assert.equal(s3.cell_index, 33);
+  assert.equal(s3.shift_sigma, 3);
+  assert.equal(s3.windows, 6);
+  assert.equal(s3.window_len, 30);
+  assert.equal(s3.window_span, '[100,280)');
+  assert.ok(Number.isFinite(s3.detection_rate));
+  assert.ok(!('k' in s3), 'S3 keeps A1\'s fires/detection_rate pair, not S2\'s k/crossing_rate pair');
+});
+
+// Mutation-strength provenance: independently regenerate the exact seeded trajectories the
+// harness itself would have produced (same CELL_SEED/TRAJ_STEP formula, same generator, same
+// injection) and recompute both the window-partitioned wealth endpoint (K3.9) and the S2 arm's
+// increment_estimator (K3.1.1) straight from dist/detectors/spectral-bet-e-process.js — proving
+// the adapter's window slicing and endpoint reading, not merely its field names.
+test('K3.9 provenance: independent window-partition + wealth-endpoint recompute matches the harness at smoke n', () => {
+  const { summary } = smoke();
+  const distRequire = createRequire(import.meta.url);
+  const spectralBet = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/spectral-bet-e-process.js'));
+  const TRAJ_STEP = 7919, ONSET = 100, T = 300, SIGMA = 1, N_SMOKE = 20;
+  const sliceWindows = (series) => {
+    const ws = [];
+    for (let w = 0; w < 6; w++) ws.push(series.slice(ONSET + w * 30, ONSET + w * 30 + 30));
+    return ws;
+  };
+  const cases = [
+    { label: 'idx 15 canonical (A0.75sigma-f0.05)', idx: 15, amp: 0.75, freq: 0.05 },
+    { label: 'idx 16 clean k=3 hit (A0.75sigma-f0.1)', idx: 16, amp: 0.75, freq: 0.1 },
+  ];
+  for (const { label, idx, amp, freq } of cases) {
+    const cellSeed = 20260807 + idx;
+    let crossedCount = 0;
+    for (let i = 0; i < N_SMOKE; i++) {
+      const draw = gaussFrom(rng(cellSeed + TRAJ_STEP * i));
+      const base = Array.from({ length: T }, draw);
+      const series = injectOscillation(base, { sigma: SIGMA, at: ONSET, amp, freq });
+      const { log } = spectralBet.spectralBetWealth(sliceWindows(series), SIGMA);
+      if (log.some((l) => l >= Math.log(20))) crossedCount += 1;
+    }
+    const c = summary.cells.find((x) => x.detector === 'spectral_bet_e_process' && x.cell_index === idx);
+    assert.ok(c, `${label}: no spectral_bet_e_process cell`);
+    assert.equal(c.fires, crossedCount, `${label}: independently recomputed crossing count`);
+    assert.equal(c.detection_rate, crossedCount / N_SMOKE, `${label}: detection_rate`);
+  }
+});
+
+test('K3.1.1 provenance: cell 33 S2 increment_estimator recomputes from an independently regenerated fixture', () => {
+  const { summary } = smoke();
+  const distRequire = createRequire(import.meta.url);
+  const spectralBet = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/spectral-bet-e-process.js'));
+  const TRAJ_STEP = 7919, ONSET = 100, T = 300, SIGMA = 1, N_SMOKE = 20;
+  const ARM33_SEED = 20260807 + 33;
+  // K3.1.1's own summarise(), copied verbatim (same shape PREREGISTRATION.md cites at
+  // run-sequential.mjs:37-44).
+  function summarise(xs) {
+    const n = xs.length;
+    const mean = xs.reduce((a, b) => a + b, 0) / n;
+    const varr = n > 1 ? xs.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1) : 0;
+    const se = Math.sqrt(varr / n);
+    return { n, mean, sd: Math.sqrt(varr), se, lower95_one_sided: mean - 1.645 * se, upper95_one_sided: mean + 1.645 * se };
+  }
+  const trajMeans = [];
+  for (let i = 0; i < N_SMOKE; i++) {
+    const draw = gaussFrom(rng(ARM33_SEED + TRAJ_STEP * i));
+    const series = Array.from({ length: T }, draw);
+    const eAvgs = [];
+    for (let w = 0; w < 6; w++) {
+      const window = series.slice(ONSET + w * 30, ONSET + w * 30 + 30);
+      eAvgs.push(spectralBet.spectralBetWindow(window, SIGMA).eAvg);
+    }
+    trajMeans.push(eAvgs.reduce((a, b) => a + b, 0) / eAvgs.length);
+  }
+  const recomputed = summarise(trajMeans);
+  const s2 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'healthy');
+  const inc = s2.increment_estimator;
+  assert.equal(inc.n, recomputed.n);
+  for (const f of ['mean', 'sd', 'se', 'lower95_one_sided', 'upper95_one_sided']) {
+    assert.ok(Math.abs(inc[f] - recomputed[f]) < 1e-9, `increment_estimator.${f}: harness ${inc[f]} vs recomputed ${recomputed[f]}`);
+  }
+});
+
+test('K3 seed arithmetic: cell 33 CELL_SEED is BASE_SEED + 33, no heldout stream registered', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'healthy');
+  const s3 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'power');
+  assert.equal('heldout_seed' in s2, false, 'K3.3/K3.6: no calibration stream for this detector');
+  assert.equal('heldout_seed' in s3, false);
+  assert.equal('cal_median' in s2, false);
+  assert.equal('cal_mad' in s2, false);
 });
 
 test('manifest records the registered seed scheme, substrate hash and smoke flag', () => {

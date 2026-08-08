@@ -29,7 +29,10 @@
     "nab:validate": "node dist/tools/run-nab-validation.js",
     "nab:per-dataset": "node dist/tools/run-nab-per-dataset.js",
     "cert:verdict": "node validation/certification/verdict.mjs",
-    "test:cert": "node --test validation/certification/test/*.test.mjs"
+    "cert:validate-cards": "node validation/certification/tools/validate-cards.mjs",
+    "cert:expiry": "node validation/certification/expiry-check.mjs",
+    "test:cert": "node --test validation/certification/test/*.test.mjs",
+    "test:coverage-battery": "node --test validation/coverage/test/*.test.mjs"
   },
   "typesVersions": {
     "*": {

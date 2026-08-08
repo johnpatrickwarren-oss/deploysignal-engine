@@ -43,6 +43,40 @@ jobs:
       - name: Certification harness tests
         run: npm run test:cert
 
+      # The T2 harness tests resolve the clustersynth sibling, which a runner does not
+      # have. clustersynth is public; pin the SHA the registered T2 run used (c1387a4,
+      # recorded in run-t2-20260808T121710Z) so CI exercises the same generator, and build
+      # its dist (untracked in that repo). CLUSTERSYNTH_ROOT is the harness's documented
+      # override for a checkout that is not a filesystem sibling.
+      - name: Check out clustersynth (pinned to the registered T2 SHA)
+        uses: actions/checkout@v4
+        with:
+          repository: johnpatrickwarren-oss/clustersynth
+          ref: c1387a4da67242e0807facd04929b5d975c795b0
+          path: .clustersynth-ci
+
+      # npm install, not ci: clustersynth commits no lockfile at the pinned SHA.
+      - name: Build clustersynth dist
+        run: npm install && npm run build
+        working-directory: .clustersynth-ci
+
+      # The coverage battery's own tests live outside dist/ for the same reason the
+      # certification harness's do (plain .mjs), so `npm test` never touched them either.
+      # They carry the substrate guards the coverage PREREGISTRATION registers -- including
+      # Amendment v2.C1's held-out autocorrelation bound, whose whole job is to make a
+      # regression to the pre-C1 lattice draw impossible to run. A guard that only runs by
+      # hand is a guard that stops running. Gating.
+      - name: Coverage battery harness tests
+        run: npm run test:coverage-battery
+        env:
+          CLUSTERSYNTH_ROOT: ${{ github.workspace }}/.clustersynth-ci
+
+      # Card schema validation is cheap, deterministic, and independent of any sibling repo
+      # (unlike the expiry check below), so unlike expiry it CAN gate: a card that fails its
+      # own schema makes every verdict downstream of it unreadable.
+      - name: Certification card schema
+        run: npm run cert:validate-cards
+
       # Expiry is the protocol's answer to a claim that outlives the code it describes:
       # drift in any hash a card pins flips that card to EXPIRED, and CI is where it has
       # to be seen, because the drift arrives with somebody else's commit.
@@ -56,5 +90,5 @@ jobs:
       # its parent, or teach the tool to report an unreadable sibling pin separately from a
       # changed hash. Until then the log carries the finding and a human reads it.
       - name: Certification card expiry (reported, not gating — see comment)
-        run: node validation/certification/expiry-check.mjs
+        run: npm run cert:expiry
         continue-on-error: true

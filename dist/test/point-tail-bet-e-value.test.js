@@ -1,0 +1,78 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+// test/point-tail-bet-e-value.test.ts — engine test/adr-0005 pattern
+const node_test_1 = require("node:test");
+const strict_1 = __importDefault(require("node:assert/strict"));
+const point_tail_bet_e_value_1 = require("../detectors/point-tail-bet-e-value");
+const lcg = (s) => () => ((s = (s * 1664525 + 1013904223) >>> 0), s / 2 ** 32);
+const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
+(0, node_test_1.test)('KAPPA is the registered constant', () => { strict_1.default.equal(point_tail_bet_e_value_1.KAPPA, 0.1); });
+(0, node_test_1.test)('calibrate refuses short or degenerate rows', () => {
+    strict_1.default.throws(() => (0, point_tail_bet_e_value_1.calibrateTailBet)([1, 2, 3]));
+    strict_1.default.throws(() => (0, point_tail_bet_e_value_1.calibrateTailBet)(new Array(10000).fill(7)));
+});
+(0, node_test_1.test)('validity: healthy exceedance at alpha=0.05 within binomial tolerance', () => {
+    const r = lcg(20260808);
+    const cal = (0, point_tail_bet_e_value_1.calibrateTailBet)(Array.from({ length: 10000 }, () => gauss(r)));
+    let exceed = 0;
+    const N = 4000;
+    for (let i = 0; i < N; i++)
+        if ((0, point_tail_bet_e_value_1.pointTailBetEValue)(gauss(r), cal).e >= 20)
+            exceed++;
+    // E[1{e>=20}] = P(p <= (20/kappa)^(1/(kappa-1))) = (200)^(-1/0.9) ≈ 0.00279; 3σ tolerance
+    const p0 = Math.pow(200, -1 / 0.9);
+    strict_1.default.ok(exceed / N < p0 + 3 * Math.sqrt(p0 / N), `exceedance ${exceed / N}`);
+});
+(0, node_test_1.test)('mean e under H0 <= 1 within tolerance (calibrator integral)', () => {
+    const r = lcg(42);
+    const cal = (0, point_tail_bet_e_value_1.calibrateTailBet)(Array.from({ length: 10000 }, () => gauss(r)));
+    let s = 0;
+    const N = 20000;
+    for (let i = 0; i < N; i++)
+        s += (0, point_tail_bet_e_value_1.pointTailBetEValue)(gauss(r), cal).e;
+    strict_1.default.ok(s / N < 1.15, `mean e ${s / N}`); // heavy-tailed; refusal-direction check only
+});
+(0, node_test_1.test)('a beyond-calibration point is decisive on its own', () => {
+    const r = lcg(7);
+    const cal = (0, point_tail_bet_e_value_1.calibrateTailBet)(Array.from({ length: 10000 }, () => gauss(r)));
+    const { e, p } = (0, point_tail_bet_e_value_1.pointTailBetEValue)(1e6, cal);
+    strict_1.default.equal(p, 1 / 10001);
+    strict_1.default.ok(e > 300 && e < 500, `e ${e}`); // 0.1 * (1/10001)^(-0.9) ≈ 398
+});
+// Mutation regression: the conformal p-value's validity depends on the tie
+// direction in the rank count — #{s_cal >= s(x)}, not #{s_cal > s(x)}.
+// Excluding exact ties breaks super-uniformity silently (it never shows up
+// on continuous draws, since ties have probability 0). rows = 0..9999 is
+// symmetric about its median, so every deviation |k - median| repeats
+// exactly twice — an exact-tie fixture by construction, not by luck.
+(0, node_test_1.test)('conformal rank count is >=, not > (tie regression; symmetric-integer fixture)', () => {
+    const rows = Array.from({ length: 10000 }, (_, k) => k);
+    const cal = (0, point_tail_bet_e_value_1.calibrateTailBet)(rows);
+    const x = 1000; // |1000 - median| === |8999 - median|: an exact tie, and x is itself a calibration row.
+    const score = Math.abs(x - cal.median) / cal.mad;
+    const tiedAtScore = cal.sortedScores.filter((s) => s === score).length;
+    strict_1.default.ok(tiedAtScore >= 2, `fixture must produce an exact tie at the query score; got ${tiedAtScore}`);
+    const expectedCount = cal.sortedScores.filter((s) => s >= score).length; // >= is the correct, validity-bearing direction
+    const expectedP = (1 + expectedCount) / (cal.sortedScores.length + 1);
+    const { p } = (0, point_tail_bet_e_value_1.pointTailBetEValue)(x, cal);
+    strict_1.default.equal(p, expectedP);
+});
+// coverage PREREGISTRATION.md Amendment v2.C1 C1.9 — kappa domain guard. `kappa` is a defaulted
+// parameter and was never validated, while this module's validity claim rests on
+// `integral_0^1 kappa*p^(kappa-1) dp = 1`, which needs kappa in the OPEN interval (0,1):
+// kappa <= 0 diverges, kappa = 1 makes e identically 1, kappa > 1 inverts the bet's direction.
+// Outside that interval the returned number is not an e-value, and silently returning it is
+// worse than throwing.
+(0, node_test_1.test)('C1.9: kappa outside (0,1) throws', () => {
+    const r = lcg(20260808);
+    const cal = (0, point_tail_bet_e_value_1.calibrateTailBet)(Array.from({ length: 10000 }, () => gauss(r)));
+    for (const bad of [0, 1, -0.1, 1.5, NaN, Infinity]) {
+        strict_1.default.throws(() => (0, point_tail_bet_e_value_1.pointTailBetEValue)(3, cal, bad), /kappa/, `kappa=${bad} must be refused`);
+    }
+    strict_1.default.doesNotThrow(() => (0, point_tail_bet_e_value_1.pointTailBetEValue)(3, cal, point_tail_bet_e_value_1.KAPPA));
+    strict_1.default.doesNotThrow(() => (0, point_tail_bet_e_value_1.pointTailBetEValue)(3, cal, 0.5));
+});
+//# sourceMappingURL=point-tail-bet-e-value.test.js.map

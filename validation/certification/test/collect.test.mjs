@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadEvidence, cellsFor, derivePhiParams } from '../lib/collect.mjs';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'ev-'));
@@ -292,4 +296,136 @@ test('unsupported run layouts are skipped (reported to stderr), not thrown, and 
   assert.equal(skippedLines.length, 2);
   assert.ok(skippedLines.some((l) => l.includes(join('mystery-study', 'results', 'live', 'run-x'))));
   assert.ok(!ev.runs.some((r) => r.study === 'mystery-study'));
+});
+
+// ── supersession (coverage PREREGISTRATION.md Amendment v2.C1 C1.6, v2.C1.1) ──────────────
+// results/ is append-only, so a rerun for a named code defect preserves the prior directory and
+// its rows keep being scored alongside the rows that correct them. These tests pin the two shapes
+// of the `supersedes` manifest field and the fact that exactly one of them is acted on.
+function supersedeFixture(manifests) {
+  const root = mkdtempSync(join(tmpdir(), 'ev-supersede-'));
+  for (const [study, run, manifest, summary] of manifests) {
+    const d = join(root, study, 'results', 'live', run);
+    mkdirSync(d, { recursive: true });
+    writeFileSync(join(d, 'manifest.json'), JSON.stringify(manifest));
+    writeFileSync(join(d, 'summary.json'), JSON.stringify(summary));
+  }
+  return root;
+}
+const cell = (detector, rate) => ({ detector, null_id: 'N1', shift_sigma: 3, detection_rate: rate, verdict: rate >= 0.1 ? 'POWERED' : 'INERT' });
+
+test('C1.6: an array supersedes declaration drops exactly the named (study, run, detector) rows', () => {
+  const root = supersedeFixture([
+    ['coverage', 'run-old', { study: 'coverage', git_sha: 'a' },
+      { cells: [cell('shape_block_conformal_bet', 1), cell('safe_t', 0)] }],
+    ['coverage', 'run-new', {
+      study: 'coverage',
+      git_sha: 'b',
+      supersedes: [{ study: 'coverage', run: 'run-old', detectors: ['shape_block_conformal_bet'], reason: 'C1' }],
+    }, { cells: [cell('shape_block_conformal_bet', 0.0005)] }],
+  ]);
+  const ev = loadEvidence(root);
+  const shape = ev.cells.filter((c) => c.detector === 'shape_block_conformal_bet');
+  assert.equal(shape.length, 1, 'the superseded row must be gone, the correcting row must remain');
+  assert.equal(shape[0].detection_rate, 0.0005);
+  assert.equal(shape[0].__run, 'run-new');
+  // safe_t was NOT named, so it survives in BOTH runs — the granularity is per detector, because
+  // a run holds sound rows alongside the defective ones.
+  assert.equal(ev.cells.filter((c) => c.detector === 'safe_t').length, 1);
+  const old = ev.runs.find((r) => r.run === 'run-old');
+  assert.deepEqual(old.superseded, [{
+    detector: 'shape_block_conformal_bet', cells: 1, superseded_by: 'coverage/run-new', reason: 'C1',
+  }], 'the drop must be reported on the run entry, never silent');
+});
+
+test('C1.6: a supersession declared by a run discovered LATER still applies', () => {
+  // Directory order is readdir order. `run-aaa` sorts first but is the one superseded, so a
+  // single-pass loader would have already emitted its cells before seeing the declaration.
+  const root = supersedeFixture([
+    ['coverage', 'run-aaa', { study: 'coverage', git_sha: 'a' }, { cells: [cell('d', 1)] }],
+    ['coverage', 'run-zzz', {
+      study: 'coverage', git_sha: 'b',
+      supersedes: [{ study: 'coverage', run: 'run-aaa', detectors: ['d'], reason: 'r' }],
+    }, { cells: [cell('d', 0)] }],
+  ]);
+  const ev = loadEvidence(root);
+  assert.equal(ev.cells.filter((c) => c.detector === 'd').length, 1);
+  assert.equal(ev.cells.find((c) => c.detector === 'd').__run, 'run-zzz');
+});
+
+test('C1.6: a supersession naming a run outside the corpus, or itself, fails closed', () => {
+  const missing = supersedeFixture([
+    ['coverage', 'run-new', {
+      study: 'coverage', git_sha: 'b',
+      supersedes: [{ study: 'coverage', run: 'run-nonexistent', detectors: ['d'], reason: 'r' }],
+    }, { cells: [cell('d', 0)] }],
+  ]);
+  assert.throws(() => loadEvidence(missing), /not in the evidence corpus/);
+
+  const selfRef = supersedeFixture([
+    ['coverage', 'run-new', {
+      study: 'coverage', git_sha: 'b',
+      supersedes: [{ study: 'coverage', run: 'run-new', detectors: ['d'], reason: 'r' }],
+    }, { cells: [cell('d', 0)] }],
+  ]);
+  assert.throws(() => loadEvidence(selfRef), /cannot supersede itself/);
+
+  const noReason = supersedeFixture([
+    ['coverage', 'run-old', { study: 'coverage', git_sha: 'a' }, { cells: [cell('d', 1)] }],
+    ['coverage', 'run-new', {
+      study: 'coverage', git_sha: 'b',
+      supersedes: [{ study: 'coverage', run: 'run-old', detectors: ['d'] }],
+    }, { cells: [cell('d', 0)] }],
+  ]);
+  assert.throws(() => loadEvidence(noReason), /needs study, run, a non-empty/);
+});
+
+// Amendment v2.C1.1. h0-battery's run-20260801T064237Z and run-20260801T064627Z have carried
+// `supersedes: {priorRun, defect}` since 2026-08-01 and nothing read it, so all 144 cells of
+// run-20260801T062824Z have been scored alongside their own correction. Recognized and REPORTED,
+// deliberately not acted on: honouring it moves four cards' verdicts, which needs h0-battery's own
+// pre-registration. This test pins BOTH halves — that it is surfaced, and that it is not applied.
+test('C1.1: the legacy {priorRun, defect} shape is reported and NOT applied', () => {
+  const root = supersedeFixture([
+    ['h0-battery', 'run-old', { study: 'h0-battery', git_sha: 'a' }, { cells: [cell('family_A_betting_e_process', 1)] }],
+    ['h0-battery', 'run-new', {
+      study: 'h0-battery', git_sha: 'b',
+      supersedes: { priorRun: 'run-old', defect: 'oracle phi was never threaded' },
+    }, { cells: [cell('family_A_betting_e_process', 0)] }],
+  ]);
+  const ev = loadEvidence(root);
+  assert.equal(ev.cells.filter((c) => c.detector === 'family_A_betting_e_process').length, 2,
+    'NOT applied: the superseded run is still scored');
+  assert.equal(ev.runs.find((r) => r.run === 'run-old').superseded, undefined);
+  assert.deepEqual(ev.unhonoured_supersessions, [{
+    declared_by: 'h0-battery/run-new',
+    target: 'h0-battery/run-old',
+    defect: 'oracle phi was never threaded',
+  }], 'REPORTED: the declaration must reach the caller so the report can carry it');
+});
+
+test('C1.1: the real corpus carries exactly the two h0-battery legacy declarations, unhonoured', () => {
+  const ev = loadEvidence(join(HERE, '..', '..'));
+  const u = ev.unhonoured_supersessions;
+  assert.equal(u.length, 2, `expected the two 2026-08-01 h0-battery declarations, got ${JSON.stringify(u)}`);
+  for (const d of u) {
+    // The locator uses the manifest's own `study` field, not the directory name: h0-battery's
+    // manifests declare study '2026-07-h0-battery'.
+    assert.equal(d.target, '2026-07-h0-battery/run-20260801T062824Z');
+    assert.match(d.defect, /oracle phi was never threaded/);
+  }
+  // And the superseded run's cells ARE still present — the gap this reports is real, not latent.
+  // 148 = endpoints.json's 144 plus the 4 additional cells/ entries the aggregate omitted
+  // (scanCellsDirExtras); floor rather than an exact count, for the same append-only reason
+  // golden-verdicts.test.mjs uses floors.
+  const still = ev.cells.filter((c) => c.__run === 'run-20260801T062824Z');
+  assert.ok(still.length >= 144, `the declared-defective cells are still scored; got ${still.length}`);
+});
+
+test('C1.6: an unrecognized supersedes shape is a crash, not a silently ignored field', () => {
+  const root = supersedeFixture([
+    ['coverage', 'run-new', { study: 'coverage', git_sha: 'b', supersedes: 'run-old' },
+      { cells: [cell('d', 0)] }],
+  ]);
+  assert.throws(() => loadEvidence(root), /must be an array, a legacy/);
 });

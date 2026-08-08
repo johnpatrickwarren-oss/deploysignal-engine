@@ -205,3 +205,82 @@ test('verdict.mjs run against a temp CERT_RESULTS_DIR produces a self-consistent
   assert.match(missing, /clustersynth-ui \/ 13 wide-format studies: 426 cells carry no detector field/, 'standing gap 1 not carried verbatim into MISSING-CELLS.md');
   assert.match(missing, /power-per-cell \+ phi-sweep \(2026-08-05\): runs exist only under terminal-evalue\/results\/sim\//, 'standing gap 2 not carried verbatim into MISSING-CELLS.md');
 });
+
+// ── Amendment v2.C1 C1.9: the NO-row tie is rendered, not silently resolved ────────────────
+// `betterBlocked`'s lexicographic step is a deterministic ORDERING, not a claim about which
+// detector is strongest. When several cards tie on (status, canonical rate) the single-name line
+// asserted a distinction the evidence does not make: all three K6 detectors read exactly 0.0005
+// at the canonical cell in run-20260808T121548Z and the line named one of them, which the run
+// report then had to record as a deviation from the amendment's own expectation. Gated on
+// report_format >= 4 — earlier runs were written under the single-name shape and are never
+// rewritten.
+const STATUS_PRIORITY = { COVERED: 0, NOT_POWERED: 1, NO_EVIDENCE: 2 };
+
+// Driven end-to-end into a temp root (the same pattern as the self-consistency test above) PLUS
+// every committed format-4 run. The temp run is what keeps this green before the first format-4
+// run is committed; the committed dirs are what keep it honest afterwards.
+function formatFourDirs(t) {
+  const tmpRoot = mkdtempSync(join(tmpdir(), 'cert-c1-'));
+  t.after(() => rmSync(tmpRoot, { recursive: true, force: true }));
+  execFileSync(process.execPath, [verdictScript], { cwd: certDir, env: { ...process.env, CERT_RESULTS_DIR: tmpRoot }, stdio: 'pipe' });
+  const fresh = readdirSync(tmpRoot).filter((d) => d.startsWith('run-')).map((d) => join(tmpRoot, d));
+  const committed = runDirs().map((r) => join(resultsRoot, r)).filter((d) => reportFormat(d) >= 4);
+  return [...fresh, ...committed];
+}
+
+test('C1.9: every NO row names every detector tied at the best (status, canonical rate)', (t) => {
+  const dirs = formatFourDirs(t);
+  assert.ok(dirs.length > 0, 'no format-4 certification run to check');
+  for (const dir of dirs) {
+    const coverage = readFileSync(join(dir, 'COVERAGE.md'), 'utf8');
+    const cards = readdirSync(dir).filter((n) => n.endsWith('.card.json'))
+      .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')));
+    for (const classId of Object.keys(FAULT_CLASSES)) {
+      const line = coverage.split('\n').find((l) => l.startsWith(`- ${classId}: NO —`));
+      if (!line) continue;   // a YES row has no blocked line
+      const candidates = cards.map((o) => ({
+        detector: o.card.detector_id,
+        status: o.coverage[classId].status,
+        rate: o.coverage[classId].canonical?.rate ?? null,
+      }));
+      const best = candidates.slice().sort((a, b) => {
+        const p = STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status];
+        if (p !== 0) return p;
+        const ra = a.rate ?? -Infinity;
+        const rb = b.rate ?? -Infinity;
+        if (ra !== rb) return rb - ra;
+        return a.detector.localeCompare(b.detector);
+      })[0];
+      const tied = candidates.filter((c) => c.status === best.status && c.rate === best.rate)
+        .map((c) => c.detector).sort((a, b) => a.localeCompare(b));
+      for (const d of tied) {
+        assert.ok(line.includes(d),
+          `${dir}: COVERAGE.md ${classId} NO line must name tied detector ${d}; line was "${line}"`);
+      }
+      if (tied.length > 1) {
+        assert.ok(line.includes(`${tied.length}-way tie`),
+          `${dir}: COVERAGE.md ${classId} must declare the ${tied.length}-way tie; line was "${line}"`);
+      }
+      // And it must not name a detector that is NOT tied with the best.
+      for (const c of candidates) {
+        if (tied.includes(c.detector)) continue;
+        assert.equal(line.includes(c.detector), false,
+          `${dir}: COVERAGE.md ${classId} NO line names untied detector ${c.detector}: "${line}"`);
+      }
+    }
+  }
+});
+
+// C1.1: the unhonoured-supersession section is not optional decoration. h0-battery declared
+// run-20260801T062824Z superseded for a named code defect and its cells are still scored, so a
+// format-4 report that omits the disclosure is a report that hides a known gap.
+test('C1.1: a format-4 report discloses every declared-but-still-scored supersession', (t) => {
+  const dirs = formatFourDirs(t);
+  assert.ok(dirs.length > 0, 'no format-4 certification run to check');
+  for (const dir of dirs) {
+    const report = readFileSync(join(dir, 'REPORT.md'), 'utf8');
+    assert.match(report, /Declared superseded but STILL SCORED/,
+      `${dir}: REPORT.md must carry the C1.1 disclosure section`);
+    assert.match(report, /run-20260801T062824Z/, `${dir}: and name the run it applies to`);
+  }
+});

@@ -1,0 +1,70 @@
+{
+  "protocol_version": 1,
+  "detector_id": "shape_block_conformal_bet",
+  "aliases": [
+    "shape_bet",
+    "k6_bet"
+  ],
+  "family": null,
+  "class": "test_martingale",
+  "engine_pin": {
+    "version": "0.6.6-pre",
+    "sha": "3fe4acd3c7400d8a0f1e6f27210444f1cf7766db"
+  },
+  "source_files": [
+    {
+      "path": "detectors/shape-block-conformal-bet.ts",
+      "sha256": "25226e1a98542845c49e22017bef5d8de9e7670bcb04a6b0849cb46a736200ce"
+    }
+  ],
+  "guarantee": {
+    "sentence": "block-conformal distance-rank shape bet: per registered held-out segment, m disjoint contiguous W=30-tick reference blocks give per-feature (raw kurtosis, |skew|) medians and |deviation-from-median| distances; p = (1+#{ref |dev| >= live |dev|})/(m+1) is super-uniform under block exchangeability of the m reference blocks and the live window's own distance-to-median statistic (stationarity across the calibration+test span -- the registered regime; O(1/m) qualifier at finite m, not the continuous-p identity exactly); e = kappa*p^(kappa-1) satisfies E[e|H0] <= 1 per feature per window (kappa=0.1, shared K3/K4 derivation); per window, features combine by averaging (never max); across disjoint windows, per-window averages combine by product, a genuine test martingale; contiguity preserves each coordinate's own serial dependence, which is this construction's own answer to C22 (fired on 82% of healthy clustersynth shards, knowledge/stats/shape-clustersynth-2026-08-05) -- validity requires calibration and live to share the same dependence structure (matched process), not a known phi; MISMATCHED calibration/live process is out-of-claim, measured for the record (PREREGISTRATION.md Amendment v2.K6 K6.11). Registered before any run: this candidate's own canonical-severity power is DERIVED NOT_POWERED (Amendment v2.K6 K6.4) -- the class martingale is validity-sound by construction but structurally weak at the class's canonical mixture separation (d=1.5) at the registered W=30.",
+    "quantifiers": [
+      {
+        "text": "block-conformal rank super-uniformity under block exchangeability, O(1/m) qualifier at finite m",
+        "tag": "proof",
+        "proof_artifact": "conformal rank identity (integral of kappa*p^(kappa-1)=1) + tie-inclusive >= countGte, detectors/shape-block-conformal-bet.ts:142-152,255-281; degenerate-reference throw + live-side NaN-hold e=1 fixtures, test/shape-block-conformal-bet.test.ts"
+      },
+      {
+        "text": "healthy crossing rate under stationarity (iid and matched-process AR(1) phi=0.6), across disjoint windows",
+        "tag": "empirical",
+        "proof_artifact": null
+      }
+    ],
+    "regime": {
+      "phi_max": null,
+      "m_min": 100,
+      "baseline": "heldout-empirical",
+      "nulls": "stationary",
+      "stationarity": true,
+      "contamination_out_of_claim": true,
+      "phi_regime": "matched-calibration",
+      "phi_regime_note": "validity is not gated by a phi ceiling -- it requires calibration and live blocks to share the SAME generating process (matched phi tested at phi=0 and phi=0.6 in the module's own unit tests, task-9-report.md); MISMATCHED calibration/live phi is out-of-claim, measured for the record: pooled per-feature exceedance 0.0584-0.0589 (cal phi=0.6/live phi=0) and 0.0532-0.0577 (cal phi=0.9/live phi=0.6), well above nominal -- PREREGISTRATION.md Amendment v2.K6 K6.11 (kurtosis exceedance inflates under mismatch, absSkew mildly deflates; the pooled figure masks the split)"
+    }
+  },
+  "shipped_path": {
+    "kind": "block-conformal shape bet on disjoint 30-tick reference/live windows, two features (raw kurtosis, |skew|) (K6 distributional-shape-change candidate)",
+    "estimator": null,
+    "notes": "K6 (distributional shape change) candidate; not deploysignal's shipped selector path. Supersedes, on the record, detectors/shape-kurtosis-e-value.ts (DO NOT WIRE: fired on 82% of healthy clustersynth shards, knowledge/stats/shape-clustersynth-2026-08-05, root cause C22) and Family C's MMD (blind to shape by construction, knowledge/stats/family-c-blind-to-shape-2026-08-04). Registered before any run as DERIVED NOT_POWERED at the class's own canonical severity (PREREGISTRATION.md Amendment v2.K6 K6.4) -- the run confirms or falsifies a derivation, it does not discover the class answer."
+  },
+  "budget": {
+    "participating": true,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
+  "falsifier": "healthy-arm crossing rate Wilson 95% lower bound > 0.05",
+  "prior_evidence": [
+    {
+      "stage": "S2",
+      "study": "coverage",
+      "runs": "coverage/results/live/*",
+      "wiki": "methodology/fault-class-coverage-matrix"
+    },
+    {
+      "stage": "design",
+      "study": "coverage-gap-detectors",
+      "runs": null,
+      "wiki": "methodology/coverage-gap-detectors"
+    }
+  ]
+}

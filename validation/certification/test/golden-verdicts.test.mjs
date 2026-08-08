@@ -1,6 +1,6 @@
 // validation/certification/test/golden-verdicts.test.mjs
 //
-// I5 -- the eleven verdicts are frozen here. Any change to the scorer, the guards, the
+// I5 -- the fourteen verdicts are frozen here. Any change to the scorer, the guards, the
 // cards, or the evidence corpus that moves a verdict fails this test by name.
 //
 // WHY A GOLDEN TABLE AND NOT A REPORT DIFF. The protocol's own rule is that endpoints and
@@ -59,6 +59,160 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // safe_t_e_value (USE); K4's NO answer holds independently of this delta (NOT_POWERED,
 // canonical rate 0.043 < 0.50 floor). Every other card's verdict, tier and four stage
 // statuses are unchanged.
+//
+// Extended 2026-08-08, coverage-gap-detectors Task 3 (card frozen at 8546bef): a third K4
+// candidate lands, point_tail_bet_e_value (the per-point conformal tail-bet construction,
+// PREREGISTRATION.md Amendments v2.K4/v2.K4.1). Its prior_evidence cites the coverage study
+// (S2, same as the other two K4 cards) and the ratified design page
+// (methodology/coverage-gap-detectors) as supporting evidence. No battery run of this
+// candidate exists yet -- Task 4's adapter is what produces one -- so S1/S2/S3 read MISSING,
+// S4 PASS (nothing priced against budget yet), overall NOT_EXECUTABLE: the correct, non-tuned
+// pre-run verdict, same convention as group_average_e_value's and family_E_conformal_heldout's
+// own NOT_EXECUTABLE entry point above. Expected to move once a battery run lands, at which
+// point this table re-freezes again by the same convention as the deltas above. Test titles
+// renamed eleven -> twelve to match.
+//
+// Corrected 2026-08-08 (card re-frozen at 9f0be14): the design-page prior_evidence entry was
+// first stamped stage 'S1', reading DECLARED. Review adjudicated that wrong -- scoreS1's
+// string-match is a v1 floor standing in for measured dispatch, not a general "any wiki
+// citation" flag, and both existing DECLARED precedents (family_E_conformal's S1+S2 entry,
+// sequential_mmd_betting_e_process's S1 entry) cite source pages backed by real run artifacts,
+// unlike this pre-run design doc; the two sibling K4 cards drawing on the same design page
+// already read MISSING. Relabeled stage 'design' (the citation itself is unchanged); S1 now
+// reads MISSING, matching the card's true pre-run state.
+//
+// Re-frozen 2026-08-08, coverage-gap-detectors Task 5 (cert run run-20260808T064214Z, consuming
+// battery run-20260808T064039Z): the delta the paragraph above predicted, on ONE row, not two.
+// `point_tail_bet_e_value` moves NOT_EXECUTABLE -> USE, tier null -> T1, S2 MISSING -> PASS,
+// S3 MISSING -> PASS (S1 MISSING and S4 PASS unchanged). The two other new-candidate rows
+// (group_average_e_value, family_E_conformal_heldout) already left NOT_EXECUTABLE at the Task 10
+// delta above and do not move here.
+//
+// What produced it, per Amendment v2.K4/v2.K4.1: arm cell 32's healthy (S2) row cleared on its
+// own registered per-point instrument -- k = 1012 of n_points = 400,000, exceedance 0.00253,
+// Wilson lower_95 0.0024027 <= alpha 0.05, so K4.7's stop condition did not fire -- and the
+// terminal_e_value mean rule (lib/guards.mjs meanRule) did NOT override it: mean_e 0.6351 sits
+// under TERMINAL_MEAN_BOUND = 1, unlike group_average_e_value's 1.9141 and
+// family_E_conformal_heldout's 3.1160. That is the whole difference between this card's USE and
+// the two REFUSEs above. S3 PASS comes from arm 32's shift_sigma = 3 power row, detection_rate
+// 1.0000.
+//
+// The class answer moves with it: COVERAGE.md's K4 row goes NO -> YES, carried by this card
+// (canonical cell 19 `5sigma-point` detection_rate 0.9750 >= COVERAGE_FLOOR 0.50, tier T1).
+// The Task 10 note above recorded "K4's NO answer holds"; that sentence described the corpus at
+// that run and is superseded here by a third candidate's evidence, not contradicted by it -- the
+// other two K4 candidates' canonical rates are unchanged and still below the floor
+// (family_E_conformal_heldout 0.0430 NOT_POWERED, safe_t_e_value 0.0005 NOT_POWERED).
+// Every other card's verdict, tier and four stage statuses are unchanged.
+//
+// Extended 2026-08-08, coverage-gap-detectors Task 7 (card frozen at ebf34c5): a fourth new
+// candidate lands, spectral_bet_e_process (the periodogram betting e-process K3 construction,
+// PREREGISTRATION.md Amendment v2.K3). Its prior_evidence cites the coverage study (S2, same
+// pattern as the other three new candidates) and the ratified design page at stage 'design' --
+// not 'S1', per the point_tail_bet_e_value precedent above (dfe7536: a pre-run design-doc
+// citation does not satisfy scoreS1's DECLARED reading). No battery run of this candidate exists
+// yet -- Task 8's adapter is what produces one -- so S1/S2/S3 read MISSING, S4 PASS (nothing
+// priced against budget yet), overall NOT_EXECUTABLE: the correct, non-tuned pre-run verdict,
+// same convention as every other new-candidate entry point above. Amendment v2.K3 K3.15 registers
+// a further, structural point this table does not resolve: this card's class is test_martingale,
+// whose CLASS_INSTRUMENTS entry (increment_estimator) the amendment's registered coverage-battery
+// fields do not populate -- so S2 is expected to stay MISSING even after a registered run lands,
+// absent a Task 8 adapter addition, unlike the three terminal_e_value-class candidates above
+// (whose exceedance/mean_e fields are exactly their class's own instrument). Expected to move only
+// if Task 8's adapter closes that gap; flagged here so a future NOT_EXECUTABLE reading post-run is
+// not mistaken for a defect in this test.
+//
+// Re-frozen 2026-08-08, coverage-gap-detectors Task 8 (cert run run-20260808T091718Z, consuming
+// battery run-20260808T091521Z): ONE row moves. `spectral_bet_e_process` goes NOT_EXECUTABLE ->
+// USE, tier null -> T1, S2 MISSING -> PASS, S3 MISSING -> PASS (S1 MISSING and S4 PASS unchanged).
+// No other card's verdict, tier or stage status moves -- the registered run was --classes K3, so
+// the other twelve cards' evidence is untouched.
+//
+// The S2 MISSING the paragraph above predicted did NOT persist, and the registered reason is an
+// amendment, not a scoring change: Amendment v2.K3.1 K3.1.1 (registered before any run, closing
+// K3.15's own gap) added `increment_estimator` -- the martingale's own per-window eAvg increments --
+// to arm cell 33's healthy row, and K3.1.2 renamed that row's rate field to the class-recognized
+// `crossing_rate`, so `isValidityCell` (lib/score.mjs) now recognizes a cell it previously could not
+// see. The Task 8 adapter emits both. The verdict token itself stays crossing_rate-derived (K3.1.3),
+// never increment_estimator-derived: k = 6 of n = 2000, crossing_rate 0.003, Wilson lower_95
+// 0.0015520 <= alpha 0.05, so K3.13's stop condition did not fire and S2 CLEARED as 'not-refuted'.
+// The test_martingale class carries no terminal mean rule, so nothing overrode that clearance the
+// way meanRule overrode group_average_e_value's and family_E_conformal_heldout's. S3 PASS comes
+// from arm 33's shift_sigma = 3 power row, detection_rate 1.0000 -- realized per class as an on-grid
+// oscillation (amp 3 sigma, freq 3/30, bin k=3) rather than a step, per Amendment v2.K3.3 K3.3.2:
+// the originally registered step probe is DC-blind to every bin this detector scores (K3.3.1) and
+// survives only as the verdict-free `step_blindness_probe_rate` row, which carries no
+// `detection_rate` and no `shift_sigma` and is therefore invisible to scoreS3 by construction.
+//
+// The class answer moves with it: COVERAGE.md's K3 row goes NO -> YES, carried by this card
+// (canonical cell 15 `A0.75sigma-f0.05` detection_rate 0.6540 >= COVERAGE_FLOOR 0.50, tier T1).
+// No USE card covered K3 at the previous corpus and none of the incumbents changed that here:
+// safe_t_e_value and universal_inference_e_value read 0.0000 on all six K3 cells in this same run,
+// and family_D_spectral_e_detector (also 0.0000 on idx 15/17) is REFUSE, barred from carrying a
+// class regardless. K5 and K6 stay NO.
+// Extended 2026-08-08, coverage-gap-detectors Task 10 (card frozen at 7bf6372's amendment,
+// card+freeze this same commit): a fifth new candidate lands, shape_block_conformal_bet (the
+// block-conformal shape-bet K6 construction, PREREGISTRATION.md Amendment v2.K6). Its
+// prior_evidence cites the coverage study (S2, same pattern as the other four new candidates)
+// and the ratified design page at stage 'design' -- not 'S1', the same MISSING-honest precedent
+// point_tail_bet_e_value/spectral_bet_e_process both already carry. No battery or T2 run of this
+// candidate exists yet -- Task 11's adapters are what produce them -- so S1/S2/S3 read MISSING,
+// S4 PASS (nothing priced against budget yet), overall NOT_EXECUTABLE: the correct, non-tuned
+// pre-run verdict, same convention as every other new-candidate entry point above. Amendment
+// v2.K6 registers, up front (not deferred to a correction round the way K3.15/v2.K3.1 needed
+// for spectral_bet_e_process), that arm cell 34's S2 row carries increment_estimator so S2 is
+// expected to move to PASS once Task 11's adapter lands -- and separately derives, in full
+// before any run, that this candidate is NOT_POWERED at K6's canonical severity and INERT on
+// its own S3 arm (Amendment v2.K6 K6.4/K6.8), so the card's own expected post-run verdict is
+// ADVISORY, not USE, per overallVerdict's valid-but-inert rule -- registered here so a future
+// ADVISORY reading is not mistaken for a defect in this test.
+// Updated 2026-08-08, coverage-gap-detectors Task 11b, the registered K6 runs
+// (coverage/results/live/run-20260808T121548Z T1 battery, run-t2-20260808T121710Z T2 arm): the
+// ONE-ROW delta those runs land, named in advance by Amendment v2.K6.2 K6.2.4 --
+// shape_block_conformal_bet NOT_EXECUTABLE -> USE, tier null -> T1, s2 MISSING -> PASS,
+// s3 MISSING -> PASS. The ADVISORY expectation in the paragraph above is exactly what v2.K6.2
+// SUPERSEDES: d=2.0 is a two-point degeneracy (s = sqrt(1 - d^2/4) = 0 exactly), so the S3 arm
+// reads POWERED at detection_rate 1.0000 rather than the withdrawn ~0.000, and overallVerdict's
+// valid-but-inert rule no longer applies. The K6 CLASS answer is unchanged at NO, decided by the
+// canonical d=1.5 cell alone (measured 0.0005 against COVERAGE_FLOOR 0.50): a USE card that does
+// not carry the class it was built for is the registered, expected reading here (v2.K6.2 K6.2.2),
+// not a defect in this test.
+//
+// Re-frozen 2026-08-08, coverage-gap-detectors final fix wave (cert run run-20260808T133943Z,
+// consuming the two registered reruns coverage/run-20260808T133746Z (K6 T1) and
+// run-20260808T133859Z (K4 T1)): the ONE-ROW delta Amendment v2.C1 registered in advance (C1.12).
+// `shape_block_conformal_bet` moves USE -> ADVISORY, s3 PASS -> INERT; tier stays T1 (minTier of
+// the supporting S2 evidence, score.mjs:567), s1 MISSING / s2 PASS / s4 PASS unchanged.
+//
+// WHAT PRODUCED IT. The whole-branch review found `heldoutRows`
+// (validation/coverage/harness/run-battery.mjs) drew each held-out row as the first gaussian of
+// its own arithmetically-spaced LCG stream, making the 10,000-row calibration reference a rank-1
+// Kronecker lattice: marginals better than iid, joint deterministic and seed-invariant
+// (acf(2) = -0.7513 across eight unrelated seeds), within-block moment spread compressed ~30%.
+// A compressed reference makes every live window rank as more extreme than it is. Registered as a
+// named code defect under house rule 7, fixed test-first, and rerun with the prior directories
+// preserved and declared superseded in the reruns' own manifests (C1.6).
+//
+// The paragraph above this one recorded the ADVISORY expectation as "exactly what v2.K6.2
+// SUPERSEDES". That is now superseded in turn, and only halfway: v2.K6.2's PREMISE stands —
+// s = sqrt(1 - d^2/4) is exactly 0 at d = 2.0, so that severity is genuinely a two-point +-1sigma
+// law — but its POWERED conclusion was an artefact of the lattice. Against a real reference the
+// same law gives mean eAvg 1.1525 and cumulative log-wealth ~0.69 over six windows against the bar
+// log(20) = 2.9957, and the rerun measures arm 34 S3 at detection_rate 0.0005 (1 of 2000) and
+// cell 28 at 0.0045 (9 of 2000). detection_rate 0.0005 < INERTNESS_FLOOR 0.10 makes scoreS3's
+// status INERT (score.mjs:342-343) and leaves s3Powered empty, which is overallVerdict's
+// valid-but-inert ADVISORY (score.mjs:566-570). So this row returns to the verdict Amendments
+// v2.K6/v2.K6.1 registered from a closed-form derivation BEFORE any run — arrived at the second
+// time from a measurement.
+//
+// No other row moves, which was also registered in advance (C1.12). In particular the K4 rerun
+// changed every family_E_conformal_heldout and point_tail_bet_e_value number without moving either
+// card: point_tail_bet_e_value stays USE/T1 (arm 32 mean_e 0.5276 still under TERMINAL_MEAN_BOUND
+// 1, Wilson lower_95 0.0017464 still under alpha), and family_E_conformal_heldout stays REFUSE
+// (arm 31 mean_e ROSE 3.1160 -> 4.1760, so the terminal mean rule fires exactly as before -- the
+// lattice had been UNDERSTATING that card's false-alarm rate). Class answers unchanged: K1 YES,
+// K2 YES, K3 YES 0.654, K4 YES (point_tail_bet_e_value, canonical 0.9780), K5 NO, K6 NO -- K6 now
+// a fortiori, its canonical cell reading 0.0000 where it read 0.0005.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -71,6 +225,9 @@ const GOLDEN = {
   universal_inference_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'INERT', s4: 'PASS' },
   group_average_e_value: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
   family_E_conformal_heldout: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
+  point_tail_bet_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
+  spectral_bet_e_process: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
+  shape_block_conformal_bet: { verdict: 'ADVISORY', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'INERT', s4: 'PASS' },
 };
 
 function runHarness(t) {
@@ -90,7 +247,7 @@ function runHarness(t) {
   return { dir, cards };
 }
 
-test('the eleven verdicts are exactly the frozen table', (t) => {
+test('the fourteen verdicts are exactly the frozen table', (t) => {
   const { cards } = runHarness(t);
   assert.deepEqual(Object.keys(cards).sort(), Object.keys(GOLDEN).sort(), 'the set of certified detectors changed');
   for (const [id, want] of Object.entries(GOLDEN)) {
@@ -142,7 +299,7 @@ test('universal-inference keeps its N4 cells in regime: its claim quantifies ove
   assert.ok(n4.every((c) => c.out_of_regime === false && c.mapped === 'CLEARED'));
 });
 
-test('the report the harness writes carries the same eleven verdicts as its card JSONs', (t) => {
+test('the report the harness writes carries the same fourteen verdicts as its card JSONs', (t) => {
   const { dir, cards } = runHarness(t);
   const report = readFileSync(join(dir, 'REPORT.md'), 'utf8');
   assert.ok(existsSync(join(dir, 'MISSING-CELLS.md')));

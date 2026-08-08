@@ -1,0 +1,61 @@
+{
+  "study": "detector-certification",
+  "protocol_version": 1,
+  "report_format": 3,
+  "git_sha": "c1f6875cfff312da2a50afb226868331e6fa9c03",
+  "node": "v25.9.0",
+  "cards": [
+    {
+      "file": "family_A_betting_e_process.json",
+      "sha256": "a356c118afc95625809525ea2f07937724046816a09fe255025ffb58ba5aee62"
+    },
+    {
+      "file": "family_A_mixture_supermartingale.json",
+      "sha256": "1a8d595261a72e8ee5d217ad0211aaa5e83e128440e2c3d84faac2cd71e90286"
+    },
+    {
+      "file": "family_C_safe_hotelling.json",
+      "sha256": "6756233e5ae5f7e89ea82181b0c9451a55d3732969613da4b051bf9b4f73e819"
+    },
+    {
+      "file": "family_D_spectral_e_detector.json",
+      "sha256": "eb9c56844233615178f4f3cb957f13446960405732d00eb7ec50210f1f1c4f51"
+    },
+    {
+      "file": "family_E_conformal.json",
+      "sha256": "16a8f0dadf135685548b34c07870f59417f41192594740a9ea90cd1d43947e36"
+    },
+    {
+      "file": "family_E_conformal_heldout.json",
+      "sha256": "72185a2ff841fc92db3e17916db49dc04f08f1f87e04286ca6c4e5ddf2334ca6"
+    },
+    {
+      "file": "group_average_e_value.json",
+      "sha256": "c8f9f632c4cb1bc0e2047091765c50af52e21586962eadb36b313a53c1c7b63a"
+    },
+    {
+      "file": "point_tail_bet_e_value.json",
+      "sha256": "49b8e6fd090a7f7b9316cc9d6a1f4274d0a22c95f44d34e721cdc39c299aa2bb"
+    },
+    {
+      "file": "safe_t_e_value.json",
+      "sha256": "a6822f5c3085f1f3c43fc8742e28ef522e90d9db38156858ec777764bbd96f55"
+    },
+    {
+      "file": "sequential_mmd_betting_e_process.json",
+      "sha256": "2da3fcb4806116fb6441f07028a8919fb8abeb2fb49ea81f921d3eb11f876325"
+    },
+    {
+      "file": "sequential_ui_e_process.json",
+      "sha256": "82c6c0b175252efa7405093edfc3b2c71d1bfb131256e64934866992d62d0825"
+    },
+    {
+      "file": "spectral_bet_e_process.json",
+      "sha256": "008ca229bfaf471a7fc41e60713b7ce8e714638e719181582da6513b3c9405d3"
+    },
+    {
+      "file": "universal_inference_e_value.json",
+      "sha256": "76c6bde4a7740a63bc99e6750863bea3fe37c4137d4e9dbb02098db55eb67fb5"
+    }
+  ]
+}

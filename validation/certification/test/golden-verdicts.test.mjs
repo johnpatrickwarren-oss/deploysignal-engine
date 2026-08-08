@@ -46,6 +46,19 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // budget yet), overall NOT_EXECUTABLE -- the correct, non-tuned verdict for a card with no
 // evidence, not a defect. This is expected to move once Task 9's battery run lands, at
 // which point this table re-freezes again by the same convention as the P-A3 update above.
+//
+// Re-frozen 2026-08-08, coverage-matrix-v1 Task 10 (cert run run-20260808T011035Z, consuming
+// battery run-20260808T010208Z): the delta the paragraph above predicted. Both new cards
+// move NOT_EXECUTABLE -> REFUSE, S2 MISSING -> REFUTED, S3 MISSING -> PASS (S1/S4 unchanged
+// at MISSING/PASS). Neither card was refuted by its own coverage-battery evidence -- idx
+// 30/31's S2 arm (Wilson lower_95 below alpha) CLEARED as 'not-refuted'. The terminal_e_value
+// mean rule (lib/guards.mjs meanRule, C1) overrode that clearance: mean_e 1.9141
+// (group_average_e_value) and 3.1160 (family_E_conformal_heldout) both exceed the registered
+// bound of 1 (TERMINAL_MEAN_BOUND, lib/constants.mjs), so the cell is scored REFUTED, which
+// maps S2 REFUTED -> overall REFUSE (lib/score.mjs overallVerdict). K2's YES answer rests on
+// safe_t_e_value (USE); K4's NO answer holds independently of this delta (NOT_POWERED,
+// canonical rate 0.043 < 0.50 floor). Every other card's verdict, tier and four stage
+// statuses are unchanged.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -56,8 +69,8 @@ const GOLDEN = {
   sequential_mmd_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'DECLARED', s2: 'REFUTED', s3: 'MISSING', s4: 'PASS' },
   sequential_ui_e_process: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'PASS', s3: 'MISSING', s4: 'PASS' },
   universal_inference_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'INERT', s4: 'PASS' },
-  group_average_e_value: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
-  family_E_conformal_heldout: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
+  group_average_e_value: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
+  family_E_conformal_heldout: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
 };
 
 function runHarness(t) {

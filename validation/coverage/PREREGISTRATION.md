@@ -3639,3 +3639,103 @@ untouched, and no floor, seed, window partition, stop condition, or decision rul
 earlier amendment moves. One expected golden delta: `shape_block_conformal_bet` USE -> ADVISORY. The
 residual `p_uniformity` KS rejection under the corrected scheme (`0.0229 > 0.0088`) is registered as
 expected and unexplained, carrying no verdict, filed for the write-back rather than resolved here.**
+
+## Amendment v2.C1.1 — 2026-08-08, a second finding: `supersedes` already existed and nothing read it
+
+Registered before the C1 code fix lands and before either rerun. **Lead with the correction to
+C1.6:** C1.6 registered a manifest-declared `supersedes` mechanism as if it were new. It is not.
+The field name, and a working declaration in it, have been in this repo's evidence corpus since
+2026-08-01 — and the certification scorer has never read it.
+
+### C1.1.1 What is there, verbatim
+
+`validation/h0-battery/results/live/run-20260801T064237Z/manifest.json` and
+`.../run-20260801T064627Z/manifest.json` each carry:
+
+```json
+"supersedes": {
+  "priorRun": "run-20260801T062824Z",
+  "defect": "oracle phi was never threaded into the detector config, so N3/N4 ran with AR(1)
+             pre-whitening disabled; ... The prior runs measure detectors unaware of phi, not the
+             registered oracle-parameter cell"
+}
+```
+
+That is house rule 7 applied correctly and in good faith: a named code defect, a rerun, the prior
+run preserved with a declaration attached. **`validation/certification/lib/collect.mjs` never
+looked at the field.** Measured this session against the real corpus: `run-20260801T062824Z`
+contributes **148 cells** to every certification run — 144 from its `endpoints.json` plus 4 more
+that `scanCellsDirExtras` merges from its `cells/` directory — across
+`family_A_betting_e_process`, `family_A_mixture_supermartingale`, `family_C_safe_hotelling` and
+`family_D_spectral_e_detector`, 36 each in the aggregate. Those cells have been scored alongside
+their own correction in every certification run since, including `run-20260808T122216Z`, the
+official re-score this branch's K6 phase produced.
+
+### C1.1.2 What this amendment does about it: reports, does not resolve
+
+**Registered decision: the legacy shape is RECOGNIZED and REPORTED, and NOT acted on.** Three
+reasons, in order of weight:
+
+1. **Acting on it would move card verdicts that this branch's registered scope does not cover.**
+   The four affected cards are `family_A_betting_e_process` (REFUSE), `family_A_mixture_supermartingale`
+   (REFUSE), `family_C_safe_hotelling` (NOT_EXECUTABLE) and `family_D_spectral_e_detector` (REFUSE).
+   Dropping 148 cells could move any of them, and none of that is C1's defect or this study's
+   evidence.
+2. **The authority is the wrong study's.** The declaration lives in `h0-battery`'s artifacts, so
+   the amendment that honours it belongs in `h0-battery`'s own pre-registration, not in
+   `coverage`'s. A coverage amendment that silently re-scored four unrelated cards would be
+   exactly the boundary violation house rule 7 exists to prevent.
+3. **It is a week old and nobody noticed, which is the finding.** The value here is the
+   disclosure, not the fix.
+
+**Implemented, therefore:** `collect.mjs` accepts the legacy `{priorRun, defect}` object, records
+it as an unhonoured declaration, and the certification `REPORT.md` carries a section headed
+**"Declared superseded but STILL SCORED"** naming the run, the declaring runs, and the stated
+defect verbatim. `report_format` goes `3 -> 4`. A `supersedes` value that is neither the legacy
+object nor C1.6's array is a crash, not a silently ignored field.
+
+### C1.1.3 C1.6, corrected in place by supersession, not by deletion
+
+C1.6's array shape stands exactly as registered — `[{ study, run, detectors, reason }]` — and it
+is now explicitly an **extension of an existing field**, not a new one. What is corrected is
+C1.6's framing ("Registered mechanism, added before the reruns"), which implied novelty it did not
+have. The extension earns its keep on two counts the legacy shape does not cover, and both are the
+reason C1 could not simply reuse it:
+
+- **Per-detector granularity.** `coverage/run-20260808T010208Z` holds
+  `family_E_conformal_heldout` rows that DO calibrate on the defective substrate alongside
+  `safe_t`, `universal_inference`, `group_average_e_value` and `family_D_spectral_e_detector` rows
+  across five other classes that take no held-out calibration and are bit-identical under the fix.
+  A whole-run declaration would delete four classes of sound evidence to correct one detector's
+  rows.
+- **Cross-study addressing.** `{study, run}` rather than a bare `priorRun`, so a locator is
+  unambiguous when the same run stamp exists under two studies.
+
+### C1.1.4 Write-back obligation, named
+
+For the wiki write-back, as a finding and not a resolved item: **the certification protocol had no
+supersession mechanism, and one existed in its data that it ignored.** A run declaring itself
+defective is the strongest evidence there is that its numbers should not be cited, and the scorer
+treated it as prose. The h0-battery amendment that honours the 2026-08-01 declarations, and the
+re-score that follows it, are named-not-done work. Until then every certification `REPORT.md`
+carries the disclosure and every reader of those four cards has it in front of them.
+
+### Amendment summary
+
+Corrects C1.6's claim of novelty: `supersedes` is a pre-existing manifest field
+(`h0-battery/run-20260801T064237Z` and `run-20260801T064627Z`, since 2026-08-01) declaring
+`run-20260801T062824Z` superseded for a named code defect — oracle `phi` never threaded into the
+detector config, so N3/N4 ran with AR(1) pre-whitening disabled — which
+`validation/certification/lib/collect.mjs` never read, so that run's **148 measured cells** across
+four cards have been scored alongside their own correction in every certification run since,
+including this branch's own `run-20260808T122216Z`. Registers the decision NOT to act on it here:
+honouring it could move four cards' verdicts outside coverage's registered scope, and the
+authorizing amendment belongs to `h0-battery`'s pre-registration. Registers what IS done: the
+legacy `{priorRun, defect}` shape is recognized, recorded, and disclosed in every certification
+`REPORT.md` under "Declared superseded but STILL SCORED", naming the run and the stated defect
+verbatim; `report_format` `3 -> 4`; an unrecognized `supersedes` value is a crash rather than a
+silently ignored field. C1.6's array shape stands unchanged and is reframed as an extension of the
+existing field, earning per-detector granularity (needed because `coverage/run-20260808T010208Z`
+mixes defective `family_E_conformal_heldout` rows with five classes of sound rows) and
+cross-study addressing. **No endpoint, floor, seed, or verdict moves as a result of this
+amendment; one disclosure section is added to a report that previously carried none.**

@@ -59,8 +59,21 @@
 // test martingale), accumulated in the log domain per ADR 0026's house pattern
 // (decisions/0026-log-domain-wealth.md; detectors/_wealth.ts): log-wealth is the
 // single source of truth, the linear view saturates at Number.MAX_VALUE instead
-// of overflowing to Infinity, and a degenerate (NaN) window's e-value holds the
-// books rather than poisoning the run.
+// of overflowing to Infinity.
+//
+// Two explicit degeneracy pathways (review round 2; see `assertNonDegenerate`
+// and `featureResult` for the implementations — this paragraph describes the
+// implemented behaviour, not an aspiration):
+//   - CALIBRATION-side: a reference segment that yields a non-finite median/
+//     deviation (a constant block, m2=0) or zero spread across all m blocks
+//     (every block ties the same statistic) makes the rank meaningless —
+//     `calibrateShapeBlocks` THROWS rather than silently shipping a
+//     calibration that scores every live window identically.
+//   - LIVE-side: a single degenerate live window (non-finite T) contributes
+//     e=1 for that feature — neutral, holds the books — rather than being
+//     ranked. If both features degenerate, eAvg=1, log-increment 0, and the
+//     window leaves the wealth product unchanged, matching K3's registered
+//     NaN pathway (spectral-bet-e-process.ts / ADR 0026).
 //
 // Out of claim, by design (card scope, not measured here): contamination
 // robustness (knowledge/stats/contamination-2026-08-04: the empirical reference
@@ -166,11 +179,58 @@ function buildFeatureCalibration(stats: number[]): ShapeFeatureCalibration {
   return { median: m, sortedAbsDev };
 }
 
+/** Guard (review round 2, Important 3): a degenerate reference must throw at
+ *  calibration time, not silently mis-score every live window. Two ways a
+ *  feature's calibration can be degenerate, both caught by one predicate:
+ *
+ *  (a) NON-FINITE — a constant held-out block has m2=0, so kurtosis and
+ *      |skew| are 0/0 = NaN for that block (possibly all blocks, if the
+ *      whole segment is constant). Pre-guard this was silent: `countGte`'s
+ *      binary search on a NaN query never takes its "go left" branch (every
+ *      `sorted[mid] < NaN` comparison is false), so it converges to
+ *      "0 excluded, all m counted" -- a REAL p=1 for every live window
+ *      forever, not a NaN that would at least be visibly wrong.
+ *  (b) ZERO SPREAD — every reference block computes to the SAME finite
+ *      statistic (e.g. a deterministically repeating two-level pattern),
+ *      so every |deviation from median| is identically 0. Pre-guard this
+ *      was also silent: `countGte(allZeros, anyNonzeroDev)` = 0 (no
+ *      reference entry ties or beats a nonzero deviation), so ANY nonzero
+ *      live perturbation -- even a 0.1% one -- scores the single smallest
+ *      possible p = 1/(m+1), the maximum possible e, regardless of how
+ *      small the perturbation actually was.
+ *
+ *  Predicate: throw unless the feature's median is finite, every entry of
+ *  its sortedAbsDev is finite, AND the array has nonzero spread (its last
+ *  entry, the maximum, is strictly greater than its first, the minimum --
+ *  sortedAbsDev is ascending by construction). */
+function assertNonDegenerate(name: ShapeFeatureName, fc: ShapeFeatureCalibration): void {
+  const allFinite = Number.isFinite(fc.median) && fc.sortedAbsDev.every((d) => Number.isFinite(d));
+  if (!allFinite) {
+    throw new Error(
+      `calibrateShapeBlocks: degenerate ${name} reference (non-finite median or deviation -- ` +
+      'a constant or otherwise degenerate held-out block, m2=0 makes kurtosis/skew 0/0)',
+    );
+  }
+  const spread = fc.sortedAbsDev[fc.sortedAbsDev.length - 1] - fc.sortedAbsDev[0];
+  if (!(spread > 0)) {
+    throw new Error(
+      `calibrateShapeBlocks: degenerate ${name} reference (zero spread across ${fc.sortedAbsDev.length} ` +
+      'reference blocks -- every |deviation| collapses to a single value, so any nonzero live ' +
+      'perturbation would score the extreme p regardless of its actual size)',
+    );
+  }
+}
+
 /** Slices `rows` into m disjoint CONTIGUOUS length-W blocks (m = floor(rows.length/W);
  *  the remainder, if any, is dropped, not padded), computes per-block kurtosis and
  *  |skew|, and stores each feature's reference median plus its ascending
- *  |deviation from median| distances. Requires m >= M_MIN_K6. */
+ *  |deviation from median| distances. Requires m >= M_MIN_K6 and a positive
+ *  integer W (Minor 3). Throws on a degenerate reference for either feature
+ *  (see `assertNonDegenerate`). */
 export function calibrateShapeBlocks(rows: number[], W: number = W_K6): ShapeCalibration {
+  if (!(Number.isInteger(W) && W > 0)) {
+    throw new Error(`calibrateShapeBlocks: W must be a positive integer, got ${W}`);
+  }
   const m = Math.floor(rows.length / W);
   if (m < M_MIN_K6) {
     throw new Error(
@@ -185,12 +245,11 @@ export function calibrateShapeBlocks(rows: number[], W: number = W_K6): ShapeCal
     kurtoses[i] = kurtosis;
     absSkews[i] = absSkew;
   }
-  return {
-    W,
-    m,
-    kurtosis: buildFeatureCalibration(kurtoses),
-    absSkew: buildFeatureCalibration(absSkews),
-  };
+  const kurtosisCal = buildFeatureCalibration(kurtoses);
+  const absSkewCal = buildFeatureCalibration(absSkews);
+  assertNonDegenerate('kurtosis', kurtosisCal);
+  assertNonDegenerate('absSkew', absSkewCal);
+  return { W, m, kurtosis: kurtosisCal, absSkew: absSkewCal };
 }
 
 function featureResult(
@@ -200,6 +259,20 @@ function featureResult(
   m: number,
   kappa: number,
 ): ShapeFeatureResult {
+  if (!Number.isFinite(T)) {
+    // A degenerate live window (e.g. a constant block: m2=0, so kurtosis and
+    // |skew| are 0/0 = NaN) carries no rank-conformal evidence. This must be
+    // an explicit e=1 (neutral, holds the books), NOT a fall-through to the
+    // dev/countGte path below: `Math.abs(NaN - fc.median)` is NaN, and
+    // `countGte`'s binary search on a NaN query never takes its "go left"
+    // branch (every `sorted[mid] < NaN` is false), so it silently converges
+    // to "0 excluded, all m counted" -- a REAL, WRONG p=1 (e=kappa), not a
+    // guarded neutral read. e=1 matches K3's registered NaN pathway
+    // (spectral-bet-e-process.ts / ADR 0026 / test/spectral-bet-e-process.test.ts):
+    // a degenerate window contributes no evidence rather than being silently
+    // mis-scored or poisoning the wealth product with a NaN.
+    return { name, T, p: NaN, e: 1 };
+  }
   const dev = Math.abs(T - fc.median);
   const count = countGte(fc.sortedAbsDev, dev);
   const p = (1 + count) / (m + 1);

@@ -38,7 +38,9 @@ export interface ShapeWealthResult {
 /** Slices `rows` into m disjoint CONTIGUOUS length-W blocks (m = floor(rows.length/W);
  *  the remainder, if any, is dropped, not padded), computes per-block kurtosis and
  *  |skew|, and stores each feature's reference median plus its ascending
- *  |deviation from median| distances. Requires m >= M_MIN_K6. */
+ *  |deviation from median| distances. Requires m >= M_MIN_K6 and a positive
+ *  integer W (Minor 3). Throws on a degenerate reference for either feature
+ *  (see `assertNonDegenerate`). */
 export declare function calibrateShapeBlocks(rows: number[], W?: number): ShapeCalibration;
 /** Per-window block-conformal shape bet. Requires `window.length === cal.W`.
  *  Per feature: distance-rank p against the calibration's reference blocks,

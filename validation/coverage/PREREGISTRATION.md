@@ -1870,12 +1870,16 @@ candidate's own class is K3 (sub-threshold oscillation), so its severity-3 reali
 actually see.
 
 **Cross-reference, named:** probing a spectral (K3, oscillation-only) detector's power arm with a
-step is the class this study's own `WORKLIST.md` C26 finding names — "the class determines the
+step is the class the knowledge wiki's `~/concord/knowledge/WORKLIST.md` C26 finding names — "the class determines the
 instrument," there about a scoring instrument mismatched to a detector's class (`increment_estimator`
 scored against an `e_process` cell it cannot speak about); here the same lesson recurs one stage
 earlier, at **injection** rather than instrument: a fault-class waveform (K1's step) mismatched to
 the detector-class (K3's oscillation-only construction) it is meant to power-test. Registered as the
 same category of error, not the identical finding.
+
+**Provenance correction, 2026-08-08 (before any K3 run):** the sentence above read "this study's own
+`WORKLIST.md`"; C26 lives in the knowledge wiki (`~/concord/knowledge/WORKLIST.md:97`) and this study
+carries no `WORKLIST.md` of its own — one word corrected, no claim, endpoint, floor, or seed moves.
 
 ### K3.3.3 The original step probe, retained as a verdict-free descriptive row
 

@@ -126,6 +126,21 @@ function assertRegistryAgreement() {
   }
   if (REGISTERED_CELLS.length !== 30) throw new Error(`run-battery: ${REGISTERED_CELLS.length} fault cells, §4 registers 30`);
   if (REGISTERED_CELLS[29].seed !== 20260836) throw new Error('run-battery: cell 29 seed != registered 20260836');
+  // Every seed constant against its registered literal (§6, A5). These are the numbers the
+  // seed formulas are made of; a formula that still parses with a changed constant produces a
+  // different data set under the same registered cell id, so each one is pinned by value here.
+  const literals = [
+    ['BASE_SEED', BASE_SEED, 20260807, '§6'],
+    ['TRAJ_STEP', TRAJ_STEP, 7919, '§6'],
+    ['SERIES_SALT', SERIES_SALT, 104729, 'A5'],
+    ['HELDOUT_OFFSET', HELDOUT_OFFSET, 500000, '§6'],
+    ['HELDOUT_ROWS', HELDOUT_ROWS, 10000, '§6'],
+  ];
+  for (const [name, actual, registered, where] of literals) {
+    if (actual !== registered) {
+      throw new Error(`run-battery: ${name} is ${actual}, PREREGISTRATION.md ${where} registers ${registered}`);
+    }
+  }
   // Amendment v1.2 item 1: the one HELDOUT_SEED literal ever registered for arm 31.
   const arm31 = ARM_CELLS.find((a) => a.idx === 31).seed + HELDOUT_OFFSET;
   if (arm31 !== 20760838) throw new Error(`run-battery: arm-31 HELDOUT_SEED ${arm31} != registered 20760838`);
@@ -247,11 +262,19 @@ const ADAPTERS = {
     read: (data, cell) => {
       const inst = familyDDet.make({ mu: 0, sigma: SIGMA, phi: cell.phi, alpha: ALPHA, windows: 'disjoint' });
       let crossed = false;
+      let firedPreOnset = false;
       for (let t = 0; t < T; t++) {
         const fired = inst.step(data.series[t]);          // run-power.mjs:78-84's step loop
-        if (fired === true && t >= ONSET) crossed = true;  // §5's onset gate (§10.2)
+        if (fired !== true) continue;
+        if (t >= ONSET) crossed = true;                    // §5's onset gate (§10.2)
+        else firedPreOnset = true;
       }
-      return { crossed, wealth: Math.exp(inst.logM()), logWealth: inst.logM() };
+      // Additive descriptive secondary, carrying no verdict (A2's precedent for the K4
+      // indicator rate). §5's gate counts a crossing at t >= onset; because the adapter's
+      // wealth is not reset at onset, a pre-onset crossing that leaves wealth above 1/alpha
+      // is still reported as `fire` afterwards and so still counts. This field makes the
+      // size of that overlap readable off the results instead of inferable from the prose.
+      return { crossed, firedPreOnset, wealth: Math.exp(inst.logM()), logWealth: inst.logM() };
     },
   },
 };
@@ -291,7 +314,23 @@ function heldoutParams(cell) {
 }
 
 // ── accumulation and the registered verdict vocabulary ────────────────────────
-const freshAcc = () => ({ fires: 0, throws: 0, nonFinite: 0, finite: 0, indicatorAtOnset: 0 });
+const freshAcc = () => ({
+  fires: 0, throws: 0, nonFinite: 0, finite: 0, indicatorAtOnset: 0, firedPreOnset: 0, firstError: null,
+});
+
+/** One adapter call, counted. The record() step is deliberately OUTSIDE the catch (see the
+ *  call sites): a defect in this harness's own bookkeeping must crash the run, never be
+ *  tallied as an adapter throw and reported as the detector's failure. */
+function attempt(acc, detId, data, cell, ctx) {
+  try { return { ok: true, out: callAdapter(detId, data, cell, ctx) }; }
+  catch (err) {
+    acc.throws += 1;
+    // M4: the FIRST error per (detector, cell) is retained and reaches the cell, so a reader
+    // can tell an adapter's own RangeError apart from a wiring defect without a re-run.
+    acc.firstError ??= err?.message ?? String(err);
+    return { ok: false };
+  }
+}
 
 function record(acc, detId, out) {
   if (ADAPTERS[detId].kind === 'terminal') {
@@ -307,13 +346,14 @@ function record(acc, detId, out) {
   if (!Number.isFinite(out.wealth)) { acc.nonFinite += 1; } else { acc.finite += 1; (acc.es ??= []).push(out.wealth); }
   if (out.crossed) acc.fires += 1;
   acc.indicatorAtOnset += out.indicatorAtOnset ?? 0;
+  if (out.firedPreOnset === true) acc.firedPreOnset += 1;
 }
 
 /** §9 (adapter throws > 1% of the cell's trajectories) + A3c (vacuity: not one finite read). */
 function fallback(acc, n) {
   if (acc.throws > 0.01 * n) {
     return `adapter threw on ${acc.throws}/${n} trajectories (> 1%, PREREGISTRATION.md §9) `
-      + '— a defect, not a measurement';
+      + `— a defect, not a measurement; first error: ${acc.firstError}`;
   }
   if (acc.finite === 0) {
     return `no finite read on any of ${n} trajectories (vacuous, PREREGISTRATION.md A3c) `
@@ -354,8 +394,8 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
     const data = generate(cell, i);
     for (const detId of dets) {
       const a = acc.get(detId);
-      try { record(a, detId, callAdapter(detId, data, cell, ctxForRead)); }
-      catch { a.throws += 1; }
+      const r = attempt(a, detId, data, cell, ctxForRead);
+      if (r.ok) record(a, detId, r.out);
     }
   }
 
@@ -393,6 +433,9 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       c.heldout_seed = ctx.heldoutSeed;
       c.heldout_rows = HELDOUT_ROWS;
     }
+    // family_D's own descriptive secondary, no verdict attached: how many trajectories the
+    // adapter already fired on before onset, which is the size of §5's gate overlap.
+    if (detId === 'family_D_spectral_e_detector') c.fired_pre_onset = a.firedPreOnset;
     cells.push(c);
     process.stderr.write(
       `${detId.padEnd(28)} ${cell.fault_class} ${cell.severity.padEnd(20)} `
@@ -430,10 +473,10 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       ? { matrix: injectUnison(base.matrix, { sigma: SIGMA, at: ONSET, eps: 3 }) }
       : { series: injectStep(base.series, { sigma: SIGMA, at: ONSET, delta: 3 }) };
 
-    try { record(healthy, detId, callAdapter(detId, base, arm, ctxForRead)); }
-    catch { healthy.throws += 1; }
-    try { record(power, detId, callAdapter(detId, shifted, arm, ctxForRead)); }
-    catch { power.throws += 1; }
+    const rh = attempt(healthy, detId, base, arm, ctxForRead);
+    if (rh.ok) record(healthy, detId, rh.out);
+    const rp = attempt(power, detId, shifted, arm, ctxForRead);
+    if (rp.ok) record(power, detId, rp.out);
   }
 
   // S2. exceedance is the crossing rate the card's falsifier names — for the terminal group
@@ -521,8 +564,15 @@ const enginePin = JSON.parse(fs.readFileSync(path.join(ENGINE_ROOT, 'package.jso
 const outRoot = process.env.COVERAGE_RESULTS_DIR
   ? path.resolve(process.env.COVERAGE_RESULTS_DIR)
   : path.join(STUDY, 'results');
+// results/live is the certification evidence path: loadEvidence (collect.mjs:138) reads
+// validation/*/results/live/* and scores whatever it finds there. Only a run at the registered
+// n = 2000 with no test hook engaged may write to it; everything else lands in results/sim, the
+// run.mjs:76 convention. This is a property of the run, not a flag the caller passes, so a
+// smoke run cannot opt itself into the evidence path. --classes does NOT force sim: Task 9 may
+// run the registered n class by class (plan step 2), and `classes_run` below records the scope.
+const MODE = (N === REGISTERED_N && FORCE_THROW === null) ? 'live' : 'sim';
 const stamp = `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}Z`;
-const outDir = path.join(outRoot, 'live', `run-${stamp}`);
+const outDir = path.join(outRoot, MODE, `run-${stamp}`);
 if (fs.existsSync(outDir)) {
   throw new Error(`run-battery: ${outDir} exists; results are append-only and this run refuses to overwrite`);
 }
@@ -541,13 +591,24 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   engine_pin: enginePin,
   engine_version: enginePin,
   node: process.version,
+  // Interpolated from the constants the run actually used, never retyped: a manifest that
+  // quoted the seed scheme as a hardcoded string could describe a run that used different
+  // numbers. assertRegistryAgreement() pins each constant to its registered literal.
   seed_scheme: {
-    cell: 'CELL_SEED = BASE_SEED(20260807) + cellIndex',
-    trajectory: 'seed(i) = CELL_SEED + 7919*i',
-    series: 'seed(i,k) = CELL_SEED + 7919*i + 104729*k (K2 matrices and arm 30)',
-    heldout: 'HELDOUT_SEED = CELL_SEED + 500000; seed(j) = HELDOUT_SEED + 7919*j, j = 0..9999',
+    cell: `CELL_SEED = BASE_SEED(${BASE_SEED}) + cellIndex`,
+    trajectory: `seed(i) = CELL_SEED + ${TRAJ_STEP}*i`,
+    series: `seed(i,k) = CELL_SEED + ${TRAJ_STEP}*i + ${SERIES_SALT}*k (K2 matrices and arm 30)`,
+    heldout: `HELDOUT_SEED = CELL_SEED + ${HELDOUT_OFFSET}; seed(j) = HELDOUT_SEED + ${TRAJ_STEP}*j, `
+      + `j = 0..${HELDOUT_ROWS - 1}`,
     heldout_seed_arm_31: ARM_CELLS.find((a) => a.idx === 31).seed + HELDOUT_OFFSET,
+    constants: {
+      base_seed: BASE_SEED,
+      trajectory_step: TRAJ_STEP,
+      series_salt: SERIES_SALT,
+      heldout_offset: HELDOUT_OFFSET,
+    },
   },
+  mode: MODE,
   n: N,
   registered_n: REGISTERED_N,
   smoke: N !== REGISTERED_N,
@@ -565,7 +626,8 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   tier: 'T1',
   force_throw_hook: FORCE_THROW,
   generated_at: stamp,
-  elapsed_s: (Date.now() - t0) / 1000,
 }, null, 1)}\n`);
 
-process.stderr.write(`\n${cells.length} cells -> ${outDir}\n`);
+// Elapsed time is operator information, not a manifest field: A8 registers the field list and
+// wall-clock is not in it, so it goes to stderr instead of into the frozen record.
+process.stderr.write(`\n${cells.length} cells -> ${outDir}\nelapsed ${(Date.now() - t0) / 1000}s\n`);

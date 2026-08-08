@@ -1,14 +1,17 @@
 // validation/coverage/test/run-battery.test.mjs — smoke tests for the battery harness.
 //
 // The harness is driven as a child process at --n 20 (smoke), with COVERAGE_RESULTS_DIR
-// pointed at a fresh temp dir so no test ever writes under
-// validation/coverage/results/live (Task 9 owns the registered runs; loadEvidence reads
-// validation/*/results/live/* and would pick a smoke run up as evidence).
+// pointed at a fresh temp dir. Two independent guards keep a smoke run out of the
+// certification evidence path: the temp results root, and the harness's own mode routing
+// (any run with n != the registered 2000, or with the forced-throw hook set, lands under
+// results/sim, never results/live — loadEvidence reads validation/*/results/live/*,
+// collect.mjs:138). Every assertion below checks results/live was never created.
 //
 // What is asserted here is shape and wiring, not the registered endpoints: one cell per
-// registered (class, detector) pair, complete fields, `canonical` marked exactly once per
-// class x detector, a real detection at a deliberately-injected 3-sigma K1 step, the A1
-// healthy arms' S2 shape, and the NOT-EXECUTABLE fallback path.
+// registered (class, detector) pair, complete fields, an exact cell census, `canonical`
+// marked exactly once per class x detector, a real detection at a deliberately-injected
+// 3-sigma K1 step, the A1 healthy arms' S2 shape, the manifest's seed constants against
+// their registered literals, and the NOT-EXECUTABLE fallback path.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -31,19 +34,38 @@ const REGISTERED_PAIRS = {
   K6: ['safe_t', 'universal_inference'],
 };
 
-function runHarness(args = [], env = {}) {
+// Registered seed literals (PREREGISTRATION.md §6, A5). The harness interpolates its own
+// constants into the manifest and asserts them against these same literals at startup, so a
+// constant that moves fails here as well as there.
+const REGISTERED_SEEDS = {
+  base_seed: 20260807, trajectory_step: 7919, series_salt: 104729, heldout_offset: 500000,
+};
+
+// The registered per-(class, detector) census (§7 + A6 + A1): 62 fault-class rows and 4 arm rows.
+const REGISTERED_CENSUS = {
+  safe_t: 30,                        // K1 4 + K2 8 + K3 6 + K4 4 + K5 4 + K6 4
+  universal_inference: 18,           // K1 4 + K3 6 + K5 4 + K6 4
+  group_average_e_value: 8,          // every K2 cell
+  family_E_conformal_heldout: 4,     // every K4 cell
+  family_D_spectral_e_detector: 2,   // K3's canonical and -ar1 cells only
+};
+
+function runHarness(args = ['--n', '20'], env = {}) {
   const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-battery-'));
-  const stdout = execFileSync(process.execPath, [HARNESS, '--n', '20', ...args], {
+  const stdout = execFileSync(process.execPath, [HARNESS, ...args], {
     env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot, ...env },
     encoding: 'utf8',
   });
-  const liveDir = path.join(outRoot, 'live');
-  const runs = fs.readdirSync(liveDir);
+  assert.equal(fs.existsSync(path.join(outRoot, 'live')), false,
+    'a smoke run must never write results/live (the certification evidence path)');
+  const simDir = path.join(outRoot, 'sim');
+  const runs = fs.readdirSync(simDir);
   assert.equal(runs.length, 1, `expected one run dir, got ${runs.join(',')}`);
-  const runDir = path.join(liveDir, runs[0]);
+  const runDir = path.join(simDir, runs[0]);
   return {
     outRoot,
     runDir,
+    mode: 'sim',
     stdout,
     summary: JSON.parse(fs.readFileSync(path.join(runDir, 'summary.json'), 'utf8')),
     manifest: JSON.parse(fs.readFileSync(path.join(runDir, 'manifest.json'), 'utf8')),
@@ -83,6 +105,46 @@ test('every registered (class, detector) pair emits cells with complete fields',
         }
       }
     }
+  }
+});
+
+test('the cell census is exactly the registered (class, detector) assignment', () => {
+  const { summary } = smoke();
+  assert.equal(summary.cells.length, 66, 'registered census: 62 fault-class rows + 4 arm rows');
+
+  const faultCells = summary.cells.filter((c) => c.fault_class != null);
+  assert.equal(faultCells.length, 62);
+  const byDetector = {};
+  for (const c of faultCells) byDetector[c.detector] = (byDetector[c.detector] ?? 0) + 1;
+  assert.deepEqual(byDetector, REGISTERED_CENSUS);
+
+  const armCells = summary.cells.filter((c) => c.arm != null);
+  assert.equal(armCells.length, 4);
+  assert.deepEqual(
+    armCells.map((c) => `${c.detector}:${c.arm}`).sort(),
+    ['family_E_conformal_heldout:healthy', 'family_E_conformal_heldout:power',
+      'group_average_e_value:healthy', 'group_average_e_value:power'],
+  );
+  assert.equal(faultCells.length + armCells.length, summary.cells.length,
+    'every cell is either a fault-class cell or an arm — no third shape');
+});
+
+test('the ordinary path is throw-free end to end', () => {
+  const { summary } = smoke();
+  for (const c of summary.cells) {
+    assert.equal(c.adapter_failures, 0,
+      `${c.detector} ${c.fault_class ?? c.arm} ${c.severity ?? ''}: ${c.not_executable_reason}`);
+    assert.equal(c.verdict === 'NOT-EXECUTABLE', false, `${c.detector}: unexpected NOT-EXECUTABLE`);
+  }
+});
+
+test('family_D cells carry the pre-onset firing count as a descriptive secondary', () => {
+  const { summary } = smoke();
+  const dCells = summary.cells.filter((c) => c.detector === 'family_D_spectral_e_detector');
+  assert.equal(dCells.length, 2);
+  for (const c of dCells) {
+    assert.ok(Number.isInteger(c.fired_pre_onset), 'fired_pre_onset must be an integer count');
+    assert.ok(c.fired_pre_onset >= 0 && c.fired_pre_onset <= c.n);
   }
 });
 
@@ -146,6 +208,7 @@ test('manifest records the registered seed scheme, substrate hash and smoke flag
   const { manifest } = smoke();
   assert.equal(manifest.study, 'coverage');
   assert.equal(manifest.prereg, 'PREREGISTRATION.md');
+  assert.equal(manifest.mode, 'sim');
   assert.equal(manifest.alpha, 0.05);
   assert.equal(manifest.ticks, 300);
   assert.equal(manifest.onset, 100);
@@ -153,10 +216,40 @@ test('manifest records the registered seed scheme, substrate hash and smoke flag
   assert.equal(manifest.registered_n, 2000);
   assert.equal(manifest.smoke, true, 'an --n override must be flagged, never read as the registered run');
   assert.match(manifest.substrate_sha256, /^[0-9a-f]{64}$/);
-  assert.match(manifest.seed_scheme.cell, /20260807/);
-  assert.match(manifest.seed_scheme.series, /104729/);
   assert.equal(manifest.seed_scheme.heldout_seed_arm_31, 20760838);
   assert.deepEqual(Object.keys(manifest.classes), ['K1', 'K2', 'K3', 'K4', 'K5', 'K6']);
+  assert.equal('elapsed_s' in manifest, false, 'A8 registers the manifest field list; timing is not in it');
+});
+
+// Mutate-resistance. The manifest's seed_scheme prose is INTERPOLATED from the harness's own
+// constants, so a constant that moves changes the emitted string. This test pins both ends:
+// the constants equal the registered literals, and the prose the run recorded quotes those same
+// constants. Editing a constant without editing the pre-registration fails here (and at the
+// harness's own startup assertion), rather than producing a run whose manifest describes a seed
+// scheme it did not use.
+test('manifest seed_scheme quotes the harness constants, and the constants are the registered literals', () => {
+  const { manifest } = smoke();
+  const c = manifest.seed_scheme.constants;
+  assert.deepEqual(c, REGISTERED_SEEDS, 'seed constants moved away from the registered literals');
+  assert.ok(manifest.seed_scheme.cell.includes(String(c.base_seed)), manifest.seed_scheme.cell);
+  assert.ok(manifest.seed_scheme.trajectory.includes(String(c.trajectory_step)), manifest.seed_scheme.trajectory);
+  assert.ok(manifest.seed_scheme.series.includes(String(c.series_salt)), manifest.seed_scheme.series);
+  assert.ok(manifest.seed_scheme.series.includes(String(c.trajectory_step)), manifest.seed_scheme.series);
+  assert.ok(manifest.seed_scheme.heldout.includes(String(c.heldout_offset)), manifest.seed_scheme.heldout);
+  assert.ok(manifest.seed_scheme.heldout.includes(String(c.trajectory_step)), manifest.seed_scheme.heldout);
+  // The one HELDOUT_SEED literal ever registered (Amendment v1.2 item 1) must be the arithmetic
+  // result of the constants, not a copied number.
+  assert.equal(c.base_seed + 31 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_31);
+});
+
+test('a smoke run lands under results/sim and never creates results/live', () => {
+  const { outRoot, runDir, manifest } = runHarness(['--n', '5', '--classes', 'K1']);
+  assert.equal(fs.existsSync(path.join(outRoot, 'live')), false);
+  assert.ok(runDir.startsWith(path.join(outRoot, 'sim')), runDir);
+  assert.equal(manifest.mode, 'sim');
+  assert.equal(manifest.n, 5);
+  assert.equal(manifest.smoke, true);
+  assert.deepEqual(fs.readdirSync(outRoot), ['sim'], 'results/sim is the only directory a smoke run creates');
 });
 
 // The NOT-EXECUTABLE path, exercised by the harness's named test-only hook
@@ -164,7 +257,9 @@ test('manifest records the registered seed scheme, substrate hash and smoke flag
 // throw. §9's fallback (adapter throws on > 1% of a cell's trajectories) then applies
 // per (detector, cell), leaving the other detector on the same cells measured.
 test('COVERAGE_FORCE_THROW drives the §9 NOT-EXECUTABLE fallback per (detector, cell)', () => {
-  const { summary } = runHarness(['--classes', 'K1'], { COVERAGE_FORCE_THROW: 'safe_t' });
+  const { summary, manifest } = runHarness(['--n', '20', '--classes', 'K1'], { COVERAGE_FORCE_THROW: 'safe_t' });
+  assert.equal(manifest.mode, 'sim', 'the forced-throw hook alone routes a run away from results/live');
+  assert.equal(manifest.force_throw_hook, 'safe_t');
   const safeTCells = summary.cells.filter((c) => c.detector === 'safe_t');
   assert.ok(safeTCells.length > 0);
   for (const c of safeTCells) {
@@ -172,6 +267,9 @@ test('COVERAGE_FORCE_THROW drives the §9 NOT-EXECUTABLE fallback per (detector,
     assert.equal(c.detection_rate, null);
     assert.equal(c.adapter_failures, 20);
     assert.match(c.not_executable_reason, /adapter threw/);
+    // M4: the first error message per (detector, cell) is retained, so a reader can tell an
+    // adapter's RangeError apart from a wiring defect without re-running the battery.
+    assert.match(c.not_executable_reason, /first error: COVERAGE_FORCE_THROW=safe_t/);
   }
   const uiCells = summary.cells.filter((c) => c.detector === 'universal_inference');
   assert.ok(uiCells.length > 0, 'the other detector on the same cells must still be measured');

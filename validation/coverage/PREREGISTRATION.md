@@ -2625,3 +2625,207 @@ arms (K6.13); predictions with falsifiers for every cell and both arms (K6.14); 
 inheritance plus a new T2-specific rule (K6.15). No endpoint, floor, or seed in §1–14, Amendment
 v1.1, Amendment v1.2, Erratum v1.3, Amendment v2.K4, Amendment v2.K4.1, Amendment v2.K3, Amendment
 v2.K3.1, Amendment v2.K3.2, or Amendment v2.K3.3 moves.
+
+## Amendment v2.K6.1 — 2026-08-08, corrections before any K6 run
+
+Closes a review verdicted NEEDS-AMENDMENT-BEFORE-RUN on Amendment v2.K6. Registered before any run
+of `shape_block_conformal_bet`. Amendment v2.K6's text (K6.1–K6.16) stays intact; every item below
+names the exact subsection it corrects, per rule 7 (K3.1.9/v1.2's own precedent for citation and
+arithmetic corrections registered before any run uses the wrong value). All items are
+registrations: no frozen endpoint, floor, or seed moves.
+
+### K6.1.1 The d=2.0 prediction, corrected: the per-window ceiling was already registered, its consequence was not drawn (K6.4 Step 5, K6.8, K6.14, Amendment summary)
+
+**The closed-form argument is not new — it is already present in this amendment's own arithmetic.**
+K6.7 registers (and this document's own commit `8e98da6` corrected the rounding of):
+`e = κ*p^(κ-1)` is bounded in `[κ, κ*(m+1)^(1-κ)]` — at the registered `m=333`, `κ=0.1`: `[0.1,
+0.1*334^0.9] ≈ [0.1, 18.68]` (re-verified here: `0.1*334^0.9 = 18.6798`, node-computed). K6.7 drew
+this bound only for a different point (`non_finite_wealth`/`degenerate_windows` are structurally
+zero); it did not draw the consequence for K6.4/K6.8/K6.14's own predictions, which is registered
+here: **`18.68 < 20 = 1/alpha`, so NO SINGLE WINDOW's `eAvg`, at any severity, can ever cross the
+wealth bar alone.** Wealth is a PRODUCT across windows (K6.2), so crossing at all requires the
+CUMULATIVE product across at least two windows to clear 20 — a materially rarer event than K6.8's
+original `~0.03` figure assumed. That figure read "INERT-floor-adjacent" off the single-window
+ceiling's proximity to 20 without accounting for the compounding the ceiling itself makes
+necessary.
+
+**Disclosed (Task 9 review, not independently re-run here): the registered endpoint, measured
+directly, reads `1/20000`, `1/20000`, `0/20000` across three independent calibration draws** — order
+`0.00003`–`0.00005`, not `0.03`.
+
+**K6.4's Step 5 table is corrected. Original text read:**
+
+> | idx 28 | 2.0 | **~0.03** |
+
+**Corrected: `idx 28 | 2.0 | ~0.000`** — every severity in the registered grid, including `d=2.0`,
+now predicts `~0.000`, per the ceiling argument and the disclosed measurement above.
+
+**K6.8's prediction paragraph is corrected. Original text read:**
+
+> **Registered prediction, honest, not tuned around: `detection_rate ≈ 0.03`** (K6.4's own Step-5
+> grid, idx 28's own predicted rate, directly — the S3 arm uses the identical construction the
+> fault-class grid's own strongest registered cell uses, so the two predictions are the SAME
+> number, not independently derived). At `0.03 < INERTNESS_FLOOR = 0.10`
+> (`validation/certification/lib/constants.mjs:19`), `scoreS3` (`score.mjs:340-345`) reads this
+> cell **INERT**, not `PASS`
+
+**Corrected: `detection_rate ≈ 0.000`** (this section's own ceiling argument, not merely echoed
+from K6.4 — the two predictions stay the SAME number, now `~0.000` instead of `~0.03`, for the same
+reason K6.8 originally gave). `INERTNESS_FLOOR = 0.10` is at `validation/certification/lib/
+constants.mjs:20` (K6.1.4 corrects this citation separately, below). **`0.000 < 0.10` exactly as
+`0.03 < 0.10` did** — `scoreS3` still reads this cell INERT, `overallVerdict` still caps at
+ADVISORY (`score.mjs:564-568`'s valid-but-inert rule, cited unchanged): **the routing is verified
+robust to this correction — S3 expected INERT, overall expected ADVISORY, exactly as K6.8
+originally concluded, for a corrected reason.** K6.8's falsifier line ("`detection_rate` materially
+above `0.03`") is corrected to **"materially above `~0.000` (approaching or exceeding `0.50`)"**.
+
+**K6.14's two bullets are corrected. Original text read:**
+
+> - **Grid cells.** idx 26 (`d=1.0`): predicted `~0.000`. idx 28 (`d=2.0`): predicted `~0.03`
+>   (INERT-floor-adjacent, K6.4 Step 5).
+> - **S3 arm (cell 34).** *Prediction:* `~0.03`, expected INERT (K6.8). *Falsifier:* materially
+>   above `0.03` — a surprise, not a target (K6.8's own closing paragraph).
+
+**Corrected: idx 28 predicted `~0.000` (ceiling-bound, K6.1.1, not "INERT-floor-adjacent" — the
+figure is now two orders of magnitude below the INERT floor, not adjacent to it); S3 arm prediction
+`~0.000`, expected INERT (K6.8 as corrected above); falsifier "materially above `~0.000`."**
+
+**The Amendment summary's own recap line is corrected. Original text read:** "the predicted
+detection grid `d=1.0→~0.000, d=1.5→~0.000, d=2.0→~0.03`" — **corrected: `d=1.0→~0.000,
+d=1.5→~0.000, d=2.0→~0.000`.**
+
+### K6.1.2 The O(1/m) qualifier, corrected: conservative, not anti-conservative (K6.11)
+
+**K6.11's disclosed-measurement sentence is untraceable and directionally wrong, corrected here
+with a closed-form re-derivation rather than a fresh disclosure. Original text read:**
+
+> **Disclosed measurement (Task 9 review, not re-run here): healthy per-feature exceedance at
+> `alpha=0.05`, `m` in the ~300 class, measures **+0.0010** above nominal** — a small, `O(1/m)`-
+> consistent discretization effect, not a validity defect
+
+**Corrected, CLOSED-FORM (re-derived here, not disclosed).** Under exchangeability, `p` is uniform
+on the discrete set `{1/(m+1), ..., (m+1)/(m+1)}` (K6.11's own registered premise, unchanged). The
+floor-type event `{p <= alpha}` has probability exactly `floor(alpha*(m+1)) / (m+1)`, and since
+`floor(x) <= x` for any real `x`: `floor(alpha*(m+1))/(m+1) <= alpha*(m+1)/(m+1) = alpha`, **ALWAYS**
+— the discretization is **CONSERVATIVE** (a discrete p-value's exceedance rate under this
+floor-type rule is never above the nominal `alpha`), the OPPOSITE sign from the withdrawn
+"+0.0010 above nominal" claim. Computed directly (node-verified, not assumed):
+
+```
+m=300: floor(0.05*301)/301 = floor(15.05)/301 = 15/301 ≈ 0.049834   (below 0.05)
+m=333: floor(0.05*334)/334 = floor(16.7)/334  = 16/334 ≈ 0.047904   (below 0.05)
+```
+
+**Both registered `m` values (K6.3) give an exceedance rate below nominal — the qualifier
+(`O(1/m)`, finite-sample discreteness) stays; its sign and value are what move.** Corroborated,
+not merely asserted: the module's own COMMITTED unit-test measurement at `m=200` (matched
+`φ=0.6/0.6`, `task-9-report.md` "Important 6," reproduced verbatim, not re-derived here): kurtosis
+`0.04618`, absSkew `0.04950` — **both below that test's own nominal `0.04975`**, consistent with
+the corrected conservative direction, not the withdrawn claim. `M_MIN_K6 = 100` (K6.1) remains the
+registered floor below which this qualifier would widen past acceptable; unchanged by this
+correction.
+
+### K6.1.3 T2 field list — the plan's literal line superseded, named explicitly (K6.12)
+
+**The plan's own text (`docs/superpowers/plans/2026-08-08-coverage-gap-detectors.md`, Task 11
+"Files:" bullet) reads:**
+
+> Create `validation/coverage/harness/run-clustersynth-arm.mjs` (T2: walks healthy clustersynth
+> shards, per-coordinate calibrate-then-score, emits cells `{detector, fault_class: 'K6', arm:
+> 'T2-clustersynth', counter, crossing_rate, n_windows, verdict}` to the same run-dir shape,
+> sim/live routing per registered N).
+
+**Followed literally, this field list VOIDs the run.** K6.12's own mismatch-mechanism derivation
+(`cellsFor`'s detector-name-only matching, `validation/certification/lib/collect.mjs`, plus
+`applyGuards`'s foreign-instrument rule, `guards.mjs:14-19`) shows a T2 cell carrying the literal
+`crossing_rate` field with no `increment_estimator` present reads `ownPresent=[]`,
+`foreignPresent=['crossing_rate']` — a `VOID`, excluding T2's own evidence from this card's S2
+stage under a confusing "instrument-class mismatch" reason that misdescribes a deliberately
+out-of-instrument arm (K6.12's own text, unchanged, already derives this; this item names the
+supersession explicitly rather than leaving the plan's contradicting literal line unaddressed).
+
+**Registered: K6.12's own field set — `t2_crossing_rate` (not `crossing_rate`), `t2_verdict` (not
+`verdict`) — SUPERSEDES the plan's literal line above, named explicitly, per K3.3.4's pattern
+(quote, correct, name the supersession rather than silently follow or silently correct the plan
+text itself).** One additional supersession, not previously named as such: **T2 cells carry NO
+`fault_class` field at all** (the plan's literal line stamps `fault_class: 'K6'`; K6.12 never
+registers that as an intended path). Reason, checked directly against `coverageFor`
+(`score.mjs`'s fault-class grouping layer): a `fault_class: 'K6'` stamp would make a T2 cell
+visible to `coverageFor`'s own `classCells = cells.filter(c => c.fault_class === classId)` filter;
+since T2 cells carry no `canonical`, `severity`, or `detection_rate` (K6.12: NO power claim), such
+a cell would clear `applyGuards` (no instrument fields present at all under the corrected naming,
+so neither `ownPresent` nor `foreignPresent` is nonempty, falling through to `status: 'OK'`) and
+then fail `coverageFor`'s own `Number.isFinite(powerRate(cell))` check, landing in K6's coverage
+`excluded[]` list with the misleading reason "no finite power rate recorded" — a shapeless,
+power-free cell cluttering K6's coverage report for no registered reason. Omitting `fault_class`
+keeps T2 fully outside `coverageFor` as well as outside S2/S3, not merely outside S2/S3 as K6.12's
+original text stated. **Task 11's adapter must emit K6.12's registered field set, not the plan's
+own literal example.**
+
+### K6.1.4 Minor corrections, and two fields the T2 arm's registration names explicitly
+
+- **`INERTNESS_FLOOR` citation, corrected.** K6.8 cited `validation/certification/lib/
+  constants.mjs:19`; the actual line is `:20` (`export const INERTNESS_FLOOR = 0.10;`, checked
+  directly). Corrected in place at K6.8 (via K6.1.1's own quote-and-correct, above) and registered
+  here as its own citation fix, independent of the numeric correction K6.1.1 makes.
+- **`ln(334)` transcription, corrected.** K6.5 wrote "`log(334) ≈ 5.81124`" — a transcription slip;
+  `Math.log(334) = 5.8111409929767`, i.e. **`5.811141`**, not `5.81124`. The registered numeric
+  CONSEQUENCE (`κ* >= 0.172` at `m=333`, K6.5) was computed directly from `1/Math.log(334)` and is
+  unaffected — only the prose citation of `ln(334)` itself was wrong, corrected here.
+- **KS critical value, precision corrected.** K6.7 wrote "`1.36/sqrt(24000) ≈ 0.008780`";
+  node-verified: `1.36/sqrt(24000) = 0.0087788`. Corrected to the stated precision.
+- **`inject.mjs` citations in K6.4 and K6.8 gain their directory.** Both cite `inject.mjs:60-70`
+  bare (matching §2's own original table, which this document does not touch); within THIS
+  amendment's own new sections, the fuller, unambiguous path is registered:
+  `validation/coverage/lib/inject.mjs:60-70`, matching the fully-pathed citation style every other
+  new citation in this amendment already uses (e.g. `detectors/shape-block-conformal-bet.ts:87`).
+- **Module docstring line, corrected.** K6.3 cited `detectors/shape-block-conformal-bet.ts:224`
+  for "the remainder, if any, is dropped, not padded" — checked directly: `:224` is
+  `/** Slices \`rows\` into m disjoint CONTIGUOUS length-W blocks (m = floor(rows.length/W);`; the
+  quoted text itself is on the next line, `:225`. Corrected.
+- **`t2_pooled_lower_95`, registered.** K6.12/K6.13 describe a "Wilson 95% lower bound on the
+  pooled crossing rate" (K6.13's own T2 stop-condition text) without naming its field. Registered:
+  the pooled row (K6.12's "one overall pooled row") carries `t2_pooled_lower_95` — the exact field
+  K6.13's stop condition tests, named to avoid the same kind of ambiguity K6.1.3 corrects for
+  `crossing_rate`/`verdict`.
+- **`k`/`n` on the T2 per-(shard, coordinate) rows, defined.** K6.12 registers "a crossing iff
+  wealth `>= 20` at any of the 20 disjoint live-window checkpoints" and "per-coordinate crossing
+  rate = crossings / (shards not skipped ...)" without naming the fields those counts live in.
+  Registered: each per-(shard, coordinate) row carries `k` (`1` if that pair crossed, `0`
+  otherwise — a single binary outcome per pair, not a sub-count over its 20 windows) and `n`
+  (always `1` per row, the row's own weight); the per-coordinate and pooled summary rows aggregate
+  these as `k = sum(k_i)`, `n = count of non-skipped pairs`, matching every other Wilson-bound
+  `k`/`n` pair already registered throughout this document (§7, A1, K3.7, K4.5).
+- **The review's superseded phi-mismatch figures, named beside the reproduced ranges (K6.11).**
+  K6.11's table registers the reproduced ranges `0.0584–0.0589` and `0.0532–0.0577`
+  (`task-9-report.md`'s own reproduction). The review's ORIGINALLY reported figures, which
+  `task-9-report.md` names and does not claim to bit-exactly match, are registered here beside
+  them for completeness: **cal φ=0.6/live φ=0 → `0.0608`; cal φ=0.9/live φ=0.6 → `0.0572`**
+  (`task-9-report.md`: "Review's reported figures... My per-feature rates don't individually match
+  either figure, but the mean of kurtosis and absSkew rates... lands close to both"). **Not
+  bit-exact** — the reproduction and the original probe used different seeds/N and, per
+  `task-9-report.md`'s own account, likely different per-feature-vs-pooled methodology; both
+  numbers are registered so a future reader has the full provenance chain, not only the
+  reproduction's own range.
+
+### Amendment summary
+
+Corrects K6.4's Step 5 table, K6.8's S3 prediction/falsifier, K6.14's grid-cell and S3-arm
+bullets, and the prior amendment summary's own recap line — quoted and replaced, `d=2.0`'s
+predicted rate `~0.03 → ~0.000` throughout, on the closed-form per-window ceiling argument
+(`κ*(m+1)^(1-κ) = 0.1*334^0.9 = 18.68 < 20`, already present in K6.7's own arithmetic but its
+consequence not previously drawn), corroborated by a disclosed reviewer measurement
+(`1/20000, 1/20000, 0/20000`); S3-INERT and overall-ADVISORY are unchanged, registered as robust
+to the correction (K6.1.1). Corrects K6.11's `O(1/m)` disclosed-measurement sentence from
+"+0.0010 above nominal" (untraceable, directionally wrong) to a closed-form conservative bound,
+`floor(alpha*(m+1))/(m+1) <= alpha` always, `0.049834` at `m=300` and `0.047904` at `m=333`, both
+below nominal, corroborated by the committed `m=200` unit-test measurements (K6.1.2). Registers
+K6.12's field set (`t2_crossing_rate`, `t2_verdict`, no `fault_class`) as a named supersession of
+the plan's own literal, VOID-inducing Task 11 field list (K6.1.3). Corrects five citations/
+transcriptions in place (`INERTNESS_FLOOR` line, `ln(334)`, KS critical precision, `inject.mjs`'s
+directory, the module docstring line) and registers two field names the T2 arm's own text implied
+but did not name (`t2_pooled_lower_95`, per-row `k`/`n`), plus the review's original (superseded,
+not bit-exactly reproduced) phi-mismatch figures beside the reproduced ranges (K6.1.4). **No
+endpoint, floor, or seed in §1–14 or any earlier amendment moves — including K6.1–K6.16's own
+registered constants, seeds, and stop conditions, which stand exactly as Amendment v2.K6
+registered them.**

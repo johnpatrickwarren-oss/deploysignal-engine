@@ -2286,7 +2286,7 @@ arithmetic (`W = 30`, span `[100,300)`), reused here because it is the same cons
 - `degenerate_windows`, `non_finite_wealth` — registered STRUCTURALLY ZERO for this candidate, a
   stronger claim than K3.1.6's "not expected to fire": `p` is bounded in `(1/(m+1), 1]` by
   construction (`countGte`'s range, K6.2), so `e = κ*p^(κ-1)` is bounded in `[κ, κ*(m+1)^(1-κ)]`
-  — at `m=333`, `κ=0.1`: `[0.1, 0.1*334^0.9] ≈ [0.1, 18.69]` — always finite, with no `p=0`
+  — at `m=333`, `κ=0.1`: `[0.1, 0.1*334^0.9] ≈ [0.1, 18.68]` — always finite, with no `p=0`
   underflow pathway (unlike K3's `p=exp(-U)`, which CAN underflow to exactly 0 for large `U`).
   The module's own explicit NaN-guard (`featureResult`, `e=1` on non-finite `T`, K6.2) further
   guarantees `eAvg` is always finite even on a degenerate window. Both fields are carried for

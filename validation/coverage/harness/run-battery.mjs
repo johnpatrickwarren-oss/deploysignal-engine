@@ -101,6 +101,14 @@ if (K3_WINDOW_SPAN !== '[100,280)') throw new Error(`run-battery: K3 window span
 // that used it can never be read as a measurement.
 const FORCE_THROW = process.env.COVERAGE_FORCE_THROW ?? null;
 
+// Test-only hook, named: overwrites spectral_bet_e_process's window 0 with a huge on-grid
+// (k=3) oscillation on every trajectory, pushing U_3 past double-precision's ~745 underflow
+// threshold so p_3 = exp(-U_3) is exactly 0 and e_3 = kappa*p^(kappa-1) is Infinity — proving
+// the degenerate_windows counter (K3.1.6) can actually move, a positive control the ordinary
+// registered amplitudes never exercise. Cannot fire by accident (unset env var leaves it
+// false) and is recorded in the manifest, same convention as COVERAGE_FORCE_THROW.
+const FORCE_SPECTRAL_DEGENERATE = process.env.COVERAGE_FORCE_SPECTRAL_DEGENERATE === '1';
+
 // ── the registered cell table (§6, A1), copied literally ──────────────────────
 const F = (idx, fault_class, severity, phi) => ({ idx, fault_class, severity, phi, seed: BASE_SEED + idx });
 const REGISTERED_CELLS = [
@@ -349,6 +357,14 @@ const ADAPTERS = {
       for (let w = 0; w < K3_WINDOWS; w++) {
         const start = ONSET + w * K3_WINDOW_LEN;
         windows.push(data.series.slice(start, start + K3_WINDOW_LEN));
+      }
+      // Test-only positive control (never fires unless COVERAGE_FORCE_SPECTRAL_DEGENERATE=1):
+      // replace window 0 with a huge on-grid k=3 oscillation so I(f_3) underflows p_3 to
+      // exactly 0, forcing e_3 = Infinity and eAvg non-finite — proving degenerate_windows
+      // can move at all (reviewer's Important 1).
+      if (FORCE_SPECTRAL_DEGENERATE) {
+        windows[0] = Array.from({ length: K3_WINDOW_LEN },
+          (_, tau) => 1e8 * Math.sin(2 * Math.PI * (3 / K3_WINDOW_LEN) * tau));
       }
       let degenerateWindows = 0;
       const eAvgs = new Array(K3_WINDOWS);
@@ -683,6 +699,9 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   const ctxForRead = { heldout: ctx.params, tailBetCal: ctx.tailBetCal };
   const healthy = freshAcc();
   const power = freshAcc();
+  // Amendment v2.K3.3, K3.3.3: spectral_bet_e_process's own third, verdict-free accumulator
+  // for the retained (now superseded-as-S3) step construction.
+  const stepProbe = spectralKind ? freshAcc() : null;
 
   for (let i = 0; i < N; i++) {
     let base;
@@ -698,15 +717,27 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       base = { series: Array.from({ length: T }, drawFor(r, arm.phi)) };
     }
     // A1's S3 construction: injectUnison at eps=3 across all K components for the group
-    // arm; injectStep at delta=3 for the conformal arm (run.mjs:89-90's registered shift).
+    // arm; injectStep at delta=3 for the conformal/tail-bet arms (run.mjs:89-90's registered
+    // shift). Amendment v2.K3.3, K3.3.2: spectral_bet_e_process's own S3 construction is the
+    // class-appropriate on-grid oscillation (amp=3sigma at freq=3/30, bin k=3 exactly) —
+    // injectStep is DC-blind to every bin this detector scores (K3.3.1's derivation), so the
+    // step survives only as the separate step_blindness_probe_rate accumulator below (K3.3.3).
     const shifted = detId === 'group_average_e_value'
       ? { matrix: injectUnison(base.matrix, { sigma: SIGMA, at: ONSET, eps: 3 }) }
-      : { series: injectStep(base.series, { sigma: SIGMA, at: ONSET, delta: 3 }) };
+      : spectralKind
+        ? { series: injectOscillation(base.series, { sigma: SIGMA, at: ONSET, amp: 3, freq: 3 / K3_WINDOW_LEN }) }
+        : { series: injectStep(base.series, { sigma: SIGMA, at: ONSET, delta: 3 }) };
 
     const rh = attempt(healthy, detId, base, arm, ctxForRead);
     if (rh.ok) record(healthy, detId, rh.out);
     const rp = attempt(power, detId, shifted, arm, ctxForRead);
     if (rp.ok) record(power, detId, rp.out);
+
+    if (spectralKind) {
+      const stepShifted = { series: injectStep(base.series, { sigma: SIGMA, at: ONSET, delta: 3 }) };
+      const rsp = attempt(stepProbe, detId, stepShifted, arm, ctxForRead);
+      if (rsp.ok) record(stepProbe, detId, rsp.out);
+    }
   }
 
   // S2. exceedance is the crossing rate the card's falsifier names — for the terminal group
@@ -813,11 +844,36 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     s2.heldout_rows = HELDOUT_ROWS;
     s3.heldout_rows = HELDOUT_ROWS;
   }
+  // Amendment v2.K3.3, K3.3.3/K3.3.5: the retained step construction, as a THIRD, verdict-
+  // free descriptive row on cell 33 — the exact registered field set, nothing more: no
+  // shift_sigma (so isPowerCell/scoreS3 never admits it as an S3 candidate), no verdict, and
+  // none of the five instrument-named strings (K3.1.4's exclusion, extended explicitly here).
+  let stepRow = null;
+  if (spectralKind) {
+    const spK = stepProbe.fires;
+    stepRow = {
+      detector: detId,
+      arm: 'step_blindness_probe',
+      cell_index: arm.idx,
+      null_id: 'K3-arm-oracle',
+      phi: arm.phi,
+      params: 'oracle',
+      alpha: ALPHA,
+      ticks: T,
+      onset: ONSET,
+      n: N,
+      k: spK,
+      step_blindness_probe_rate: spK / N,
+      substrate_tier: 'T1',
+    };
+    cells.push(stepRow);
+  }
   cells.push(s2, s3);
   process.stderr.write(spectralKind
     ? `${detId.padEnd(28)} ARM healthy crossing_rate=${Number.isFinite(s2.crossing_rate) ? s2.crossing_rate.toFixed(4) : ' n/a  '} `
       + `inc_mean=${Number.isFinite(s2.increment_estimator.mean) ? s2.increment_estimator.mean.toFixed(4) : ' n/a  '} ${s2.verdict}\n`
       + `${detId.padEnd(28)} ARM power   rate=${s3Rate === null ? ' n/a  ' : s3Rate.toFixed(4)} ${s3.verdict}\n`
+      + `${detId.padEnd(28)} ARM step_blindness_probe_rate=${stepRow.step_blindness_probe_rate.toFixed(4)}\n`
     : `${detId.padEnd(28)} ARM healthy exceedance=${Number.isFinite(s2.exceedance) ? s2.exceedance.toFixed(4) : ' n/a  '} `
       + `mean_e=${Number.isFinite(s2.mean_e) ? s2.mean_e.toFixed(4) : ' n/a  '} ${s2.verdict}\n`
       + `${detId.padEnd(28)} ARM power   rate=${s3Rate === null ? ' n/a  ' : s3Rate.toFixed(4)} ${s3.verdict}\n`);
@@ -848,7 +904,7 @@ const outRoot = process.env.COVERAGE_RESULTS_DIR
 // run.mjs:76 convention. This is a property of the run, not a flag the caller passes, so a
 // smoke run cannot opt itself into the evidence path. --classes does NOT force sim: Task 9 may
 // run the registered n class by class (plan step 2), and `classes_run` below records the scope.
-const MODE = (N === REGISTERED_N && FORCE_THROW === null) ? 'live' : 'sim';
+const MODE = (N === REGISTERED_N && FORCE_THROW === null && !FORCE_SPECTRAL_DEGENERATE) ? 'live' : 'sim';
 const stamp = `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}Z`;
 const outDir = path.join(outRoot, MODE, `run-${stamp}`);
 if (fs.existsSync(outDir)) {
@@ -904,6 +960,7 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   family_d_adapter_sha256: familyDAdapterSha,
   tier: 'T1',
   force_throw_hook: FORCE_THROW,
+  spectral_force_degenerate_hook: FORCE_SPECTRAL_DEGENERATE,
   generated_at: stamp,
 }, null, 1)}\n`);
 

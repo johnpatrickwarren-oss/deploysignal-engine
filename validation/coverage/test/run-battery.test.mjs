@@ -46,10 +46,13 @@ const REGISTERED_SEEDS = {
   base_seed: 20260807, trajectory_step: 7919, series_salt: 104729, heldout_offset: 500000,
 };
 
-// The registered per-(class, detector) census (§7 + A6 + A1 + Amendment v2.K4 K4.3): 66
-// fault-class rows and 6 arm rows. Amendment v2.K4 adds `point_tail_bet_e_value` on K4's
-// four fault cells (18-21) plus its own arm (cell 32, S2+S3) — 4 fault + 2 arm rows, the
-// "6 point_tail_bet_e_value rows" the task brief names.
+// The registered per-(class, detector) census (§7 + A6 + A1 + Amendment v2.K4 K4.3 +
+// Amendment v2.K3 K3.5/K3.6): 72 fault-class rows and 9 arm rows. Amendment v2.K4 adds
+// `point_tail_bet_e_value` on K4's four fault cells (18-21) plus its own arm (cell 32,
+// S2+S3) — 4 fault + 2 arm rows, the "6 point_tail_bet_e_value rows" the task brief names.
+// Amendment v2.K3 adds `spectral_bet_e_process` on all six K3 fault cells plus its own arm
+// (cell 33, S2+S3+the verdict-free step_blindness_probe_rate row, Amendment v2.K3.3
+// K3.3.3) — 6 fault + 3 arm rows.
 const REGISTERED_CENSUS = {
   safe_t: 30,                        // K1 4 + K2 8 + K3 6 + K4 4 + K5 4 + K6 4
   universal_inference: 18,           // K1 4 + K3 6 + K5 4 + K6 4
@@ -120,9 +123,10 @@ test('every registered (class, detector) pair emits cells with complete fields',
 
 test('the cell census is exactly the registered (class, detector) assignment', () => {
   const { summary } = smoke();
-  // Amendment v2.K3, K3.5/K3.6: +6 fault rows (all six K3 cells) + 2 arm rows (cell 33
-  // S2/S3) on top of the pre-K3 72-cell census (66 fault + 6 arm).
-  assert.equal(summary.cells.length, 80, 'registered census: 72 fault-class rows + 8 arm rows');
+  // Amendment v2.K3/v2.K3.3, K3.5/K3.6/K3.3.3: +6 fault rows (all six K3 cells) + 3 arm rows
+  // (cell 33 S2/S3/step_blindness_probe_rate) on top of the pre-K3 72-cell census (66 fault
+  // + 6 arm).
+  assert.equal(summary.cells.length, 81, 'registered census: 72 fault-class rows + 9 arm rows');
 
   const faultCells = summary.cells.filter((c) => c.fault_class != null);
   assert.equal(faultCells.length, 72);
@@ -131,13 +135,14 @@ test('the cell census is exactly the registered (class, detector) assignment', (
   assert.deepEqual(byDetector, REGISTERED_CENSUS);
 
   const armCells = summary.cells.filter((c) => c.arm != null);
-  assert.equal(armCells.length, 8);
+  assert.equal(armCells.length, 9);
   assert.deepEqual(
     armCells.map((c) => `${c.detector}:${c.arm}`).sort(),
     ['family_E_conformal_heldout:healthy', 'family_E_conformal_heldout:power',
       'group_average_e_value:healthy', 'group_average_e_value:power',
       'point_tail_bet_e_value:healthy', 'point_tail_bet_e_value:power',
-      'spectral_bet_e_process:healthy', 'spectral_bet_e_process:power'],
+      'spectral_bet_e_process:healthy', 'spectral_bet_e_process:power',
+      'spectral_bet_e_process:step_blindness_probe'],
   );
   assert.equal(faultCells.length + armCells.length, summary.cells.length,
     'every cell is either a fault-class cell or an arm — no third shape');
@@ -146,6 +151,9 @@ test('the cell census is exactly the registered (class, detector) assignment', (
 test('the ordinary path is throw-free end to end', () => {
   const { summary } = smoke();
   for (const c of summary.cells) {
+    // Amendment v2.K3.3, K3.3.3/K3.3.5: step_blindness_probe_rate's registered field set is
+    // deliberately minimal — no adapter_failures, no verdict — so it is exempt here, not a gap.
+    if (c.arm === 'step_blindness_probe') { assert.equal('verdict' in c, false); continue; }
     assert.equal(c.adapter_failures, 0,
       `${c.detector} ${c.fault_class ?? c.arm} ${c.severity ?? ''}: ${c.not_executable_reason}`);
     assert.equal(c.verdict === 'NOT-EXECUTABLE', false, `${c.detector}: unexpected NOT-EXECUTABLE`);
@@ -417,13 +425,17 @@ test('K3.8: fault-cell rows carry the registered window-partition fields and par
   }
 });
 
-test('K3.1.4 (Critical, binding): the S3 power row and all six fault cells carry NONE of the five instrument-named fields', () => {
+test('K3.1.4 (Critical, binding): the S3 power row, the step probe row, and all six fault cells carry NONE of the five instrument-named fields', () => {
   const { summary } = smoke();
   const scoped = [
     ...summary.cells.filter((c) => c.detector === 'spectral_bet_e_process' && c.fault_class === 'K3'),
     summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'power'),
+    // Amendment v2.K3.3, K3.3.3: the retained step-probe row extends K3.1.4's exclusion
+    // explicitly — "on the same 'one offending cell VOIDs the whole run's S2 evidence'
+    // reasoning."
+    summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'step_blindness_probe'),
   ];
-  assert.equal(scoped.length, 7, '6 fault cells + 1 S3 arm row');
+  assert.equal(scoped.length, 8, '6 fault cells + 1 S3 arm row + 1 step-probe arm row');
   for (const c of scoped) {
     for (const field of FIVE_INSTRUMENT_FIELDS) {
       assert.equal(field in c, false,
@@ -481,9 +493,11 @@ test('K3.1.7: p_uniformity is pooled n*6*3 per-bin p values with decile counts a
   assert.equal('verdict' in pu, false, 'K3.1.7: no verdict key of its own');
 });
 
-test('K3.1.6: degenerate_windows is a non-negative integer on every spectral_bet_e_process row, 0 at smoke', () => {
+test('K3.1.6: degenerate_windows is a non-negative integer on every spectral_bet_e_process row that carries it, 0 at smoke', () => {
   const { summary } = smoke();
-  const rows = summary.cells.filter((c) => c.detector === 'spectral_bet_e_process');
+  // step_blindness_probe_rate's registered field set (K3.3.3/K3.3.5) does not include
+  // degenerate_windows — excluded here, not a gap.
+  const rows = summary.cells.filter((c) => c.detector === 'spectral_bet_e_process' && c.arm !== 'step_blindness_probe');
   assert.equal(rows.length, 8, '6 fault cells + S2 + S3 arm rows');
   for (const c of rows) {
     assert.ok(Number.isInteger(c.degenerate_windows), `${c.fault_class ?? c.arm} ${c.cell_index}: degenerate_windows`);
@@ -491,7 +505,42 @@ test('K3.1.6: degenerate_windows is a non-negative integer on every spectral_bet
   }
 });
 
-test('K3.7: cell 33 S3 (power) arm fires on any of the 6 window checkpoints, shift_sigma=3, no S2 instrument fields', () => {
+// Reviewer's Important 1: degenerate_windows positive control. The ordinary registered
+// amplitudes never underflow p to exactly 0 (K3.1.6's own reasoning), so a 0 reading alone
+// does not prove the counter can move at all — this drives the test-only
+// COVERAGE_FORCE_SPECTRAL_DEGENERATE hook (forces window 0's periodogram past double-
+// precision underflow on every trajectory) and checks the counter actually responds.
+test('degenerate_windows positive control: the counter moves under a forced p-underflow, stays 0 on the ordinary path', () => {
+  const { summary: ordinary } = smoke();
+  const ordinaryCell12 = ordinary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.cell_index === 12);
+  assert.equal(ordinaryCell12.degenerate_windows, 0, 'ordinary path: no forced condition, no degenerate window');
+
+  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-battery-degen-'));
+  execFileSync(process.execPath, [HARNESS, '--n', '5', '--classes', 'K3'], {
+    env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot, COVERAGE_FORCE_SPECTRAL_DEGENERATE: '1' },
+    encoding: 'utf8',
+  });
+  const simDir = path.join(outRoot, 'sim');
+  const runDir = path.join(simDir, fs.readdirSync(simDir)[0]);
+  const forced = JSON.parse(fs.readFileSync(path.join(runDir, 'summary.json'), 'utf8'));
+  const manifest = JSON.parse(fs.readFileSync(path.join(runDir, 'manifest.json'), 'utf8'));
+  assert.equal(manifest.spectral_force_degenerate_hook, true, 'the hook must be recorded in the manifest');
+  assert.equal(manifest.mode, 'sim', 'a forced-degenerate run must never land under results/live');
+
+  const forcedCell12 = forced.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.cell_index === 12);
+  assert.ok(forcedCell12.degenerate_windows > 0,
+    `degenerate_windows must move under the forced condition; got ${forcedCell12.degenerate_windows}`);
+  assert.equal(forcedCell12.degenerate_windows, 5, 'window 0 is forced degenerate on all 5 smoke trajectories');
+});
+
+// Amendment v2.K3.3, K3.3.2/K3.3.4: S3 is now the on-grid oscillation probe
+// (amp=3sigma, freq=3/30, bin k=3 exactly) — injectStep is DC-blind to every bin this
+// detector scores (K3.3.1), so the superseded step construction can no longer be what S3
+// measures. K3.3.4's own derivation predicts near-certain detection (I(f_3)=67.5 exactly,
+// e_3 ~ 1e25, wealth-saturating on the first window) — pinned here as exactly 1.0 at the
+// registered smoke seeds, the K4.5-mutation-guard convention (a step-construction
+// regression would collapse this back toward the healthy false-alarm rate, ~0).
+test('K3.3.2/K3.3.4: cell 33 S3 (power) arm is the on-grid oscillation probe, detection_rate exactly 1 at smoke seeds', () => {
   const { summary } = smoke();
   const s3 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'power');
   assert.ok(s3, 'no spectral_bet_e_process power arm');
@@ -500,8 +549,44 @@ test('K3.7: cell 33 S3 (power) arm fires on any of the 6 window checkpoints, shi
   assert.equal(s3.windows, 6);
   assert.equal(s3.window_len, 30);
   assert.equal(s3.window_span, '[100,280)');
-  assert.ok(Number.isFinite(s3.detection_rate));
+  assert.equal(s3.detection_rate, 1,
+    'K3.3.4 predicts near-certain detection; a stale injectStep mutation would collapse this '
+    + 'toward the healthy false-alarm rate instead');
+  assert.equal(s3.verdict, 'POWERED');
   assert.ok(!('k' in s3), 'S3 keeps A1\'s fires/detection_rate pair, not S2\'s k/crossing_rate pair');
+});
+
+// Amendment v2.K3.3, K3.3.3/K3.3.5: the retained (now-superseded) step construction survives
+// as a THIRD, verdict-free descriptive row on cell 33 — the exact registered field set, no
+// more: no shift_sigma (so it can never be picked up by scoreS3/isPowerCell's shift_sigma
+// gate), no verdict (K3.1.4's negative scope, extended explicitly to this row, asserted
+// separately above), field name step_blindness_probe_rate (not detection_rate, so
+// isPowerCell's `'detection_rate' in c` never admits it as an S3 candidate at all).
+test('K3.3.3: cell 33 carries the verdict-free step_blindness_probe_rate row, excluded from S2/S3 scoring by field-name absence', () => {
+  const { summary } = smoke();
+  const step = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'step_blindness_probe');
+  assert.ok(step, 'no spectral_bet_e_process step_blindness_probe row');
+  assert.equal(step.cell_index, 33);
+  assert.equal(step.null_id, 'K3-arm-oracle', 'K3.1.5\'s literal applies here too — same cell');
+  assert.equal(step.phi, 0);
+  assert.equal(step.params, 'oracle');
+  assert.equal(step.alpha, 0.05);
+  assert.equal(step.ticks, 300);
+  assert.equal(step.onset, 100);
+  assert.equal(step.substrate_tier, 'T1');
+  assert.ok(Number.isInteger(step.k), 'k: count crossing (expected ~6/2000 per K3.3.1\'s disclosed probe)');
+  assert.equal(step.n, 20, 'n: the full smoke trajectory count (K3.3.3 — n: 2000 at the registered N)');
+  assert.ok(Number.isFinite(step.step_blindness_probe_rate));
+  assert.equal(step.step_blindness_probe_rate, step.k / step.n, 'step_blindness_probe_rate must equal k/n exactly');
+  assert.equal('shift_sigma' in step, false, 'no shift_sigma — belt-and-suspenders with the field-name exclusion');
+  assert.equal('verdict' in step, false, 'K3.3.3: no verdict field, this row is purely descriptive');
+  assert.equal('not_executable_reason' in step, false);
+  assert.equal('detection_rate' in step, false, 'must not be named detection_rate, or isPowerCell would admit it as an S3 candidate');
+  // Exactly the registered field set (K3.3.5) — nothing extra smuggled in.
+  assert.deepEqual(Object.keys(step).sort(), [
+    'alpha', 'arm', 'cell_index', 'detector', 'k', 'n', 'null_id', 'onset', 'params',
+    'phi', 'step_blindness_probe_rate', 'substrate_tier', 'ticks',
+  ]);
 });
 
 // Mutation-strength provenance: independently regenerate the exact seeded trajectories the
@@ -575,14 +660,40 @@ test('K3.1.1 provenance: cell 33 S2 increment_estimator recomputes from an indep
   }
 });
 
-test('K3 seed arithmetic: cell 33 CELL_SEED is BASE_SEED + 33, no heldout stream registered', () => {
+// Minor 3 (fix round): renamed — this asserts the absence of heldout/calibration fields on
+// cell 33's rows, not seed arithmetic (that is covered separately by assertRegistryAgreement's
+// own startup check and the K3.9/K3.1.1 provenance tests above, which regenerate against the
+// registered CELL_SEED formula directly).
+test('K3.3/K3.6: cell 33 rows carry no heldout or calibration fields (sigma is oracle, nothing calibrated)', () => {
   const { summary } = smoke();
   const s2 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'healthy');
   const s3 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'power');
-  assert.equal('heldout_seed' in s2, false, 'K3.3/K3.6: no calibration stream for this detector');
-  assert.equal('heldout_seed' in s3, false);
-  assert.equal('cal_median' in s2, false);
-  assert.equal('cal_mad' in s2, false);
+  const step = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.arm === 'step_blindness_probe');
+  for (const c of [s2, s3, step]) {
+    assert.equal('heldout_seed' in c, false, 'K3.3/K3.6: no calibration stream for this detector');
+    assert.equal('cal_median' in c, false);
+    assert.equal('cal_mad' in c, false);
+  }
+});
+
+// Reviewer's Important 2: params==='oracle' alone is a static string — a mutation that starts
+// computing sigma from data (Erratum v1.3's defect class, see the K3.3 comment at K3.3
+// header) while leaving the 'oracle' stamp untouched would sail past a string-only check. The
+// float pin on final_wealth_mean is a second, independent channel: it is computed straight
+// from the oracle SIGMA=1 literal (K3.3), so any drift toward an estimated sigma moves this
+// number measurably, at these exact deterministic smoke seeds.
+test('Reviewer Important 2: params=oracle on every spectral row, plus a float pin on cell 15 final_wealth_mean', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'spectral_bet_e_process');
+  assert.ok(rows.length > 0);
+  for (const c of rows) {
+    assert.equal(c.params, 'oracle', `${c.fault_class ?? c.arm} ${c.cell_index}: params (K3.3 — genuinely oracle sigma)`);
+  }
+  const c15 = summary.cells.find((c) => c.detector === 'spectral_bet_e_process' && c.cell_index === 15);
+  assert.ok(c15, 'no cell 15 (canonical) spectral_bet_e_process row');
+  assert.equal(c15.final_wealth_mean, 1958461.7555607539,
+    'exact float pin at the registered smoke seeds — an estimated-sigma mutation (Erratum '
+    + 'v1.3\'s defect class) would move this value while leaving params=\'oracle\' untouched');
 });
 
 test('manifest records the registered seed scheme, substrate hash and smoke flag', () => {

@@ -1,0 +1,59 @@
+{
+  "protocol_version": 1,
+  "detector_id": "family_E_conformal_heldout",
+  "aliases": [
+    "family_E_heldout",
+    "K4_conformal_heldout"
+  ],
+  "family": "E",
+  "class": "terminal_e_value",
+  "engine_pin": {
+    "version": "0.6.6-pre",
+    "sha": "4c16092c86653f61ed6097597adb92bea73adc85"
+  },
+  "source_files": [
+    {
+      "path": "tools/stamp-heldout-family-e.mjs",
+      "sha256": "470fbd2282a08aaaa232192cc171d1f87aab041f06a3015a42ed5c4ecd13df64"
+    },
+    {
+      "path": "detectors/conformal.ts",
+      "sha256": "b9efef8675264595aca1de1fdd68b35f630812f9e631f1403ec08bebdd84e4f5"
+    }
+  ],
+  "guarantee": {
+    "sentence": "per-tick hedged-indicator e-value wealth process (M_t = M_{t-1} * (1 + indicator - alpha_E), fires iff M_t >= 1/alpha_E, Ville's inequality) with the tail quantile calibrated on held-out data (n >= 10,000/cell); P(indicator|H0) = alpha holds by exchangeability of held-out calibration and live draws — T1 (this battery's own generator) now, T2 (clustersynth) blocked by substrate since clustersynth ships multivariate-only per-shard telemetry, not the 1-D stream this route scores, T3 (real corpus) blocked pending C37",
+    "quantifiers": [
+      {
+        "text": "by exchangeability",
+        "tag": "empirical",
+        "proof_artifact": null
+      }
+    ],
+    "regime": {
+      "phi_max": 0.6,
+      "m_min": null,
+      "baseline": "held-out empirical, T1 (this battery's own generator, not clustersynth)",
+      "nulls": "gaussian iid (phi=0) and AR(1) phi<=0.6 (cell 21)"
+    }
+  },
+  "shipped_path": {
+    "kind": "per-tick weighted-e-value wealth process (Addition #22), held-out calibration route",
+    "estimator": null,
+    "notes": "K4 (point-outlier) candidate; not deploysignal's shipped selector path -- see family_E_conformal.json for the shipped chi_p route's own unreachability finding"
+  },
+  "budget": {
+    "participating": true,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
+  "falsifier": "crossing rate > alpha on the held-out-calibrated healthy battery",
+  "prior_evidence": [
+    {
+      "stage": "S2",
+      "study": "coverage",
+      "runs": "coverage/results/live/*",
+      "wiki": "methodology/fault-class-coverage-matrix"
+    }
+  ]
+}

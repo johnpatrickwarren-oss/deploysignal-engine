@@ -1725,3 +1725,66 @@ three loose citations in place and clarifies `sigma_known` is descriptive, not s
 registers fields Task 8's adapter must emit, not a card revision — so no re-freeze and no golden
 delta follow this commit.** No endpoint, floor, or seed in §1–14, Amendment v1.1, Amendment v1.2,
 Erratum v1.3, Amendment v2.K4, Amendment v2.K4.1, or Amendment v2.K3 moves.
+
+## Amendment v2.K3.2 — 2026-08-08, probe-citation correction
+
+Corrects K3.1.3's transcription of the Task-7 reviewer's disclosed 40-block
+`detector-audit-sequential` probe, registered before any run of `spectral_bet_e_process`.
+K3.1.1–K3.1.9 stay intact except for the one sentence quoted and corrected below; nothing else in
+Amendment v2.K3.1 moves.
+
+**K3.1.3 read:** "**9/40 cells REFUTED on `lower95_one_sided > 1`, with 32/40 clearances arriving
+from below 1, and 8/40 reading unmapped/`'inconclusive'`**" — arithmetic check, run now rather than
+assumed: `9 + 32 + 8 = 49 ≠ 40`. That inequality is the defect; the sentence conflated two
+different measurements of the same 40-block probe into one count.
+
+**Corrected, both metrics named separately, as the reviewer actually disclosed them:**
+
+1. **Wald-interval coverage of the known true value.** `summarise()`'s `mean ± 1.645·se` interval
+   (K3.1.1's shape, a nominal 90% two-sided interval) was checked against the *known* true value
+   this null guarantees, `E[e|H0] = 1` exactly (K3.1/K3.2's calibrator identity) — **captured `1`
+   in only 9 of the 40 blocks**, against a nominal 90% (≈36/40 expected if the interval's stated
+   coverage held). This is the undercoverage measurement K3.1.3's infinite-variance argument
+   predicts: a Wald interval built on a statistic whose population variance is infinite is not
+   safely CLT-backed at this N, and severe undercoverage of the *known* truth is a direct,
+   independent demonstration of exactly that failure mode — sharper evidence than a REFUTED count
+   would have been, not weaker.
+2. **`run-sequential.mjs:105-106`'s own token distribution.** `inc.lower95_one_sided > 1 ?
+   'REFUTED' : inc.upper95_one_sided < 1.0005 ? 'CLEARED' : 'inconclusive'`, run over the same 40
+   blocks: **`CLEARED` 32/40, `'inconclusive'` 8/40, `REFUTED` 0/40** (`32 + 8 + 0 = 40`, checked).
+   Every one of the 32 clearances arrived from *below* 1 (block means ranging `0.591`–`1.641`,
+   median `0.693`) — disclosed by the reviewer, not independently re-run here, same convention as
+   every other probe this study discloses rather than reproduces.
+
+**The original sentence's "9/40 ... REFUTED" was wrong on both counts** — the true REFUTED count
+is `0/40`, and `9/40` is the *coverage* metric (item 1), not a token count at all. **Provenance,
+named plainly:** this conflation originated in the coordinator's fix-dispatch message relaying the
+Task-7 reviewer's probe, not in this document's own transcription of that message (which
+transcribed the relayed figures faithfully, including the arithmetic defect) and not in the
+Task-7 reviewer's original probe (which reported the two metrics separately and correctly, per the
+coordinator's own account). Registered here, not assigned as a defect to the probe itself.
+
+**What is unaffected, checked, not assumed:**
+
+- **The tail-index derivation is independently re-verified, unaffected by the count correction.**
+  `1/(1-κ) = 1/0.9 ≈ 1.111 < 2` (K3.1.3) is a property of the calibrator formula `e =
+  κ·p^(κ-1)` alone — re-derived here from the formula itself, not from either of the 40-block
+  probe's two disclosed numbers. It stands regardless of which count was right.
+- **The verdict rule is unaffected.** K3.1.3's registered reporting rule — a future
+  `increment_estimator.lower95_one_sided > 1` on cell 33's S2 row is filed to
+  `stats/terminal-mean-rule-contested` as Claim-B-side evidence, not scored, and does not move
+  this card's S2 verdict — never depended on the exact REFUTED count. The corrected figures (0/40
+  REFUTED by the naive rule, yet only 9/40 achieving nominal coverage of the *known* true value)
+  support the rule's underlying reasoning more directly than the wrong figures did: the naive
+  token rule's near-total absence of REFUTED reads is not evidence the interval is trustworthy —
+  the coverage measurement shows the same interval failing to bracket a value it is guaranteed to
+  equal, most of the time.
+- **`stats/terminal-mean-rule-contested`'s citation stands, strengthened.** K3.1.3's Claim-B
+  filing pointed at single-path-dominated, high-variance terminal statistics as the reason an
+  above-1 reading should not be trusted uncritically; the corrected coverage figure (9/40 against
+  90% nominal) is independent, complementary evidence for that same page — filed for Task 12,
+  unresolved here, per this document's own precedence rule.
+
+No endpoint, floor, or seed moves. No card field registered by K3.1.1–K3.1.9 changes shape or
+name; this amendment corrects one mistranscribed sentence's numbers and adds the metric it
+conflated, nothing else.

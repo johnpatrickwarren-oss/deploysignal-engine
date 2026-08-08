@@ -59,6 +59,7 @@ function checkCoverageDir(dir) {
   const rows = coverage.split('\n').filter((l) => classIds.some((k) => l.startsWith(`| ${k} |`)));
   assert.equal(rows.length, classIds.length, `${dir}: expected ${classIds.length} class rows in COVERAGE.md, got ${rows.length}`);
 
+  const yesClasses = [];
   for (const row of rows) {
     const cells = row.split('|').map((c) => c.trim());
     const classId = cells[1];
@@ -72,9 +73,29 @@ function checkCoverageDir(dir) {
     assert.equal(answer, expectedAnswer, `${dir}: COVERAGE.md ${classId} answer "${answer}" disagrees with independent re-derivation (${expectedAnswer})`);
 
     if (expectedAnswer === 'YES') {
+      yesClasses.push(classId);
       const expectedTier = minTier(supporting.map((o) => coveringCellFor(o.coverage[classId])?.__tier ?? null));
       assert.equal(tier, expectedTier ?? '—', `${dir}: COVERAGE.md ${classId} tier "${tier}" disagrees with independent re-derivation (${expectedTier ?? '—'})`);
     }
+  }
+
+  // I4: a YES row names only the USE cards that carried the class, so a card that measured
+  // the class COVERED but is barred from carrying it by its own non-USE verdict
+  // (group_average_e_value's 0.9985 on K2, card REFUSE) would appear nowhere in COVERAGE.md.
+  // The detail section must name every such card. Re-derived from the card JSONs here and
+  // compared set-for-set, so neither a missing line nor an invented one passes. Gated on
+  // report_format >= 3: format-2 runs were written before these lines existed and are never
+  // rewritten (append-only), so each is checked against the shape it was written under.
+  if (reportFormat(dir) >= 3) {
+    const expectedAlso = yesClasses.flatMap((classId) => cards
+      .filter((o) => o.overall.verdict !== 'USE' && o.coverage[classId].status === 'COVERED')
+      .map((o) => `- ${classId}: also COVERED by ${o.card.detector_id} `
+        + `${o.coverage[classId].canonical?.rate ?? '—'} (verdict ${o.overall.verdict} — see card)`));
+    const actualAlso = coverage.split('\n').filter((l) => l.includes('also COVERED by'));
+    assert.deepEqual(
+      actualAlso.slice().sort(), expectedAlso.slice().sort(),
+      `${dir}: COVERAGE.md "also COVERED" detail lines disagree with the card JSONs`,
+    );
   }
 }
 

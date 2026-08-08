@@ -61,12 +61,14 @@ for (const f of cardFiles) {
 }
 
 const gitSha = execSync('git rev-parse HEAD', { cwd: repoRoot }).toString().trim();
-// report_format is the shape of REPORT.md, NOT the protocol version (which stays 1).
-// Format 2 added the S1 column and the standing-caveat footer. Preserved runs written
-// under format 1 are never rewritten -- results/ is append-only -- so the machine check in
-// test/report-consistency.test.mjs reads this field to know which columns to expect.
+// report_format is the shape of this run's emitted markdown, NOT the protocol version
+// (which stays 1). Format 2 added REPORT.md's S1 column and the standing-caveat footer;
+// format 3 added COVERAGE.md's per-YES-row "also COVERED" detail lines (I4). Preserved runs
+// written under an earlier format are never rewritten -- results/ is append-only -- so the
+// machine check in test/report-consistency.test.mjs reads this field to know which columns
+// and which detail lines to expect.
 writeFileSync(join(outDir, 'manifest.json'), JSON.stringify({
-  study: 'detector-certification', protocol_version: 1, report_format: 2, git_sha: gitSha,
+  study: 'detector-certification', protocol_version: 1, report_format: 3, git_sha: gitSha,
   node: process.version, cards: cardFiles.map((f) => ({ file: f, sha256: fileSha256(join(here, 'cards', f)) })),
 }, null, 2) + '\n');
 
@@ -211,24 +213,29 @@ const coverageLine = (r) => `| ${r.classId} | ${r.answer} | ${r.detectors} | ${r
 
 // For a NO class, the detail line names the single best-status card that still fell
 // short -- COVERED-but-not-USE beats NOT_POWERED beats NO_EVIDENCE, ties broken by the
-// higher canonical rate and then by detector_id -- so a reader sees exactly what is
-// blocking the class rather than nine identical "no evidence" lines.
+// higher canonical rate and then by the lexicographically smaller detector_id -- so a
+// reader sees exactly what is blocking the class rather than nine identical "no evidence"
+// lines. M1: the detector_id tiebreak is compared explicitly rather than inherited from
+// `emitted`'s order. It happens to be the same order today (cardFiles is sorted and each
+// card's filename is its detector_id), but a comment claiming a tiebreak the code left to
+// readdir order was false in the only sense that matters -- it would stop being true the
+// moment the iteration order changed.
 const STATUS_PRIORITY = { COVERED: 0, NOT_POWERED: 1, NO_EVIDENCE: 2 };
 function bestBlocked(classId) {
   let best = null;
   for (const o of emitted) {
     const cov = o.coverage[classId];
     const candidate = { detector: o.card.detector_id, status: cov.status, rate: cov.canonical?.rate ?? null, verdict: o.overall.verdict };
-    if (
-      best === null
-      || STATUS_PRIORITY[candidate.status] < STATUS_PRIORITY[best.status]
-      || (STATUS_PRIORITY[candidate.status] === STATUS_PRIORITY[best.status]
-          && (candidate.rate ?? -Infinity) > (best.rate ?? -Infinity))
-    ) {
-      best = candidate;
-    }
+    if (best === null || betterBlocked(candidate, best)) best = candidate;
   }
   return best;
+}
+function betterBlocked(a, b) {
+  const pa = STATUS_PRIORITY[a.status], pb = STATUS_PRIORITY[b.status];
+  if (pa !== pb) return pa < pb;
+  const ra = a.rate ?? -Infinity, rb = b.rate ?? -Infinity;
+  if (ra !== rb) return ra > rb;
+  return a.detector.localeCompare(b.detector) < 0;
 }
 function blockedLine(classId) {
   const best = bestBlocked(classId);
@@ -236,15 +243,31 @@ function blockedLine(classId) {
   return `- ${classId}: NO — best: ${best.detector} ${best.status}${rateStr} (verdict ${best.verdict})`;
 }
 
+// I4: a YES row's detector column lists only the USE cards that carried the class, so a
+// card that measured the class COVERED but is barred from carrying it by its own non-USE
+// verdict appeared nowhere in COVERAGE.md -- group_average_e_value read 0.9985 at the K2
+// canonical cell, above the floor, and its REFUSE card removed it from the row that its
+// number is the strongest evidence for. One detail line per such card, naming the rate and
+// the verdict that blocks it, sorted by detector_id for a deterministic file.
+function alsoCoveredLines(classId) {
+  return emitted
+    .filter((o) => o.overall.verdict !== 'USE' && o.coverage[classId].status === 'COVERED')
+    .sort((a, b) => a.card.detector_id.localeCompare(b.card.detector_id))
+    .map((o) => `- ${classId}: also COVERED by ${o.card.detector_id} `
+      + `${o.coverage[classId].canonical?.rate ?? '—'} (verdict ${o.overall.verdict} — see card)`);
+}
+
 writeFileSync(join(outDir, 'COVERAGE.md'), [
   `# Fault-class coverage — protocol v1, engine ${gitSha.slice(0, 7)}`, '',
   'A class answers YES iff at least one card with overall verdict USE has that class COVERED '
     + '(lib/score.mjs coverageFor). Tier on a YES row is the min tier of the supporting canonical '
-    + 'cells. NO rows are detailed below the table with the best status found across every card.', '',
+    + 'cells. Every row is detailed below the table: a NO row with the best status found across '
+    + 'every card, a YES row with any card that also measured the class COVERED but is barred '
+    + 'from carrying it by its own non-USE verdict.', '',
   '| class | answer | detector(s) | tier | canonical rate |', '|---|---|---|---|---|',
   ...coverageRows.map(coverageLine), '',
-  '## Detail (NO rows)', '',
-  ...coverageRows.filter((r) => r.answer === 'NO').map((r) => blockedLine(r.classId)), '',
+  '## Detail', '',
+  ...coverageRows.flatMap((r) => (r.answer === 'NO' ? [blockedLine(r.classId)] : alsoCoveredLines(r.classId))), '',
 ].join('\n'));
 
 console.log(`emitted ${emitted.length} cards -> ${outDir}`);

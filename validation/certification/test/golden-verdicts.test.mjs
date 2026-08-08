@@ -177,6 +177,42 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // canonical d=1.5 cell alone (measured 0.0005 against COVERAGE_FLOOR 0.50): a USE card that does
 // not carry the class it was built for is the registered, expected reading here (v2.K6.2 K6.2.2),
 // not a defect in this test.
+//
+// Re-frozen 2026-08-08, coverage-gap-detectors final fix wave (cert run run-20260808T133943Z,
+// consuming the two registered reruns coverage/run-20260808T133746Z (K6 T1) and
+// run-20260808T133859Z (K4 T1)): the ONE-ROW delta Amendment v2.C1 registered in advance (C1.12).
+// `shape_block_conformal_bet` moves USE -> ADVISORY, s3 PASS -> INERT; tier stays T1 (minTier of
+// the supporting S2 evidence, score.mjs:567), s1 MISSING / s2 PASS / s4 PASS unchanged.
+//
+// WHAT PRODUCED IT. The whole-branch review found `heldoutRows`
+// (validation/coverage/harness/run-battery.mjs) drew each held-out row as the first gaussian of
+// its own arithmetically-spaced LCG stream, making the 10,000-row calibration reference a rank-1
+// Kronecker lattice: marginals better than iid, joint deterministic and seed-invariant
+// (acf(2) = -0.7513 across eight unrelated seeds), within-block moment spread compressed ~30%.
+// A compressed reference makes every live window rank as more extreme than it is. Registered as a
+// named code defect under house rule 7, fixed test-first, and rerun with the prior directories
+// preserved and declared superseded in the reruns' own manifests (C1.6).
+//
+// The paragraph above this one recorded the ADVISORY expectation as "exactly what v2.K6.2
+// SUPERSEDES". That is now superseded in turn, and only halfway: v2.K6.2's PREMISE stands —
+// s = sqrt(1 - d^2/4) is exactly 0 at d = 2.0, so that severity is genuinely a two-point +-1sigma
+// law — but its POWERED conclusion was an artefact of the lattice. Against a real reference the
+// same law gives mean eAvg 1.1525 and cumulative log-wealth ~0.69 over six windows against the bar
+// log(20) = 2.9957, and the rerun measures arm 34 S3 at detection_rate 0.0005 (1 of 2000) and
+// cell 28 at 0.0045 (9 of 2000). detection_rate 0.0005 < INERTNESS_FLOOR 0.10 makes scoreS3's
+// status INERT (score.mjs:342-343) and leaves s3Powered empty, which is overallVerdict's
+// valid-but-inert ADVISORY (score.mjs:566-570). So this row returns to the verdict Amendments
+// v2.K6/v2.K6.1 registered from a closed-form derivation BEFORE any run — arrived at the second
+// time from a measurement.
+//
+// No other row moves, which was also registered in advance (C1.12). In particular the K4 rerun
+// changed every family_E_conformal_heldout and point_tail_bet_e_value number without moving either
+// card: point_tail_bet_e_value stays USE/T1 (arm 32 mean_e 0.5276 still under TERMINAL_MEAN_BOUND
+// 1, Wilson lower_95 0.0017464 still under alpha), and family_E_conformal_heldout stays REFUSE
+// (arm 31 mean_e ROSE 3.1160 -> 4.1760, so the terminal mean rule fires exactly as before -- the
+// lattice had been UNDERSTATING that card's false-alarm rate). Class answers unchanged: K1 YES,
+// K2 YES, K3 YES 0.654, K4 YES (point_tail_bet_e_value, canonical 0.9780), K5 NO, K6 NO -- K6 now
+// a fortiori, its canonical cell reading 0.0000 where it read 0.0005.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -191,7 +227,7 @@ const GOLDEN = {
   family_E_conformal_heldout: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
   point_tail_bet_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
   spectral_bet_e_process: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
-  shape_block_conformal_bet: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
+  shape_block_conformal_bet: { verdict: 'ADVISORY', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'INERT', s4: 'PASS' },
 };
 
 function runHarness(t) {

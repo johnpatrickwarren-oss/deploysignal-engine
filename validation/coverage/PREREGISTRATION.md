@@ -1104,8 +1104,9 @@ not restated).
 
 **Cross-checked against `detectors/spectral-bet-e-process.ts`'s exports — result: no diff.**
 `export const W_K3 = 30` (`:57`); `export const BINS_K3 = [1, 2, 3]` (`:62`); `export const KAPPA_K3
-= 0.1` (`:66`). BINS_K3 avoids both `{0, W/2} = {0, 15}` by construction — the module's own header
-comment names this explicitly (`:57-66`'s doc block, "Neither touches {0, W/2}").
+= 0.1` (`:66`). BINS_K3 avoids both `{0, W/2} = {0, 15}` by construction — `BINS_K3`'s own JSDoc
+names this explicitly (`:59-61`, "Neither touches {0, W/2} = {0, 15}, where the exactness
+identity's hypotheses ... fail").
 
 ### K3.2 Ordinate/p/e formulas (verbatim from the code, line cites) and the exactness identity's hypotheses
 
@@ -1230,8 +1231,9 @@ applied identically to both rows below (same span the fault cells use, K3.9).
 - **Healthy (S2) arm.** No injection. Because this detector is a running, window-indexed process
   (like `family_D_spectral_e_detector`), not a per-point terminal read (unlike
   `point_tail_bet_e_value`'s K4.5 arm), detection is read the same way K3.9 reads it for the fault
-  cells: a trajectory is detected iff `spectralBetWealth`'s `log[]` array (`spectral-bet-e-process.ts:118-125`,
-  the cumulative log-wealth at each window index) satisfies `wealth >= 20`
+  cells: a trajectory is detected iff `spectralBetWealth`'s `log[]` array (field declared
+  `spectral-bet-e-process.ts:119`; semantics documented `:122-126`, "the cumulative log-wealth
+  through window i"), the cumulative log-wealth at each window index, satisfies `wealth >= 20`
   (`log_M >= Math.log(20)`) at **any** of the 6 window checkpoints — the any-prefix, Ville-inequality
   reading, martingale time being the window index here rather than the tick index. Per-trajectory
   denominator (not per-point — this candidate has no per-tick reading the way `point_tail_bet_e_value`
@@ -1289,7 +1291,7 @@ adapter is `kind: 'process'`, a `read(data, cell)` function that builds an instr
 `windows: number[][]`, not a per-tick step call — so Task 8's adapter is registered here to slice
 `data.series.slice(100, 280)` into six contiguous length-30 chunks and call
 `spectralBetWealth(windows, SIGMA)` once per trajectory, reading the returned `log[]` array
-(`spectral-bet-e-process.ts:118-125`) for the any-prefix crossing check (`log[i] >= Math.log(20)`
+(field declared `spectral-bet-e-process.ts:119`) for the any-prefix crossing check (`log[i] >= Math.log(20)`
 for any `i = 0..5`) rather than re-deriving crossing from the final wealth alone — the any-time
 (Ville-inequality) property K4's own A2/K4.6 registrations already establish as this study's house
 reading for a running wealth process, applied here at window granularity since the martingale time
@@ -1337,7 +1339,7 @@ as a probe-vs-registered-run discrepancy in its own right, not silently reconcil
 ### K3.12 Wealth floor — registered, structurally unreachable at this span (binding obligation)
 
 `LOG_WEALTH_FLOOR_K3 = Math.log(1e-12) ≈ -27.631` (`spectral-bet-e-process.ts:71`) binds inside
-`advanceLogWealth` (`detectors/_wealth.ts:31`, `Math.max(logFloor, next)`) only once the running
+`advanceLogWealth` (`detectors/_wealth.ts:35`, `Math.max(logFloor, next)`) only once the running
 cumulative log-wealth would fall below it. **At this document's registered 6-window test span
 (K3.9), the floor is registered here as structurally unreachable** — Task 6 review's own finding
 (carried forward in `progress.md`) is that the floor binds only at window ≥ 12, double this
@@ -1443,3 +1445,283 @@ f=0.05 leakage note (K3.10), the disclosed review-time power probe (K3.11), the 
 unreachable wealth floor (K3.12), and the card-instrument field-name gap for `test_martingale`
 (K3.15, not resolved here). No endpoint, floor, or seed in §1–14, Amendment v1.1, Amendment v1.2,
 Erratum v1.3, Amendment v2.K4, or Amendment v2.K4.1 moves.
+
+## Amendment v2.K3.1 — 2026-08-08, before any K3 run
+
+Closes a review verdicted FROZEN-SOUND-PENDING-K3.1 on Amendment v2.K3, adjudicating K3.15's
+surfaced gap Critical. Registered before any run of `spectral_bet_e_process`. Amendment v2.K3's
+text (K3.1–K3.17) stays intact; every item below names the exact subsection it corrects,
+supersedes, or extends, per rule 7. All items are registrations: no endpoint, floor, or seed moves,
+and — per this review's own resolution — the card JSON does not change (no re-freeze, no golden
+delta): K3.1.1/K3.1.2 register per-cell fields the harness (Task 8) must emit; they do not touch
+`guarantee.regime`, whose schema already accepts arbitrary keys.
+
+### K3.1.1 S2 healthy row (cell 33) gains `increment_estimator` — the martingale's own increments (Critical, resolves K3.15)
+
+**Extends K3.7's S2 row.** Per trajectory, the increment sample is that trajectory's six per-window
+`eAvg` values — identically `exp(log[i] - log[i-1])` with `log[-1] = 0` (wealth starts at 1,
+`log(1) = 0`, `spectral-bet-e-process.ts:129`'s `logM = 0` before the loop) and `log[i]` the
+cumulative log-wealth `spectralBetWealth` returns through window `i` (field declared `:119`). **These
+are the test martingale's own increments** — `spectralBetWealth` (`:128-136`) is a product of
+per-window `eAvg` accumulated in the log domain (K3.4's own registered form,
+`wealth = prod_w eAvg_w`), so `eAvg_w` **is** the martingale's per-window multiplicative increment
+by construction, not a derived or approximate proxy for it. A trajectory's own increment MEAN is the
+mean of its six `eAvg` values (mirroring `run-sequential.mjs:93`'s per-trajectory mean-of-per-tick-
+increments, applied here per-window rather than per-tick, matching this candidate's martingale time
+being the window index — K3.7's own registration). Collecting this one number per trajectory across
+the N=2000 trajectories gives the sample `summarise()` (`validation/detector-audit/harness/run-sequential.mjs:37-44`)
+consumes:
+
+```
+function summarise(xs) {
+  const n = xs.length;
+  const mean = xs.reduce((a,b)=>a+b,0)/n;
+  const varr = n>1 ? xs.reduce((a,b)=>a+(b-mean)**2,0)/(n-1) : 0;
+  const se = Math.sqrt(varr/n);
+  return { n, mean, sd: Math.sqrt(varr), se,
+    lower95_one_sided: mean - 1.645*se, upper95_one_sided: mean + 1.645*se };
+}
+```
+
+**Registered field, cell 33's S2 row only:** `increment_estimator: {n, mean, sd, se,
+lower95_one_sided, upper95_one_sided}`, the exact shape above, `n` expected `2000` absent a
+degenerate window (K3.1.6). This satisfies `CLASS_INSTRUMENTS['test_martingale'] =
+['increment_estimator']` (`constants.mjs:10`) and `isValidityCell`
+(`score.mjs:11-12`), closing K3.15's gap: the S2 row now carries its class's own instrument, not
+merely a study-house field name `isValidityCell` does not recognize.
+
+### K3.1.2 S2 row's rate field renamed to the class-recognized name (Critical, supersedes K3.7)
+
+**Supersedes K3.7's S2 field name only:** `trajectory_crossing_rate` → **`crossing_rate`** (`k`,
+`n`, `lower_95` unchanged — same computation, same meaning, K3.7's own text otherwise stands). Two
+reasons, both mechanical: (1) with `increment_estimator` now present (K3.1.1), `applyGuards`
+(`guards.mjs:14-19`) finds `ownPresent = ['increment_estimator']` nonempty, so a foreign field
+present alongside it — `crossing_rate` (e_process's own instrument name, `constants.mjs:12`) — is
+read as annotation, `status: 'OK'`, not `VOID` (`guards.mjs:32-34`, "foreign fields present
+alongside the class instrument"); under the old name `trajectory_crossing_rate` this branch was
+moot because the field was invisible to `applyGuards` either way. (2) `internalConsistency`
+(`guards.mjs:95-110`) reads `c.crossing_rate` **literally** — the canonical name is what lets its
+mean/crossing-rate impossibility check (K3.1.6) re-engage on this cell at all; the old house name
+was invisible to it too.
+
+### K3.1.3 The S2 verdict token is unchanged — and does not come from the increment estimator (Critical)
+
+**K3.7's verdict rule stands, unchanged:** `verdict: lower_95 > alpha ? 'FAIL' : 'not-refuted'`,
+computed from `crossing_rate`'s own Wilson bound (K3.1.2), **not** from
+`increment_estimator.lower95_one_sided`. Registered why, with the reviewer's disclosed,
+unregistered probe named as the basis (K3.11's own convention, applied again here): at `κ = 0.1`
+(K3.1), the per-window increment `e = κ·p^(κ-1)` has a Pareto-type right tail with index
+`1/(1-κ) = 1/0.9 ≈ 1.111` (`E[e|H0] = 1` exactly, by the calibrator identity, K3.1/K3.2 — but
+`1/0.9 < 2` means **`Var[e]` is infinite**: a moment of order `r` of a Pareto-tailed variable with
+index `α` is finite only for `r < α`, and `2 > 1.111`). A Wald interval (`mean ± 1.645·se`, exactly
+`summarise()`'s construction, K3.1.1) assumes the CLT applies to the sampling distribution of the
+mean at the registered N — infinite population variance is precisely the condition under which that
+assumption is not automatic. The reviewer disclosed an unregistered review-context probe measuring
+this directly on `detector-audit-sequential`'s own `1.0005`-bar increment-estimator verdict rule
+(`run-sequential.mjs:105-106`, `inc.lower95_one_sided > 1 ? 'REFUTED' : inc.upper95_one_sided <
+1.0005 ? 'CLEARED' : 'inconclusive'`): **9/40 cells REFUTED on `lower95_one_sided > 1`, with 32/40
+clearances arriving from below 1, and 8/40 reading unmapped/`'inconclusive'`** (`'inconclusive'` is
+not in `VERDICT_MAP`, `score.mjs:31`, so those cells are unmapped-verdict misses, not clearances).
+**Disclosed as the reviewer's own measurement, not independently re-run here** — same convention as
+K3.11's probe.
+
+**Registered reporting rule:** if a future run's `increment_estimator.lower95_one_sided > 1` on
+cell 33's S2 row, that reading is **filed as a discrepancy to
+`~/concord/knowledge/stats/pages/terminal-mean-rule-contested.md`** — the reviewer's 9/40 measurement
+is named as **new Claim-B-side evidence** for that page (Claim B: the coverage run's above-1
+mean-rule readings are single-path-dominated statistics whose behavior at N=2000 is itself in
+dispute, not settled excess) for Task 12's write-back — **it is not scored, and it does not move
+this card's S2 verdict.** Transparency over feigned ignorance: `increment_estimator` is registered
+(K3.1.1) precisely so this reading is visible and auditable, not to let an infinite-variance Wald
+bound silently gate a fresh detector's certification the way the terminal mean rule's own contested
+history (`stats/terminal-mean-is-not-measurable`) already warns against for a different, but
+structurally related, statistic.
+
+### K3.1.4 Instrument-only fields excluded from S3 and the fault cells — a registered adapter constraint (Critical)
+
+**Registered constraint, binding on Task 8's adapter and its smoke test.** The S3 power row (cell
+33) and all six fault cells (idx 12–17) carry **none** of the five instrument-named fields —
+`increment_estimator`, `crossing_rate`, `stopped_mean`, `exceedance`, `mean_e` — for any detector
+row `spectral_bet_e_process` emits on those cells. Reason, mechanical and severe: `scoreS2`'s
+per-run voiding (`score.mjs`, `mismatchVoidedRuns` / `voidedRuns`) excludes **every cell sharing
+`cell.__run`** once any one candidate cell in that run reads `VOID` — not just the offending cell.
+A single fault-cell or S3-row field carrying a foreign instrument with no own-instrument present
+(`ownPresent.length === 0 && foreignPresent.length > 0`, `guards.mjs:18-19`) would `VOID` that
+cell, which would `VOID` the **entire run's** S2 evidence for this card — silently, since `VOID`
+reads as a stage status, not a thrown error the harness would surface. K3.8's fault-cell fields
+(`detection_rate`, `n`, `verdict`, wealth descriptives, `final_wealth_mean`,
+`final_wealth_median`) and K3.7's S3 fields (`fires`, `detection_rate`, wealth descriptives)
+already avoid all five strings — this item makes that avoidance a **named, binding constraint**
+Task 8's adapter must satisfy by construction (not merely by accident of the field names K3.7/K3.8
+already chose), and its smoke run must assert (e.g., a fixture check that no fault-cell or S3-row
+object's own keys intersect the five-string instrument set).
+
+### K3.1.5 `null_id` for cell 33, and reconciliation with K4.1.5 (Minor 5)
+
+**Registered, cell 33 only (both rows):** `null_id: 'K3-arm-oracle'` — a single literal, identical
+on the S2 and S3 rows (both `phi: 0`) — chosen **outside** the `NULL_ID` grammar
+(`validation/certification/lib/nulls.mjs:54`, `/^N([1-7])(?:-p(\d{2,3}))?(?:-m(\d+))?$/`), verified
+directly: `'K3-arm-oracle'` does not match (does not begin `N` followed by a digit 1–7). Consequence,
+checked against the actual functions: `derivePhiParams('K3-arm-oracle')` returns `null` (`nulls.mjs:62-63`,
+`if (!m) return null`), so `effectivePhi` falls through to its first branch, `cell.phi != null`
+(`nulls.mjs:103`) — the registered `phi: 0` this document already stamps on both rows governs
+directly, with no dependence on the grammar resolving anything. This card's regime does not set
+`phi_known`, so `phiIsEstimated`/`derivePhiParams` do not gate this card's `regimeCheck` at all
+(`score.mjs`'s `regime.phi_known === true` branch never fires) — the out-of-grammar choice is
+registered as defensive hygiene, not a functional necessity for this specific card, matching the
+spirit of K4.1.5's own registration for a candidate whose regime similarly does not lean on the
+derived-phi path.
+
+**Reconciliation (K3.7/K3.8-vs-K4.1.5 wording, checked against the code — Minor 5).** K3.7/K3.8
+list `null_id` as a field these cells carry, without pinning its value — implicitly assuming
+run-battery.mjs's existing, shared per-cell convention (`null_id: cell.phi === 0 ? 'N1' :
+'N3-p06'`, `run-battery.mjs:497`, stamped **unconditionally on every detector's row for a given
+cell**, `safe_t`/`universal_inference`/`family_D_spectral_e_detector`/`point_tail_bet_e_value`
+included). K4.1.5 stated the opposite — "Coverage-battery cells ... carry neither `phi_source` nor
+`null_id`" — checked directly against `run-battery.mjs:497` here: **that premise is factually
+wrong**; `null_id` is present, unconditionally, on every emitted coverage-battery cell already in
+this study, `point_tail_bet_e_value`'s own K4 fault-cell rows included. K4.1.5's **conclusion**
+(`phiIsEstimated` reads `false` for `point_tail_bet_e_value`'s cells) is still correct, but by a
+different mechanism than K4.1.5 stated: `'N1'` **is** in the `NULL_ID` grammar (`n='1'`, no `-p`/`-m`
+suffix matches `nulls.mjs:66-70`'s case `'1'`), so `derivePhiParams('N1')` returns `{phi: 0,
+phi_source: 'oracle', params: 'oracle'}` — `phiIsEstimated` reads `false` because the derived
+`phi_source` is `'oracle'`, not because the field is absent. **This correction does not reopen
+K4.1.5's own text or any run made under it** — K4's registered run (Task 5) already executed under
+`null_id: 'N1'`/`'N3-p06'` per `run-battery.mjs`'s actual, unconditional behavior, and its card's
+functional scoring is unaffected by which of the two reasons explains `phiIsEstimated`'s `false`
+reading. Fault cells 12–17 are **not** changed by this item: they keep the existing, shared
+per-cell `'N1'`/`'N3-p06'` convention every other detector already carries on these same cells
+(§6) — only cell 33, this candidate's own arm with no other detector sharing it, takes the
+out-of-grammar literal.
+
+### K3.1.6 Guards that cannot fire, with reasons, and `degenerate_windows` registered (resolves the reviewer's item 6)
+
+**`VACUOUS` (`guards.mjs:29`, `inc.sd === 0` exactly).** Requires the entire N=2000-trajectory
+sample of per-trajectory increment-means to be bit-for-bit identical — each trajectory is an
+independently-seeded, continuous Gaussian draw (§6/K3.6), so exact equality across 2000 draws has
+probability 0 under any non-degenerate implementation. The reviewer's disclosed, unregistered probe
+measured `sd ≈ 4.1` on a healthy increment-mean sample of this shape — far from the `0` trigger.
+Disclosed, not independently re-run here, same convention as K3.11/K3.1.3's probes.
+
+**`internalConsistency`'s conjunction (`guards.mjs:100`, `inc.mean > 1e6 && c.crossing_rate === 0`),
+mutually exclusive here on two independent grounds.** First, `E[eAvg | H0] = 1` exactly (K3.1/K3.2's
+calibrator identity, `mean_k E[e_k] = mean_k 1 = 1`), so the population-level expectation of
+`increment_estimator.mean` is `1`, not anywhere near `1e6` — a measured value near `1e6` would
+itself be a K3.13 stop-condition-relevant surprise long before this guard's threshold mattered.
+Second, even granting an extreme realized `inc.mean > 1e6`, a single window's multiplier that large
+applied to a wealth process starting near `1` would very likely push at least some of the 2000
+trajectories' wealth past the `20` crossing bar, making `crossing_rate === 0` implausible in
+conjunction — not a proof, a practical argument, registered as such.
+
+**`NON_FINITE` (`guards.mjs:27-28`, any of `inc.mean`/`inc.sd`/`inc.lower95_one_sided` non-finite) —
+not expected to fire, on grounds distinct from `wealth`'s own strict guarantee.** `wealthView`
+(`detectors/_wealth.ts:15-17`) and `advanceLogWealth`'s NaN-hold/Infinity-cap/floor logic
+(`_wealth.ts:31-35`) keep `log[]` **always finite**, bounded within `[LOG_WEALTH_FLOOR_K3,
+LOG_MAX_WEALTH] ≈ [-27.631, 709.783]` — but the increment sample (K3.1.1) is `exp(log[i] -
+log[i-1])`, a quantity computed **outside** `wealthView`, and the maximum possible span of that
+difference, `709.783 - (-27.631) = 737.414`, itself overflows `Math.exp` in IEEE-754 double
+precision (`Math.exp(737.414) = Infinity`; the overflow threshold is `Math.exp(709.783) ≈
+Number.MAX_VALUE`, checked directly) — so `log[]`'s own boundedness does not, by itself, guarantee
+every increment-sample value is finite in the pathological case. The narrower, checked reason this
+is not expected to fire: within this battery's **registered** injection amplitudes (oscillation
+`amp <= 0.75σ`, canonical/grid; step `delta = 3σ`, the S3 sanity arm), no bin's `U = I/σ²`
+approaches the `~745` threshold where `p = exp(-U)` underflows to exactly `0` in double precision —
+the only path to a non-finite `eAvg` (`e = κ·p^(κ-1)` with `κ-1 = -0.9`, so `p = 0` gives `e =
+Infinity`) — so no single window's `eAvg` is expected to be non-finite under this battery's own
+registered cells. This is an **empirical bound tied to this battery's registered amplitudes**, not
+a strict identity the way `wealthView`'s clamp is for the `wealth` field itself — which is exactly
+why the field below is registered, rather than treating "not expected to fire" as "cannot fire."
+
+**Registered field, added to both cell-33 rows (S2, S3) and all fault rows (idx 12–17):**
+`degenerate_windows` — the count of individual `spectralBetWindow` calls, across every trajectory
+and window scored for that cell, whose returned `eAvg` was non-finite (`!Number.isFinite(eAvg)`),
+**counted before** `advanceLogWealth` absorbs it (the module's own docstring, `:51-52`: "a
+degenerate (NaN or zero) window's e-value holds/floors the books rather than poisoning the run" —
+absorption the module performs by design, which is exactly why a separate counter is needed to see
+the condition at all; `log[]`/`wealth` alone would not show it). Distinct from `non_finite_wealth`
+(A3a), which is a trajectory-level count of degenerate **final** wealth reads; `degenerate_windows`
+is a window-level count, visible pre-accumulation.
+
+### K3.1.7 `p_uniformity`, reported, no verdict authority (resolves the reviewer's item 7)
+
+**Registered field, cell 33's S2 row.** Every individual per-bin `p` value
+(`spectralBetWindow`'s `perBin[].p`, `spectral-bet-e-process.ts:109`) across the healthy arm's
+2000 trajectories × 6 windows × 3 bins = **36,000** values is pooled into `p_uniformity: {n: 36000,
+decile_counts: [10 integers], ks_statistic, ks_critical_at_alpha}` — `decile_counts[j]` the count of
+pooled values in `[j/10, (j+1)/10)`, each expected `≈ 3600` under the registered exactness identity
+(K3.2); `ks_statistic` the one-sample Kolmogorov–Smirnov statistic of the pooled sample against
+Uniform(0,1); `ks_critical_at_alpha` the registered asymptotic critical value at this sample size,
+`1.36/√36000 ≈ 0.007168` (`c(α=0.05) = 1.36`, the standard one-sample KS asymptotic constant,
+computed here, not measured). **Reported, no verdict authority** — this field does not drive S2's
+`CLEARED`/`REFUTED` mapping (K3.1.3's verdict stays `crossing_rate`-derived) and carries no `verdict`
+key of its own. Registered scope caveat: pooling across bins is a diagnostic convenience, not a
+formal exchangeability claim — this document registers per-window, per-bin uniformity (K3.2) and
+independence **across windows** (disjointness), not independence **across the 3 bins within a
+window**, so the pooled KS statistic's nominal size is a diagnostic approximation, not a certified
+test. Cited to the design page's own reversal criterion
+(`~/concord/knowledge/methodology/pages/coverage-gap-detectors.md:149-153`, "What would reverse
+this decision": "A validity identity failing where the design says it is exact ( ... the
+periodogram p not uniform under the registered null) — that is a construction error, and the
+one-attempt rule sends it to the record, not to a patch") — `p_uniformity` is the field that makes
+that specific, named reversal condition checkable directly against a run, without itself being the
+mechanism that fires a verdict.
+
+### K3.1.8 Expected post-run scoring (resolves the reviewer's item 8)
+
+**Registered prediction**, contingent on K3.13's stop condition not firing: **S1 MISSING** (v1
+floor — `scoreS1` reads the card's `prior_evidence` stage tokens, `'design'` per K3's card, not
+`'S1'`, same as every sibling candidate in this study); **S2 PASS** (K3.1.1's `increment_estimator`
+present satisfies `isValidityCell`; `applyGuards` reads `OK` per K3.1.2/K3.1.6; the registered
+verdict token, K3.1.3, is expected `'not-refuted'` per K3.14's own healthy-crossing-rate
+prediction); **S3 PASS** (arm 33's power row, K3.7, `shift_sigma: 3` `injectStep`, expected
+`detection_rate` near-certain given a sustained 3σ step against a `wealth >= 20` bar over 6
+windows); **S4 PASS** (`budget.participating: true`, nothing yet priced against it, matching every
+sibling candidate's pre-run and post-run S4 in this study). **Composed: `USE` at tier `T1`**, per
+`verdict.mjs`'s aggregation (§8/A4) — absent a fired stop condition. A fired K3.13 stop condition
+instead REFUTES this candidate (S2 `REFUTED`, overall `REFUSE`), per this study's one-attempt rule;
+this prediction is falsified by that outcome, not tuned around it.
+
+### K3.1.9 Minor corrections (Minor 6, Minor 7)
+
+- **Three loose cites, corrected in place at their K3.1/K3.9/K3.12 locations** (v1.2's own
+  precedent for citation corrections registered before any run uses the wrong value — no run has
+  occurred under either the loose or the corrected cite). `BINS_K3`'s "Neither touches {0, W/2}"
+  quote is at `spectral-bet-e-process.ts:59-61` (was cited as the looser `:57-66` doc-block range).
+  `SpectralWealthResult`'s `log: number[]` field is declared at `:119` (was folded into a single
+  `:118-125` range that conflated the interface declaration with the docstring above the function,
+  now cited separately: field at `:119`, `log[i]` semantics at `:122-126`). `advanceLogWealth`'s
+  floor line is `detectors/_wealth.ts:35` (was cited as `:31`, off by four lines — checked directly
+  against the file: `export function advanceLogWealth(...)` opens at `:31`, `return
+  Math.max(logFloor, next);` is the fourth line of the body, `:35`).
+- **`regime.sigma_known` is descriptive, not scorer-mechanical.** `regimeCheck`
+  (`score.mjs`) reads `regime.phi_max`, `regime.phi_known`, and `regime.m_min` only — it does not
+  inspect `sigma_known` at all (checked directly against the function body). The card's
+  `sigma_known: true` is a human-readable annotation of K3.1/K3.3's known-σ finding, not a field
+  the scorer enforces. The actual mechanical encoding of the known-σ regime is (a) the module's own
+  argument-presence guard, `spectralBetWindow`'s `if (!(sigma > 0)) throw` (`:96-98`), which ensures
+  a positive `sigma` is always supplied by the caller, and (b) the harness's own registered choice
+  (K3.3) to pass `SIGMA = 1`, the generator's literal true value — the guard alone cannot verify
+  oracularity, only presence and sign; oracularity is a registered harness commitment, not a
+  runtime-checked property.
+
+### Amendment summary
+
+Resolves K3.15 (Critical): registers `increment_estimator` on cell 33's S2 row (K3.1.1), renames
+that row's rate field to `crossing_rate` (K3.1.2, supersedes K3.7's field name only), and confirms
+the verdict token stays `crossing_rate`-derived, with the reviewer's disclosed 9/40-cell probe and
+the calibrator's own infinite-variance tail (`1/0.9 < 2`) registered as the reason
+`increment_estimator.lower95_one_sided > 1` is filed to `stats/terminal-mean-rule-contested` rather
+than scored (K3.1.3). Registers a binding adapter constraint excluding all five instrument-named
+strings from the S3 row and the six fault cells (K3.1.4, Critical). Registers cell 33's
+out-of-grammar `null_id` and reconciles K3.7/K3.8's wording against K4.1.5's incorrect premise
+without reopening K4.1.5 or any run made under it (K3.1.5, Minor). Registers why `VACUOUS`,
+`internalConsistency`, and `NON_FINITE` are not expected to fire, and adds `degenerate_windows` to
+every cell-33 row and every fault row as the field that can see a degenerate window `advanceLogWealth`
+would otherwise silently absorb (K3.1.6). Adds `p_uniformity`, reported with no verdict authority,
+cited to the design page's own named reversal criterion (K3.1.7). Registers the expected post-run
+scoring, S1 MISSING → S2/S3/S4 PASS → USE at T1 absent a fired stop condition (K3.1.8). Corrects
+three loose citations in place and clarifies `sigma_known` is descriptive, not scorer-mechanical
+(K3.1.9, Minor). **The card JSON (`spectral_bet_e_process.json`) does not change — this amendment
+registers fields Task 8's adapter must emit, not a card revision — so no re-freeze and no golden
+delta follow this commit.** No endpoint, floor, or seed in §1–14, Amendment v1.1, Amendment v1.2,
+Erratum v1.3, Amendment v2.K4, Amendment v2.K4.1, or Amendment v2.K3 moves.

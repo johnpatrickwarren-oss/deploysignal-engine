@@ -1,0 +1,63 @@
+{
+  "protocol_version": 1,
+  "detector_id": "spectral_bet_e_process",
+  "aliases": [
+    "spectral_bet",
+    "k3_bet"
+  ],
+  "family": null,
+  "class": "test_martingale",
+  "engine_pin": {
+    "version": "0.6.6-pre",
+    "sha": "fdebe5ea87d8edd711387c9371536843bc9b0d28"
+  },
+  "source_files": [
+    {
+      "path": "detectors/spectral-bet-e-process.ts",
+      "sha256": "10763129b6089f45a0582a707d9736b4ece88ed79b7dada887e6ce264d077aed"
+    }
+  ],
+  "guarantee": {
+    "sentence": "periodogram betting e-process: per disjoint 30-tick window, p_k = exp(-U_k) is exactly Uniform(0,1) for iid N(0,sigma^2) noise at Fourier bins k in {1,2,3} (k not in {0,15}), sigma known; e_k = kappa*p_k^(kappa-1) satisfies E[e_k|H0] <= 1; per window, bins combine by averaging e-values (never max); across disjoint windows, the per-window averages combine by product (independent increments), giving wealth = prod_w mean_k(e_k,w) -- product-over-windows of per-window bin-averages, the form this module implements, not the design page's average-of-per-bin-wealths (mean_k prod_w e_k,w); both are valid e-processes, but they are not the same statistic -- canonical-cell numeric divergence measured at 1.5pp (Task 6 review-time probe, filed for wiki write-back, PREREGISTRATION.md Amendment v2.K3 K3.4)",
+    "quantifiers": [
+      {
+        "text": "per-window exact uniformity + product over disjoint windows + average-over-bins validity",
+        "tag": "proof",
+        "proof_artifact": "exactness identity (2U_k ~ chi^2_2 at k not in {0, W/2}), module docstring detectors/spectral-bet-e-process.ts:22-27; never-max mutation-killed fixture + NaN-hold/p-underflow degenerate-path fixtures, test/spectral-bet-e-process.test.ts"
+      }
+    ],
+    "regime": {
+      "phi_max": 0,
+      "m_min": null,
+      "baseline": "oracle",
+      "nulls": "iid-gaussian",
+      "sigma_known": true,
+      "ar1_note": "AR(1) colors the spectrum and breaks the per-bin independence the exactness identity assumes (module docstring detectors/spectral-bet-e-process.ts:29) -- the -ar1 cell (idx 17) is out-of-claim by design, measured for the record only, per PREREGISTRATION.md Amendment v2.K3 K3.14"
+    }
+  },
+  "shipped_path": {
+    "kind": "periodogram betting e-process on disjoint 30-tick windows, Fourier bins k in {1,2,3} (K3 sub-threshold-oscillation candidate)",
+    "estimator": null,
+    "notes": "K3 (sub-threshold oscillation) candidate; not deploysignal's shipped selector path -- see family_D_spectral_e_detector.json for the prior K3 construction (REFUSE: refuted at N1, and the disjoint-window fix still carried a refuted increment) this candidate is built to supersede if it clears"
+  },
+  "budget": {
+    "participating": true,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
+  "falsifier": "healthy-arm crossing rate Wilson 95% lower bound > 0.05",
+  "prior_evidence": [
+    {
+      "stage": "S2",
+      "study": "coverage",
+      "runs": "coverage/results/live/*",
+      "wiki": "methodology/fault-class-coverage-matrix"
+    },
+    {
+      "stage": "design",
+      "study": "coverage-gap-detectors",
+      "runs": null,
+      "wiki": "methodology/coverage-gap-detectors"
+    }
+  ]
+}

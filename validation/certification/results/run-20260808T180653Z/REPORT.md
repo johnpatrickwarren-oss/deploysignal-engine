@@ -56,3 +56,129 @@ These runs declared a prior run superseded for a named code defect in the legacy
 
 - ADR-0012 real-telemetry anomaly (E[e|H0] = 24/9/9) attaches to every T1/T2 verdict until explained
 - P1 unmet: assertValidForFdrPath has no production caller — every USE is advisory in practice until the gate is wired
+
+---
+
+## C44 re-score narrative, appended 2026-08-08 — the registered supersession re-score
+
+Appended, not edited: `results/` is append-only, so this narrative sits below the mechanically
+emitted sections rather than rewriting them. **Every figure below is read out of a committed
+artifact** — this run's `manifest.json`, its fourteen `*.card.json` files, its own `REPORT.md`
+and `MISSING-CELLS.md`, the bracketing run `run-20260808T133943Z`'s card JSONs, and Amendment A1.6's
+registered table parsed out of `validation/h0-battery/PREREGISTRATION.md`. The two quantities no
+artifact records are labelled as re-derivations where they appear.
+
+### What this run is
+
+This is the re-score h0-battery `PREREGISTRATION.md` **Amendment A1** authorized and A1.6
+registered the expectation for: the first certification run in which the h0-battery supersession
+registry `validation/h0-battery/results/live/SUPERSESSIONS.json` is honoured.
+`protocol_version` 1, `report_format` **4 → 5**, engine `0a800b3`,
+14 cards. **No detector ran.** No h0-battery, coverage or other study run directory
+was created, edited or re-run; the only new evidence-side artifact in this wave is the registry
+file, committed before the collector that reads it.
+
+### A1.6's registered expectation, against what this run emitted
+
+The `expected` columns are parsed from A1.6's table in the committed pre-registration; the
+`emitted` columns are read from this run's card JSONs, and the `before` figures from
+`run-20260808T133943Z`'s. Matched-cell counts are the one re-derivation in this table (see the note below it).
+
+| card | expected tuple | emitted tuple | matched cells expected | matched re-derived | S3 `perCell` expected | S3 `perCell` emitted |
+|---|---|---|---|---|---|---|
+| `family_A_betting_e_process` | MISSING / REFUTED / INERT / UNPRICED / **REFUSE** / — | MISSING / REFUTED / INERT / UNPRICED / **REFUSE** / — | 255 → 145 | 145 | 51 → 49 | 51 → 49 |
+| `family_A_mixture_supermartingale` | MISSING / REFUTED / PASS / PASS / **REFUSE** / — | MISSING / REFUTED / PASS / PASS / **REFUSE** / — | 255 → 145 | 145 | 47 → 45 | 47 → 45 |
+| `family_C_safe_hotelling` | MISSING / MISSING / PASS / UNPRICED / **NOT_EXECUTABLE** / — | MISSING / MISSING / PASS / UNPRICED / **NOT_EXECUTABLE** / — | 147 → 37 | 37 | 3 → 1 | 3 → 1 |
+| `family_D_spectral_e_detector` | MISSING / REFUTED / INERT / PASS / **REFUSE** / — | MISSING / REFUTED / INERT / PASS / **REFUSE** / — | 259 → 149 | 149 | 51 → 49 | 51 → 49 |
+
+**Every cell of that table agrees.**
+
+**Re-derivation, disclosed.** `matched re-derived` and the pooled-corpus figure below are not
+fields in any committed artifact — no run directory records how many cells the scorer pooled. They
+are recomputed by loading `validation/` through the same `lib/collect.mjs` this run used, at the
+same commit. Pooled corpus: **2108 → 1668** registered, **1668** re-derived.
+
+### All fourteen cards: nothing moved
+
+Read from both runs' card JSONs, all four stage statuses plus verdict, tier and the merged
+suppressed-verdict tally:
+
+| detector | S1 / S2 / S3 / S4 / verdict / tier | moved? | suppressed tally | moved? |
+|---|---|---|---|---|
+| `family_A_betting_e_process` | MISSING / REFUTED / INERT / UNPRICED / **REFUSE** / — | no | CLEARED x1 | no |
+| `family_A_mixture_supermartingale` | MISSING / REFUTED / PASS / PASS / **REFUSE** / — | no | NOT-EXECUTABLE x4, inconclusive x3 | no |
+| `family_C_safe_hotelling` | MISSING / MISSING / PASS / UNPRICED / **NOT_EXECUTABLE** / — | no | — | no |
+| `family_D_spectral_e_detector` | MISSING / REFUTED / INERT / PASS / **REFUSE** / — | no | — | no |
+| `family_E_conformal` | DECLARED / VOID / MISSING / REFUSE / **NOT_EXECUTABLE** / — | no | ANTI-CONSERVATIVE x25, conservative x23 | no |
+| `family_E_conformal_heldout` | MISSING / REFUTED / PASS / PASS / **REFUSE** / — | no | not-refuted x1 | no |
+| `group_average_e_value` | MISSING / REFUTED / PASS / PASS / **REFUSE** / — | no | not-refuted x1 | no |
+| `point_tail_bet_e_value` | MISSING / PASS / PASS / PASS / **USE** / T1 | no | — | no |
+| `safe_t_e_value` | MISSING / PASS / PASS / PASS / **USE** / T1 | no | not-refuted x7 | no |
+| `sequential_mmd_betting_e_process` | DECLARED / REFUTED / MISSING / PASS / **REFUSE** / — | no | — | no |
+| `sequential_ui_e_process` | MISSING / PASS / MISSING / PASS / **NOT_EXECUTABLE** / — | no | not-refuted x15, not-refuted BUT INERT x15 | no |
+| `shape_block_conformal_bet` | MISSING / PASS / INERT / PASS / **ADVISORY** / T1 | no | — | no |
+| `spectral_bet_e_process` | MISSING / PASS / PASS / PASS / **USE** / T1 | no | — | no |
+| `universal_inference_e_value` | MISSING / PASS / INERT / PASS / **USE** / T1 | no | not-refuted x27, not-refuted BUT INERT x3 | no |
+
+**0 of 14 verdict tuples moved. 0 of 14 suppressed tallies moved.**
+That is the whole point of the registered expectation: withdrawing 440 pooled cells changed no
+card's answer, because the withdrawn cells were duplicates of the surviving canonical run or were
+read by no scoring stage at all (A1.3).
+
+### Supersession provenance
+
+Read off this file's own `Superseded evidence by study registry` section, which the scorer emits
+from `lib/collect.mjs`'s drop map:
+
+| superseded run | detectors named | cells dropped |
+|---|---|---|
+| `2026-07-h0-battery/run-20260801T062612Z` | 4 | 36 + 36 + 36 + 36 = **144** |
+| `2026-07-h0-battery/run-20260801T062824Z` | 4 | 37 + 37 + 37 + 37 = **148** |
+| `2026-07-h0-battery/run-20260801T064237Z` | 4 | 37 + 37 + 37 + 37 = **148** |
+| | | **440 total** |
+
+Every line names `declared_by` = the amendment, not a run, because no run declares these — two of
+the three were never declared by anything until A1.2 named them. `run-20260801T064627Z` is not
+superseded and is the sole scored h0-battery run.
+
+The 2 legacy `{priorRun, defect}` declarations from 2026-08-01 are still reported, in the
+section headed *Declared superseded in the legacy shape, and now closed by a registry*, each
+annotated `NOW DROPPED by a supersession registry`. The phrase `STILL SCORED` occurs **0** times
+in this report: it was true of those declarations in every run through
+`run-20260808T133943Z` and is not true here. The legacy shape itself is still not the mechanism that acts —
+a registry is.
+
+### Disclosed deviation: `MISSING-CELLS.md` moves, and A1.6 did not name it
+
+**A1.6 registered the verdict tuples, the matched-cell counts, the S3 `perCell` counts, the pooled
+corpus and the suppressed tallies. It did not name `MISSING-CELLS.md`.** Two of its lines move, and
+the change is disclosed here rather than amended, because it is the arithmetic consequence of a
+drop A1.6 did register rather than a new effect:
+
+| card | before | after |
+|---|---|---|
+| `family_A_betting_e_process` | `phi unmeasured on a power cell x3` | `x1` |
+| `family_A_mixture_supermartingale` | `phi unmeasured on a power cell x3` | `x1` |
+
+**2 of the 4 lines carrying that phrase move**, both on the family A cards. Mechanism: the h0-battery `P2__<detector>.json`
+power cells carry no `null_id`, so `annotatePhi` derives no `phi` for them and `scoreS3` records
+each as an untokened exclusion. Three such cells existed for each family A detector
+(`run-20260801T062824Z`, `run-20260801T064237Z`, `run-20260801T064627Z`); the registry dropped two,
+leaving one. It is the same 2-cell drop A1.6 registered as `S3 perCell 51 → 49` and `47 → 45`,
+counted in a second place. Provenance: surfaced by review of Task 1 as Minor 3 and registered in
+advance of this run by the C44 coordinator, as a named non-surprise. **No endpoint, floor, verdict
+or tier moves and no amendment is needed** — a re-scored report naming one unmeasured-phi power
+cell where it used to name three is the report telling the truth about a smaller pool.
+
+The 2 other cards carrying that line are unchanged — `safe_t_e_value` at `x2` and `universal_inference_e_value` at `x2` —
+because their power cells come from studies this registry does not touch.
+
+### What this run does not establish
+
+Restated because the verdict table is unchanged and an unchanged table invites the wrong reading.
+**No detector became more or less valid.** Three cards still REFUSE, one is still NOT_EXECUTABLE,
+and per A1.3 the S2 refutation behind three of those four is not h0-battery evidence at all — it
+comes from `detector-audit-sequential/seq-20260805T025650Z`. What changed is that the corpus no
+longer contains a run that declared itself defective, nor two runs that were defective and never
+said so. `PREREGISTRATION.md` §2 still governs the h0-battery's own wording: a detector that
+survives a null is "not refuted at these nulls", never "valid".

@@ -9,7 +9,7 @@
   "class": "e_process",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "4c16092c86653f61ed6097597adb92bea73adc85"
+    "sha": "597a97cf75fd04230d75f00e9c8f0931ce6354b0"
   },
   "source_files": [
     {
@@ -26,7 +26,7 @@
     },
     {
       "path": "validation/certification/verdict.mjs",
-      "sha256": "eb62d4088f78dc3abd5dcf96bcf00c4c966b8c899e702156e704ebeb914a173b"
+      "sha256": "24ac635d0c3fcca25498bd919da32feb1273356e49a0f0161ebaf4d9c002de8b"
     }
   ],
   "guarantee": {

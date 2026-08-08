@@ -45,7 +45,7 @@ written is ever edited or deleted by a later run.
 
 ### Which run is current
 
-**Current: `results/run-20260807T220905Z`.** Run directories are named `run-<UTC basic>`, so
+**Current: `results/run-20260808T014809Z`.** Run directories are named `run-<UTC basic>`, so
 lexicographic order is chronological and the greatest name is the current run — there is no
 pointer file, because a pointer would be the one file in an append-only tree that every run
 rewrote.
@@ -98,19 +98,22 @@ one line per YES class naming any card that also measured the class COVERED but 
 from carrying it by its own non-USE verdict. `test/report-consistency.test.mjs` reads that
 field so a preserved run is checked against the shape it was written under.
 
-### Card pins, and why the sha moved four times
+### Card pins, and why the sha moved six times
 
-The nine cards have been frozen four times. Each freeze restamped `engine_pin.sha` and
-recomputed `source_files[].sha256`:
+The cards have been frozen six times — the nine original claim cards through all six, the two
+2026-08-08 candidates (`group_average_e_value`, `family_E_conformal_heldout`) through the last
+two. Each freeze restamped `engine_pin.sha` and recomputed `source_files[].sha256`:
 
 | freeze | pin | what changed in the cards |
 |---|---|---|
 | `959d622` | `7dc473b` | the original freeze of the nine claim cards |
 | `095dd81` | `017599f` | corrected detector **aliases**, so evidence keyed under a detector's other names could be matched; no endpoint moved |
 | `6eef189` | `45ce230` | added `detectors/validity-envelope.ts`, `lib/score.mjs` and `verdict.mjs` to every card's expiry surface, and `regime.phi_known: true` to safe-t (the machine form of its own frozen guarantee sentence) |
-| (this freeze) | `77067e6` | `lib/score.mjs`'s pinned sha256 moved: the mean-rule strongest-signal fix and the `FAIL` → `REFUTED` vocabulary fix (see "Which run is current" above). `verdict.mjs`'s sha256 is unchanged — it wasn't touched. No card content changed; only the pin. |
+| `7b1e9be` | `77067e6` | `lib/score.mjs`'s pinned sha256 moved: the mean-rule strongest-signal fix and the `FAIL` → `REFUTED` vocabulary fix (see "Which run is current" above). `verdict.mjs`'s sha256 is unchanged — it wasn't touched. No card content changed; only the pin. |
+| `6b01274` | `4c16092` | the two new candidate cards land and every card is restamped to the same pin (identity/freeze only) |
+| (this freeze) | `597a97c` | `verdict.mjs`'s pinned sha256 moved on the nine cards that pin it: COVERAGE.md now names, per YES row, any card that measured the class COVERED but is barred by its own non-USE verdict (I4), and `bestBlocked`'s detector_id tiebreak is now in the code rather than only in its comment (M1). No detector source sha moved, no card content changed, and no verdict moved — the eleven card JSONs of `run-20260808T014809Z` are byte-identical to `run-20260808T011035Z`'s outside the two pin fields. |
 
-**Every detector source file is byte-identical across all four pins.** The restamp records
+**Every detector source file is byte-identical across all six pins.** The restamp records
 when a card was frozen, not a change in the detector it describes. Verifiable directly:
 
 ```

@@ -1,0 +1,361 @@
+{
+  "card": {
+    "protocol_version": 1,
+    "detector_id": "point_tail_bet_e_value",
+    "aliases": [
+      "point_tail_bet",
+      "tail_bet"
+    ],
+    "family": null,
+    "class": "terminal_e_value",
+    "engine_pin": {
+      "version": "0.6.6-pre",
+      "sha": "7bf6372108fb7e12d5ba8b8277dae3c465354be0"
+    },
+    "source_files": [
+      {
+        "path": "detectors/point-tail-bet-e-value.ts",
+        "sha256": "46c5caf862687000f8589d5830a4b042462c628ce7602f08cd306d86cd3cbb73"
+      }
+    ],
+    "guarantee": {
+      "sentence": "per-point conformal tail-bet: p = (1+rank)/(n+1) is super-uniform under exchangeability of held-out and live scores (distribution-free, exact); e = 0.1*p^(-0.9) satisfies E[e|H0] <= 1 by the calibrator integral identity",
+      "quantifiers": [
+        {
+          "text": "under exchangeability, any score distribution",
+          "tag": "proof",
+          "proof_artifact": "conformal super-uniformity + integral of kappa*p^(kappa-1) = 1; unit test asserts both"
+        }
+      ],
+      "regime": {
+        "phi_max": 0,
+        "m_min": 10000,
+        "baseline": "held-out empirical",
+        "nulls": "exchangeable/iid",
+        "phi_known": true,
+        "exchangeability_note": "O(1/n)-approximate, anti-conservative, under this construction's self-fit median/MAD held-out calibration (K4.1.10) -- not the exact identity the module docstring and design page state; filed for wiki write-back, unresolved here"
+      }
+    },
+    "shipped_path": {
+      "kind": "per-point conformal tail-bet e-value (K4 point-outlier candidate)",
+      "estimator": null,
+      "notes": "K4 (point-outlier) candidate; not deploysignal's shipped selector path -- see family_E_conformal_heldout.json for the other K4 held-out candidate (bounded-increment wealth process) and family_E_conformal.json for the shipped chi_p route's own unreachability finding"
+    },
+    "budget": {
+      "participating": true,
+      "alpha_booked": null,
+      "resolution_claim": null
+    },
+    "falsifier": "healthy-arm per-point exceedance Wilson 95% lower bound > 0.05",
+    "prior_evidence": [
+      {
+        "stage": "S2",
+        "study": "coverage",
+        "runs": "coverage/results/live/*",
+        "wiki": "methodology/fault-class-coverage-matrix"
+      },
+      {
+        "stage": "design",
+        "study": "coverage-gap-detectors",
+        "runs": null,
+        "wiki": "methodology/coverage-gap-detectors"
+      }
+    ]
+  },
+  "s1": {
+    "status": "MISSING"
+  },
+  "s2": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "point_tail_bet_e_value",
+        "arm": "healthy",
+        "cell_index": 32,
+        "null_id": "N1",
+        "phi": 0,
+        "params": "heldout-empirical",
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 300,
+        "onset": 100,
+        "n_points": 400000,
+        "k": 1012,
+        "exceedance": 0.00253,
+        "mean_e": 0.6350959226365732,
+        "lower_95": 0.002402661467871697,
+        "non_finite_wealth": 0,
+        "adapter_failures": 0,
+        "verdict": "not-refuted",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "point_non_finite": 0,
+        "cal_median": 0.0002141666862827221,
+        "cal_mad": 0.6768543390645476,
+        "heldout_seed": 20760839,
+        "heldout_rows": 10000,
+        "__study": "coverage",
+        "__run": "run-20260808T064039Z",
+        "__git_sha": "43f3386c7bd8a9963c1ce80988f35e57c7665383",
+        "__tier": "T1",
+        "phi_source": "oracle",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      }
+    ],
+    "excluded": [],
+    "missing": [],
+    "mean_rule_overrides": [],
+    "suppressed_verdicts": {}
+  },
+  "s3": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "point_tail_bet_e_value",
+        "arm": "power",
+        "cell_index": 32,
+        "null_id": "N1",
+        "phi": 0,
+        "params": "heldout-empirical",
+        "shift_sigma": 3,
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 300,
+        "onset": 100,
+        "fires": 2000,
+        "detection_rate": 1,
+        "adapter_failures": 0,
+        "non_finite_wealth": 0,
+        "verdict": "POWERED",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "point_non_finite": 0,
+        "cal_median": 0.0002141666862827221,
+        "cal_mad": 0.6768543390645476,
+        "heldout_seed": 20760839,
+        "heldout_rows": 10000,
+        "__study": "coverage",
+        "__run": "run-20260808T064039Z",
+        "__git_sha": "43f3386c7bd8a9963c1ce80988f35e57c7665383",
+        "__tier": "T1",
+        "phi_source": "oracle"
+      }
+    ],
+    "excluded": [],
+    "missing": [
+      {
+        "detector": "point_tail_bet_e_value",
+        "null_id": null,
+        "reason": "power cell with no shift_sigma recorded x4: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT"
+      }
+    ],
+    "suppressed_verdicts": {}
+  },
+  "s4": {
+    "status": "PASS",
+    "reasons": [
+      "no envelope wiring"
+    ]
+  },
+  "pairing": [],
+  "overall": {
+    "verdict": "USE",
+    "tier": "T1",
+    "regime": {
+      "phi_max": 0,
+      "m_min": 10000,
+      "baseline": "held-out empirical",
+      "nulls": "exchangeable/iid",
+      "phi_known": true,
+      "exchangeability_note": "O(1/n)-approximate, anti-conservative, under this construction's self-fit median/MAD held-out calibration (K4.1.10) -- not the exact identity the module docstring and design page state; filed for wiki write-back, unresolved here",
+      "excluded_cells": []
+    },
+    "reasons": [
+      "S1 reachability not run-backed (v1 floor)",
+      "no envelope wiring"
+    ]
+  },
+  "coverage": {
+    "K1": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K2": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K3": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K4": {
+      "status": "COVERED",
+      "cells": [
+        {
+          "detector": "point_tail_bet_e_value",
+          "fault_class": "K4",
+          "severity": "3sigma-point",
+          "canonical": false,
+          "cell_index": 18,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 1011,
+          "detection_rate": 0.5055,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "window_crossing_rate": 0.7115,
+          "heldout_seed": 20760825,
+          "heldout_rows": 10000,
+          "cal_median": 0.00020601995399109694,
+          "cal_mad": 0.6707177384018341,
+          "point_non_finite": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T064039Z",
+          "__git_sha": "43f3386c7bd8a9963c1ce80988f35e57c7665383",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "point_tail_bet_e_value",
+          "fault_class": "K4",
+          "severity": "5sigma-point",
+          "canonical": true,
+          "cell_index": 19,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 1950,
+          "detection_rate": 0.975,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "window_crossing_rate": 0.986,
+          "heldout_seed": 20760826,
+          "heldout_rows": 10000,
+          "cal_median": -0.00019420715664679483,
+          "cal_mad": 0.6720358514211853,
+          "point_non_finite": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T064039Z",
+          "__git_sha": "43f3386c7bd8a9963c1ce80988f35e57c7665383",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "point_tail_bet_e_value",
+          "fault_class": "K4",
+          "severity": "8sigma-point",
+          "canonical": false,
+          "cell_index": 20,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 2000,
+          "detection_rate": 1,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "window_crossing_rate": 1,
+          "heldout_seed": 20760827,
+          "heldout_rows": 10000,
+          "cal_median": -0.0004685864892835873,
+          "cal_mad": 0.6749061580665298,
+          "point_non_finite": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T064039Z",
+          "__git_sha": "43f3386c7bd8a9963c1ce80988f35e57c7665383",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "point_tail_bet_e_value",
+          "fault_class": "K4",
+          "severity": "5sigma-point-ar1",
+          "canonical": false,
+          "cell_index": 21,
+          "null_id": "N3-p06",
+          "phi": 0.6,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 1958,
+          "detection_rate": 0.979,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "window_crossing_rate": 0.986,
+          "heldout_seed": 20760828,
+          "heldout_rows": 10000,
+          "cal_median": 0.0076767294056060975,
+          "cal_mad": 0.675161572502539,
+          "point_non_finite": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T064039Z",
+          "__git_sha": "43f3386c7bd8a9963c1ce80988f35e57c7665383",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        }
+      ],
+      "canonical": {
+        "severity": "5sigma-point",
+        "rate": 0.975
+      },
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K5": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    }
+  },
+  "generated_from": {
+    "runs": [
+      "coverage/run-20260808T064039Z"
+    ]
+  }
+}

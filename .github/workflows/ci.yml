@@ -55,8 +55,9 @@ jobs:
           ref: c1387a4da67242e0807facd04929b5d975c795b0
           path: .clustersynth-ci
 
+      # npm install, not ci: clustersynth commits no lockfile at the pinned SHA.
       - name: Build clustersynth dist
-        run: npm ci && npm run build
+        run: npm install && npm run build
         working-directory: .clustersynth-ci
 
       # The coverage battery's own tests live outside dist/ for the same reason the

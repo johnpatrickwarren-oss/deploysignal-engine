@@ -21,7 +21,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { FAULT_CLASSES } from '../../certification/lib/constants.mjs';
-import { rng, gaussFrom, injectOscillation } from '../lib/inject.mjs';
+import { rng, gaussFrom, injectOscillation, injectShapeMix } from '../lib/inject.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const HARNESS = path.join(HERE, '..', 'harness', 'run-battery.mjs');
@@ -36,7 +36,8 @@ const REGISTERED_PAIRS = {
   K3: ['safe_t', 'universal_inference', 'family_D_spectral_e_detector', 'spectral_bet_e_process'],
   K4: ['family_E_conformal_heldout', 'safe_t', 'point_tail_bet_e_value'],
   K5: ['safe_t', 'universal_inference'],
-  K6: ['safe_t', 'universal_inference'],
+  // Amendment v2.K6, K6.6: shape_block_conformal_bet joins K6 as a new row, K6 only.
+  K6: ['safe_t', 'universal_inference', 'shape_block_conformal_bet'],
 };
 
 // Registered seed literals (PREREGISTRATION.md §6, A5). The harness interpolates its own
@@ -61,6 +62,7 @@ const REGISTERED_CENSUS = {
   family_D_spectral_e_detector: 2,   // K3's canonical and -ar1 cells only
   point_tail_bet_e_value: 4,         // K4's four fault cells (Amendment v2.K4 K4.3)
   spectral_bet_e_process: 6,         // every K3 cell (Amendment v2.K3, K3.5) — 6 fault + 2 arm rows
+  shape_block_conformal_bet: 4,      // K6's four fault cells (Amendment v2.K6, K6.6) — 4 fault + 2 arm rows
 };
 
 function runHarness(args = ['--n', '20'], env = {}) {
@@ -125,22 +127,24 @@ test('the cell census is exactly the registered (class, detector) assignment', (
   const { summary } = smoke();
   // Amendment v2.K3/v2.K3.3, K3.5/K3.6/K3.3.3: +6 fault rows (all six K3 cells) + 3 arm rows
   // (cell 33 S2/S3/step_blindness_probe_rate) on top of the pre-K3 72-cell census (66 fault
-  // + 6 arm).
-  assert.equal(summary.cells.length, 81, 'registered census: 72 fault-class rows + 9 arm rows');
+  // + 6 arm). Amendment v2.K6, K6.6/K6.7: +4 fault rows (all four K6 cells) + 2 arm rows
+  // (cell 34 S2/S3) on top of that.
+  assert.equal(summary.cells.length, 87, 'registered census: 76 fault-class rows + 11 arm rows');
 
   const faultCells = summary.cells.filter((c) => c.fault_class != null);
-  assert.equal(faultCells.length, 72);
+  assert.equal(faultCells.length, 76);
   const byDetector = {};
   for (const c of faultCells) byDetector[c.detector] = (byDetector[c.detector] ?? 0) + 1;
   assert.deepEqual(byDetector, REGISTERED_CENSUS);
 
   const armCells = summary.cells.filter((c) => c.arm != null);
-  assert.equal(armCells.length, 9);
+  assert.equal(armCells.length, 11);
   assert.deepEqual(
     armCells.map((c) => `${c.detector}:${c.arm}`).sort(),
     ['family_E_conformal_heldout:healthy', 'family_E_conformal_heldout:power',
       'group_average_e_value:healthy', 'group_average_e_value:power',
       'point_tail_bet_e_value:healthy', 'point_tail_bet_e_value:power',
+      'shape_block_conformal_bet:healthy', 'shape_block_conformal_bet:power',
       'spectral_bet_e_process:healthy', 'spectral_bet_e_process:power',
       'spectral_bet_e_process:step_blindness_probe'],
   );
@@ -350,15 +354,27 @@ test('K4.1.8 mutation guard: cell 32 S2 mean_e is within the registered 3-sd ban
     `K4.1.8 predicts mean_e ~0.6246 (3-sd band at n_points=${s2.n_points} smoke); got ${s2.mean_e}`);
 });
 
-test('params negative scope: every non-point_tail_bet_e_value row keeps params=oracle', () => {
+test('params negative scope: every row outside the two heldout-empirical candidates keeps params=oracle', () => {
   const { summary } = smoke();
-  const nonPointRows = summary.cells.filter((c) => c.detector !== 'point_tail_bet_e_value');
-  assert.ok(nonPointRows.length > 0);
-  for (const c of nonPointRows) {
+  // Amendment v2.K6, K6.9: shape_block_conformal_bet joins point_tail_bet_e_value as the
+  // second heldout-empirical candidate — both excluded here, everything else must still
+  // read 'oracle'.
+  const nonHeldoutRows = summary.cells.filter(
+    (c) => c.detector !== 'point_tail_bet_e_value' && c.detector !== 'shape_block_conformal_bet',
+  );
+  assert.ok(nonHeldoutRows.length > 0);
+  for (const c of nonHeldoutRows) {
     // Kills a collapsed-ternary mutation (e.g. always 'heldout-empirical', or the branches
-    // swapped) that a point_tail_bet_e_value-only positive check cannot see.
+    // swapped) that a heldout-only positive check cannot see.
     assert.equal(c.params, 'oracle', `${c.detector} ${c.fault_class ?? c.arm} ${c.severity ?? ''}: params`);
   }
+});
+
+test('K6.9 params positive scope: every shape_block_conformal_bet row stamps heldout-empirical', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet');
+  assert.equal(rows.length, 6, '4 fault cells + healthy(S2) + power(S3) arm rows');
+  for (const c of rows) assert.equal(c.params, 'heldout-empirical', JSON.stringify(c));
 });
 
 test('K4.4 provenance: cal_median/cal_mad are re-derivable from lib/inject.mjs at the registered heldout seed', () => {
@@ -696,6 +712,254 @@ test('Reviewer Important 2: params=oracle on every spectral row, plus a float pi
     + 'v1.3\'s defect class) would move this value while leaving params=\'oracle\' untouched');
 });
 
+// Amendment v2.K6/v2.K6.1 — the fourth candidate, `shape_block_conformal_bet` (K6 only).
+const K6_HELDOUT_SEED_BY_CELL = { 26: 20760833, 27: 20760834, 28: 20760835, 29: 20760836 };
+
+test('K6.6: shape_block_conformal_bet is scored on all four K6 fault cells, K6 only', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet' && c.fault_class === 'K6');
+  assert.equal(rows.length, 4);
+  assert.deepEqual(rows.map((c) => c.cell_index).sort((a, b) => a - b), [26, 27, 28, 29]);
+  const other = summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet' && c.fault_class != null && c.fault_class !== 'K6');
+  assert.equal(other.length, 0, 'shape_block_conformal_bet must not be scored on any other class');
+});
+
+test('K6.9: fault-cell rows carry the registered window-partition fields, params=heldout-empirical, no shift_sigma', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet' && c.fault_class === 'K6');
+  assert.equal(rows.length, 4);
+  for (const c of rows) {
+    assert.equal(c.windows, 6, `cell ${c.cell_index}: windows`);
+    assert.equal(c.window_len, 30, `cell ${c.cell_index}: window_len`);
+    assert.equal(c.window_span, '[100,280)', `cell ${c.cell_index}: window_span`);
+    assert.equal(c.params, 'heldout-empirical', `cell ${c.cell_index}: params (K6.3 — genuinely empirical calibration)`);
+    assert.ok(Number.isInteger(c.degenerate_windows), `cell ${c.cell_index}: degenerate_windows`);
+    assert.equal(c.degenerate_windows, 0, `cell ${c.cell_index}: structurally zero for this candidate (K6.7)`);
+    assert.equal(c.non_finite_wealth, 0, `cell ${c.cell_index}: structurally zero for this candidate (K6.7)`);
+    assert.ok(Number.isFinite(c.final_wealth_mean), `cell ${c.cell_index}: final_wealth_mean`);
+    assert.ok(Number.isFinite(c.final_wealth_median), `cell ${c.cell_index}: final_wealth_median`);
+    assert.equal(c.null_id, c.phi === 0 ? 'N1' : 'N3-p06', `cell ${c.cell_index}: null_id keeps the shared fault-cell convention (K6.9), not the arm literal`);
+    assert.equal('shift_sigma' in c, false, `cell ${c.cell_index}: K6.9 — fault cells carry no shift_sigma`);
+  }
+});
+
+test('K6.6: shape_block_conformal_bet reuses the registered held-out seed on cells 26-29', () => {
+  const { summary } = smoke();
+  for (const [idx, heldoutSeed] of Object.entries(K6_HELDOUT_SEED_BY_CELL)) {
+    const c = summary.cells.find((x) => x.detector === 'shape_block_conformal_bet' && x.cell_index === Number(idx));
+    assert.ok(c, `no shape_block_conformal_bet row for cell ${idx}`);
+    // K6.9's field list does not register cal_median/cal_mad/heldout_seed on fault cells
+    // (unlike point_tail_bet_e_value's K4.4) — this is checked end-to-end via the K6.10
+    // provenance recompute test below instead of a per-cell exposed seed field.
+    assert.equal(Number(idx), c.cell_index);
+  }
+});
+
+test('K6.7 (Critical, binding): the S3 power row and all four fault cells carry NONE of the five instrument-named fields', () => {
+  const { summary } = smoke();
+  const scoped = [
+    ...summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet' && c.fault_class === 'K6'),
+    summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'power'),
+  ];
+  assert.equal(scoped.length, 5, '4 fault cells + 1 S3 arm row');
+  for (const c of scoped) {
+    for (const field of FIVE_INSTRUMENT_FIELDS) {
+      assert.equal(field in c, false,
+        `${c.fault_class ?? c.arm} cell ${c.cell_index}: must not carry foreign instrument field "${field}" `
+        + '(K6.7) — a single such field would VOID the entire run\'s S2 evidence for this card');
+    }
+  }
+});
+
+test('K6.7: cell 34 S2 arm carries increment_estimator AND crossing_rate, no foreign fields', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'healthy');
+  assert.ok(s2, 'no shape_block_conformal_bet healthy arm');
+  assert.equal(s2.cell_index, 34);
+  assert.equal(s2.windows, 6);
+  assert.equal(s2.window_len, 30);
+  assert.equal(s2.window_span, '[100,280)');
+  assert.ok(Number.isInteger(s2.k), 'k: count of trajectories crossing (K6.7)');
+  assert.ok(Number.isFinite(s2.crossing_rate), 'crossing_rate (K6.7)');
+  assert.equal(s2.crossing_rate, s2.k / s2.n, 'crossing_rate must equal k/n exactly');
+  assert.ok(Number.isFinite(s2.lower_95), 'lower_95: Wilson bound on crossing_rate');
+  assert.equal('exceedance' in s2, false, 'S2 must not additionally carry the terminal_e_value instrument');
+  assert.equal('mean_e' in s2, false, 'S2 must not additionally carry the terminal_e_value instrument');
+  const inc = s2.increment_estimator;
+  assert.ok(inc, 'K6.7: increment_estimator, applying the K3.15 lesson up front');
+  assert.equal(inc.n, s2.n, 'K6.7: n expected 2000 (registered)/20 (smoke) absent a degenerate window');
+  for (const f of ['mean', 'sd', 'se', 'lower95_one_sided', 'upper95_one_sided']) {
+    assert.ok(Number.isFinite(inc[f]), `increment_estimator.${f}`);
+  }
+  // K6.7: the verdict is crossing_rate-derived, NOT increment_estimator-derived.
+  assert.equal(s2.verdict, s2.lower_95 > 0.05 ? 'FAIL' : 'not-refuted');
+});
+
+test('K6.7: cell 34 (both S2 and S3) stamps the out-of-grammar null_id literal K6-arm-heldout', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'healthy');
+  const s3 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'power');
+  assert.equal(s2.null_id, 'K6-arm-heldout');
+  assert.equal(s3.null_id, 'K6-arm-heldout');
+  // Distinct from K3's own arm literal — this arm's calibration is EMPIRICAL, not oracle.
+  assert.notEqual(s2.null_id, 'K3-arm-oracle');
+});
+
+test('K6.7: p_uniformity is pooled n*6*2 per-feature p values (kurtosis + absSkew) with decile counts and a KS statistic', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'healthy');
+  const pu = s2.p_uniformity;
+  assert.ok(pu, 'K6.7: p_uniformity, reported with no verdict authority');
+  assert.equal(pu.n, s2.n * 6 * 2, 'pooled across n trajectories x 6 windows x 2 features');
+  assert.equal(pu.decile_counts.length, 10);
+  assert.equal(pu.decile_counts.reduce((a, b) => a + b, 0), pu.n, 'decile counts must exhaust the pooled sample');
+  for (const count of pu.decile_counts) assert.ok(Number.isInteger(count) && count >= 0);
+  assert.ok(Number.isFinite(pu.ks_statistic) && pu.ks_statistic >= 0 && pu.ks_statistic <= 1);
+  const expectedCritical = 1.36 / Math.sqrt(pu.n);
+  assert.ok(Math.abs(pu.ks_critical_at_alpha - expectedCritical) < 1e-9,
+    'ks_critical_at_alpha must be the standard asymptotic 1.36/sqrt(n), computed at the actual pooled n');
+  assert.equal('verdict' in pu, false, 'K6.7: no verdict key of its own');
+});
+
+test('K6.7: degenerate_windows is a non-negative integer on every shape_block_conformal_bet row that carries it, 0 at smoke', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet');
+  assert.equal(rows.length, 6, '4 fault cells + S2 + S3 arm rows');
+  for (const c of rows) {
+    assert.ok(Number.isInteger(c.degenerate_windows), `${c.fault_class ?? c.arm} ${c.cell_index}: degenerate_windows`);
+    assert.equal(c.degenerate_windows, 0, `${c.fault_class ?? c.arm} ${c.cell_index}: structurally zero (K6.7)`);
+  }
+});
+
+test('K6 S3 arm carries no windows/window_len/window_span (K6.7\'s own field list omits them on this row)', () => {
+  const { summary } = smoke();
+  const s3 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'power');
+  assert.ok(s3, 'no shape_block_conformal_bet power arm');
+  assert.equal('windows' in s3, false);
+  assert.equal('window_len' in s3, false);
+  assert.equal('window_span' in s3, false);
+});
+
+// Amendment v2.K6.1, K6.1.1: predicted ~0.000 at EVERY registered severity, including
+// d=2.0 (the corrected Step-5 table). At smoke n=20/500, the canonical cell (idx 27,
+// d=1.5) and idx 26/29 read exactly the predicted near-zero — pinned below. idx 28
+// (d=2.0) does NOT: empirically, at these registered seeds (and independently confirmed
+// against the compiled detector module directly, outside this harness), the d=2.0 cell
+// (and the S3 arm, which uses the SAME d=2.0 construction per K6.8) detects at a rate
+// far above the ~0.000 prediction — d=2.0 is `s=0` exactly (injectShapeMix's own
+// `s = sqrt(max(0, 1 - d*d/4))`), a perfectly bimodal +-1sigma series, not a Gaussian
+// mixture with substantial overlap like d=1.0/1.5. This is registered here as a pinned
+// regression value (the K4.5/K3.3.4 mutation-guard convention), NOT as an endorsement of
+// the ~0.000 prediction at d=2.0 — K6.1.1's own falsifier ("detection_rate materially
+// above ~0.000, approaching or exceeding 0.50") is squarely tripped by this reading, and
+// it is reported as a surprise requiring investigation, not tuned around or resolved here
+// (that adjudication is out of this task's scope — the adapter must wire the registered
+// construction faithfully and report what it measures).
+test('canonical (idx 27, mix-d1.5) and idx 26/29 read the predicted near-zero at smoke seeds', () => {
+  const { summary } = smoke();
+  for (const idx of [26, 27, 29]) {
+    const c = summary.cells.find((x) => x.detector === 'shape_block_conformal_bet' && x.cell_index === idx);
+    assert.ok(c, `no cell ${idx}`);
+    assert.equal(c.detection_rate, 0, `cell ${idx}: K6.1.1 predicts ~0.000; at n=20 smoke seeds this reads exactly 0`);
+  }
+});
+
+test('SURPRISE, registered per K6.1.1\'s own falsifier: idx 28 (mix-d2.0) and arm 34 S3 detect far above the ~0.000 prediction at smoke seeds', () => {
+  const { summary } = smoke();
+  const c28 = summary.cells.find((x) => x.detector === 'shape_block_conformal_bet' && x.cell_index === 28);
+  assert.ok(c28, 'no cell 28');
+  assert.equal(c28.canonical, false, 'idx 28 is grid-only, not the class-deciding canonical cell (idx 27)');
+  // Pinned at the registered smoke seeds — see the block comment above for the finding.
+  assert.equal(c28.detection_rate, 1, 'idx 28 empirically detects at 1.0 at n=20 smoke seeds, not ~0.000');
+  assert.equal(c28.verdict, 'POWERED');
+
+  const s3 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'power');
+  assert.ok(s3, 'no shape_block_conformal_bet power arm');
+  assert.equal(s3.detection_rate, 1, 'arm 34 S3 (also d=2.0, K6.8) empirically detects at 1.0 at n=20 smoke seeds');
+  assert.equal(s3.verdict, 'POWERED',
+    'K6.8/K6.1.1 predict INERT here — empirically this reads POWERED, which would remove the '
+    + '"valid-but-inert" ADVISORY cap (score.mjs:564-568) if it held at the registered N; not '
+    + 'resolved by this adapter task, reported as a finding');
+});
+
+test('K6.10 provenance: independent window-partition + wealth-endpoint recompute matches the harness at smoke n, across the surprise', () => {
+  const { summary } = smoke();
+  const distRequire = createRequire(import.meta.url);
+  const shapeBlockBet = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/shape-block-conformal-bet.js'));
+  const TRAJ_STEP = 7919, HELDOUT_OFFSET = 500000, ONSET = 100, T = 300, N_SMOKE = 20;
+  const HELDOUT_ROWS = 10000;
+  const regenHeldout = (heldoutSeed) => {
+    const rows = new Array(HELDOUT_ROWS);
+    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = gaussFrom(rng(heldoutSeed + TRAJ_STEP * j))();
+    return rows;
+  };
+  const sliceWindows = (series) => {
+    const ws = [];
+    for (let w = 0; w < 6; w++) ws.push(series.slice(ONSET + w * 30, ONSET + w * 30 + 30));
+    return ws;
+  };
+  const cases = [
+    { label: 'idx 27 canonical (d=1.5)', idx: 27, d: 1.5 },
+    { label: 'idx 28 (d=2.0, the surprise)', idx: 28, d: 2.0 },
+  ];
+  for (const { label, idx, d } of cases) {
+    const cellSeed = 20260807 + idx;
+    const heldoutSeed = cellSeed + HELDOUT_OFFSET;
+    const cal = shapeBlockBet.calibrateShapeBlocks(regenHeldout(heldoutSeed), 30);
+    let crossedCount = 0;
+    for (let i = 0; i < N_SMOKE; i++) {
+      const r = rng(cellSeed + TRAJ_STEP * i);
+      const draw = gaussFrom(r);
+      const base = Array.from({ length: T }, draw);
+      const series = injectShapeMix(base, { sigma: 1, at: ONSET, d, rng: r });
+      const { log } = shapeBlockBet.shapeBetWealth(sliceWindows(series), cal);
+      if (log.some((l) => l >= Math.log(20))) crossedCount += 1;
+    }
+    const c = summary.cells.find((x) => x.detector === 'shape_block_conformal_bet' && x.cell_index === idx);
+    assert.ok(c, `${label}: no shape_block_conformal_bet cell`);
+    assert.equal(c.fires, crossedCount, `${label}: independently recomputed crossing count`);
+    assert.equal(c.detection_rate, crossedCount / N_SMOKE, `${label}: detection_rate`);
+  }
+});
+
+test('K6.7 provenance: cell 34 S2 increment_estimator recomputes from an independently regenerated fixture', () => {
+  const { summary } = smoke();
+  const distRequire = createRequire(import.meta.url);
+  const shapeBlockBet = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/shape-block-conformal-bet.js'));
+  const TRAJ_STEP = 7919, ONSET = 100, T = 300, N_SMOKE = 20, HELDOUT_ROWS = 10000;
+  const ARM34_SEED = 20260807 + 34;
+  const ARM34_HELDOUT_SEED = ARM34_SEED + 500000;
+  function summarise(xs) {
+    const n = xs.length;
+    const mean = xs.reduce((a, b) => a + b, 0) / n;
+    const varr = n > 1 ? xs.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1) : 0;
+    const se = Math.sqrt(varr / n);
+    return { n, mean, sd: Math.sqrt(varr), se, lower95_one_sided: mean - 1.645 * se, upper95_one_sided: mean + 1.645 * se };
+  }
+  const heldoutRows = new Array(HELDOUT_ROWS);
+  for (let j = 0; j < HELDOUT_ROWS; j++) heldoutRows[j] = gaussFrom(rng(ARM34_HELDOUT_SEED + TRAJ_STEP * j))();
+  const cal = shapeBlockBet.calibrateShapeBlocks(heldoutRows, 30);
+
+  const trajMeans = [];
+  for (let i = 0; i < N_SMOKE; i++) {
+    const draw = gaussFrom(rng(ARM34_SEED + TRAJ_STEP * i));
+    const series = Array.from({ length: T }, draw);
+    const eAvgs = [];
+    for (let w = 0; w < 6; w++) {
+      const window = series.slice(ONSET + w * 30, ONSET + w * 30 + 30);
+      eAvgs.push(shapeBlockBet.shapeBetWindow(window, cal).eAvg);
+    }
+    trajMeans.push(eAvgs.reduce((a, b) => a + b, 0) / eAvgs.length);
+  }
+  const recomputed = summarise(trajMeans);
+  const s2 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'healthy');
+  const inc = s2.increment_estimator;
+  assert.equal(inc.n, recomputed.n);
+  for (const f of ['mean', 'sd', 'se', 'lower95_one_sided', 'upper95_one_sided']) {
+    assert.ok(Math.abs(inc[f] - recomputed[f]) < 1e-9, `increment_estimator.${f}: harness ${inc[f]} vs recomputed ${recomputed[f]}`);
+  }
+});
+
 test('manifest records the registered seed scheme, substrate hash and smoke flag', () => {
   const { manifest } = smoke();
   assert.equal(manifest.study, 'coverage');
@@ -710,6 +974,7 @@ test('manifest records the registered seed scheme, substrate hash and smoke flag
   assert.match(manifest.substrate_sha256, /^[0-9a-f]{64}$/);
   assert.equal(manifest.seed_scheme.heldout_seed_arm_31, 20760838);
   assert.equal(manifest.seed_scheme.heldout_seed_arm_32, 20760839, 'K4.4: cell 32 HELDOUT_SEED');
+  assert.equal(manifest.seed_scheme.heldout_seed_arm_34, 20760841, 'K6.6: cell 34 HELDOUT_SEED');
   assert.deepEqual(Object.keys(manifest.classes), ['K1', 'K2', 'K3', 'K4', 'K5', 'K6']);
   assert.equal('elapsed_s' in manifest, false, 'A8 registers the manifest field list; timing is not in it');
 });
@@ -735,6 +1000,8 @@ test('manifest seed_scheme quotes the harness constants, and the constants are t
   assert.equal(c.base_seed + 31 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_31);
   // Same discipline for arm 32's own HELDOUT_SEED (Amendment v2.K4, K4.4).
   assert.equal(c.base_seed + 32 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_32);
+  // Same discipline for arm 34's own HELDOUT_SEED (Amendment v2.K6, K6.6).
+  assert.equal(c.base_seed + 34 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_34);
 });
 
 test('a smoke run lands under results/sim and never creates results/live', () => {

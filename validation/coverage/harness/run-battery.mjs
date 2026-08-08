@@ -65,6 +65,7 @@ const groupAvg = require(path.join(ENGINE_ROOT, 'dist/detectors/group-average-e-
 const conformal = require(path.join(ENGINE_ROOT, 'dist/detectors/conformal.js'));
 const tailBet = require(path.join(ENGINE_ROOT, 'dist/detectors/point-tail-bet-e-value.js'));
 const spectralBet = require(path.join(ENGINE_ROOT, 'dist/detectors/spectral-bet-e-process.js'));
+const shapeBlockBet = require(path.join(ENGINE_ROOT, 'dist/detectors/shape-block-conformal-bet.js'));
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 
@@ -94,6 +95,15 @@ const K3_WINDOW_LEN = spectralBet.W_K3;
 const K3_WINDOW_SPAN = `[${ONSET},${ONSET + K3_WINDOWS * K3_WINDOW_LEN})`;
 if (K3_WINDOW_LEN !== 30) throw new Error(`run-battery: spectralBet.W_K3 is ${K3_WINDOW_LEN}, PREREGISTRATION.md K3.1 registers 30`);
 if (K3_WINDOW_SPAN !== '[100,280)') throw new Error(`run-battery: K3 window span computed as ${K3_WINDOW_SPAN}, PREREGISTRATION.md K3.9 registers [100,280)`);
+
+// Amendment v2.K6, K6.10: the class endpoint reuses K3.9's identical window partition
+// (disjoint-window product martingale, same shape as spectralBetWealth), cross-checked
+// against the module's own W_K6 export the same way K3's is above.
+const K6_WINDOWS = 6;
+const K6_WINDOW_LEN = shapeBlockBet.W_K6;
+const K6_WINDOW_SPAN = `[${ONSET},${ONSET + K6_WINDOWS * K6_WINDOW_LEN})`;
+if (K6_WINDOW_LEN !== 30) throw new Error(`run-battery: shapeBlockBet.W_K6 is ${K6_WINDOW_LEN}, PREREGISTRATION.md K6.1 registers 30`);
+if (K6_WINDOW_SPAN !== '[100,280)') throw new Error(`run-battery: K6 window span computed as ${K6_WINDOW_SPAN}, PREREGISTRATION.md K6.10 registers [100,280)`);
 
 // Test-only hook, named: forces every adapter call for one detector id to throw, so §9's
 // NOT-EXECUTABLE fallback path is exercised by test/run-battery.test.mjs. It cannot fire by
@@ -137,6 +147,10 @@ const ARM_CELLS = [
   // 20260840, continuing directly from arm 32's index. No held-out stream is registered
   // for this candidate (K3.3/K3.6: sigma is passed oracle, nothing to calibrate).
   { idx: 33, arm_detector: 'spectral_bet_e_process', hint: 'K3', phi: 0, seed: BASE_SEED + 33 },
+  // Amendment v2.K6, K6.6: shape_block_conformal_bet's own arm, CELL_SEED = BASE_SEED + 34 =
+  // 20260841, continuing directly from arm 33's index. HELDOUT_SEED = CELL_SEED + 500000 =
+  // 20760841 (K6.6's table) — this arm's calibration is EMPIRICAL, unlike arm 33's oracle sigma.
+  { idx: 34, arm_detector: 'shape_block_conformal_bet', hint: 'K6', phi: 0, seed: BASE_SEED + 34 },
 ];
 
 // The constants module is normative (§1); this table mirrors it. Disagreement is a defect,
@@ -185,6 +199,20 @@ function assertRegistryAgreement() {
   // HELDOUT_SEED is registered for this arm (K3.3/K3.6: no calibration stream).
   const arm33Cell = ARM_CELLS.find((a) => a.idx === 33);
   if (arm33Cell.seed !== 20260840) throw new Error(`run-battery: arm-33 CELL_SEED ${arm33Cell.seed} != registered 20260840`);
+  // Amendment v2.K6, K6.6: arm 34's own CELL_SEED and HELDOUT_SEED, shown by arithmetic there.
+  const arm34Cell = ARM_CELLS.find((a) => a.idx === 34);
+  if (arm34Cell.seed !== 20260841) throw new Error(`run-battery: arm-34 CELL_SEED ${arm34Cell.seed} != registered 20260841`);
+  const arm34Heldout = arm34Cell.seed + HELDOUT_OFFSET;
+  if (arm34Heldout !== 20760841) throw new Error(`run-battery: arm-34 HELDOUT_SEED ${arm34Heldout} != registered 20760841`);
+  // Amendment v2.K6, K6.6's table: shape_block_conformal_bet's four fault cells' own
+  // HELDOUT_SEEDs, cross-checked against the table's own literals.
+  const K6_HELDOUT_SEEDS = { 26: 20760833, 27: 20760834, 28: 20760835, 29: 20760836 };
+  for (const [idxStr, expected] of Object.entries(K6_HELDOUT_SEEDS)) {
+    const idx = Number(idxStr);
+    const cell = REGISTERED_CELLS.find((c) => c.idx === idx);
+    const heldout = cell.seed + HELDOUT_OFFSET;
+    if (heldout !== expected) throw new Error(`run-battery: cell ${idx} HELDOUT_SEED ${heldout} != registered ${expected}`);
+  }
   // Amendment v2.K4, K4.4's table: point_tail_bet_e_value reuses the identical held-out stream
   // already registered for family_E_conformal_heldout on cells 18-21 (superseding §6's "only"
   // scoping, per Amendment v2.K4.1 K4.1.2). Verified here against the table's own literals.
@@ -380,12 +408,45 @@ const ADAPTERS = {
       return { crossed, wealth, eAvgs, ps, degenerateWindows };
     },
   },
+  // Amendment v2.K6/v2.K6.1: shape_block_conformal_bet. K6.10's registered adapter
+  // reading: slice the post-onset span into the SAME six disjoint 30-tick windows K3.9
+  // registers, and call shapeBetWealth(windows, cal) once per trajectory against the
+  // cell/arm's own empirical (held-out) calibration (K6.3: m=333 at n=10,000, W=30).
+  // shapeBetWindow is ALSO called directly per window (not only through shapeBetWealth)
+  // because K6.7's S2 arm needs the raw per-window eAvg (increment_estimator) and
+  // per-feature p (p_uniformity) BEFORE advanceLogWealth absorbs a degenerate read —
+  // shapeBetWealth's own log[] does not expose that (identical reasoning to K3.9's comment).
+  shape_block_conformal_bet: {
+    kind: 'shapeblock',
+    read: (data, cell, ctx) => {
+      const windows = [];
+      for (let w = 0; w < K6_WINDOWS; w++) {
+        const start = ONSET + w * K6_WINDOW_LEN;
+        windows.push(data.series.slice(start, start + K6_WINDOW_LEN));
+      }
+      let degenerateWindows = 0;
+      const eAvgs = new Array(K6_WINDOWS);
+      const ps = [];
+      for (let w = 0; w < K6_WINDOWS; w++) {
+        const { perFeature, eAvg } = shapeBlockBet.shapeBetWindow(windows[w], ctx.shapeCal);
+        if (!Number.isFinite(eAvg)) degenerateWindows += 1;
+        eAvgs[w] = eAvg;
+        for (const f of perFeature) ps.push(f.p);
+      }
+      const { wealth, log } = shapeBlockBet.shapeBetWealth(windows, ctx.shapeCal);
+      const crossed = log.some((l) => l >= Math.log(THRESHOLD));
+      return { crossed, wealth, eAvgs, ps, degenerateWindows };
+    },
+  },
 };
 
 // §7 + A6: which detectors are scored on which class, and (family_D) on which cells.
 function detectorsFor(cell) {
   switch (cell.fault_class) {
-    case 'K1': case 'K5': case 'K6': return ['safe_t', 'universal_inference'];
+    case 'K1': case 'K5': return ['safe_t', 'universal_inference'];
+    // Amendment v2.K6, K6.6: shape_block_conformal_bet joins K6 as a new row, scored on
+    // the class's four registered fault cells (K6 only, not the other five classes).
+    case 'K6': return ['safe_t', 'universal_inference', 'shape_block_conformal_bet'];
     // Amendment v2.K3, K3.5: spectral_bet_e_process is scored on ALL SIX K3 cells,
     // unlike family_D_spectral_e_detector, which stays canonical + -ar1 only (§7).
     case 'K3': {
@@ -443,6 +504,11 @@ const freshAcc = () => ({
   // K3.1.1's increment_estimator is built from. spectralPs pools every individual per-bin p
   // value (K3.1.7).
   degenerateWindows: 0, spectralEAvgMeans: [], spectralPs: [],
+  // shape_block_conformal_bet only (`kind: 'shapeblock'`): the identical accumulator shape
+  // as the spectral fields above, kept separate rather than shared so a K6 read can never
+  // silently pool into K3's arrays (each is a per-detId accumulator, so this is belt-and-
+  // suspenders, not load-bearing on its own).
+  shapeEAvgMeans: [], shapePs: [],
 });
 
 /** One adapter call, counted. The record() step is deliberately OUTSIDE the catch (see the
@@ -490,16 +556,23 @@ function record(acc, detId, out) {
     if (anyFired) acc.windowCrossed += 1;
     return;
   }
-  if (ADAPTERS[detId].kind === 'spectral') {
+  if (ADAPTERS[detId].kind === 'spectral' || ADAPTERS[detId].kind === 'shapeblock') {
     if (!Number.isFinite(out.wealth)) { acc.nonFinite += 1; } else { acc.finite += 1; (acc.es ??= []).push(out.wealth); }
     if (out.crossed) acc.fires += 1;
     acc.degenerateWindows += out.degenerateWindows;
-    // K3.1.1: the trajectory's own increment MEAN is the mean of its six eAvg values —
+    // K3.1.1/K6.7: the trajectory's own increment MEAN is the mean of its six eAvg values —
     // taken from the raw per-window reads (not the post-floor log[] diffs), so a
-    // degenerate window (not expected, K3.1.6) surfaces here as a non-finite mean rather
-    // than being silently absorbed the way advanceLogWealth absorbs it for wealth itself.
-    acc.spectralEAvgMeans.push(mean(out.eAvgs));
-    for (const p of out.ps) acc.spectralPs.push(p);
+    // degenerate window (not expected, K3.1.6/K6.7's structural-zero claim) surfaces here
+    // as a non-finite mean rather than being silently absorbed the way advanceLogWealth
+    // absorbs it for wealth itself. K6 uses its own accumulator arrays (never K3's).
+    const meanEAvg = mean(out.eAvgs);
+    if (ADAPTERS[detId].kind === 'spectral') {
+      acc.spectralEAvgMeans.push(meanEAvg);
+      for (const p of out.ps) acc.spectralPs.push(p);
+    } else {
+      acc.shapeEAvgMeans.push(meanEAvg);
+      for (const p of out.ps) acc.shapePs.push(p);
+    }
     return;
   }
   // A3a's registered field name is `non_finite_wealth` for every cell this battery emits,
@@ -585,13 +658,18 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
   // registered for family_E_conformal_heldout on these same cells (superseding §6's "only"
   // scoping, per Amendment v2.K4.1 K4.1.2) — drawn once here, so both candidates calibrate
   // from the same rows rather than two independently-drawn samples that happen to agree.
-  const needsHeldout = dets.includes('family_E_conformal_heldout') || dets.includes('point_tail_bet_e_value');
+  // Amendment v2.K6, K6.3/K6.6: shape_block_conformal_bet's own held-out calibration
+  // reuses the SAME n=10,000/HELDOUT_SEED mechanism, drawn once here per cell like the
+  // other two calibrated candidates above.
+  const needsHeldout = dets.includes('family_E_conformal_heldout') || dets.includes('point_tail_bet_e_value')
+    || dets.includes('shape_block_conformal_bet');
   const heldout = needsHeldout ? heldoutRows(cell) : null;
   const ctx = {};
   if (heldout) ctx.heldoutSeed = heldout.heldoutSeed;
   if (dets.includes('family_E_conformal_heldout')) ctx.params = heldoutParams(heldout.rows);
   if (dets.includes('point_tail_bet_e_value')) ctx.tailBetCal = tailBet.calibrateTailBet(heldout.rows);
-  const ctxForRead = { heldout: ctx.params, tailBetCal: ctx.tailBetCal };
+  if (dets.includes('shape_block_conformal_bet')) ctx.shapeCal = shapeBlockBet.calibrateShapeBlocks(heldout.rows, K6_WINDOW_LEN);
+  const ctxForRead = { heldout: ctx.params, tailBetCal: ctx.tailBetCal, shapeCal: ctx.shapeCal };
 
   for (let i = 0; i < N; i++) {
     const data = generate(cell, i);
@@ -620,7 +698,10 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       // Amendment v2.K4.1, K4.1.5: point_tail_bet_e_value stamps its own accurate literal
       // rather than reusing 'oracle' (Erratum v1.3's defect class) — its median/MAD are
       // empirical statistics of an independent held-out sample, not oracle constants.
-      params: detId === 'point_tail_bet_e_value' ? 'heldout-empirical' : 'oracle',
+      // Amendment v2.K6, K6.9: shape_block_conformal_bet stamps the same accurate literal
+      // as point_tail_bet_e_value — its calibration is an empirical statistic of an
+      // independent held-out sample (K6.3), not an oracle constant like K3's sigma.
+      params: (detId === 'point_tail_bet_e_value' || detId === 'shape_block_conformal_bet') ? 'heldout-empirical' : 'oracle',
       alpha: ALPHA,
       n: N,
       ticks: T,
@@ -673,6 +754,18 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       c.final_wealth_median = a.es && a.es.length ? median(a.es) : NaN;
       c.degenerate_windows = a.degenerateWindows;
     }
+    // Amendment v2.K6, K6.9: the registered window-partition fields, wealth descriptives,
+    // and the pre-absorption degenerate-window counter (structurally 0, K6.7). Deliberately
+    // NONE of the five instrument-named fields (K6.7's binding adapter constraint) — a fault
+    // cell has no S2/S3 role.
+    if (detId === 'shape_block_conformal_bet') {
+      c.windows = K6_WINDOWS;
+      c.window_len = K6_WINDOW_LEN;
+      c.window_span = K6_WINDOW_SPAN;
+      c.final_wealth_mean = a.es && a.es.length ? mean(a.es) : NaN;
+      c.final_wealth_median = a.es && a.es.length ? median(a.es) : NaN;
+      c.degenerate_windows = a.degenerateWindows;
+    }
     cells.push(c);
     process.stderr.write(
       `${detId.padEnd(28)} ${cell.fault_class} ${cell.severity.padEnd(20)} `
@@ -689,14 +782,18 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   const pointKind = ADAPTERS[detId].kind === 'point';
   // Amendment v2.K3, K3.6/K3.7: spectral_bet_e_process's own arm. No heldout stream (K3.3).
   const spectralKind = detId === 'spectral_bet_e_process';
+  // Amendment v2.K6, K6.6/K6.7: shape_block_conformal_bet's own arm. Held-out calibration
+  // (K6.3), unlike spectral_bet_e_process's genuinely-oracle sigma.
+  const shapeKind = detId === 'shape_block_conformal_bet';
   const ctx = {};
-  if (detId === 'family_E_conformal_heldout' || pointKind) {
+  if (detId === 'family_E_conformal_heldout' || pointKind || shapeKind) {
     const h = heldoutRows(arm);
     ctx.heldoutSeed = h.heldoutSeed;
     if (detId === 'family_E_conformal_heldout') ctx.params = heldoutParams(h.rows);
     if (pointKind) ctx.tailBetCal = tailBet.calibrateTailBet(h.rows);
+    if (shapeKind) ctx.shapeCal = shapeBlockBet.calibrateShapeBlocks(h.rows, K6_WINDOW_LEN);
   }
-  const ctxForRead = { heldout: ctx.params, tailBetCal: ctx.tailBetCal };
+  const ctxForRead = { heldout: ctx.params, tailBetCal: ctx.tailBetCal, shapeCal: ctx.shapeCal };
   const healthy = freshAcc();
   const power = freshAcc();
   // Amendment v2.K3.3, K3.3.3: spectral_bet_e_process's own third, verdict-free accumulator
@@ -705,15 +802,16 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
 
   for (let i = 0; i < N; i++) {
     let base;
+    let r;
     if (detId === 'group_average_e_value') {
       const matrix = [];
       for (let k = 0; k < arm.K; k++) {
-        const r = rng(seriesSeed(arm, i, k));
-        matrix.push(Array.from({ length: T }, drawFor(r, arm.phi)));
+        const rk = rng(seriesSeed(arm, i, k));
+        matrix.push(Array.from({ length: T }, drawFor(rk, arm.phi)));
       }
       base = { matrix };
     } else {
-      const r = rng(cellSeed(arm, i));
+      r = rng(cellSeed(arm, i));
       base = { series: Array.from({ length: T }, drawFor(r, arm.phi)) };
     }
     // A1's S3 construction: injectUnison at eps=3 across all K components for the group
@@ -722,11 +820,18 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     // class-appropriate on-grid oscillation (amp=3sigma at freq=3/30, bin k=3 exactly) —
     // injectStep is DC-blind to every bin this detector scores (K3.3.1's derivation), so the
     // step survives only as the separate step_blindness_probe_rate accumulator below (K3.3.3).
+    // Amendment v2.K6.1, K6.1.1/K6.8: shape_block_conformal_bet's own S3 construction is
+    // injectShapeMix at the class's own maximal registered severity (d=2.0), sustained
+    // across the full test span — reusing the SAME now-advanced `r` stream `base.series`
+    // was drawn from (A5's K6 pinning convention, generate()'s own comment, applied here
+    // to the arm identically).
     const shifted = detId === 'group_average_e_value'
       ? { matrix: injectUnison(base.matrix, { sigma: SIGMA, at: ONSET, eps: 3 }) }
       : spectralKind
         ? { series: injectOscillation(base.series, { sigma: SIGMA, at: ONSET, amp: 3, freq: 3 / K3_WINDOW_LEN }) }
-        : { series: injectStep(base.series, { sigma: SIGMA, at: ONSET, delta: 3 }) };
+        : shapeKind
+          ? { series: injectShapeMix(base.series, { sigma: SIGMA, at: ONSET, d: 2.0, rng: r }) }
+          : { series: injectStep(base.series, { sigma: SIGMA, at: ONSET, delta: 3 }) };
 
     const rh = attempt(healthy, detId, base, arm, ctxForRead);
     if (rh.ok) record(healthy, detId, rh.out);
@@ -763,20 +868,25 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     arm: 'healthy',
     cell_index: arm.idx,
     // Amendment v2.K3.1, K3.1.5: cell 33 stamps the out-of-grammar literal on both rows,
-    // outside the run.mjs:497-style N1/N3-p06 convention every other arm keeps.
-    null_id: spectralKind ? 'K3-arm-oracle' : (arm.phi === 0 ? 'N1' : 'N3-p06'),
+    // outside the run.mjs:497-style N1/N3-p06 convention every other arm keeps. Amendment
+    // v2.K6, K6.7: cell 34 gets its own out-of-grammar literal, 'K6-arm-heldout' — adapted
+    // from K3's 'K3-arm-oracle' because this arm's calibration is EMPIRICAL, not oracle.
+    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? 'K6-arm-heldout' : (arm.phi === 0 ? 'N1' : 'N3-p06'),
     phi: arm.phi,
-    params: pointKind ? 'heldout-empirical' : 'oracle',
+    params: (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle',
     alpha: ALPHA,
     n: s2n,
     ticks: T,
     onset: ONSET,
     ...(pointKind ? { n_points: s2PointN, k: s2PointK } : {}),
     ...(spectralKind ? { windows: K3_WINDOWS, window_len: K3_WINDOW_LEN, window_span: K3_WINDOW_SPAN } : {}),
+    ...(shapeKind ? { windows: K6_WINDOWS, window_len: K6_WINDOW_LEN, window_span: K6_WINDOW_SPAN } : {}),
     // Amendment v2.K3.1, K3.1.1/K3.1.2: spectral_bet_e_process's S2 row carries its own
     // class instrument (increment_estimator) plus crossing_rate/k — NOT exceedance/mean_e
     // (K3.15's gap; the terminal_e_value instrument pair belongs to a different class).
-    ...(spectralKind
+    // Amendment v2.K6, K6.7: shape_block_conformal_bet's S2 row carries the identical
+    // instrument pair, applying the K3.15 lesson directly rather than deferring it.
+    ...((spectralKind || shapeKind)
       ? { k: s2k, crossing_rate: s2n ? s2k / s2n : NaN }
       : {
         exceedance: pointKind ? (s2PointN ? s2PointK / s2PointN : NaN) : (s2n ? s2k / s2n : NaN),
@@ -790,12 +900,19 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       final_wealth_median: healthy.es && healthy.es.length ? median(healthy.es) : NaN,
       degenerate_windows: healthy.degenerateWindows,                     // K3.1.6
     } : {}),
+    ...(shapeKind ? {
+      increment_estimator: summarise(healthy.shapeEAvgMeans),            // K6.7
+      p_uniformity: computePUniformity(healthy.shapePs),                 // K6.7
+      final_wealth_mean: healthy.es && healthy.es.length ? mean(healthy.es) : NaN,
+      final_wealth_median: healthy.es && healthy.es.length ? median(healthy.es) : NaN,
+      degenerate_windows: healthy.degenerateWindows,                     // K6.7, structurally 0
+    } : {}),
     non_finite_wealth: healthy.nonFinite,
     adapter_failures: healthy.throws,
     verdict: s2Reason !== null
       ? 'NOT-EXECUTABLE'
-      // K3.1.3: unchanged from K3.7 — crossing_rate-derived, NOT increment_estimator-derived.
-      : (s2Lower95 > ALPHA ? 'FAIL' : 'not-refuted'),   // run.mjs:115 / K4.1.4 / K3.1.3
+      // K3.1.3/K6.7: unchanged — crossing_rate-derived, NOT increment_estimator-derived.
+      : (s2Lower95 > ALPHA ? 'FAIL' : 'not-refuted'),   // run.mjs:115 / K4.1.4 / K3.1.3 / K6.7
     not_executable_reason: s2Reason,
     substrate_tier: 'T1',
     ...(pointKind ? { point_non_finite: healthy.pointNonFinite, cal_median: ctx.tailBetCal.median, cal_mad: ctx.tailBetCal.mad } : {}),
@@ -813,20 +930,24 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     detector: detId,
     arm: 'power',
     cell_index: arm.idx,
-    null_id: spectralKind ? 'K3-arm-oracle' : (arm.phi === 0 ? 'N1' : 'N3-p06'),
+    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? 'K6-arm-heldout' : (arm.phi === 0 ? 'N1' : 'N3-p06'),
     phi: arm.phi,
-    params: pointKind ? 'heldout-empirical' : 'oracle',
+    params: (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle',
     shift_sigma: 3,
     alpha: ALPHA,
     n: N,
     ticks: T,
     onset: ONSET,
     ...(spectralKind ? { windows: K3_WINDOWS, window_len: K3_WINDOW_LEN, window_span: K3_WINDOW_SPAN } : {}),
+    // Amendment v2.K6, K6.7: no windows/window_len/window_span on the S3 row — the
+    // registration's own field list for this row does not name them (unlike S2's), so they
+    // are omitted here rather than added by K3 parity.
     fires: s3k,
     detection_rate: s3Rate,
     // Amendment v2.K3.1, K3.1.4 (Critical, binding): NONE of the five instrument-named
     // fields land here — only wealth descriptives and the degenerate-window counter.
-    ...(spectralKind ? {
+    // Amendment v2.K6, K6.7: the same binding exclusion, applied to shape_block_conformal_bet.
+    ...((spectralKind || shapeKind) ? {
       final_wealth_mean: power.es && power.es.length ? mean(power.es) : NaN,
       final_wealth_median: power.es && power.es.length ? median(power.es) : NaN,
       degenerate_windows: power.degenerateWindows,
@@ -838,7 +959,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     substrate_tier: 'T1',
     ...(pointKind ? { point_non_finite: power.pointNonFinite, cal_median: ctx.tailBetCal.median, cal_mad: ctx.tailBetCal.mad } : {}),
   };
-  if (detId === 'family_E_conformal_heldout' || pointKind) {
+  if (detId === 'family_E_conformal_heldout' || pointKind || shapeKind) {
     s2.heldout_seed = ctx.heldoutSeed;
     s3.heldout_seed = ctx.heldoutSeed;
     s2.heldout_rows = HELDOUT_ROWS;
@@ -874,9 +995,13 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       + `inc_mean=${Number.isFinite(s2.increment_estimator.mean) ? s2.increment_estimator.mean.toFixed(4) : ' n/a  '} ${s2.verdict}\n`
       + `${detId.padEnd(28)} ARM power   rate=${s3Rate === null ? ' n/a  ' : s3Rate.toFixed(4)} ${s3.verdict}\n`
       + `${detId.padEnd(28)} ARM step_blindness_probe_rate=${stepRow.step_blindness_probe_rate.toFixed(4)}\n`
-    : `${detId.padEnd(28)} ARM healthy exceedance=${Number.isFinite(s2.exceedance) ? s2.exceedance.toFixed(4) : ' n/a  '} `
-      + `mean_e=${Number.isFinite(s2.mean_e) ? s2.mean_e.toFixed(4) : ' n/a  '} ${s2.verdict}\n`
-      + `${detId.padEnd(28)} ARM power   rate=${s3Rate === null ? ' n/a  ' : s3Rate.toFixed(4)} ${s3.verdict}\n`);
+    : shapeKind
+      ? `${detId.padEnd(28)} ARM healthy crossing_rate=${Number.isFinite(s2.crossing_rate) ? s2.crossing_rate.toFixed(4) : ' n/a  '} `
+        + `inc_mean=${Number.isFinite(s2.increment_estimator.mean) ? s2.increment_estimator.mean.toFixed(4) : ' n/a  '} ${s2.verdict}\n`
+        + `${detId.padEnd(28)} ARM power   rate=${s3Rate === null ? ' n/a  ' : s3Rate.toFixed(4)} ${s3.verdict}\n`
+      : `${detId.padEnd(28)} ARM healthy exceedance=${Number.isFinite(s2.exceedance) ? s2.exceedance.toFixed(4) : ' n/a  '} `
+        + `mean_e=${Number.isFinite(s2.mean_e) ? s2.mean_e.toFixed(4) : ' n/a  '} ${s2.verdict}\n`
+        + `${detId.padEnd(28)} ARM power   rate=${s3Rate === null ? ' n/a  ' : s3Rate.toFixed(4)} ${s3.verdict}\n`);
 }
 
 // ── manifest (A8's registered field list) and append-only write ───────────────
@@ -936,6 +1061,7 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
       + `j = 0..${HELDOUT_ROWS - 1}`,
     heldout_seed_arm_31: ARM_CELLS.find((a) => a.idx === 31).seed + HELDOUT_OFFSET,
     heldout_seed_arm_32: ARM_CELLS.find((a) => a.idx === 32).seed + HELDOUT_OFFSET,
+    heldout_seed_arm_34: ARM_CELLS.find((a) => a.idx === 34).seed + HELDOUT_OFFSET,
     constants: {
       base_seed: BASE_SEED,
       trajectory_step: TRAJ_STEP,

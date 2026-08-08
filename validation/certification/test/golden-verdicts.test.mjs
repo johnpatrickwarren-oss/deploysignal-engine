@@ -166,6 +166,17 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // its own S3 arm (Amendment v2.K6 K6.4/K6.8), so the card's own expected post-run verdict is
 // ADVISORY, not USE, per overallVerdict's valid-but-inert rule -- registered here so a future
 // ADVISORY reading is not mistaken for a defect in this test.
+// Updated 2026-08-08, coverage-gap-detectors Task 11b, the registered K6 runs
+// (coverage/results/live/run-20260808T121548Z T1 battery, run-t2-20260808T121710Z T2 arm): the
+// ONE-ROW delta those runs land, named in advance by Amendment v2.K6.2 K6.2.4 --
+// shape_block_conformal_bet NOT_EXECUTABLE -> USE, tier null -> T1, s2 MISSING -> PASS,
+// s3 MISSING -> PASS. The ADVISORY expectation in the paragraph above is exactly what v2.K6.2
+// SUPERSEDES: d=2.0 is a two-point degeneracy (s = sqrt(1 - d^2/4) = 0 exactly), so the S3 arm
+// reads POWERED at detection_rate 1.0000 rather than the withdrawn ~0.000, and overallVerdict's
+// valid-but-inert rule no longer applies. The K6 CLASS answer is unchanged at NO, decided by the
+// canonical d=1.5 cell alone (measured 0.0005 against COVERAGE_FLOOR 0.50): a USE card that does
+// not carry the class it was built for is the registered, expected reading here (v2.K6.2 K6.2.2),
+// not a defect in this test.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -180,7 +191,7 @@ const GOLDEN = {
   family_E_conformal_heldout: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
   point_tail_bet_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
   spectral_bet_e_process: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
-  shape_block_conformal_bet: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
+  shape_block_conformal_bet: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
 };
 
 function runHarness(t) {

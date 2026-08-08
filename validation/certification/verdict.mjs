@@ -63,12 +63,14 @@ for (const f of cardFiles) {
 const gitSha = execSync('git rev-parse HEAD', { cwd: repoRoot }).toString().trim();
 // report_format is the shape of this run's emitted markdown, NOT the protocol version
 // (which stays 1). Format 2 added REPORT.md's S1 column and the standing-caveat footer;
-// format 3 added COVERAGE.md's per-YES-row "also COVERED" detail lines (I4). Preserved runs
-// written under an earlier format are never rewritten -- results/ is append-only -- so the
-// machine check in test/report-consistency.test.mjs reads this field to know which columns
-// and which detail lines to expect.
+// format 3 added COVERAGE.md's per-YES-row "also COVERED" detail lines (I4); format 4 names
+// EVERY detector tied at the best (status, canonical rate) on a NO row instead of the single
+// lexicographic winner (coverage Amendment v2.C1 C1.9) and adds REPORT.md's superseded-evidence
+// sections (C1.6, C1.1). Preserved runs written under an earlier format are never rewritten --
+// results/ is append-only -- so the machine check in test/report-consistency.test.mjs reads this
+// field to know which columns and which detail lines to expect.
 writeFileSync(join(outDir, 'manifest.json'), JSON.stringify({
-  study: 'detector-certification', protocol_version: 1, report_format: 3, git_sha: gitSha,
+  study: 'detector-certification', protocol_version: 1, report_format: 4, git_sha: gitSha,
   node: process.version, cards: cardFiles.map((f) => ({ file: f, sha256: fileSha256(join(here, 'cards', f)) })),
 }, null, 2) + '\n');
 
@@ -102,11 +104,42 @@ const STANDING_CAVEATS = [
   'P1 unmet: assertValidForFdrPath has no production caller — every USE is advisory in practice until the gate is wired',
 ];
 
+// Amendment v2.C1 (C1.6): evidence a rerun's own manifest declared superseded is DROPPED from
+// scoring, so it has to be visible in the report -- an unreported exclusion is
+// indistinguishable from a scorer that lost rows. One line per (superseded run, detector), with
+// the row count, the declaring run, and the declared reason.
+const supersededLines = evidence.runs
+  .filter((r) => r.superseded)
+  .flatMap((r) => r.superseded.map((s) => `- ${r.study}/${r.run} — ${s.detector}: ${s.cells} `
+    + `cell${s.cells === 1 ? '' : 's'} dropped, superseded by ${s.superseded_by} (${s.reason})`));
+
+// Amendment v2.C1.1: legacy `supersedes: {priorRun, defect}` declarations, recognized and
+// reported, deliberately NOT acted on. Silence here would have been the status quo — which is
+// how 144 h0-battery cells stayed in the corpus for a week after being declared defective.
+const unhonouredLines = (evidence.unhonoured_supersessions ?? [])
+  .map((u) => `- ${u.target} — declared superseded by ${u.declared_by}, STILL SCORED. `
+    + `Stated defect: ${u.defect}`);
+
 writeFileSync(join(outDir, 'REPORT.md'), [
   `# Certification re-score — protocol v1, engine ${gitSha.slice(0, 7)}`, '',
   'Verdicts computed mechanically from frozen cards and existing registered runs. See MISSING-CELLS.md for what this run could not adjudicate.', '',
   '| detector | class | S1 | S2 | S3 | S4 | suppressed | verdict | tier |', '|---|---|---|---|---|---|---|---|---|',
   ...emitted.map(line), '',
+  ...(supersededLines.length
+    ? ['## Superseded evidence (Amendment v2.C1 C1.6)', '',
+      'Rows a later run\'s manifest declared superseded. The prior run directories are preserved '
+      + 'byte-for-byte; only their scoring is withdrawn, per the reason each declaring run states.', '',
+      ...supersededLines, '']
+    : []),
+  ...(unhonouredLines.length
+    ? ['## Declared superseded but STILL SCORED (Amendment v2.C1.1 — a reported gap, not a decision)', '',
+      'These runs declared a prior run superseded for a named code defect, in the legacy '
+      + '`supersedes: {priorRun, defect}` manifest shape, and this scorer does NOT act on it: '
+      + 'the superseded run\'s cells are still in every verdict below. Honouring the declaration '
+      + 'would move card verdicts, which needs the declaring study\'s own pre-registration to '
+      + 'authorize. Read every verdict below with this open.', '',
+      ...unhonouredLines, '']
+    : []),
   '## Standing caveats', '',
   ...STANDING_CAVEATS.map((c) => `- ${c}`), '',
 ].join('\n'));
@@ -237,10 +270,29 @@ function betterBlocked(a, b) {
   if (ra !== rb) return ra > rb;
   return a.detector.localeCompare(b.detector) < 0;
 }
+// Amendment v2.C1 (C1.9): the tie is now RENDERED, not silently resolved. `betterBlocked`'s
+// lexicographic step is a deterministic ordering, not a statement about which detector is
+// strongest -- and when several cards tie on (status, canonical rate) the old single-name line
+// asserted a distinction the evidence does not make. All three K6 detectors read exactly 0.0005
+// at the canonical cell in run-20260808T121548Z, and the line named one of them, which the Task
+// 11b report then had to record as a deviation from the amendment's own expectation. Every card
+// tied with the winner is named; the tie-break still fixes the ORDER, so the file stays
+// deterministic. FUTURE RUNS ONLY -- committed COVERAGE.md files are not rewritten.
+function tiedWithBest(classId, best) {
+  return emitted
+    .map((o) => ({ detector: o.card.detector_id, status: o.coverage[classId].status, rate: o.coverage[classId].canonical?.rate ?? null }))
+    .filter((c) => c.status === best.status && c.rate === best.rate)
+    .map((c) => c.detector)
+    .sort((a, b) => a.localeCompare(b));
+}
 function blockedLine(classId) {
   const best = bestBlocked(classId);
   const rateStr = best.rate != null ? ` ${best.rate}` : '';
-  return `- ${classId}: NO — best: ${best.detector} ${best.status}${rateStr} (verdict ${best.verdict})`;
+  const tied = tiedWithBest(classId, best);
+  const names = tied.length > 1
+    ? `${tied.join(', ')} (${tied.length}-way tie)`
+    : best.detector;
+  return `- ${classId}: NO — best: ${names} ${best.status}${rateStr} (verdict ${best.verdict})`;
 }
 
 // I4: a YES row's detector column lists only the USE cards that carried the class, so a

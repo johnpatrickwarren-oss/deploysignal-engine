@@ -132,6 +132,46 @@ const FORCE_SPECTRAL_DEGENERATE = process.env.COVERAGE_FORCE_SPECTRAL_DEGENERATE
 // convention as COVERAGE_FORCE_SPECTRAL_DEGENERATE.
 const FORCE_SHAPE_DEGENERATE = process.env.COVERAGE_FORCE_SHAPE_DEGENERATE === '1';
 
+// Test-only hook, named: restores the PRE-Amendment-v2.C1 held-out draw (one gaussian per
+// arithmetically-spaced LCG seed — the rank-1 Kronecker lattice C1.1 names) so a test can prove
+// the C1.2 serial-structure guard actually rejects it. Without this control, a guard that never
+// fires is indistinguishable from a guard that cannot fire. Cannot fire by accident (unset env
+// var leaves it false), forces MODE=sim, and is recorded in the manifest, same convention as
+// COVERAGE_FORCE_THROW / COVERAGE_FORCE_SPECTRAL_DEGENERATE / COVERAGE_FORCE_SHAPE_DEGENERATE.
+const FORCE_HELDOUT_LATTICE = process.env.COVERAGE_FORCE_HELDOUT_LATTICE === '1';
+
+// Amendment v2.C1, C1.6: a rerun declares, in its own manifest, which already-registered
+// (study, run, detector) rows it supersedes — the only way a preserved prior run stops being
+// scored alongside its own correction (validation/certification/lib/collect.mjs pools every
+// directory under validation/*/results/live/ with no cross-run dedup). Both flags travel
+// together or neither does: a supersession with no stated reason is not auditable, and a reason
+// with nothing named is not machine-readable.
+//   --supersedes "study/run:detA,detB;study/run:detC"   --supersedes-reason "<text>"
+const SUPERSEDES_RAW = arg('--supersedes', null);
+const SUPERSEDES_REASON = arg('--supersedes-reason', null);
+function parseSupersedes() {
+  if (SUPERSEDES_RAW === null && SUPERSEDES_REASON === null) return null;
+  if (SUPERSEDES_RAW === null || SUPERSEDES_REASON === null) {
+    throw new Error('run-battery: --supersedes and --supersedes-reason must be given together (C1.6)');
+  }
+  const out = SUPERSEDES_RAW.split(';').map((entry) => {
+    const [locator, dets] = entry.split(':');
+    const [study, run] = (locator ?? '').split('/');
+    if (!study || !run || !dets) {
+      throw new Error(`run-battery: --supersedes entry "${entry}" must read study/run:detector[,detector] (C1.6)`);
+    }
+    return { study, run, detectors: dets.split(',').map((d) => d.trim()).filter(Boolean), reason: SUPERSEDES_REASON };
+  });
+  for (const s of out) {
+    // A supersession that names a directory nobody can find is a typo that would silently
+    // supersede nothing, so it is a startup crash rather than a run with a dead declaration.
+    const dir = path.resolve(STUDY, '..', s.study, 'results', 'live', s.run);
+    if (!fs.existsSync(dir)) throw new Error(`run-battery: --supersedes names ${s.study}/${s.run}, which does not exist at ${dir}`);
+    if (!s.detectors.length) throw new Error(`run-battery: --supersedes names ${s.study}/${s.run} with no detectors`);
+  }
+  return out;
+}
+
 // ── the registered cell table (§6, A1), copied literally ──────────────────────
 const F = (idx, fault_class, severity, phi) => ({ idx, fault_class, severity, phi, seed: BASE_SEED + idx });
 const REGISTERED_CELLS = [
@@ -494,21 +534,89 @@ function callAdapter(detId, data, cell, ctx) {
   return ADAPTERS[detId].read(data, cell, ctx);
 }
 
-/** The registered held-out draw shared by both K4 candidates (§6's K4 block, A1 for arm 31,
- *  A7's T1 substrate finding, Amendment v2.K4 K4.4 for point_tail_bet_e_value's reuse of the
- *  identical stream on cells 18-21 and its own fresh stream on arm 32): n=10,000 rows drawn
- *  from the cell's healthy null under HELDOUT_SEED = CELL_SEED + 500000, seed(j) = HELDOUT_SEED
- *  + 7919*j. Returning the raw rows (not a detector-specific calibration) lets both candidates
- *  calibrate from the SAME draw when both are scored on the same cell, per K4.4's text. */
+/** C1.2's registered statistic: the biased sample autocorrelation at lag k. */
+function acfAt(xs, k) {
+  const m = xs.reduce((a, b) => a + b, 0) / xs.length;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < xs.length; i++) den += (xs[i] - m) ** 2;
+  for (let i = 0; i + k < xs.length; i++) num += (xs[i] - m) * (xs[i + k] - m);
+  return num / den;
+}
+
+/** Amendment v2.C1, C1.2 — the registered runtime guard, and the mechanical kill for a
+ *  regression to the spaced-seed scheme. The rows must carry the serial structure their own
+ *  phi implies: nothing at phi=0, (phi, phi^2) at phi>0. HELDOUT_ACF_BOUND is derived, not
+ *  tuned — the iid sampling sd of acf(k) at n=10,000 is ~n^(-1/2) = 0.01, so 0.10 is a
+ *  10-sigma bound, while the lattice reads acf(2) = -0.7513 at phi=0 (outside by 7.5x) and
+ *  deviates 0.33/0.68 at phi=0.6. This THROWS rather than counting a fallback: a defective
+ *  calibration substrate is not a detector failure to tally, it is a run that must not exist. */
+const HELDOUT_ACF_BOUND = 0.10;
+function assertHeldoutSerialStructure(rows, phi, heldoutSeed) {
+  for (const k of [1, 2]) {
+    const got = acfAt(rows, k);
+    const want = phi ** k;
+    if (!(Math.abs(got - want) <= HELDOUT_ACF_BOUND)) {
+      throw new Error(
+        `run-battery: held-out draw at HELDOUT_SEED ${heldoutSeed} (phi=${phi}) has acf(${k}) `
+        + `${got}, which deviates ${Math.abs(got - want)} from the ${want} its phi implies `
+        + `(bound ${HELDOUT_ACF_BOUND}, PREREGISTRATION.md Amendment v2.C1 C1.2). The registered `
+        + 'generator is ONE continuous stream per held-out draw; the spaced-seed scheme this '
+        + 'guard rejects produced a rank-1 Kronecker lattice (C1.1) and moved a verdict.');
+    }
+  }
+}
+
+/** The registered held-out draw shared by both K4 candidates and by K6 (§6's K4 block, A1 for
+ *  arm 31, A7's T1 substrate finding, Amendment v2.K4 K4.4 for point_tail_bet_e_value's reuse of
+ *  the identical stream on cells 18-21 and its own fresh stream on arm 32, Amendment v2.K6
+ *  K6.3/K6.6 for shape_block_conformal_bet): n=10,000 rows drawn from the cell's healthy null
+ *  under HELDOUT_SEED = CELL_SEED + 500000. Returning the raw rows (not a detector-specific
+ *  calibration) lets every candidate scored on the cell calibrate from the SAME draw, per K4.4.
+ *
+ *  Amendment v2.C1 (C1.2) SUPERSEDES K4.4/K6.3/K6.6's `seed(j) = HELDOUT_SEED + 7919*j` clause.
+ *  HELDOUT_SEED and HELDOUT_ROWS are unchanged; the DRAW is not. The rows are 10,000
+ *  CONSECUTIVE draws from one continuously-advanced stream, the same way a live window is 30
+ *  consecutive draws — which is the comparability the block-conformal rank assumes and the
+ *  contiguity K6's module docstring claims (shape-block-conformal-bet.ts:12-16). Under the old
+ *  form `drawFor` was constructed and called ONCE per row, so both uniforms gaussFrom consumes
+ *  were affine in j (a rank-1 lattice) and, on the -ar1 cells, the AR(1) recursion never
+ *  advanced at all (C1.3). Here the single `draw` closure holds the AR(1) state across rows. */
 function heldoutRows(cell) {
   const heldoutSeed = cell.seed + HELDOUT_OFFSET;
   const rows = new Array(HELDOUT_ROWS);
-  for (let j = 0; j < HELDOUT_ROWS; j++) {
-    const r = rng(heldoutSeed + TRAJ_STEP * j);
-    rows[j] = drawFor(r, cell.phi)();
+  if (FORCE_HELDOUT_LATTICE) {
+    // Test-only positive control for the guard above (see the flag's own comment): the exact
+    // pre-C1 draw, so a test can prove the guard actually rejects it.
+    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = drawFor(rng(heldoutSeed + TRAJ_STEP * j), cell.phi)();
+  } else {
+    const r = rng(heldoutSeed);
+    const draw = drawFor(r, cell.phi);
+    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = draw();
   }
+  assertHeldoutSerialStructure(rows, cell.phi, heldoutSeed);
   return { rows, heldoutSeed };
 }
+
+/** Amendment v2.C1, C1.8 (review Important 3): the calibration's own fingerprint, read straight
+ *  off the ShapeCalibration the row actually used rather than re-derived — the K6 analogue of
+ *  point_tail_bet_e_value's cal_median/cal_mad, extended to a two-feature block calibration.
+ *  Makes C1's signature (a compressed reference |dev| spread) readable off a future run
+ *  directory instead of only off the amendment, and makes the single-draw caveat (C1.7)
+ *  checkable: two rows sharing a reference have identical fingerprints. */
+const calQuantile = (sortedAbsDev, p) => sortedAbsDev[Math.round(p * (sortedAbsDev.length - 1))];
+const calFeatureFingerprint = (f) => ({
+  median: f.median,
+  absdev_p50: calQuantile(f.sortedAbsDev, 0.5),
+  absdev_p90: calQuantile(f.sortedAbsDev, 0.9),
+  absdev_max: f.sortedAbsDev[f.sortedAbsDev.length - 1],
+});
+const shapeCalFingerprint = (cal) => ({
+  W: cal.W,
+  m: cal.m,
+  kurtosis: calFeatureFingerprint(cal.kurtosis),
+  absSkew: calFeatureFingerprint(cal.absSkew),
+});
 
 function heldoutParams(rows) {
   return stampHeldoutFamilyE({ calibrationRows: rows, alpha: ALPHA });
@@ -663,6 +771,9 @@ function computePUniformity(rawPs) {
 
 // ── run ──────────────────────────────────────────────────────────────────────
 assertRegistryAgreement();
+// Parsed here rather than at flag-read time so a malformed declaration crashes before any
+// trajectory is generated, alongside the registry agreement it belongs with (C1.6).
+const SUPERSEDES = parseSupersedes();
 
 const classFilter = arg('--classes', null);
 const CLASSES_RUN = classFilter ? classFilter.split(',').map((s) => s.trim()) : Object.keys(FAULT_CLASSES);
@@ -789,6 +900,13 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       c.final_wealth_mean = a.es && a.es.length ? mean(a.es) : NaN;
       c.final_wealth_median = a.es && a.es.length ? median(a.es) : NaN;
       c.degenerate_windows = a.degenerateWindows;
+      // Amendment v2.C1, C1.8: the calibration fingerprint + the same held-out provenance pair
+      // point_tail_bet_e_value already carries (K4.4). A K6 row previously named no calibration
+      // at all, so the artefact that moved this class's S3 verdict was invisible in the run
+      // directory — a reader had to re-derive the reference to see anything about it.
+      c.cal_fingerprint = shapeCalFingerprint(ctx.shapeCal);
+      c.heldout_seed = ctx.heldoutSeed;
+      c.heldout_rows = HELDOUT_ROWS;
     }
     cells.push(c);
     process.stderr.write(
@@ -989,6 +1107,13 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     s2.heldout_rows = HELDOUT_ROWS;
     s3.heldout_rows = HELDOUT_ROWS;
   }
+  // Amendment v2.C1, C1.8: the K6 arm's own calibration fingerprint, on both rows. This arm is
+  // where the defect reached a verdict (S3 POWERED on a lattice reference), so it is the row
+  // where the reference's shape most needs to be on the record.
+  if (shapeKind) {
+    s2.cal_fingerprint = shapeCalFingerprint(ctx.shapeCal);
+    s3.cal_fingerprint = shapeCalFingerprint(ctx.shapeCal);
+  }
   // Amendment v2.K3.3, K3.3.3/K3.3.5: the retained step construction, as a THIRD, verdict-
   // free descriptive row on cell 33 — the exact registered field set, nothing more: no
   // shift_sigma (so isPowerCell/scoreS3 never admits it as an S3 candidate), no verdict, and
@@ -1053,7 +1178,8 @@ const outRoot = process.env.COVERAGE_RESULTS_DIR
 // run.mjs:76 convention. This is a property of the run, not a flag the caller passes, so a
 // smoke run cannot opt itself into the evidence path. --classes does NOT force sim: Task 9 may
 // run the registered n class by class (plan step 2), and `classes_run` below records the scope.
-const MODE = (N === REGISTERED_N && FORCE_THROW === null && !FORCE_SPECTRAL_DEGENERATE && !FORCE_SHAPE_DEGENERATE) ? 'live' : 'sim';
+const MODE = (N === REGISTERED_N && FORCE_THROW === null && !FORCE_SPECTRAL_DEGENERATE
+  && !FORCE_SHAPE_DEGENERATE && !FORCE_HELDOUT_LATTICE) ? 'live' : 'sim';
 const stamp = `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}Z`;
 const outDir = path.join(outRoot, MODE, `run-${stamp}`);
 if (fs.existsSync(outDir)) {
@@ -1081,8 +1207,15 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
     cell: `CELL_SEED = BASE_SEED(${BASE_SEED}) + cellIndex`,
     trajectory: `seed(i) = CELL_SEED + ${TRAJ_STEP}*i`,
     series: `seed(i,k) = CELL_SEED + ${TRAJ_STEP}*i + ${SERIES_SALT}*k (K2 matrices and arm 30)`,
-    heldout: `HELDOUT_SEED = CELL_SEED + ${HELDOUT_OFFSET}; seed(j) = HELDOUT_SEED + ${TRAJ_STEP}*j, `
-      + `j = 0..${HELDOUT_ROWS - 1}`,
+    // Amendment v2.C1 (C1.2) supersedes the `seed(j) = HELDOUT_SEED + 7919*j` clause every run
+    // before this one recorded here. HELDOUT_SEED and the row count are unchanged; the draw is
+    // ONE continuous stream, so this string is not a cosmetic edit — it is the difference
+    // between a lattice and a sample, and a manifest that still said `seed(j)` would misdescribe
+    // the run it manifests.
+    heldout: `HELDOUT_SEED = CELL_SEED + ${HELDOUT_OFFSET}; rows are ${HELDOUT_ROWS} CONSECUTIVE `
+      + 'draws from one continuously-advanced rng(HELDOUT_SEED) stream (Amendment v2.C1 C1.2, '
+      + 'superseding the pre-C1 seed(j) = HELDOUT_SEED + 7919*j scheme)',
+    heldout_acf_bound: HELDOUT_ACF_BOUND,
     heldout_seed_arm_31: ARM_CELLS.find((a) => a.idx === 31).seed + HELDOUT_OFFSET,
     heldout_seed_arm_32: ARM_CELLS.find((a) => a.idx === 32).seed + HELDOUT_OFFSET,
     heldout_seed_arm_34: ARM_CELLS.find((a) => a.idx === 34).seed + HELDOUT_OFFSET,
@@ -1112,6 +1245,10 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   force_throw_hook: FORCE_THROW,
   spectral_force_degenerate_hook: FORCE_SPECTRAL_DEGENERATE,
   shape_force_degenerate_hook: FORCE_SHAPE_DEGENERATE,
+  heldout_lattice_hook: FORCE_HELDOUT_LATTICE,
+  // Amendment v2.C1, C1.6: null on every run that supersedes nothing, which is every run
+  // committed before this amendment.
+  supersedes: SUPERSEDES,
   generated_at: stamp,
 }, null, 1)}\n`);
 

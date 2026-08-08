@@ -26,14 +26,30 @@
 //
 // Two-step validity argument (the docstring the design page requires):
 //   1. Conformal p is super-uniform under exchangeability of the
-//      (calibration, live) scores — distribution-free and exact; no
-//      plug-in parameter. This is the valid super-uniform p-value the
-//      calibrator below requires as its precondition.
+//      (calibration, live) scores — distribution-free, no plug-in
+//      parameter. This is the valid super-uniform p-value the calibrator
+//      below requires as its precondition.
 //   2. ∫₀¹ κ·p^(κ−1) dp = 1 for any κ ∈ (0, 1), so e = κ·p^(κ−1) is a
 //      valid e-value with E[e | H0] <= 1 per point (Vovk-Wang calibrator).
 // Both steps are citable theorems whose hypotheses (exchangeability; a
 // super-uniform input p) the certification battery checks directly.
 // Quantifier tag: proof, with the calibrator identity as the artifact.
+//
+// EXACTNESS, QUALIFIED — read step 1 with this (coverage
+// PREREGISTRATION.md Amendment v2.K4.1 K4.1.10, and Amendment v2.C1 C1.9
+// which corrects the claim text rather than the defect). Step 1 is exact
+// for a reference whose median and MAD are FIXED. This construction
+// estimates both FROM THE SAME held-out rows it then ranks against, so
+// the (calibration, live) scores are not exactly exchangeable: the
+// self-fit introduces an O(1/n) anti-conservative departure. At the
+// registered n = 10,000 it is small, and it is not zero. Earlier text
+// here — and this detector's certification card
+// (validation/certification/cards/point_tail_bet_e_value.json) — called
+// the argument "distribution-free, exact" while the card's own
+// regime.exchangeability_note recorded the O(1/n) departure two fields
+// below: the card contradicted itself, and this docstring was the source
+// it agreed with. The defect is UNRESOLVED (filed for wiki write-back);
+// what is corrected is the claim, which no longer overstates it.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KAPPA = void 0;
 exports.calibrateTailBet = calibrateTailBet;
@@ -74,10 +90,21 @@ function calibrateTailBet(rows) {
     const sortedScores = absDevs.map((d) => d / mad).sort((a, b) => a - b);
     return { median: m, mad, sortedScores };
 }
+/** Amendment v2.C1 (C1.9): the calibrator `e = kappa*p^(kappa-1)` is an e-value because
+ *  `integral_0^1 kappa*p^(kappa-1) dp = 1`, and that identity needs kappa in the OPEN interval
+ *  (0,1): kappa <= 0 diverges, kappa = 1 makes e identically 1 (no bet), kappa > 1 inverts the
+ *  bet's direction so large p pays. kappa was a defaulted parameter no caller had to justify and
+ *  nothing validated, so an out-of-domain value returned a number that is not an e-value. */
+function assertKappaInUnitInterval(fn, kappa) {
+    if (!Number.isFinite(kappa) || !(kappa > 0) || !(kappa < 1)) {
+        throw new Error(`${fn}: kappa must be a finite number in the open interval (0,1), got ${kappa}`);
+    }
+}
 /** Per-point conformal tail-bet e-value against a frozen calibration.
  *  score = |x - cal.median| / cal.mad; p = (1 + #{cal >= score}) / (n+1);
  *  e = kappa * p^(kappa-1). See module docstring for the validity argument. */
 function pointTailBetEValue(x, cal, kappa = exports.KAPPA) {
+    assertKappaInUnitInterval('pointTailBetEValue', kappa);
     const score = Math.abs(x - cal.median) / cal.mad;
     const n = cal.sortedScores.length;
     const p = (1 + countGte(cal.sortedScores, score)) / (n + 1);

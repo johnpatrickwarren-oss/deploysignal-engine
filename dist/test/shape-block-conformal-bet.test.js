@@ -350,4 +350,17 @@ function buildDeterministicCalibration() {
         strict_1.default.equal(f.p, expectedP, `${f.name}: p ${f.p} vs expected ${expectedP}`);
     }
 });
+// coverage PREREGISTRATION.md Amendment v2.C1 C1.9 — kappa domain guard, the same argument as
+// K3's and K4's (this module's docstring already states the requirement in prose: "for any
+// kappa in (0,1)"), now machine-encoded rather than left to the caller's discipline.
+(0, node_test_1.test)('C1.9: kappa outside (0,1) throws', () => {
+    const r = lcg(20260808);
+    const cal = (0, shape_block_conformal_bet_1.calibrateShapeBlocks)(Array.from({ length: 10000 }, () => gauss(r)));
+    const w = Array.from({ length: shape_block_conformal_bet_1.W_K6 }, () => gauss(r));
+    for (const bad of [0, 1, -0.1, 1.5, NaN, Infinity]) {
+        strict_1.default.throws(() => (0, shape_block_conformal_bet_1.shapeBetWindow)(w, cal, bad), /kappa/, `kappa=${bad} must be refused`);
+    }
+    strict_1.default.doesNotThrow(() => (0, shape_block_conformal_bet_1.shapeBetWindow)(w, cal, shape_block_conformal_bet_1.KAPPA_K6));
+    strict_1.default.doesNotThrow(() => (0, shape_block_conformal_bet_1.shapeBetWindow)(w, cal, 0.5));
+});
 //# sourceMappingURL=shape-block-conformal-bet.test.js.map

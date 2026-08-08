@@ -128,4 +128,31 @@ const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * 
     strict_1.default.equal(wealth, Number.MAX_VALUE, 'the linear view saturates finite, never Infinity');
     strict_1.default.ok(Number.isFinite(log[0]), 'log books stay exact and finite');
 });
+// coverage PREREGISTRATION.md Amendment v2.C1 C1.9 — domain guards.
+//
+// The pre-existing `sigma > 0` check admitted Infinity: `U = I/(sigma*sigma)` becomes 0, so
+// `p = exp(-0) = 1` and `e = kappa` on every bin — a finite, plausible-looking, wrong answer on
+// every window. NaN was already rejected (NaN > 0 is false); Infinity was not.
+//
+// `kappa` is a defaulted parameter and was never validated, while the module's own validity
+// argument holds only for kappa in (0,1): `integral_0^1 kappa*p^(kappa-1) dp = 1` needs
+// kappa > 0 for the integral to converge and kappa < 1 for the calibrator to be a bet on small
+// p at all (kappa = 1 is the constant e = 1; kappa > 1 inverts the direction). A caller passing
+// 0, 1, a negative, or a non-finite kappa gets a number back that is not an e-value.
+(0, node_test_1.test)('C1.9: sigma must be FINITE and positive, not merely positive', () => {
+    const w = Array.from({ length: spectral_bet_e_process_1.W_K3 }, (_, t) => Math.sin(t));
+    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(w, Infinity), /finite/);
+    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(w, NaN));
+    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(w, 0));
+    strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(w, -1));
+    strict_1.default.doesNotThrow(() => (0, spectral_bet_e_process_1.spectralBetWindow)(w, 1));
+});
+(0, node_test_1.test)('C1.9: kappa outside the open interval (0,1) throws — the calibrator identity needs it', () => {
+    const w = Array.from({ length: spectral_bet_e_process_1.W_K3 }, (_, t) => Math.sin(t));
+    for (const bad of [0, 1, -0.1, 1.5, NaN, Infinity]) {
+        strict_1.default.throws(() => (0, spectral_bet_e_process_1.spectralBetWindow)(w, 1, bad), /kappa/, `kappa=${bad} must be refused`);
+    }
+    strict_1.default.doesNotThrow(() => (0, spectral_bet_e_process_1.spectralBetWindow)(w, 1, spectral_bet_e_process_1.KAPPA_K3));
+    strict_1.default.doesNotThrow(() => (0, spectral_bet_e_process_1.spectralBetWindow)(w, 1, 0.5));
+});
 //# sourceMappingURL=spectral-bet-e-process.test.js.map

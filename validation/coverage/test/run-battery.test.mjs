@@ -377,14 +377,23 @@ test('K6.9 params positive scope: every shape_block_conformal_bet row stamps hel
   for (const c of rows) assert.equal(c.params, 'heldout-empirical', JSON.stringify(c));
 });
 
+// Amendment v2.C1 (C1.2): the re-derivation below now follows the CORRECTED generator — one
+// continuous stream per held-out draw. This test's own limitation is worth naming where it lives:
+// it re-implements the seeding scheme, so while the harness drew a rank-1 lattice this test agreed
+// with it and passed. A re-implementation test cannot see a defect in the thing it re-implements.
+// The DISTRIBUTIONAL kill that can see it lives in test/heldout-substrate.test.mjs (an
+// autocorrelation bound the old scheme fails by 7.5x), and the harness itself now refuses to run
+// on rows that violate that bound. What this test still earns is wrong-stream provenance: a
+// heldoutSeed off by one, or a cell sharing another cell's draw, still moves median/mad here.
 test('K4.4 provenance: cal_median/cal_mad are re-derivable from lib/inject.mjs at the registered heldout seed', () => {
   const { summary } = smoke();
   const distRequire = createRequire(import.meta.url);
   const tailBetDist = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/point-tail-bet-e-value.js'));
-  const HELDOUT_ROWS = 10000, TRAJ_STEP = 7919;
+  const HELDOUT_ROWS = 10000;
   const regenRows = (heldoutSeed) => {
+    const draw = gaussFrom(rng(heldoutSeed));          // ONE stream, advanced continuously (C1.2)
     const rows = new Array(HELDOUT_ROWS);
-    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = gaussFrom(rng(heldoutSeed + TRAJ_STEP * j))();
+    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = draw();
     return rows;
   };
   const cases = [
@@ -745,16 +754,106 @@ test('K6.9: fault-cell rows carry the registered window-partition fields, params
   }
 });
 
-test('K6.6: shape_block_conformal_bet reuses the registered held-out seed on cells 26-29', () => {
+test('K6.6 + C1.8: shape_block_conformal_bet stamps the registered held-out seed on cells 26-29', () => {
   const { summary } = smoke();
   for (const [idx, heldoutSeed] of Object.entries(K6_HELDOUT_SEED_BY_CELL)) {
     const c = summary.cells.find((x) => x.detector === 'shape_block_conformal_bet' && x.cell_index === Number(idx));
     assert.ok(c, `no shape_block_conformal_bet row for cell ${idx}`);
-    // K6.9's field list does not register cal_median/cal_mad/heldout_seed on fault cells
-    // (unlike point_tail_bet_e_value's K4.4) — this is checked end-to-end via the K6.10
-    // provenance recompute test below instead of a per-cell exposed seed field.
     assert.equal(Number(idx), c.cell_index);
+    // Amendment v2.C1 (C1.8) EXTENDS K6.9's field list: before C1, a K6 row named no
+    // calibration at all, so the reference artefact that moved this class's S3 verdict was
+    // invisible in the run directory. heldout_seed/heldout_rows now match K4.4's convention.
+    assert.equal(c.heldout_seed, Number(heldoutSeed), `cell ${idx}: heldout_seed (C1.8)`);
+    assert.equal(c.heldout_rows, 10000, `cell ${idx}: heldout_rows (C1.8)`);
   }
+});
+
+// Amendment v2.C1, C1.8 (review Important 3). The fingerprint is asserted three ways: present and
+// well-shaped on every K6 row; re-derivable from the corrected generator (so a wrong-stream
+// mutation moves it); and ORDERED, since `sortedAbsDev` quantiles that came out unsorted would
+// make the compression signature unreadable.
+test('C1.8: every shape_block_conformal_bet row carries a well-formed cal_fingerprint', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet');
+  assert.equal(rows.length, 6, '4 fault cells + S2 + S3 arm rows');
+  for (const c of rows) {
+    const f = c.cal_fingerprint;
+    assert.ok(f, `${c.fault_class ?? c.arm} ${c.cell_index}: cal_fingerprint absent`);
+    assert.equal(f.W, 30, `${c.cell_index}: cal_fingerprint.W`);
+    assert.equal(f.m, 333, `${c.cell_index}: cal_fingerprint.m (K6.3's floor(10000/30))`);
+    for (const feature of ['kurtosis', 'absSkew']) {
+      const g = f[feature];
+      assert.ok(Number.isFinite(g.median), `${c.cell_index}/${feature}: median`);
+      for (const q of ['absdev_p50', 'absdev_p90', 'absdev_max']) {
+        assert.ok(Number.isFinite(g[q]) && g[q] >= 0, `${c.cell_index}/${feature}: ${q}`);
+      }
+      assert.ok(g.absdev_p50 <= g.absdev_p90, `${c.cell_index}/${feature}: p50 <= p90`);
+      assert.ok(g.absdev_p90 <= g.absdev_max, `${c.cell_index}/${feature}: p90 <= max`);
+    }
+  }
+  // The two arm rows share ONE draw (arm 34's), so their fingerprints must be identical — the
+  // property C1.7's single-draw caveat is about, made checkable off the emitted rows alone.
+  const s2 = rows.find((c) => c.arm === 'healthy');
+  const s3 = rows.find((c) => c.arm === 'power');
+  assert.deepEqual(s2.cal_fingerprint, s3.cal_fingerprint,
+    'C1.7: the S2 and S3 arm rows calibrate on the same held-out draw, so the fingerprints must match');
+});
+
+test('C1.8: cal_fingerprint is re-derivable from lib/inject.mjs under the corrected generator', () => {
+  const { summary } = smoke();
+  const distRequire = createRequire(import.meta.url);
+  const shapeDist = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/shape-block-conformal-bet.js'));
+  const HELDOUT_ROWS = 10000;
+  const q = (sorted, p) => sorted[Math.round(p * (sorted.length - 1))];
+  const regen = (heldoutSeed) => {
+    const draw = gaussFrom(rng(heldoutSeed));
+    const rows = new Array(HELDOUT_ROWS);
+    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = draw();
+    return shapeDist.calibrateShapeBlocks(rows, 30);
+  };
+  for (const [idx, heldoutSeed] of [...Object.entries(K6_HELDOUT_SEED_BY_CELL), ['34', 20760841]]) {
+    // Cell 29 is the -ar1 cell: its held-out draw is AR(1) at phi=0.6, so the iid regeneration
+    // here does not describe it. C1.3 covers that row's own structure in heldout-substrate.
+    if (Number(idx) === 29) continue;
+    const c = summary.cells.find((x) => x.detector === 'shape_block_conformal_bet'
+      && (x.cell_index === Number(idx)) && x.arm !== 'power');
+    assert.ok(c, `no row for ${idx}`);
+    const cal = regen(Number(heldoutSeed));
+    for (const feature of ['kurtosis', 'absSkew']) {
+      assert.equal(c.cal_fingerprint[feature].median, cal[feature].median, `${idx}/${feature}: median`);
+      assert.equal(c.cal_fingerprint[feature].absdev_p50, q(cal[feature].sortedAbsDev, 0.5), `${idx}/${feature}: p50`);
+      assert.equal(c.cal_fingerprint[feature].absdev_p90, q(cal[feature].sortedAbsDev, 0.9), `${idx}/${feature}: p90`);
+      assert.equal(c.cal_fingerprint[feature].absdev_max,
+        cal[feature].sortedAbsDev[cal[feature].sortedAbsDev.length - 1], `${idx}/${feature}: max`);
+    }
+  }
+});
+
+// C1.2's registered runtime guard, positive control. A guard that never fires is
+// indistinguishable from a guard that cannot fire, and this one exists specifically to make a
+// regression to the pre-C1 draw impossible to run. Same COVERAGE_FORCE_* convention as the two
+// degenerate-window controls above.
+test('C1.2 guard positive control: the harness REFUSES to run on pre-C1 lattice held-out rows', () => {
+  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-battery-lattice-'));
+  let threw = false;
+  let stderr = '';
+  try {
+    execFileSync(process.execPath, [HARNESS, '--n', '5', '--classes', 'K6'], {
+      env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot, COVERAGE_FORCE_HELDOUT_LATTICE: '1' },
+      encoding: 'utf8', stdio: 'pipe',
+    });
+  } catch (err) {
+    threw = true;
+    stderr = String(err.stderr ?? '');
+  }
+  assert.ok(threw, 'the harness must refuse the lattice draw, not run on it');
+  assert.match(stderr, /Amendment v2\.C1 C1\.2/, 'the refusal must name the registration it enforces');
+  assert.match(stderr, /rank-1 Kronecker lattice/, 'and the mechanism it rejects');
+  assert.equal(fs.existsSync(path.join(outRoot, 'live')), false, 'no results/live directory may be created');
+  // And the ordinary path does NOT throw: the guard is a property of the rows, not a blanket
+  // refusal that would pass this test for the wrong reason.
+  const { summary } = smoke();
+  assert.equal(summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet').length, 6);
 });
 
 test('K6.7 (Critical, binding): the S3 power row and all four fault cells carry NONE of the five instrument-named fields', () => {
@@ -821,6 +920,28 @@ test('K6.7: p_uniformity is pooled n*6*2 per-feature p values (kurtosis + absSke
   assert.ok(Math.abs(pu.ks_critical_at_alpha - expectedCritical) < 1e-9,
     'ks_critical_at_alpha must be the standard asymptotic 1.36/sqrt(n), computed at the actual pooled n');
   assert.equal('verdict' in pu, false, 'K6.7: no verdict key of its own');
+});
+
+// Amendment v2.C1: p_uniformity PINNED BY VALUE, not only by shape. The shape test above passed
+// on both sides of C1 — it is the statistic's value that carried the finding (T1 read
+// P(p<=0.05) = 0.10017 and ks 0.1080 against critical 0.0087788 under the lattice, and this
+// instrument firing is what led to the defect). A shape-only test lets that value drift silently,
+// so the smoke reading is pinned to the last digit here and the registered n=2000 reading is
+// pinned in C1.5's prediction table.
+test('C1: p_uniformity is pinned by value on the K6 S2 arm at the smoke seeds', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'healthy');
+  const pu = s2.p_uniformity;
+  assert.equal(pu.n, 240, '20 smoke trajectories x 6 windows x 2 features');
+  assert.deepEqual(pu.decile_counts, [19, 28, 28, 21, 26, 24, 29, 22, 21, 22],
+    'the pooled decile histogram under the corrected reference; the lattice piled 4475/24000 into '
+    + 'the first decile at n=2000, a first-decile excess this histogram does not have');
+  assert.equal(pu.ks_statistic, 0.04575848303393215);
+  assert.equal(pu.ks_critical_at_alpha, 0.08778762251403478);
+  assert.ok(pu.ks_statistic < pu.ks_critical_at_alpha,
+    'at the smoke n the KS statistic sits UNDER its critical value; C1.5 registers that at the '
+    + 'registered n=2000 it does NOT (0.0229 > 0.0088) — an expected, unexplained residual with '
+    + 'no verdict authority, filed rather than resolved');
 });
 
 // K6.7 registers degenerate_windows as "structurally zero" on the reasoning that eAvg stays
@@ -900,28 +1021,36 @@ test('canonical (idx 27, mix-d1.5) and idx 26/29 read the predicted near-zero at
   }
 });
 
-// K6.2.1: idx 28 (mix-d2.0) and arm 34's S3 (same d=2.0 construction, K6.8) are POWERED — the
-// registered expectation at this severity's two-point degeneracy, not an unresolved finding.
-// K6.2.2 draws the consequence for the card's stage tuple: S3 POWERED (not INERT) removes
-// `overallVerdict`'s valid-but-inert ADVISORY cap (score.mjs:564-568), so the expected overall
-// verdict is USE, not ADVISORY — resolved by the amendment, nothing left for Task 12 to
-// adjudicate on this point. The K6 CLASS answer stays NO regardless (K6.2.2: decided by the
-// canonical cell, idx 27, alone — unaffected by this correction).
-test('K6.2.1/K6.2.2: idx 28 (mix-d2.0) and arm 34 S3 are POWERED at smoke seeds — the registered two-point-degeneracy expectation', () => {
+// Amendment v2.C1 (C1.5) SUPERSEDES the pin this test carried. Amendment v2.K6.2 (K6.2.1) had
+// idx 28 and arm 34's S3 POWERED at `detection_rate` exactly 1, and K6.2.2 drew the consequence:
+// S3 POWERED removes overallVerdict's valid-but-inert ADVISORY cap (score.mjs:566-570), so the
+// expected card verdict was USE. That reading rested on a rank-1 Kronecker lattice standing in
+// for the reference distribution (C1.1). v2.K6.2's PREMISE is kept — `s = sqrt(1 - d^2/4)` is
+// exactly 0 at d=2.0, so this severity is genuinely a two-point +-1sigma law, and K6.2.3's
+// boundary-artifact taxonomy stands — but its CONCLUSION is withdrawn: against a real reference
+// the same law gives mean eAvg 1.1525 and cumulative log-wealth ~0.69 over six windows against
+// the bar log(20) = 2.9957, so it cannot cross. Registered: INERT, and the card returns to
+// ADVISORY, which is what v2.K6/K6.1 registered from a derivation before any run.
+test('C1.5 (supersedes K6.2.1/K6.2.2): idx 28 (mix-d2.0) and arm 34 S3 are INERT at smoke seeds — the corrected-reference expectation', () => {
   const { summary } = smoke();
   const c28 = summary.cells.find((x) => x.detector === 'shape_block_conformal_bet' && x.cell_index === 28);
   assert.ok(c28, 'no cell 28');
   assert.equal(c28.canonical, false, 'idx 28 is grid-only, not the class-deciding canonical cell (idx 27, K6.2.2)');
-  // Pinned at the registered smoke seeds — matches K6.2.1's corrected ~0.95-1.0 prediction.
-  assert.equal(c28.detection_rate, 1, 'K6.2.1 predicts ~0.95-1.0 at d=2.0; at n=20 smoke seeds this reads exactly 1');
-  assert.equal(c28.verdict, 'POWERED');
+  // C1.5's registered band at n=2000 is <= 0.02 (point prediction 0.0045); at these 20 smoke
+  // seeds it reads exactly 0. Pinned as both: the exact smoke value AND the registered band, so
+  // this test fails on a return to the lattice (which reads exactly 1 here) and also on any
+  // drift that lifts the rate into the powered range.
+  assert.equal(c28.detection_rate, 0, 'C1.5: at n=20 smoke seeds the corrected reference reads exactly 0 (the lattice read exactly 1)');
+  assert.ok(c28.detection_rate <= 0.02, 'C1.5 registered band for cell 28');
+  assert.equal(c28.verdict, 'INERT');
 
   const s3 = summary.cells.find((c) => c.detector === 'shape_block_conformal_bet' && c.arm === 'power');
   assert.ok(s3, 'no shape_block_conformal_bet power arm');
-  assert.equal(s3.detection_rate, 1, 'arm 34 S3 (also d=2.0, K6.8) reads 1.0 at n=20 smoke seeds, matching K6.2.1');
-  assert.equal(s3.verdict, 'POWERED',
-    'K6.2.1/K6.2.2: POWERED here is the registered, corrected expectation — removes the '
-    + '"valid-but-inert" ADVISORY cap (score.mjs:564-568), expected overall verdict USE (K6.2.2)');
+  assert.equal(s3.detection_rate, 0, 'arm 34 S3 (also d=2.0, K6.8) reads 0 at n=20 smoke seeds under the corrected reference');
+  assert.ok(s3.detection_rate <= 0.02, 'C1.5 registered band for arm 34 S3 (point prediction 0.0005 at n=2000)');
+  assert.equal(s3.verdict, 'INERT',
+    'C1.5/C1.12: INERT here restores overallVerdict\'s valid-but-inert cap (score.mjs:566-570), '
+    + 'so the expected overall verdict is ADVISORY — v2.K6/K6.1\'s original registration');
 });
 
 test('K6.10 provenance: independent window-partition + wealth-endpoint recompute matches the harness at smoke n, across the d=2.0 two-point degeneracy', () => {
@@ -930,9 +1059,13 @@ test('K6.10 provenance: independent window-partition + wealth-endpoint recompute
   const shapeBlockBet = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/shape-block-conformal-bet.js'));
   const TRAJ_STEP = 7919, HELDOUT_OFFSET = 500000, ONSET = 100, T = 300, N_SMOKE = 20;
   const HELDOUT_ROWS = 10000;
+  // Amendment v2.C1 (C1.2): one continuous stream per held-out draw. TRAJ_STEP still spaces the
+  // TRAJECTORY seeds below — that scheme is unchanged and was never defective; only the held-out
+  // rows moved. Keeping both in one test makes the distinction visible rather than implied.
   const regenHeldout = (heldoutSeed) => {
+    const draw = gaussFrom(rng(heldoutSeed));
     const rows = new Array(HELDOUT_ROWS);
-    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = gaussFrom(rng(heldoutSeed + TRAJ_STEP * j))();
+    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = draw();
     return rows;
   };
   const sliceWindows = (series) => {
@@ -999,8 +1132,11 @@ test('K6.7 provenance: cell 34 S2 increment_estimator recomputes from an indepen
     const se = Math.sqrt(varr / n);
     return { n, mean, sd: Math.sqrt(varr), se, lower95_one_sided: mean - 1.645 * se, upper95_one_sided: mean + 1.645 * se };
   }
+  // Amendment v2.C1 (C1.2): the held-out rows are one continuous stream, not one draw per
+  // spaced seed. TRAJ_STEP below still spaces the TRAJECTORY seeds — unchanged by C1.
   const heldoutRows = new Array(HELDOUT_ROWS);
-  for (let j = 0; j < HELDOUT_ROWS; j++) heldoutRows[j] = gaussFrom(rng(ARM34_HELDOUT_SEED + TRAJ_STEP * j))();
+  const heldoutDraw = gaussFrom(rng(ARM34_HELDOUT_SEED));
+  for (let j = 0; j < HELDOUT_ROWS; j++) heldoutRows[j] = heldoutDraw();
   const cal = shapeBlockBet.calibrateShapeBlocks(heldoutRows, 30);
 
   const trajMeans = [];
@@ -1057,7 +1193,17 @@ test('manifest seed_scheme quotes the harness constants, and the constants are t
   assert.ok(manifest.seed_scheme.series.includes(String(c.series_salt)), manifest.seed_scheme.series);
   assert.ok(manifest.seed_scheme.series.includes(String(c.trajectory_step)), manifest.seed_scheme.series);
   assert.ok(manifest.seed_scheme.heldout.includes(String(c.heldout_offset)), manifest.seed_scheme.heldout);
-  assert.ok(manifest.seed_scheme.heldout.includes(String(c.trajectory_step)), manifest.seed_scheme.heldout);
+  // Amendment v2.C1 (C1.2): the held-out prose no longer describes a spaced-seed draw. It still
+  // mentions 7919 — inside the clause naming what it SUPERSEDES — so the old
+  // `includes(trajectory_step)` assertion would pass for the wrong reason. Pinned on the words
+  // that carry the corrected mechanism instead, plus the row count it draws.
+  assert.match(manifest.seed_scheme.heldout, /CONSECUTIVE draws from one continuously-advanced/,
+    'the manifest must describe the C1.2 continuous-stream draw, not the superseded scheme');
+  assert.match(manifest.seed_scheme.heldout, /Amendment v2\.C1 C1\.2/, manifest.seed_scheme.heldout);
+  assert.ok(manifest.seed_scheme.heldout.includes('10000'), manifest.seed_scheme.heldout);
+  assert.equal(manifest.seed_scheme.heldout_acf_bound, 0.10, 'C1.2: the registered guard bound is recorded');
+  assert.equal(manifest.heldout_lattice_hook, false, 'the lattice control hook must be off on an ordinary run');
+  assert.equal(manifest.supersedes, null, 'C1.6: a run that supersedes nothing records null, not an empty list');
   // The one HELDOUT_SEED literal ever registered (Amendment v1.2 item 1) must be the arithmetic
   // result of the constants, not a copied number.
   assert.equal(c.base_seed + 31 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_31);
@@ -1101,5 +1247,56 @@ test('COVERAGE_FORCE_THROW drives the §9 NOT-EXECUTABLE fallback per (detector,
   for (const c of uiCells) {
     assert.equal(c.verdict === 'NOT-EXECUTABLE', false);
     assert.equal(c.adapter_failures, 0);
+  }
+});
+
+// Amendment v2.C1, C1.6: the supersession declaration. This exists because results/ is
+// append-only and loadEvidence pools every directory under validation/*/results/live/ with no
+// cross-run dedup (collect.mjs:135-167) — so a preserved prior run keeps scoring alongside its
+// own correction, and a rerun for a named code defect would change nothing. The declaration is
+// the rerun's own manifest field, so the prior directory is never edited.
+test('C1.6: --supersedes records a machine-readable declaration in the rerun\'s own manifest', () => {
+  const { manifest } = runHarness([
+    '--n', '20', '--classes', 'K6',
+    '--supersedes', 'coverage/run-20260808T121548Z:shape_block_conformal_bet',
+    '--supersedes-reason', 'test-only declaration',
+  ]);
+  assert.deepEqual(manifest.supersedes, [{
+    study: 'coverage',
+    run: 'run-20260808T121548Z',
+    detectors: ['shape_block_conformal_bet'],
+    reason: 'test-only declaration',
+  }]);
+});
+
+test('C1.6: a supersession with no reason, no target, or a nonexistent run is refused at startup', () => {
+  const cases = [
+    { args: ['--supersedes', 'coverage/run-20260808T121548Z:shape_block_conformal_bet'], match: /must be given together/ },
+    { args: ['--supersedes-reason', 'orphaned reason'], match: /must be given together/ },
+    {
+      args: ['--supersedes', 'coverage/run-does-not-exist:safe_t', '--supersedes-reason', 'r'],
+      match: /which does not exist/,
+    },
+    {
+      args: ['--supersedes', 'not-a-locator', '--supersedes-reason', 'r'],
+      match: /must read study\/run:detector/,
+    },
+  ];
+  for (const { args, match } of cases) {
+    const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-battery-supersede-'));
+    let stderr = '';
+    let threw = false;
+    try {
+      execFileSync(process.execPath, [HARNESS, '--n', '5', '--classes', 'K6', ...args], {
+        env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot }, encoding: 'utf8', stdio: 'pipe',
+      });
+    } catch (err) {
+      threw = true;
+      stderr = String(err.stderr ?? '');
+    }
+    assert.ok(threw, `${args.join(' ')}: must be refused`);
+    assert.match(stderr, match);
+    assert.equal(fs.existsSync(path.join(outRoot, 'live')), false);
+    assert.equal(fs.existsSync(path.join(outRoot, 'sim')), false, 'refused before any run directory is created');
   }
 });

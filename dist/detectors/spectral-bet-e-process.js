@@ -69,6 +69,16 @@ exports.KAPPA_K3 = 0.1;
  *  WEALTH_FLOOR (1e-12); prevents underflow on long healthy runs where
  *  eAvg stays under 1 for many consecutive windows. */
 const LOG_WEALTH_FLOOR_K3 = Math.log(1e-12);
+/** Amendment v2.C1 (C1.9): the calibrator `e = kappa*p^(kappa-1)` is an e-value because
+ *  `integral_0^1 kappa*p^(kappa-1) dp = 1`, and that identity needs kappa in the OPEN interval
+ *  (0,1): kappa <= 0 diverges, kappa = 1 makes e identically 1 (no bet), kappa > 1 inverts the
+ *  bet's direction so large p pays. kappa was a defaulted parameter no caller had to justify and
+ *  nothing validated, so an out-of-domain value returned a number that is not an e-value. */
+function assertKappaInUnitInterval(fn, kappa) {
+    if (!Number.isFinite(kappa) || !(kappa > 0) || !(kappa < 1)) {
+        throw new Error(`${fn}: kappa must be a finite number in the open interval (0,1), got ${kappa}`);
+    }
+}
 /** Per-window periodogram bet: direct DFT summation over BINS_K3. Requires
  *  `window.length === W_K3` and `sigma > 0` — the known-σ regime is
  *  machine-encoded here, not left to the caller's discipline. */
@@ -76,9 +86,13 @@ function spectralBetWindow(window, sigma, kappa = exports.KAPPA_K3) {
     if (window.length !== exports.W_K3) {
         throw new Error(`spectralBetWindow: window.length must be ${exports.W_K3}, got ${window.length}`);
     }
-    if (!(sigma > 0)) {
-        throw new Error(`spectralBetWindow: sigma must be > 0, got ${sigma}`);
+    // Amendment v2.C1 (C1.9): FINITE and positive. `sigma > 0` alone admitted Infinity, which
+    // makes U = I/sigma^2 exactly 0, p = exp(-0) = 1 and e = kappa on every bin -- a finite,
+    // plausible-looking, wrong answer rather than a refusal. NaN was already rejected.
+    if (!Number.isFinite(sigma) || !(sigma > 0)) {
+        throw new Error(`spectralBetWindow: sigma must be a finite number > 0, got ${sigma}`);
     }
+    assertKappaInUnitInterval('spectralBetWindow', kappa);
     const perBin = exports.BINS_K3.map((k) => {
         let re = 0;
         let im = 0;

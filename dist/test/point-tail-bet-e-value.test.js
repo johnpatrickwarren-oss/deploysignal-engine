@@ -60,4 +60,19 @@ const gauss = (r) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * 
     const { p } = (0, point_tail_bet_e_value_1.pointTailBetEValue)(x, cal);
     strict_1.default.equal(p, expectedP);
 });
+// coverage PREREGISTRATION.md Amendment v2.C1 C1.9 — kappa domain guard. `kappa` is a defaulted
+// parameter and was never validated, while this module's validity claim rests on
+// `integral_0^1 kappa*p^(kappa-1) dp = 1`, which needs kappa in the OPEN interval (0,1):
+// kappa <= 0 diverges, kappa = 1 makes e identically 1, kappa > 1 inverts the bet's direction.
+// Outside that interval the returned number is not an e-value, and silently returning it is
+// worse than throwing.
+(0, node_test_1.test)('C1.9: kappa outside (0,1) throws', () => {
+    const r = lcg(20260808);
+    const cal = (0, point_tail_bet_e_value_1.calibrateTailBet)(Array.from({ length: 10000 }, () => gauss(r)));
+    for (const bad of [0, 1, -0.1, 1.5, NaN, Infinity]) {
+        strict_1.default.throws(() => (0, point_tail_bet_e_value_1.pointTailBetEValue)(3, cal, bad), /kappa/, `kappa=${bad} must be refused`);
+    }
+    strict_1.default.doesNotThrow(() => (0, point_tail_bet_e_value_1.pointTailBetEValue)(3, cal, point_tail_bet_e_value_1.KAPPA));
+    strict_1.default.doesNotThrow(() => (0, point_tail_bet_e_value_1.pointTailBetEValue)(3, cal, 0.5));
+});
 //# sourceMappingURL=point-tail-bet-e-value.test.js.map

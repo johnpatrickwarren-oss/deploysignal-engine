@@ -233,11 +233,22 @@ function featureResult(name, T, fc, m, kappa) {
     const e = kappa * Math.pow(p, kappa - 1);
     return { name, T, p, e };
 }
+/** Amendment v2.C1 (C1.9): the calibrator `e = kappa*p^(kappa-1)` is an e-value because
+ *  `integral_0^1 kappa*p^(kappa-1) dp = 1` -- the identity this module's own docstring already
+ *  states holds "for any kappa in (0,1)". That requirement was prose only: kappa was a defaulted
+ *  parameter nothing validated, so kappa <= 0 (divergent), kappa = 1 (e identically 1, no bet) or
+ *  kappa > 1 (bet inverted, large p pays) returned a number that is not an e-value. */
+function assertKappaInUnitInterval(fn, kappa) {
+    if (!Number.isFinite(kappa) || !(kappa > 0) || !(kappa < 1)) {
+        throw new Error(`${fn}: kappa must be a finite number in the open interval (0,1), got ${kappa}`);
+    }
+}
 /** Per-window block-conformal shape bet. Requires `window.length === cal.W`.
  *  Per feature: distance-rank p against the calibration's reference blocks,
  *  e through the kappa*p^(kappa-1) calibrator; eAvg is the mean of the two
  *  feature e-values (never max — see module docstring). */
 function shapeBetWindow(window, cal, kappa = exports.KAPPA_K6) {
+    assertKappaInUnitInterval('shapeBetWindow', kappa);
     if (window.length !== cal.W) {
         throw new Error(`shapeBetWindow: window.length must be ${cal.W}, got ${window.length}`);
     }

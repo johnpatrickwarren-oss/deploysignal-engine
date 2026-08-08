@@ -379,3 +379,17 @@ test('conformal rank count is >=, not > (tie regression, iid fixture)', () => {
     assert.equal(f.p, expectedP, `${f.name}: p ${f.p} vs expected ${expectedP}`);
   }
 });
+
+// coverage PREREGISTRATION.md Amendment v2.C1 C1.9 — kappa domain guard, the same argument as
+// K3's and K4's (this module's docstring already states the requirement in prose: "for any
+// kappa in (0,1)"), now machine-encoded rather than left to the caller's discipline.
+test('C1.9: kappa outside (0,1) throws', () => {
+  const r = lcg(20260808);
+  const cal = calibrateShapeBlocks(Array.from({ length: 10000 }, () => gauss(r)));
+  const w = Array.from({ length: W_K6 }, () => gauss(r));
+  for (const bad of [0, 1, -0.1, 1.5, NaN, Infinity]) {
+    assert.throws(() => shapeBetWindow(w, cal, bad), /kappa/, `kappa=${bad} must be refused`);
+  }
+  assert.doesNotThrow(() => shapeBetWindow(w, cal, KAPPA_K6));
+  assert.doesNotThrow(() => shapeBetWindow(w, cal, 0.5));
+});

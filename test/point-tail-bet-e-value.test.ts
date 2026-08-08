@@ -58,3 +58,19 @@ test('conformal rank count is >=, not > (tie regression; symmetric-integer fixtu
   const { p } = pointTailBetEValue(x, cal);
   assert.equal(p, expectedP);
 });
+
+// coverage PREREGISTRATION.md Amendment v2.C1 C1.9 — kappa domain guard. `kappa` is a defaulted
+// parameter and was never validated, while this module's validity claim rests on
+// `integral_0^1 kappa*p^(kappa-1) dp = 1`, which needs kappa in the OPEN interval (0,1):
+// kappa <= 0 diverges, kappa = 1 makes e identically 1, kappa > 1 inverts the bet's direction.
+// Outside that interval the returned number is not an e-value, and silently returning it is
+// worse than throwing.
+test('C1.9: kappa outside (0,1) throws', () => {
+  const r = lcg(20260808);
+  const cal = calibrateTailBet(Array.from({ length: 10000 }, () => gauss(r)));
+  for (const bad of [0, 1, -0.1, 1.5, NaN, Infinity]) {
+    assert.throws(() => pointTailBetEValue(3, cal, bad), /kappa/, `kappa=${bad} must be refused`);
+  }
+  assert.doesNotThrow(() => pointTailBetEValue(3, cal, KAPPA));
+  assert.doesNotThrow(() => pointTailBetEValue(3, cal, 0.5));
+});

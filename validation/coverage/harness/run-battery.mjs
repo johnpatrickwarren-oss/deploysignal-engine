@@ -1,16 +1,20 @@
 // validation/coverage/harness/run-battery.mjs — the fault-class coverage battery.
 //
 // Design frozen by ../PREREGISTRATION.md (sections 1-14, Amendment v1.1 A1-A8, Amendment
-// v1.2 items 1-3). WHERE THAT DOCUMENT AND THE IMPLEMENTATION PLAN'S TASK-8 BRIEF DISAGREE,
-// THE PREREGISTRATION WINS — it postdates the brief by three reviewed amendments. Every
-// divergence taken is named in ../../../.superpowers/sdd/2026-08-07-coverage-matrix-v1/task-8-report.md.
+// v1.2 items 1-3, Amendment v2.K4 + v2.K4.1). WHERE THAT DOCUMENT AND THE IMPLEMENTATION
+// PLAN'S TASK-8 BRIEF DISAGREE, THE PREREGISTRATION WINS — it postdates the brief by five
+// reviewed amendments. Every divergence taken through v1.2 is named in
+// ../../../.superpowers/sdd/2026-08-07-coverage-matrix-v1/task-8-report.md; K4's third
+// candidate is Task 4 of ../../../.superpowers/sdd/2026-08-08-coverage-gap-detectors/.
 //
-// What it drives, per §7 + A6 + A1:
+// What it drives, per §7 + A6 + A1 + Amendment v2.K4 (K4.3):
 //   K1, K3, K5, K6  -> safe_t, universal_inference            (all grid + -ar1 cells)
 //   K3 (idx 15, 17) -> family_D_spectral_e_detector           (canonical + -ar1, for the record)
 //   K2              -> group_average_e_value, and safe_t on series k=0 (A6)
-//   K4              -> family_E_conformal_heldout, and safe_t on the point series (A6)
-//   arms 30, 31     -> the two new candidates' own healthy (S2) and 3-sigma power (S3) arms (A1)
+//   K4              -> family_E_conformal_heldout, point_tail_bet_e_value (Amendment v2.K4
+//                      K4.3), and safe_t on the point series (A6)
+//   arms 30, 31, 32 -> the three candidates' own healthy (S2) and 3-sigma power (S3) arms
+//                      (A1; arm 32 per Amendment v2.K4 K4.5)
 //
 // Harness discipline (knowledge/methodology/harness-discipline.md):
 //   1. Every external interface was read before wiring, at a line: safe-t
@@ -58,6 +62,7 @@ const safeT = require(path.join(ENGINE_ROOT, 'dist/detectors/safe-t-e-value.js')
 const ui = require(path.join(ENGINE_ROOT, 'dist/detectors/universal-inference-e-value.js'));
 const groupAvg = require(path.join(ENGINE_ROOT, 'dist/detectors/group-average-e-value.js'));
 const conformal = require(path.join(ENGINE_ROOT, 'dist/detectors/conformal.js'));
+const tailBet = require(path.join(ENGINE_ROOT, 'dist/detectors/point-tail-bet-e-value.js'));
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 
@@ -105,6 +110,9 @@ const REGISTERED_CELLS = [
 const ARM_CELLS = [
   { idx: 30, arm_detector: 'group_average_e_value', hint: 'K2', phi: 0, seed: BASE_SEED + 30, K: 10 },
   { idx: 31, arm_detector: 'family_E_conformal_heldout', hint: 'K4', phi: 0, seed: BASE_SEED + 31 },
+  // Amendment v2.K4, K4.4/K4.5: point_tail_bet_e_value's own arm, CELL_SEED = BASE_SEED + 32
+  // = 20260839 (arithmetic shown in K4.4's table, continuing directly from arm 31's index).
+  { idx: 32, arm_detector: 'point_tail_bet_e_value', hint: 'K4', phi: 0, seed: BASE_SEED + 32 },
 ];
 
 // The constants module is normative (§1); this table mirrors it. Disagreement is a defect,
@@ -144,6 +152,21 @@ function assertRegistryAgreement() {
   // Amendment v1.2 item 1: the one HELDOUT_SEED literal ever registered for arm 31.
   const arm31 = ARM_CELLS.find((a) => a.idx === 31).seed + HELDOUT_OFFSET;
   if (arm31 !== 20760838) throw new Error(`run-battery: arm-31 HELDOUT_SEED ${arm31} != registered 20760838`);
+  // Amendment v2.K4, K4.4: arm 32's own CELL_SEED and HELDOUT_SEED, shown by arithmetic there.
+  const arm32Cell = ARM_CELLS.find((a) => a.idx === 32);
+  if (arm32Cell.seed !== 20260839) throw new Error(`run-battery: arm-32 CELL_SEED ${arm32Cell.seed} != registered 20260839`);
+  const arm32Heldout = arm32Cell.seed + HELDOUT_OFFSET;
+  if (arm32Heldout !== 20760839) throw new Error(`run-battery: arm-32 HELDOUT_SEED ${arm32Heldout} != registered 20760839`);
+  // Amendment v2.K4, K4.4's table: point_tail_bet_e_value reuses the identical held-out stream
+  // already registered for family_E_conformal_heldout on cells 18-21 (superseding §6's "only"
+  // scoping, per Amendment v2.K4.1 K4.1.2). Verified here against the table's own literals.
+  const K4_HELDOUT_SEEDS = { 18: 20760825, 19: 20760826, 20: 20760827, 21: 20760828 };
+  for (const [idxStr, expected] of Object.entries(K4_HELDOUT_SEEDS)) {
+    const idx = Number(idxStr);
+    const cell = REGISTERED_CELLS.find((c) => c.idx === idx);
+    const heldout = cell.seed + HELDOUT_OFFSET;
+    if (heldout !== expected) throw new Error(`run-battery: cell ${idx} HELDOUT_SEED ${heldout} != registered ${expected}`);
+  }
 }
 
 const canonicalOf = (cell) => cell.severity === FAULT_CLASSES[cell.fault_class].canonical;
@@ -256,6 +279,21 @@ const ADAPTERS = {
       return { crossed, wealth: state.M, indicatorAtOnset };
     },
   },
+  // Amendment v2.K4/v2.K4.1: point_tail_bet_e_value. `kind: 'point'` returns one e-value per
+  // tick of the post-onset test window (index 0 = the injected tick, ONSET), rather than a
+  // single scalar/process summary — the two K4 cell types this candidate is scored on read
+  // that array differently (K4.6's injected-tick class endpoint + window-crossing secondary
+  // on the four fault cells; K4.1.4's per-point exceedance on arm 32's healthy (S2) row;
+  // K4.5's any-tick-fires reading on arm 32's power (S3) row), so `record()` accumulates both
+  // readings and each cell-emission site picks the one the amendment registers for that row.
+  point_tail_bet_e_value: {
+    kind: 'point',
+    read: (data, cell, ctx) => {
+      const es = new Array(TEST.len);
+      for (let t = ONSET; t < T; t++) es[t - ONSET] = tailBet.pointTailBetEValue(data.series[t], ctx.tailBetCal).e;
+      return es;
+    },
+  },
   family_D_spectral_e_detector: {
     kind: 'process',
     // A5's registered cfg, mirroring run-power.mjs:71-72's oracle branch with windows pinned.
@@ -287,7 +325,8 @@ function detectorsFor(cell) {
       ? ['safe_t', 'universal_inference', 'family_D_spectral_e_detector']
       : ['safe_t', 'universal_inference'];
     case 'K2': return ['group_average_e_value', 'safe_t'];
-    case 'K4': return ['family_E_conformal_heldout', 'safe_t'];
+    // Amendment v2.K4, K4.3: point_tail_bet_e_value joins K4 as a new row.
+    case 'K4': return ['family_E_conformal_heldout', 'safe_t', 'point_tail_bet_e_value'];
     default: throw new Error(`run-battery: no detector assignment for ${cell.fault_class}`);
   }
 }
@@ -300,22 +339,33 @@ function callAdapter(detId, data, cell, ctx) {
   return ADAPTERS[detId].read(data, cell, ctx);
 }
 
-/** Held-out calibration params for the K4 route (§6's K4 block, A1 for arm 31, A7's T1
- *  substrate finding): n=10,000 rows drawn from the cell's healthy null under
- *  HELDOUT_SEED = CELL_SEED + 500000, seed(j) = HELDOUT_SEED + 7919*j. */
-function heldoutParams(cell) {
+/** The registered held-out draw shared by both K4 candidates (§6's K4 block, A1 for arm 31,
+ *  A7's T1 substrate finding, Amendment v2.K4 K4.4 for point_tail_bet_e_value's reuse of the
+ *  identical stream on cells 18-21 and its own fresh stream on arm 32): n=10,000 rows drawn
+ *  from the cell's healthy null under HELDOUT_SEED = CELL_SEED + 500000, seed(j) = HELDOUT_SEED
+ *  + 7919*j. Returning the raw rows (not a detector-specific calibration) lets both candidates
+ *  calibrate from the SAME draw when both are scored on the same cell, per K4.4's text. */
+function heldoutRows(cell) {
   const heldoutSeed = cell.seed + HELDOUT_OFFSET;
   const rows = new Array(HELDOUT_ROWS);
   for (let j = 0; j < HELDOUT_ROWS; j++) {
     const r = rng(heldoutSeed + TRAJ_STEP * j);
     rows[j] = drawFor(r, cell.phi)();
   }
-  return { params: stampHeldoutFamilyE({ calibrationRows: rows, alpha: ALPHA }), heldoutSeed };
+  return { rows, heldoutSeed };
+}
+
+function heldoutParams(rows) {
+  return stampHeldoutFamilyE({ calibrationRows: rows, alpha: ALPHA });
 }
 
 // ── accumulation and the registered verdict vocabulary ────────────────────────
 const freshAcc = () => ({
   fires: 0, throws: 0, nonFinite: 0, finite: 0, indicatorAtOnset: 0, firedPreOnset: 0, firstError: null,
+  // point_tail_bet_e_value only (`kind: 'point'`): per-POINT counters across the whole
+  // post-onset window, read by K4.1.4's healthy (S2) arm; windowCrossed is the K4.6
+  // descriptive secondary (fault cells) and K4.5's own per-trajectory reading (S3 arm).
+  pointFinite: 0, pointNonFinite: 0, pointK: 0, pointSumE: 0, windowCrossed: 0,
 });
 
 /** One adapter call, counted. The record() step is deliberately OUTSIDE the catch (see the
@@ -338,6 +388,29 @@ function record(acc, detId, out) {
     acc.finite += 1;
     if (out >= THRESHOLD) acc.fires += 1;
     (acc.es ??= []).push(out);
+    return;
+  }
+  if (ADAPTERS[detId].kind === 'point') {
+    // K4.6's class endpoint: the single injected tick, index 0 of the window array (t = ONSET).
+    const eAtOnset = out[0];
+    if (!Number.isFinite(eAtOnset)) { acc.nonFinite += 1; } else {
+      acc.finite += 1;
+      (acc.es ??= []).push(eAtOnset);
+      if (eAtOnset >= THRESHOLD) acc.fires += 1;
+    }
+    // K4.1.4's per-point aggregate, across every tick of the window regardless of cell type —
+    // cheap to always compute; only the S2 arm's emission reads it.
+    let anyFired = false;
+    for (const e of out) {
+      if (Number.isFinite(e)) {
+        acc.pointFinite += 1;
+        acc.pointSumE += e;
+        if (e >= THRESHOLD) { acc.pointK += 1; anyFired = true; }
+      } else {
+        acc.pointNonFinite += 1;
+      }
+    }
+    if (anyFired) acc.windowCrossed += 1;
     return;
   }
   // A3a's registered field name is `non_finite_wealth` for every cell this battery emits,
@@ -387,8 +460,17 @@ const t0 = Date.now();
 for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_class))) {
   const dets = detectorsFor(cell);
   const acc = new Map(dets.map((d) => [d, freshAcc()]));
-  const ctx = dets.includes('family_E_conformal_heldout') ? heldoutParams(cell) : {};
-  const ctxForRead = { heldout: ctx.params };
+  // Amendment v2.K4, K4.4: point_tail_bet_e_value reuses the IDENTICAL held-out stream already
+  // registered for family_E_conformal_heldout on these same cells (superseding §6's "only"
+  // scoping, per Amendment v2.K4.1 K4.1.2) — drawn once here, so both candidates calibrate
+  // from the same rows rather than two independently-drawn samples that happen to agree.
+  const needsHeldout = dets.includes('family_E_conformal_heldout') || dets.includes('point_tail_bet_e_value');
+  const heldout = needsHeldout ? heldoutRows(cell) : null;
+  const ctx = {};
+  if (heldout) ctx.heldoutSeed = heldout.heldoutSeed;
+  if (dets.includes('family_E_conformal_heldout')) ctx.params = heldoutParams(heldout.rows);
+  if (dets.includes('point_tail_bet_e_value')) ctx.tailBetCal = tailBet.calibrateTailBet(heldout.rows);
+  const ctxForRead = { heldout: ctx.params, tailBetCal: ctx.tailBetCal };
 
   for (let i = 0; i < N; i++) {
     const data = generate(cell, i);
@@ -414,7 +496,10 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       // with the phi recorded here instead of refusing the cell fail-closed.
       null_id: cell.phi === 0 ? 'N1' : 'N3-p06',
       phi: cell.phi,
-      params: 'oracle',
+      // Amendment v2.K4.1, K4.1.5: point_tail_bet_e_value stamps its own accurate literal
+      // rather than reusing 'oracle' (Erratum v1.3's defect class) — its median/MAD are
+      // empirical statistics of an independent held-out sample, not oracle constants.
+      params: detId === 'point_tail_bet_e_value' ? 'heldout-empirical' : 'oracle',
       alpha: ALPHA,
       n: N,
       ticks: T,
@@ -436,6 +521,15 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
     // family_D's own descriptive secondary, no verdict attached: how many trajectories the
     // adapter already fired on before onset, which is the size of §5's gate overlap.
     if (detId === 'family_D_spectral_e_detector') c.fired_pre_onset = a.firedPreOnset;
+    // Amendment v2.K4, K4.6: the window-crossing reading is a descriptive secondary, no
+    // verdict attached — the fraction of trajectories where ANY of the 200 post-onset ticks
+    // (not only the injected one) has e >= 20, conflating the class endpoint with false-alarm
+    // noise from the other 199 null ticks by design (K4.6's own text).
+    if (detId === 'point_tail_bet_e_value') {
+      c.window_crossing_rate = a.windowCrossed / N;
+      c.heldout_seed = ctx.heldoutSeed;
+      c.heldout_rows = HELDOUT_ROWS;
+    }
     cells.push(c);
     process.stderr.write(
       `${detId.padEnd(28)} ${cell.fault_class} ${cell.severity.padEnd(20)} `
@@ -449,8 +543,15 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
 // fault-class cells, so the certification pipeline reads them as ordinary S2/S3 cells.
 for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   const detId = arm.arm_detector;
-  const ctx = detId === 'family_E_conformal_heldout' ? heldoutParams(arm) : {};
-  const ctxForRead = { heldout: ctx.params };
+  const pointKind = ADAPTERS[detId].kind === 'point';
+  const ctx = {};
+  if (detId === 'family_E_conformal_heldout' || pointKind) {
+    const h = heldoutRows(arm);
+    ctx.heldoutSeed = h.heldoutSeed;
+    if (detId === 'family_E_conformal_heldout') ctx.params = heldoutParams(h.rows);
+    if (pointKind) ctx.tailBetCal = tailBet.calibrateTailBet(h.rows);
+  }
+  const ctxForRead = { heldout: ctx.params, tailBetCal: ctx.tailBetCal };
   const healthy = freshAcc();
   const power = freshAcc();
 
@@ -483,48 +584,63 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   // read, e >= 1/alpha; for the conformal wealth process, A2's firing rule (M_t >= 1/alpha at
   // some t >= onset). mean_e is the terminal read's mean (the group e-value; the wealth M_T),
   // the field name CLASS_INSTRUMENTS.terminal_e_value registers (constants.mjs:11).
+  //
+  // Amendment v2.K4.1, K4.1.4: point_tail_bet_e_value's S2 row is PER-POINT, not
+  // per-trajectory — n_points = n*200, exceedance = k/n_points, lower_95 the per-point Wilson
+  // bound, and verdict derived from that already-computed lower_95 (not recomputed).
   const s2Reason = fallback(healthy, N);
   const s2n = healthy.finite;
   const s2k = healthy.fires;
+  const s2PointN = healthy.pointFinite;
+  const s2PointK = healthy.pointK;
+  const s2Lower95 = pointKind
+    ? (s2PointN ? lower95(s2PointK, s2PointN) : NaN)
+    : (s2n ? lower95(s2k, s2n) : NaN);
   const s2 = {
     detector: detId,
     arm: 'healthy',
     cell_index: arm.idx,
     null_id: arm.phi === 0 ? 'N1' : 'N3-p06',
     phi: arm.phi,
-    params: 'oracle',
+    params: pointKind ? 'heldout-empirical' : 'oracle',
     alpha: ALPHA,
     n: s2n,
     ticks: T,
     onset: ONSET,
-    exceedance: s2n ? s2k / s2n : NaN,
-    mean_e: healthy.es ? mean(healthy.es) : NaN,
-    lower_95: s2n ? lower95(s2k, s2n) : NaN,
+    ...(pointKind ? { n_points: s2PointN } : {}),
+    exceedance: pointKind ? (s2PointN ? s2PointK / s2PointN : NaN) : (s2n ? s2k / s2n : NaN),
+    mean_e: pointKind ? (s2PointN ? healthy.pointSumE / s2PointN : NaN) : (healthy.es ? mean(healthy.es) : NaN),
+    lower_95: s2Lower95,
     non_finite_wealth: healthy.nonFinite,
     adapter_failures: healthy.throws,
     verdict: s2Reason !== null
       ? 'NOT-EXECUTABLE'
-      : (lower95(s2k, s2n) > ALPHA ? 'FAIL' : 'not-refuted'),   // run.mjs:115
+      : (s2Lower95 > ALPHA ? 'FAIL' : 'not-refuted'),   // run.mjs:115 / K4.1.4
     not_executable_reason: s2Reason,
     substrate_tier: 'T1',
   };
   // S3. No exceedance/mean_e, so this arm is not a validity candidate (run.mjs:130-132's
-  // own reasoning); the paired S2 row above is.
+  // own reasoning); the paired S2 row above is. Amendment v2.K4, K4.5: point_tail_bet_e_value's
+  // S3 detection is per-trajectory, "fires iff any of its 200 post-onset ticks has e >= 20" —
+  // windowCrossed, not the injected-tick-only `fires` counter K4.6 uses for the fault cells
+  // (this arm's injection is a SUSTAINED step, not a single point, so there is no one
+  // "injected tick" to read in isolation).
   const s3Reason = fallback(power, N);
-  const s3Rate = s3Reason === null ? power.fires / N : null;
+  const s3k = pointKind ? power.windowCrossed : power.fires;
+  const s3Rate = s3Reason === null ? s3k / N : null;
   const s3 = {
     detector: detId,
     arm: 'power',
     cell_index: arm.idx,
     null_id: arm.phi === 0 ? 'N1' : 'N3-p06',
     phi: arm.phi,
-    params: 'oracle',
+    params: pointKind ? 'heldout-empirical' : 'oracle',
     shift_sigma: 3,
     alpha: ALPHA,
     n: N,
     ticks: T,
     onset: ONSET,
-    fires: power.fires,
+    fires: s3k,
     detection_rate: s3Rate,
     adapter_failures: power.throws,
     non_finite_wealth: power.nonFinite,
@@ -532,7 +648,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     not_executable_reason: s3Reason,
     substrate_tier: 'T1',
   };
-  if (detId === 'family_E_conformal_heldout') {
+  if (detId === 'family_E_conformal_heldout' || pointKind) {
     s2.heldout_seed = ctx.heldoutSeed;
     s3.heldout_seed = ctx.heldoutSeed;
     s2.heldout_rows = HELDOUT_ROWS;
@@ -601,6 +717,7 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
     heldout: `HELDOUT_SEED = CELL_SEED + ${HELDOUT_OFFSET}; seed(j) = HELDOUT_SEED + ${TRAJ_STEP}*j, `
       + `j = 0..${HELDOUT_ROWS - 1}`,
     heldout_seed_arm_31: ARM_CELLS.find((a) => a.idx === 31).seed + HELDOUT_OFFSET,
+    heldout_seed_arm_32: ARM_CELLS.find((a) => a.idx === 32).seed + HELDOUT_OFFSET,
     constants: {
       base_seed: BASE_SEED,
       trajectory_step: TRAJ_STEP,

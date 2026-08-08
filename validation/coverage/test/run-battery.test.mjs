@@ -24,12 +24,13 @@ import { FAULT_CLASSES } from '../../certification/lib/constants.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const HARNESS = path.join(HERE, '..', 'harness', 'run-battery.mjs');
 
-// PREREGISTRATION.md §7 + Amendment A6: which detectors are scored on which class.
+// PREREGISTRATION.md §7 + Amendment A6 + Amendment v2.K4/v2.K4.1: which detectors are
+// scored on which class. K4 gains `point_tail_bet_e_value` at Amendment v2.K4 (K4.3).
 const REGISTERED_PAIRS = {
   K1: ['safe_t', 'universal_inference'],
   K2: ['group_average_e_value', 'safe_t'],
   K3: ['safe_t', 'universal_inference', 'family_D_spectral_e_detector'],
-  K4: ['family_E_conformal_heldout', 'safe_t'],
+  K4: ['family_E_conformal_heldout', 'safe_t', 'point_tail_bet_e_value'],
   K5: ['safe_t', 'universal_inference'],
   K6: ['safe_t', 'universal_inference'],
 };
@@ -41,13 +42,17 @@ const REGISTERED_SEEDS = {
   base_seed: 20260807, trajectory_step: 7919, series_salt: 104729, heldout_offset: 500000,
 };
 
-// The registered per-(class, detector) census (§7 + A6 + A1): 62 fault-class rows and 4 arm rows.
+// The registered per-(class, detector) census (§7 + A6 + A1 + Amendment v2.K4 K4.3): 66
+// fault-class rows and 6 arm rows. Amendment v2.K4 adds `point_tail_bet_e_value` on K4's
+// four fault cells (18-21) plus its own arm (cell 32, S2+S3) — 4 fault + 2 arm rows, the
+// "6 point_tail_bet_e_value rows" the task brief names.
 const REGISTERED_CENSUS = {
   safe_t: 30,                        // K1 4 + K2 8 + K3 6 + K4 4 + K5 4 + K6 4
   universal_inference: 18,           // K1 4 + K3 6 + K5 4 + K6 4
   group_average_e_value: 8,          // every K2 cell
   family_E_conformal_heldout: 4,     // every K4 cell
   family_D_spectral_e_detector: 2,   // K3's canonical and -ar1 cells only
+  point_tail_bet_e_value: 4,         // K4's four fault cells (Amendment v2.K4 K4.3)
 };
 
 function runHarness(args = ['--n', '20'], env = {}) {
@@ -110,20 +115,21 @@ test('every registered (class, detector) pair emits cells with complete fields',
 
 test('the cell census is exactly the registered (class, detector) assignment', () => {
   const { summary } = smoke();
-  assert.equal(summary.cells.length, 66, 'registered census: 62 fault-class rows + 4 arm rows');
+  assert.equal(summary.cells.length, 72, 'registered census: 66 fault-class rows + 6 arm rows');
 
   const faultCells = summary.cells.filter((c) => c.fault_class != null);
-  assert.equal(faultCells.length, 62);
+  assert.equal(faultCells.length, 66);
   const byDetector = {};
   for (const c of faultCells) byDetector[c.detector] = (byDetector[c.detector] ?? 0) + 1;
   assert.deepEqual(byDetector, REGISTERED_CENSUS);
 
   const armCells = summary.cells.filter((c) => c.arm != null);
-  assert.equal(armCells.length, 4);
+  assert.equal(armCells.length, 6);
   assert.deepEqual(
     armCells.map((c) => `${c.detector}:${c.arm}`).sort(),
     ['family_E_conformal_heldout:healthy', 'family_E_conformal_heldout:power',
-      'group_average_e_value:healthy', 'group_average_e_value:power'],
+      'group_average_e_value:healthy', 'group_average_e_value:power',
+      'point_tail_bet_e_value:healthy', 'point_tail_bet_e_value:power'],
   );
   assert.equal(faultCells.length + armCells.length, summary.cells.length,
     'every cell is either a fault-class cell or an arm — no third shape');
@@ -183,7 +189,7 @@ test('the deliberately-injected 3-sigma K1 step is detected at n=20', () => {
 
 test('the A1 healthy arms carry the S2 shape and a paired S3 arm', () => {
   const { summary } = smoke();
-  for (const det of ['group_average_e_value', 'family_E_conformal_heldout']) {
+  for (const det of ['group_average_e_value', 'family_E_conformal_heldout', 'point_tail_bet_e_value']) {
     const arms = summary.cells.filter((c) => c.arm != null && c.detector === det);
     assert.equal(arms.length, 2, `${det}: expected one S2 and one S3 arm`);
 
@@ -204,6 +210,77 @@ test('the A1 healthy arms carry the S2 shape and a paired S3 arm', () => {
   }
 });
 
+// Amendment v2.K4 / v2.K4.1 — the new K4 candidate, `point_tail_bet_e_value`.
+const HELDOUT_SEED_BY_CELL = { 18: 20760825, 19: 20760826, 20: 20760827, 21: 20760828 };
+
+test('K4.1.5: params stamps heldout-empirical on every point_tail_bet_e_value cell and arm', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'point_tail_bet_e_value');
+  assert.equal(rows.length, 6, '4 fault cells + healthy(S2) + power(S3) arm rows');
+  for (const c of rows) assert.equal(c.params, 'heldout-empirical', JSON.stringify(c));
+});
+
+test('K4.4: point_tail_bet_e_value reuses the registered held-out seed on cells 18-21', () => {
+  const { summary } = smoke();
+  for (const [idx, heldoutSeed] of Object.entries(HELDOUT_SEED_BY_CELL)) {
+    const c = summary.cells.find(
+      (x) => x.detector === 'point_tail_bet_e_value' && x.cell_index === Number(idx),
+    );
+    assert.ok(c, `no point_tail_bet_e_value row for cell ${idx}`);
+    assert.equal(c.heldout_seed, heldoutSeed, `cell ${idx}: heldout_seed`);
+    assert.equal(c.heldout_rows, 10000, `cell ${idx}: heldout_rows`);
+  }
+});
+
+test('K4.6: fault cells carry the injected-tick class endpoint plus the window-crossing secondary', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'point_tail_bet_e_value' && c.fault_class === 'K4');
+  assert.equal(rows.length, 4, 'cells 18-21');
+  for (const c of rows) {
+    assert.ok(Number.isFinite(c.detection_rate) || c.verdict === 'NOT-EXECUTABLE', `cell ${c.cell_index}: detection_rate`);
+    assert.ok(Number.isFinite(c.window_crossing_rate), `cell ${c.cell_index}: window_crossing_rate (descriptive secondary, K4.6)`);
+    assert.ok(c.window_crossing_rate >= (c.detection_rate ?? 0),
+      `cell ${c.cell_index}: the window-crossing reading conflates the injected tick with 199 null ticks, so it can only be >= the class endpoint`);
+    assert.equal(c.non_finite_wealth, 0, `cell ${c.cell_index}: K4.1.6 — non-finite is structurally impossible once calibration succeeds`);
+  }
+});
+
+test('K4.8: the canonical 5sigma-point cell clears the coverage floor at n=20', () => {
+  const { summary } = smoke();
+  const c = summary.cells.find(
+    (x) => x.detector === 'point_tail_bet_e_value' && x.fault_class === 'K4' && x.severity === '5sigma-point',
+  );
+  assert.ok(c, 'no canonical (idx 19, 5sigma-point) point_tail_bet_e_value cell');
+  assert.equal(c.canonical, true);
+  assert.ok(c.detection_rate > 0.5, `K4.8 predicts canonical detection >= 0.50; got ${c.detection_rate}`);
+});
+
+test('K4.1.4: cell 32 (arm) emits the per-point healthy (S2) field set', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.detector === 'point_tail_bet_e_value' && c.arm === 'healthy');
+  assert.ok(s2, 'no point_tail_bet_e_value healthy arm');
+  assert.equal(s2.cell_index, 32);
+  assert.equal(s2.heldout_seed, 20760839, 'K4.4: CELL_SEED(20260839) + 500000');
+  assert.equal(s2.heldout_rows, 10000);
+  assert.equal(s2.n, 20, 'trajectory count, unchanged shape from A1/A3(c) — smoke override');
+  assert.equal(s2.n_points, s2.n * 200, 'K4.1.4: n_points = n * 200 (200-tick post-onset window)');
+  assert.ok(Number.isFinite(s2.exceedance), 'K4.1.4: per-point exceedance');
+  assert.ok(Number.isFinite(s2.lower_95), 'K4.1.4: per-point Wilson lower bound');
+  assert.ok(Number.isFinite(s2.mean_e), 'K4.5: mean_e across all n_points');
+  // K4.1.4: verdict is derived from the already-computed lower_95 field, not recomputed.
+  assert.equal(s2.verdict, s2.lower_95 > 0.05 ? 'FAIL' : 'not-refuted');
+});
+
+test('K4.5: cell 32 power (S3) arm fires per-trajectory on any of the 200-tick window', () => {
+  const { summary } = smoke();
+  const s3 = summary.cells.find((c) => c.detector === 'point_tail_bet_e_value' && c.arm === 'power');
+  assert.ok(s3, 'no point_tail_bet_e_value power arm');
+  assert.equal(s3.cell_index, 32);
+  assert.equal(s3.shift_sigma, 3);
+  assert.ok(Number.isFinite(s3.detection_rate));
+  assert.ok(!('n_points' in s3), 'S3 keeps A1\'s per-trajectory pair, not K4.1.4\'s per-point fields');
+});
+
 test('manifest records the registered seed scheme, substrate hash and smoke flag', () => {
   const { manifest } = smoke();
   assert.equal(manifest.study, 'coverage');
@@ -217,6 +294,7 @@ test('manifest records the registered seed scheme, substrate hash and smoke flag
   assert.equal(manifest.smoke, true, 'an --n override must be flagged, never read as the registered run');
   assert.match(manifest.substrate_sha256, /^[0-9a-f]{64}$/);
   assert.equal(manifest.seed_scheme.heldout_seed_arm_31, 20760838);
+  assert.equal(manifest.seed_scheme.heldout_seed_arm_32, 20760839, 'K4.4: cell 32 HELDOUT_SEED');
   assert.deepEqual(Object.keys(manifest.classes), ['K1', 'K2', 'K3', 'K4', 'K5', 'K6']);
   assert.equal('elapsed_s' in manifest, false, 'A8 registers the manifest field list; timing is not in it');
 });
@@ -240,6 +318,8 @@ test('manifest seed_scheme quotes the harness constants, and the constants are t
   // The one HELDOUT_SEED literal ever registered (Amendment v1.2 item 1) must be the arithmetic
   // result of the constants, not a copied number.
   assert.equal(c.base_seed + 31 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_31);
+  // Same discipline for arm 32's own HELDOUT_SEED (Amendment v2.K4, K4.4).
+  assert.equal(c.base_seed + 32 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_32);
 });
 
 test('a smoke run lands under results/sim and never creates results/live', () => {

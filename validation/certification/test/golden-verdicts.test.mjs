@@ -80,6 +80,30 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // unlike this pre-run design doc; the two sibling K4 cards drawing on the same design page
 // already read MISSING. Relabeled stage 'design' (the citation itself is unchanged); S1 now
 // reads MISSING, matching the card's true pre-run state.
+//
+// Re-frozen 2026-08-08, coverage-gap-detectors Task 5 (cert run run-20260808T064214Z, consuming
+// battery run-20260808T064039Z): the delta the paragraph above predicted, on ONE row, not two.
+// `point_tail_bet_e_value` moves NOT_EXECUTABLE -> USE, tier null -> T1, S2 MISSING -> PASS,
+// S3 MISSING -> PASS (S1 MISSING and S4 PASS unchanged). The two other new-candidate rows
+// (group_average_e_value, family_E_conformal_heldout) already left NOT_EXECUTABLE at the Task 10
+// delta above and do not move here.
+//
+// What produced it, per Amendment v2.K4/v2.K4.1: arm cell 32's healthy (S2) row cleared on its
+// own registered per-point instrument -- k = 1012 of n_points = 400,000, exceedance 0.00253,
+// Wilson lower_95 0.0024027 <= alpha 0.05, so K4.7's stop condition did not fire -- and the
+// terminal_e_value mean rule (lib/guards.mjs meanRule) did NOT override it: mean_e 0.6351 sits
+// under TERMINAL_MEAN_BOUND = 1, unlike group_average_e_value's 1.9141 and
+// family_E_conformal_heldout's 3.1160. That is the whole difference between this card's USE and
+// the two REFUSEs above. S3 PASS comes from arm 32's shift_sigma = 3 power row, detection_rate
+// 1.0000.
+//
+// The class answer moves with it: COVERAGE.md's K4 row goes NO -> YES, carried by this card
+// (canonical cell 19 `5sigma-point` detection_rate 0.9750 >= COVERAGE_FLOOR 0.50, tier T1).
+// The Task 10 note above recorded "K4's NO answer holds"; that sentence described the corpus at
+// that run and is superseded here by a third candidate's evidence, not contradicted by it -- the
+// other two K4 candidates' canonical rates are unchanged and still below the floor
+// (family_E_conformal_heldout 0.0430 NOT_POWERED, safe_t_e_value 0.0005 NOT_POWERED).
+// Every other card's verdict, tier and four stage statuses are unchanged.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -92,7 +116,7 @@ const GOLDEN = {
   universal_inference_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'INERT', s4: 'PASS' },
   group_average_e_value: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
   family_E_conformal_heldout: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
-  point_tail_bet_e_value: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
+  point_tail_bet_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
 };
 
 function runHarness(t) {

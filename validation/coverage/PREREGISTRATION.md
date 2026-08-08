@@ -4865,3 +4865,539 @@ registered as tail handfuls rather than rates); and the three wiki pages the rul
 **No endpoint, floor, seed or verdict in §1–14 or in any earlier amendment moves, and no artifact
 was created; the whole content of this amendment is a ruling, a strengthened bound, five corrections
 to this wave's own text, and a K6 class answer of NO reached without spending a run.**
+
+## Amendment v2.K5R — 2026-08-08, the K5 drift grid re-registered: the old grid tested a shift no detector could reach
+
+Authority: operator directive 2026-08-08 (WORKLIST C42). Committed **before** any artifact this
+amendment authorizes: no run, no re-score, no new cell exists at this commit. The code change that
+adds the cells below is a separate, later commit on the same branch, and the runs are a separate
+task after both.
+
+### K5R.1 The defect, named: what the registered K5 grid actually injects
+
+`injectDrift` (`validation/coverage/lib/inject.mjs:49-51`, `series.map((v, t) => (t >= at ? v +
+slope * (t - at) * sigma : v))`) adds `slope*(t-at)*sigma` from the onset. `at = ONSET = 100`,
+`T = 300`, `SIGMA = 1` (`run-battery.mjs:75-78`), and the scored post-onset slice is
+`TEST = { start: 100, len: 200 }` (`run-battery.mjs:87`), so `(t - at)` runs `0…199` and the
+injected component reaches its maximum at the last scored tick `t = 299`.
+
+Three quantities follow, and they are not the same number:
+
+- **terminal shift** (the displacement at end-of-window): `slope * 199 * sigma`;
+- **mean shift over the scored window** (what a two-sample mean test sees):
+  `slope * (0+1+…+199)/200 = slope * 99.5 * sigma`, exactly half the terminal shift;
+- **ramp sd within the window** (the variance the drift adds to the test window):
+  `slope * sqrt((200² - 1)/12) = slope * 57.7345 * sigma`.
+
+| registered severity | slope = per-tick increment | terminal shift at `t=299` | mean shift over `TEST` | ramp sd |
+|---|---|---|---|---|
+| `slope5e-5` | `5e-5 σ` | **`0.009950 σ`** | `0.004975 σ` | `0.002887 σ` |
+| `slope1e-4` (canonical) | `1e-4 σ` | **`0.019900 σ`** | `0.009950 σ` | `0.005773 σ` |
+| `slope5e-4` | `5e-4 σ` | **`0.099500 σ`** | `0.049750 σ` | `0.028867 σ` |
+
+Every figure above was read off the generator itself on a zero baseline (`injectDrift` called with
+`sigma: 1, at: 100, slope`), not re-derived by hand, and each matched its closed form to the printed
+precision.
+
+**Quote-and-correct 1, the run report's own post-hoc.** `results/live/run-20260808T010208Z/REPORT.md`
+§3 states: *"the canonical `slope1e-4` integrates to a test-window mean shift of `1e-4 * 99.5 =
+0.00995σ` and the largest registered slope `slope5e-4` to `0.04975σ`."* Both numbers are right and
+both are MEAN shifts. Read as "the cumulative shift", `0.00995σ` understates the canonical cell's
+end-of-window displacement by exactly `2×`; the terminal figures are `0.0199σ` and `0.0995σ`. This
+amendment registers all three quantities per cell so no later reader has to guess which one a bare
+"≈0.01σ" names.
+
+**Quote-and-correct 2, §13's K5 prediction.** §13 registers *"K5. Expected YES via safe-t; genuinely
+uncertain. Falsifier: powered < 0.50 at canonical slope for both USE detectors."* The prediction was
+met as a measurement and the class answer NO stands for the grid as it was run. What the sentence
+does not say, and could not have said before the arithmetic above was written down, is that the
+canonical cell's injected mean shift is `0.00995σ` — `75×` smaller than K1's smallest registered step
+(`0.75σ`) and `151×` smaller than K1's own canonical (`1.5σ`). The class claim in
+`~/concord/knowledge/methodology/pages/fault-class-coverage-matrix.md` — a per-tick increment below
+every level threshold that an anytime-valid detector should nevertheless accumulate — requires a
+cumulative shift that is reachable and a per-tick increment that is not. The registered grid
+delivered the second half and not the first. **§13's K5 entry is therefore not withdrawn and not
+falsified; it is re-scoped: it was answered against a grid whose largest cell moves the scored window
+mean by `0.0498σ`.**
+
+**Quote-and-correct 3, A4's mechanical falsifier.** A4 registers *"K5: falsified iff canonical-cell
+(idx 23) detection rate `< 0.50` for both `safe_t` and `universal_inference`."* `idx 23` is the cell
+id of `slope1e-4`. K5R.5 moves the canonical to a new cell id, so **A4's `idx 23` is superseded by
+`idx 40` for every K5 decision taken after the code commit that follows this amendment**; A4's text
+is left intact and its clause remains the correct falsifier shape.
+
+**Not a defect in the run.** The measured rows (`0.0005 / 0.0000 / 0.0005 / 0.0000` for `safe_t`,
+`0.0000` throughout for `universal_inference`, `REPORT.md` lines 81-88) are correct measurements of
+the registered grid, taken under a frozen design, and they are preserved. The defect is in the grid's
+scope, which was registered without this arithmetic written down. §11 rule 7 governs the code change
+that follows: a named defect, fixed test-first, prior runs preserved.
+
+### K5R.2 The measured proof that the registered grid tested nothing the class claim is about
+
+A grid whose cells cannot be distinguished from **no injection at all** is not a weak test of the
+class claim; it is not a test of it. Measured, paired, on non-registered seeds (probe 3, K5R.7's
+method and seed provenance): 14,000 baseline trajectories, each scored twice — once clean, once with
+the drift added to the same trajectory — so the only difference between the two arms is the
+injection.
+
+| slope | `safe_t` crossing decisions that change vs no injection | `universal_inference` | max abs Δ log e (`safe_t` / UI) |
+|---|---|---|---|
+| `5e-5` | **0 / 14,000** | **0 / 14,000** | `0.1900` / `0.4268` |
+| `1e-4` (old canonical) | **0 / 14,000** | **0 / 14,000** | `0.3818` / `0.8544` |
+| `5e-4` | 7 / 14,000 | 3 / 14,000 | `1.9792` / `4.3000` |
+| `2.5e-3` | 763 / 14,000 | 126 / 14,000 | `11.3860` / `21.9487` |
+| `5e-3` | 8,037 / 14,000 | 411 / 14,000 | `26.5560` / `44.9430` |
+| `1e-2` | **13,993 / 14,000** | 27 / 14,000 | `58.5286` / `119.3998` |
+
+At the retired canonical slope, **not one trajectory in 14,000 changes its `e >= 20` decision when
+the drift is applied.** The e-values move (`|Δ log e| <= 0.38`), so the cell is not a no-op on the
+statistic; it is a no-op on the endpoint. The same probe reads the old cells' detection rates as
+indistinguishable from a clean series: `safe_t` `0.00057 ± 0.00020` at `slope5e-5`,
+`0.00057 ± 0.00020` at `slope1e-4`, `0.00086 ± 0.00025` at `slope5e-4`, against
+**`0.00057 ± 0.00020` with no injection at all** (`8/14,000` in each of the first, second and
+no-injection arms — the same count). This is consistent with the committed run's own
+`0.0005 / 0.0000 / 0.0005` at `N = 2000`.
+
+### K5R.3 The new grid, derived exactly from the injection formula
+
+Slopes are chosen so the terminal shift lands on `{0.5σ, 1σ, 2σ, 4σ}` to within `0.5%` while the
+slope constants stay exact powers-of-ten multiples (`2.5e-3`, `5e-3`, `1e-2`, `2e-2`), spaced by a
+factor of two. The generator is **unchanged** — `injectDrift` already takes any slope, `inject.mjs`
+is not edited, and `substrate_sha256` therefore stays
+`0d25265f6af237e94b79cc8a09c0e5d11f6033da3e9581eddfce02efca349edf`, the hash every committed run of
+this study already records.
+
+`slope = target_terminal / 199`, then rounded to the exact constant below; the realized terminal
+shift is `slope * 199`:
+
+| new severity | slope = per-tick increment | terminal shift | mean shift over `TEST` | ramp sd | target |
+|---|---|---|---|---|---|
+| `slope2.5e-3` | `2.5e-3 σ` | `0.497500 σ` | `0.248750 σ` | `0.144336 σ` | `0.5σ` (`-0.50%`) |
+| `slope5e-3` | `5e-3 σ` | `0.995000 σ` | `0.497500 σ` | `0.288672 σ` | `1σ` (`-0.50%`) |
+| **`slope1e-2` (canonical)** | `1e-2 σ` | **`1.990000 σ`** | `0.995000 σ` | `0.577343 σ` | `2σ` (`-0.50%`) |
+| `slope2e-2` | `2e-2 σ` | `3.980000 σ` | `1.990000 σ` | `1.154686 σ` | `4σ` (`-0.50%`) |
+
+Read off the generator, same method as K5R.1's table: every terminal, mean, sum and ramp-sd figure
+matched its closed form to the printed precision.
+
+**The per-tick increment stays far below any level threshold, which is what makes these cells honest
+to the class definition.** Against the registered severities of the two level-shift classes:
+
+| comparison | canonical `slope1e-2` per-tick `0.01σ` | largest new cell `slope2e-2` per-tick `0.02σ` |
+|---|---|---|
+| K1 smallest step `0.75σ` | `75×` smaller | `37.5×` smaller |
+| K1 canonical step `1.5σ` | `150×` smaller | `75×` smaller |
+| K1 largest step `3σ` | `300×` smaller | `150×` smaller |
+| K3 smallest amplitude `0.5σ` | `50×` smaller | `25×` smaller |
+| K4 smallest point `3σ` | `300×` smaller | `150×` smaller |
+| two-sided `z` at `α = 0.05` (`1.96σ`) | `196×` smaller | `98×` smaller |
+
+No per-tick level rule in this battery, at any registered severity of any class, would respond to a
+`0.01σ` or `0.02σ` increment. The class claim is tested by the cumulative displacement; no tick of
+these cells is itself detectable.
+
+**Canonical is the `2σ`-terminal cell (`slope1e-2`)**, mid-grid among the four new cells, which is
+how every other class picks its canonical: K1's `1.5sigma` is 2nd of 3, K3's `A0.75sigma-f0.05` is
+4th of 5, K4's `5sigma-point` is 2nd of 3, K6's `mix-d1.5` is 2nd of 3.
+
+### K5R.4 The old cells are preserved evidence of a different question
+
+The three old grid cells and the old `-ar1` replicate (idx 22-25) **stay registered, stay in the
+grid, and are re-measured by the run this amendment authorizes.** They are not withdrawn, not
+superseded, and not corrected: they are correct measurements of a `0.0199σ`-terminal drift, which is
+a different question from the one the class claim asks. Their committed rows on disk are untouched
+(§11 rule 6, append-only). What changes is which cell carries the class decision — K5R.5 — and
+K5R.6 registers the one mechanical consequence that has to be handled for the corpus to stay
+readable.
+
+### K5R.5 Cell registration (extends §6/§7; nothing in §6's formula shape moves)
+
+Five new cells. `CELL_SEED = BASE_SEED + idx` with `BASE_SEED = 20260807`, §6's formula unchanged;
+trajectory seeds `seed(i) = CELL_SEED + 7919*i`, `i = 0…1999`, §6 unchanged; no held-out stream (no
+K5 detector calibrates — §6/K3.3's oracle case).
+
+**Index provenance.** Fault cells 0-29 (§6), arms 30-34 (A1, v2.K4 K4.4, v2.K3 K3.6, v2.K6 K6.6),
+`K6_T2_SCENARIO_SEED` idx 35 (K6.12, `20260842`, asserted in
+`harness/run-clustersynth-arm.mjs:67-68`), `shape_ecdf_conformal_bet` arm idx 36 (K6E.9, `20260843`),
+`K6E_T2_SCENARIO_SEED` idx 37 (K6E.10, `20260844`). Indices 36 and 37 were registered by v2.K6E and
+its run was cancelled by v2.K6E.17; **a cancelled run does not release a registered index** — reusing
+36 or 37 would make two different registrations share a seed. These cells therefore start at 38.
+
+| idx | fault class | severity | φ | `CELL_SEED` | arithmetic |
+|---|---|---|---|---|---|
+| 38 | K5 | `slope2.5e-3` | 0 | **20260845** | `20260807+38` |
+| 39 | K5 | `slope5e-3` | 0 | **20260846** | `20260807+39` |
+| **40** | K5 | **`slope1e-2` (canonical)** | 0 | **20260847** | `20260807+40` |
+| 41 | K5 | `slope2e-2` | 0 | **20260848** | `20260807+41` |
+| 42 | K5 | `slope1e-2-ar1` | 0.6 | **20260849** | `20260807+42` |
+
+**Registered K5 grid, after this amendment** (the order is the cell-table order, which
+`assertRegistryAgreement` compares string-for-string against `FAULT_CLASSES.K5.grid`):
+`['slope5e-5', 'slope1e-4', 'slope5e-4', 'slope2.5e-3', 'slope5e-3', 'slope1e-2', 'slope2e-2']`,
+canonical `slope1e-2`. §1's table and §6's seed table mirror `constants.mjs` and are superseded for
+K5's `canonical` and `grid` fields by this section; their text stays intact.
+
+**Severity grammar: unchanged.** `run-battery.mjs:293` parses K5 severities with
+`/^slope(\d+(?:\.\d+)?e-\d+)$/`, which already accepts `slope2.5e-3`, `slope5e-3`, `slope1e-2` and
+`slope2e-2`. No grammar amendment is needed and none is registered.
+
+**Detector assignment: unchanged.** §7's K5 row (`safe_t`, `universal_inference`) applies to the new
+cells with no addition; `detectorsFor` (`run-battery.mjs:510`) needs no edit. No new detector, card,
+module or arm is registered by this amendment.
+
+**Two `-ar1` rows in one class, registered deliberately.** §4 gives each class one φ=0.6 replicate of
+its own canonical. K5 now carries two: `slope1e-4-ar1` (idx 25, preserved — K5R.4) and
+`slope1e-2-ar1` (idx 42, the current canonical's replicate). `assertRegistryAgreement`
+(`run-battery.mjs:218-221`) currently demands **exactly one** φ=0.6 row per class whose severity is
+`${canonical}-ar1`; the code commit that follows replaces that with three checks, each registered
+here: (1) the current canonical's `-ar1` replicate is present; (2) every `-ar1` row's base severity
+is a registered grid entry; (3) the per-class `-ar1` row count equals a registered literal table
+(`K1 1, K2 1, K3 1, K4 1, K5 2, K6 1`). The third clause is what keeps this from being a loosening —
+a stray fourth K5 replicate still crashes the run at startup. §10.1 is untouched: **no `-ar1` cell
+decides coverage, either of them.**
+
+**Census after the change**, all figures derived from the assignment above, not retyped from the
+current test: 35 fault cells (was 30) and 11 arm rows; 86 fault-class rows (was 76) across
+detectors, of which `safe_t` 35 (was 30) and `universal_inference` 23 (was 18); 97 emitted cells
+(was 87).
+
+### K5R.6 How the scorer decides K5 after the change, and the two-canonical disambiguation
+
+**The mechanism, at code.** The battery emits a per-cell boolean: `canonicalOf(cell) = cell.severity
+=== FAULT_CLASSES[cell.fault_class].canonical` (`run-battery.mjs:281`), written to the cell as
+`canonical` (`run-battery.mjs:826`). The scorer keys on that field and on nothing else:
+`coverageFor` filters `survivors.filter((c) => c.canonical === true)`, takes
+`covering = canonicalCells.find((c) => powerRate(c) >= COVERAGE_FLOOR)` and reports
+`canonicalCell = covering ?? canonicalCells[0] ?? null`
+(`validation/certification/lib/score.mjs:397-402`), with `powerRate = (c) => c.detection_rate ??
+c.rate_e_ge_20` (`score.mjs:17`). `verdict.mjs:272` then requires the card's overall verdict to be
+`USE` before a COVERED class counts toward a portfolio YES.
+
+**Registered: `idx 40` (`slope1e-2`, φ=0) is K5's canonical cell**, and it is the only K5 cell that
+decides. Every other K5 cell — the three old grid cells, the three other new grid cells, both `-ar1`
+replicates — reports context and decides nothing (§8, §10.1).
+
+**The problem this creates, stated exactly.** `loadEvidence` pools every run under
+`validation/*/results/live/` with no cross-run dedup (`collect.mjs:311-341`). The committed run
+`coverage/run-20260808T010208Z` carries `severity: 'slope1e-4', canonical: true` for both `safe_t`
+and `universal_inference`, at `detection_rate` `0.0000`. After the constants change, a new run emits
+`canonical: true` at `slope1e-2` and `canonical: false` at `slope1e-4`. Both runs' rows would be
+pooled, so **K5 would have two canonical cells per detector, at different severities and different
+rates.** With `.find`, a covering new cell still yields COVERED; but when nothing covers,
+`canonicalCells[0]` is whichever row `readdir` reached first, and the reported canonical rate is then
+indeterminate. Two canonicals is not a state this study is willing to publish either way.
+
+**Registered disambiguation: the mechanism that already exists, used at the granularity it has.**
+Amendment v2.C1 C1.6's manifest-declared `supersedes` drops rows per `(study, run, detector)`
+(`collect.mjs:217-221, 353-370`); it never touches the superseded directory. The run this amendment
+authorizes therefore declares:
+
+```
+--supersedes "coverage/run-20260808T010208Z:safe_t,universal_inference,group_average_e_value"
+--supersedes-reason "PREREGISTRATION.md Amendment v2.K5R (K5R.5/K5R.6): K5's canonical moved from
+  slope1e-4 (idx 23) to slope1e-2 (idx 40), so that run's safe_t and universal_inference rows carry
+  canonical: true at a severity that no longer decides the class; this run re-measures every row
+  those three detectors had in it, at identical seeds, and carries the current canonical flag."
+```
+
+**Registered run scope, and why it makes the supersession lossless.** `--classes K1,K2,K5`. Verified
+against the corpus, cell by cell: `coverage/run-20260808T010208Z` is the **sole** surviving source of
+`safe_t` K1, `safe_t` K2, `safe_t` K5, `universal_inference` K1, `universal_inference` K5,
+`group_average_e_value` K2, and arm 30's healthy/power rows. Its `safe_t`/`universal_inference` K3
+rows survive in `run-20260808T091521Z`, its `safe_t`/`family_E` K4 rows in `run-20260808T133859Z`,
+and its `safe_t`/`universal_inference` K6 rows in `run-20260808T133746Z` and
+`run-20260808T121548Z`. `--classes K1,K2,K5` re-emits exactly the set the supersession drops, so no
+`(detector, class)` pair loses its only evidence and no pair gains a duplicate.
+
+**Two machine checks on that run, registered as binding.** (1) Every K1 and K2 row it emits for
+those three detectors, and both arm-30 rows, must reproduce the superseded run's numbers
+**bit-identically**: the seeds are `CELL_SEED = BASE_SEED + idx` for the same indices, the code path
+for those classes is untouched by this amendment, and the new cells sit at indices 38-42, so they
+cannot perturb any earlier cell's stream. (2) `substrate_sha256` must equal
+`0d25265f6af237e94b79cc8a09c0e5d11f6033da3e9581eddfce02efca349edf`. A failure of either is a code
+defect to report under §11 rule 7 and **blocks the supersession declaration** — a rerun that does not
+reproduce what it supersedes is not a rerun.
+
+**Disclosed, because the scope forces it:** `--classes K1,K2,K5` re-emits arm 30
+(`group_average_e_value`'s healthy S2 and 3σ power S3 rows). That is a healthy-arm endpoint inside
+the run's output. It is not a *changed* endpoint — check (1) covers it, and identical seeds through
+identical code must give identical numbers — but the honest statement is that the run touches the
+arm by re-measuring it, not that it leaves it alone. See K5R.9.
+
+### K5R.7 Expectations, from a disclosed probe on non-registered seeds
+
+**A disclosed probe** (this document's DISCLOSED convention, K6.4/K3.11/K6E.4). Three probes: two
+independent detection-rate probes and one paired decision-flip probe (K5R.2). Scripts live outside
+the repo (scratchpad `c42/derive-shift.mjs`, `k5-probe.mjs`, `decision-flip.mjs`, `pool.mjs`,
+`safet-arith.mjs`); every number below is reproducible from what this section states.
+
+**Mechanism, copied rather than re-derived.** `rng`, `gaussFrom` and `injectDrift` are imported from
+`validation/coverage/lib/inject.mjs` — the registered generators themselves, not a re-implementation.
+The AR(1) draw is `run-battery.mjs:302-308`'s `ar1`/`drawFor`, copied verbatim. `T = 300`,
+`ONSET = 100`, `SIGMA = 1`, `ALPHA = 0.05`, `THRESHOLD = 20`, `CAL = {0,100}`, `TEST = {100,200}`
+are `run-battery.mjs:75-87`'s literals. The two adapters are `run-battery.mjs:353-361`'s, called
+identically, including `safeTOpts` (`:347`): `{ ar1Phi: phi }` is passed only when `phi > 0`, so the
+φ=0 cells run `safe_t`'s ESTIMATED φ exactly as the battery does. The detectors are the built
+artifacts the battery loads (`dist/detectors/safe-t-e-value.js`,
+`dist/detectors/universal-inference-e-value.js`).
+
+**Seed provenance.** Probe 1: four blocks based at `3.70e9, 3.71e9, 3.72e9, 3.73e9`, 1,000
+trajectories each. Probe 2 (independent): `3.80e9, 3.81e9, 3.82e9, 3.83e9`, 2,500 each. Probe 3
+(paired): `3.70e9`, 14,000. All use the harness's own trajectory step 7919, so within-block
+independence structure is identical to a registered run's. Maximum seed reached
+`3.83e9 + 7919*2499 = 3,849,789,581 < 2^32`, so no seed wraps in `rng`'s `s >>> 0`. **Every seed this
+study registers is `<= 1.0e8`**: `CELL_SEED` max `20260849` after K5R.5, trajectory seed max
+`20260849 + 7919*1999 = 36,095,130`, `HELDOUT_SEED = CELL_SEED + 500000`, `+104729*k` for K2's series
+salt, and even the retired pre-C1 lattice form maxed at `20760841 + 7919*9999 = 99,942,922`. **No
+registered seed, and no arithmetic derivation of one, can reach `3.70e9.`** No `CELL_SEED`- or
+`HELDOUT_SEED`-derived value was touched.
+
+**Replicates and standard errors.** `n = 4,000` (probe 1) and `n = 10,000` (probe 2) per cell per
+detector, `14,000` pooled. Trajectories are independent draws, so the endpoint is a binomial
+proportion and the pooled SE is `sqrt(p(1-p)/14000)`; the four-block spread is reported alongside as
+a consistency check and agrees with it. Where a cell reads 0 or n, the one-sided 95% rule-of-three
+bound `3/14000 = 0.000214` is given instead of an SE of zero.
+
+**Table 1 — `safe_t`, detection rate (`e >= 20` on the windowed terminal read).**
+
+| cell | probe 1 (n=4,000) | probe 2 (n=10,000) | pooled | pooled rate ± SE |
+|---|---|---|---|---|
+| `slope5e-5` (old) | `4/4000` | `4/10000` | `8/14000` | `0.00057 ± 0.00020` |
+| `slope1e-4` (old canonical) | `5/4000` | `3/10000` | `8/14000` | `0.00057 ± 0.00020` |
+| `slope5e-4` (old) | `5/4000` | `7/10000` | `12/14000` | `0.00086 ± 0.00025` |
+| `slope1e-4-ar1` (old) | `5/4000` | `2/10000` | `7/14000` | `0.00050 ± 0.00019` |
+| `slope2.5e-3` | `212/4000` | `513/10000` | `725/14000` | `0.05179 ± 0.00187` |
+| `slope5e-3` | `2327/4000` | `5767/10000` | `8094/14000` | `0.57814 ± 0.00417` |
+| **`slope1e-2` (canonical)** | `3999/4000` | `10000/10000` | `13999/14000` | **`0.99993 ± 0.00007`** |
+| `slope2e-2` | `4000/4000` | `10000/10000` | `14000/14000` | `1.00000` (`>= 0.99979`) |
+| `slope1e-2-ar1` | `2473/4000` | `6158/10000` | `8631/14000` | `0.61650 ± 0.00411` |
+| no injection (sanity) | `4/4000` | `4/10000` | `8/14000` | `0.00057 ± 0.00020` |
+
+**Table 2 — `universal_inference`, same trajectories.**
+
+| cell | probe 1 | probe 2 | pooled | pooled rate ± SE | median `e` |
+|---|---|---|---|---|---|
+| `slope5e-5` (old) | `2/4000` | `0/10000` | `2/14000` | `0.00014 ± 0.00010` | `4.8e-2` |
+| `slope1e-4` (old canonical) | `2/4000` | `0/10000` | `2/14000` | `0.00014 ± 0.00010` | `4.8e-2` |
+| `slope5e-4` (old) | `3/4000` | `1/10000` | `4/14000` | `0.00029 ± 0.00014` | `4.7e-2` |
+| `slope1e-4-ar1` (old) | `3/4000` | `1/10000` | `4/14000` | `0.00029 ± 0.00014` | `4.1e-2` |
+| `slope2.5e-3` | `53/4000` | `94/10000` | `147/14000` | `0.01050 ± 0.00086` | `2.2e-2` |
+| `slope5e-3` | `139/4000` | `315/10000` | `454/14000` | `0.03243 ± 0.00150` | `5.7e-4` |
+| **`slope1e-2` (canonical)** | `2/4000` | `20/10000` | `22/14000` | **`0.00157 ± 0.00033`** | `1.4e-12` |
+| `slope2e-2` | `0/4000` | `0/10000` | `0/14000` | `0.00000` (`<= 0.00021`) | `2.0e-40` |
+| `slope1e-2-ar1` | `43/4000` | `102/10000` | `145/14000` | `0.01036 ± 0.00086` | `1.0e-4` |
+| no injection (sanity) | `2/4000` | `0/10000` | `2/14000` | `0.00014 ± 0.00010` | `4.8e-2` |
+
+**Mechanism, `safe_t`: it accumulates the mean.** `safeTwoSampleTEValue`
+(`detectors/safe-t-e-value.ts:135-159`) whitens with the calibration-window φ̂, then forms
+`t = (mean(w_test) - mean(w_cal)) / (s_p * sqrt(1/n1 + 1/n2))` with `n1 = 99`, `n2 = 200`,
+`ν = 297`, and returns `r^(-1/2) * [(1 + t²/ν)/(1 + (t²/ν)/r)]^((ν+1)/2)` with
+`r = 1 + n_eff*g`, `n_eff = 99*200/299 = 66.22`, `g = 25` (`DEFAULT_EFFECT_PRIOR_VAR`), so
+`r = 1656.5` and `r^(-1/2) = 0.024570`. Setting that expression to 20 and solving gives the crossing
+condition **`|t| >= 3.6976`**. The drift supplies a mean shift of `slope*99.5` and inflates the test
+window's pooled variance by the ramp (`ramp sd` column, K5R.3), so
+`E[t] = slope*99.5 / (sqrt(((n1-1) + (n2-1)*(1 + ramp_var))/297) * 0.12289)`:
+
+| cell | mean shift | ramp var | pooled `s_p²` | `E[t]` | predicted rate `P(\|t\| >= 3.6976)` | probe measured |
+|---|---|---|---|---|---|---|
+| `slope2.5e-3` | `0.24875σ` | `0.02083` | `1.01396` | `2.010` | `0.0458` | `0.0518 ± 0.0019` |
+| `slope5e-3` | `0.49750σ` | `0.08333` | `1.05583` | `3.940` | `0.5957` | `0.5781 ± 0.0042` |
+| **`slope1e-2`** | `0.99500σ` | `0.33333` | `1.22334` | `7.321` | `0.9999` | `0.99993 ± 0.00007` |
+| `slope2e-2` | `1.99000σ` | `1.33330` | `1.89336` | `11.769` | `1.0000` | `1.00000` |
+
+The predicted column treats `t` as unit-sd about `E[t]`, which is an approximation; it lands within
+`12%` of the measurement at every powered cell and undershoots at the retired canonical
+(`0.0002` predicted against `0.00057` measured, where the reading is `safe_t`'s own null exceedance
+rather than drift power — the no-injection arm reads the same `0.00057`). **A `2σ` cumulative
+drift's detectability inside 200 ticks is a computed quantity here, not an expectation.**
+
+**Mechanism, `universal_inference`: the fixed split defeats a ramp, and the e-value is driven below
+1.** `universalInferenceMeanShiftEValue` fits the alternative's test-regime mean on
+`tTrain = [100,200)` and scores it on `tEval = [200,300)`
+(`detectors/universal-inference-e-value.ts:216-226`), while the null's common mean is fitted on the
+eval halves themselves (`:223`). The injected component's mean is `slope*49.5` over the train half
+and `slope*149.5` over the eval half, so **the plug-in mean is short by exactly `slope*100`** —
+`0.25σ`, `0.50σ`, `1.00σ`, `2.00σ` across the four new cells. Measured consequence: UI's median
+`e` falls monotonically as the drift grows — `2.2e-2`, `5.7e-4`, `1.4e-12`, `2.0e-40` — i.e. `log e`
+of `-3.8, -7.5, -27.3, -91.2`. A crude Gaussian mean-mismatch penalty (`n_eval*mismatch²/2` with
+`n_eval = 100`: `3.1, 12.5, 50, 200`) has the right sign and the right ordering and over-predicts the
+magnitude by roughly `2×`, because the null's mean is also misfitted; **the arithmetic of the
+shortfall is exact, the size of the penalty is measured, and no closed form for it is registered
+here.** This is anti-power, not absence of power: UI's rate at the canonical cell (`0.00157`) is
+above its own no-injection rate (`0.00014`) only because the smaller-drift tail still helps, and at
+`slope2e-2` it is `0/14,000`. Registered as a finding, **not resolved here**: the fixed-split UI is
+the wrong instrument for a monotone ramp, and `sequential-ui.ts`'s predictable-plug-in variant
+(ADR 0025) is the obvious successor to test. No card, module or claim about `sequential_ui` is
+registered by this amendment.
+
+**Registered per-cell predictions for the run, at `N = 2000`.** The probe rate is the point
+prediction; the tolerance is `±3` binomial SE **at `N = 2000`** (`sqrt(p(1-p)/2000)`), which is the
+run's own sampling noise, not the probe's.
+
+| cell | `safe_t` predicted | tolerance (±3 SE at N=2000) | `universal_inference` predicted | tolerance |
+|---|---|---|---|---|
+| `slope5e-5` (old) | `0.0006` | `± 0.0016` | `0.0001` | `± 0.0008` |
+| `slope1e-4` (old canonical) | `0.0006` | `± 0.0016` | `0.0001` | `± 0.0008` |
+| `slope5e-4` (old) | `0.0009` | `± 0.0020` | `0.0003` | `± 0.0011` |
+| `slope1e-4-ar1` (old) | `0.0005` | `± 0.0015` | `0.0003` | `± 0.0011` |
+| `slope2.5e-3` | `0.0518` | `± 0.0148` | `0.0105` | `± 0.0068` |
+| `slope5e-3` | `0.5781` | `± 0.0331` | `0.0324` | `± 0.0119` |
+| **`slope1e-2` (canonical)** | **`0.9999`** | `± 0.0006` | **`0.0016`** | `± 0.0026` |
+| `slope2e-2` | `1.0000` | `-0.0000/+0` | `0.0000` | `+0.0026/-0` |
+| `slope1e-2-ar1` | `0.6165` | `± 0.0326` | `0.0104` | `± 0.0068` |
+
+A reading outside its tolerance is **reported as a deviation, not absorbed**, and does not move any
+threshold, grid or falsifier. The old cells' predicted rows are the probe's, not the committed run's;
+check (1) of K5R.6 pins those against the committed numbers exactly, which is the stronger test.
+
+### K5R.8 The healthy arms do not change, and why
+
+Every cell this amendment registers is a **power** cell: a fault-injected trajectory scored for
+detection rate, contributing to S3 evidence through `coverageFor` and to nothing else. No validity
+(S2) arm, no healthy stream, no calibration draw, and no `exceedance`/`mean_e`/`crossing_rate`/
+`increment_estimator`/`p_uniformity` field is registered, emitted or moved here. `safe_t` and
+`universal_inference` already carry their own S2 evidence from the studies their cards rest on; a new
+K5 severity adds no arm and can change no validity endpoint. `ARM_CELLS`
+(`run-battery.mjs:193-207`) is not edited, and no `HELDOUT_SEED` is registered — no K5 detector
+calibrates. **No new validity arm exists in this amendment.**
+
+The one honest qualification is K5R.6's: the registered run scope re-emits arm 30 because
+`group_average_e_value`'s K2 rows and its arm live in the same superseded run. Re-emitting is not
+changing; check (1) requires bit-identity.
+
+### K5R.9 Stop conditions
+
+**Unchanged from the standing battery registration.** §9's NOT-EXECUTABLE fallback (adapter throws
+on `> 1%` of a cell's trajectories, scoped per `(detector, cell)`), A3c's vacuity rule, and every
+validity endpoint in §1-14 and in Amendments v1.1 through v2.K6E.17 stand exactly as written. This
+amendment registers power cells only; it touches no validity endpoint and moves no threshold, floor,
+seed formula, window partition or decision rule.
+
+**The one cancel-and-refile condition, stated for this run.** If any healthy-arm endpoint the run
+emits — arm 30's `exceedance`, `mean_e`, or S2 verdict — differs in any digit from the superseded
+run's, the run is **cancelled and refiled**, not interpreted: identical seeds through untouched code
+must give identical numbers, so a difference is a code defect, and the amendment authorizing the run
+would be describing a run that did not happen. K5R.6's check (1) is the mechanical form of this
+condition, and it also covers the K1/K2 fault rows.
+
+### K5R.10 Predicted class answer, with falsifiers
+
+**K5 = YES.** Registered plainly, from the probe's number and the two gates as they are coded:
+`safe_t`'s canonical cell (idx 40, `slope1e-2`) is predicted at `0.9999`, above
+`COVERAGE_FLOOR = 0.50`, and `safe_t_e_value`'s card verdict is `USE`
+(`validation/certification/results/run-20260808T180653Z/COVERAGE.md`, K1 row), so `coverageFor`
+reads K5 COVERED for that card and `verdict.mjs:272`'s USE gate passes. The supporting tier is T1.
+
+`universal_inference_e_value` is predicted **NOT_POWERED** at the canonical cell (`0.0016`), so it
+does not appear on the YES row, and the class answer rests on one detector.
+
+**Falsifiers, mechanical:**
+
+- **K5's YES is falsified iff the canonical cell (idx 40) reads `detection_rate < 0.50` for both
+  `safe_t` and `universal_inference`.** A4's shape, with A4's `idx 23` superseded by `idx 40`.
+- The per-detector predictions above are falsified cell by cell by any reading outside its registered
+  `±3` SE tolerance. Such a falsification is reported and carries no threshold movement.
+- The mechanism claim for `safe_t` (K5R.7) is falsified if the canonical cell's measured rate is
+  inconsistent with `|t| >= 3.6976` at `E[t] = 7.321` — concretely, any canonical reading below
+  `0.99` would contradict the derivation and is to be reported as such rather than absorbed.
+
+**A failed endpoint is a publishable result and thresholds do not move.** This prediction was
+registered from a measurement whose number could equally have been below the floor: `slope5e-3`, one
+cell down, reads `0.578` and `slope2.5e-3` reads `0.052`. Had the `2σ` cell landed under `0.50`, the
+NO would have been registered here as written.
+
+### K5R.11 Golden expectation
+
+**One expected class-answer delta: `K5 NO -> YES`**, detector `safe_t_e_value`, tier T1, canonical
+rate `≈ 1.0000` at severity `slope1e-2`. `COVERAGE.md`'s K5 row moves from
+`| K5 | NO | — | — | — |` to a YES row naming `safe_t_e_value`, and the detail line
+`K5: NO — best: safe_t_e_value, universal_inference_e_value (2-way tie) NOT_POWERED 0 (verdict USE)`
+disappears.
+
+**Expected golden non-deltas:** every card tuple unchanged, including `safe_t_e_value` `USE`/T1 and
+`universal_inference_e_value` `USE`/T1 — `coverageFor` is a grouping layer over S3 evidence and no
+card's S1/S2/S3/S4 status is a function of a K5 severity. Class answers K1 YES, K2 YES, K3 YES, K4
+YES, K6 NO unchanged; C1.12's list is otherwise untouched (and its `K1 NO` entry was already
+corrected to YES by C1.2.1). **Any other golden movement is a surprise to report, not to absorb.**
+
+### K5R.12 Named-not-done
+
+- **No wiki page is written by this amendment.** `~/concord/knowledge` is read-only for this task.
+  The write-back obligation is named and outstanding: the ratified authority page
+  `methodology/pages/fault-class-coverage-matrix.md` states K5's expectation against a grid whose
+  cumulative reach it does not quantify, and `stats/` carries no page for the fixed-split UI's
+  anti-power against a monotone ramp. Both are for the operator to route.
+- **`sequential_ui` is not registered, built, carded or run.** K5R.7 names it as the obvious
+  successor for the ramp geometry and stops there.
+- **The old cells are not re-scoped as a separate class.** They stay K5 grid cells that decide
+  nothing, which is the weakest claim that keeps them readable.
+- **No T2 or T3 K5 evidence is registered.** §14's scope limit stands.
+- **The `slope5e-3` cell straddles the floor** (`0.578 ± 0.004` probe, `± 0.033` at N=2000). It is a
+  grid cell and decides nothing; no attempt is made here to place a cell exactly at the floor, and no
+  interpolated "detection threshold slope" is registered.
+
+### K5R.13 House rules, mapped
+
+| rule (`pre-registration-discipline.md`) | how this amendment satisfies it |
+|---|---|
+| 1. Committed before any data fetched | This amendment commits alone, before the code change that adds the cells and before any run of them. |
+| 2. A failed endpoint is publishable; thresholds do not move | K5R.10, stated with the counterfactual that would have produced a NO. |
+| 3. Post-hoc analysis labelled, no verdict | The probe is disclosed as a probe on non-registered seeds (K5R.7), and it is the basis of a PREDICTION registered before the run, not a post-hoc reading of one. |
+| 4. A fallback rule written in advance | §9, unchanged (K5R.9). |
+| 5. Raw downloads frozen | Not applicable (synthetic injection). The equivalent freeze is this amendment plus `substrate_sha256` and the git SHA each run's manifest records. |
+| 6. Results append-only, nothing overwritten | K5R.4: old cells and their committed rows are untouched. K5R.6's supersession is a declaration on the NEW run's manifest; the superseded directory is never modified (`collect.mjs:147-149`). |
+| 7. Reruns only for a named code defect, fixed test-first, prior run preserved | K5R.1 names the defect (a grid whose scope was registered without its cumulative arithmetic) and K5R.2 measures it (0 decision flips in 14,000 at the retired canonical). The code change lands test-first in its own commit; the prior run is preserved and superseded by declaration, not deletion. |
+| 8. The report states every endpoint's number and verdict | Binding on the run's report: every cell in K5R.7's prediction table, old and new, with its measured rate and verdict. |
+
+### Amendment summary
+
+Names, as a scope defect under §11 rule 7, that the registered K5 grid tested a drift no detector
+could reach: `injectDrift` adds `slope*(t-at)*sigma` over `(t-at) = 0…199`, so the three registered
+slopes reach terminal shifts of `0.00995σ / 0.0199σ / 0.0995σ` and scored-window MEAN shifts of
+`0.004975σ / 0.00995σ / 0.04975σ` — the canonical cell moving the window mean by `1/75` of K1's
+smallest step. Quote-and-corrects the run report's `0.00995σ` (a mean shift, `2×` below the terminal
+displacement a bare "cumulative shift" would name), §13's K5 prediction (re-scoped, not withdrawn:
+answered against a grid whose largest cell moves the mean `0.0498σ`), and A4's `idx 23` (superseded
+by `idx 40`). Measures the defect rather than arguing it: on 14,000 paired trajectories, **0 change
+their `e >= 20` decision** at the retired canonical slope when the drift is applied, and the old
+cells' detection rates are the same `8/14,000` as no injection at all. Registers a new grid derived
+exactly from the injection formula — `slope2.5e-3 / slope5e-3 / slope1e-2 / slope2e-2`, terminal
+shifts `0.4975σ / 0.995σ / 1.99σ / 3.98σ`, canonical the `2σ` cell `slope1e-2` (idx 40, `CELL_SEED
+20260847`) — with the per-tick increment `0.01σ` at canonical, `75×` below K1's smallest step and
+`196×` below the two-sided `z` at `α = 0.05`, so the class definition's sub-threshold-per-tick
+requirement is met by construction. Registers five cells at indices **38-42** (`20260845`-`20260849`),
+starting past the indices v2.K6E reserved and its cancellation did not release, with §6's seed
+formula, §7's detector assignment (`safe_t`, `universal_inference`) and `run-battery.mjs:293`'s
+severity grammar all unchanged, and `inject.mjs` not edited (`substrate_sha256` stays
+`0d25265f…349edf`). Keeps the old cells registered and re-measured as **preserved evidence of a
+different question** — not withdrawn, not superseded, not corrected — and registers the two-`-ar1`-
+rows-in-one-class consequence with a per-class `-ar1` count table so the relaxation cannot hide a
+stray cell. Registers the canonical mechanism at code (`canonicalOf` at `run-battery.mjs:281` →
+`coverageFor`'s `canonical === true` filter at `score.mjs:397-402` → `verdict.mjs:272`'s USE gate)
+and the disambiguation it forces: because `loadEvidence` pools runs with no dedup, the committed
+`run-20260808T010208Z` would leave a second canonical K5 cell at `slope1e-4`, so the new run declares
+C1.6's manifest `supersedes` on that run for `safe_t`, `universal_inference` and
+`group_average_e_value`, at the verified scope `--classes K1,K2,K5` that re-emits exactly the rows
+the supersession drops — **one canonical, no orphaned `(detector, class)` pair, no duplicate row** —
+gated on two binding checks (bit-identical reproduction of the superseded K1/K2/arm-30 rows, and the
+substrate hash), with the arm-30 re-emission disclosed rather than described as untouched. Registers
+expectations from a disclosed probe on non-registered seeds (`3.70e9`/`3.80e9` families, harness step
+7919, 4,000 + 10,000 trajectories per cell, binomial SEs, four-block spreads shown, no registered
+seed reachable above `1.0e8`): `safe_t` `0.0518 / 0.5781 / 0.99993 ± 0.00007 / 1.0000` and
+`universal_inference` `0.0105 / 0.0324 / 0.00157 ± 0.00033 / 0.0000` across the four new cells, plus
+the φ=0.6 replicate at `0.6165 / 0.0104`, each with the mechanism: `safe_t`'s crossing condition is
+`|t| >= 3.6976` and the drift's `E[t]` is `2.010 / 3.940 / 7.321 / 11.769`, predicting
+`0.0458 / 0.5957 / 0.9999 / 1.0000` against the measured rates. Discloses, as a finding and not a resolution, that the
+fixed-split `universal_inference` is **anti-powered** against a ramp — its alternative's mean is
+fitted on `[100,200)` and scored on `[200,300)`, short by exactly `slope*100`, driving median `e` to
+`1.4e-12` at the canonical cell and `2.0e-40` at the largest — with the exact shortfall arithmetic
+given, the penalty size measured, no closed form registered, and `sequential-ui.ts`'s predictable
+plug-in named as the successor to test and nothing more. States that the healthy-arm endpoints do not
+change and why (every cell here is a power cell; no arm, no calibration stream, no instrument-named
+field), and that stop conditions are unchanged, with the single cancel-and-refile condition written
+for this run. **Registers the class answer the probe's number supports, whatever it said: K5 = YES,
+canonical `slope1e-2` at `0.9999` with `safe_t_e_value`'s USE card, tier T1 — one expected golden
+delta (`K5 NO -> YES`), every card tuple and every other class answer unchanged. No floor, seed
+formula, window partition, validity endpoint, stop condition or decision rule in §1-14 or in any
+earlier amendment moves.** Names not-done: the two wiki write-backs, `sequential_ui`, any T2/T3 K5
+evidence, and any interpolated detection-threshold slope.

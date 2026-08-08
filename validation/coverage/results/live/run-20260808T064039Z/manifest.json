@@ -1,0 +1,98 @@
+{
+ "study": "coverage",
+ "prereg": "PREREGISTRATION.md",
+ "git_sha": "43f3386c7bd8a9963c1ce80988f35e57c7665383",
+ "engine_pin": "0.6.6-pre",
+ "engine_version": "0.6.6-pre",
+ "node": "v25.9.0",
+ "seed_scheme": {
+  "cell": "CELL_SEED = BASE_SEED(20260807) + cellIndex",
+  "trajectory": "seed(i) = CELL_SEED + 7919*i",
+  "series": "seed(i,k) = CELL_SEED + 7919*i + 104729*k (K2 matrices and arm 30)",
+  "heldout": "HELDOUT_SEED = CELL_SEED + 500000; seed(j) = HELDOUT_SEED + 7919*j, j = 0..9999",
+  "heldout_seed_arm_31": 20760838,
+  "heldout_seed_arm_32": 20760839,
+  "constants": {
+   "base_seed": 20260807,
+   "trajectory_step": 7919,
+   "series_salt": 104729,
+   "heldout_offset": 500000
+  }
+ },
+ "mode": "live",
+ "n": 2000,
+ "registered_n": 2000,
+ "smoke": false,
+ "ticks": 300,
+ "onset": 100,
+ "alpha": 0.05,
+ "sigma": 1,
+ "detectors": [
+  "family_E_conformal_heldout",
+  "safe_t",
+  "point_tail_bet_e_value"
+ ],
+ "classes": {
+  "K1": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "K2": [
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11
+  ],
+  "K3": [
+   12,
+   13,
+   14,
+   15,
+   16,
+   17
+  ],
+  "K4": [
+   18,
+   19,
+   20,
+   21
+  ],
+  "K5": [
+   22,
+   23,
+   24,
+   25
+  ],
+  "K6": [
+   26,
+   27,
+   28,
+   29
+  ]
+ },
+ "classes_run": [
+  "K4"
+ ],
+ "arms": [
+  {
+   "cell_index": 31,
+   "detector": "family_E_conformal_heldout"
+  },
+  {
+   "cell_index": 32,
+   "detector": "point_tail_bet_e_value"
+  }
+ ],
+ "substrate": "validation/coverage/lib/inject.mjs (this battery's own generators; A7 T1)",
+ "substrate_sha256": "0d25265f6af237e94b79cc8a09c0e5d11f6033da3e9581eddfce02efca349edf",
+ "family_d_adapter_sha256": "4affa3c9fc7b36bfa5e73d53c15e7c999de9475a9ec1e76e2a631e9e0fbce69d",
+ "tier": "T1",
+ "force_throw_hook": null,
+ "generated_at": "20260808T064039Z"
+}

@@ -2829,3 +2829,205 @@ not bit-exactly reproduced) phi-mismatch figures beside the reproduced ranges (K
 endpoint, floor, or seed in §1–14 or any earlier amendment moves — including K6.1–K6.16's own
 registered constants, seeds, and stop conditions, which stand exactly as Amendment v2.K6
 registered them.**
+
+## Amendment v2.K6.2 — 2026-08-08, d=2.0 degeneracy correction, before any run
+
+Registered before any run of `shape_block_conformal_bet`, closing a finding the Task-11a adapter
+smoke surfaced: `d=2.0` trips Amendment v2.K6.1's own named falsifier ("materially above `~0.000`
+(approaching or exceeding `0.50`)"), and the closed-form reason is a degeneracy Amendments v2.K6
+and v2.K6.1 both missed. Amendments v2.K6 (K6.1–K6.16) and v2.K6.1 (K6.1.1–K6.1.4) stay intact;
+every item below names the exact text it corrects, per rule 7. All items are registrations: no
+frozen endpoint, floor, or seed moves — the correction is entirely to this candidate's own
+PREDICTIONS at the grid's top severity, not to any constant, seed, or decision rule.
+
+### K6.2.1 The d=2.0 degeneracy, re-derived here, and the corrected predictions (supersedes K6.1.1's `~0.000` at d=2.0)
+
+**Re-derived independently before writing (node-verified), not assumed.** `injectShapeMix`'s own
+scale factor is `s = sqrt(max(0, 1 - d*d/4))` (`inject.mjs:60-70`, §2/K6.4 Step 1). At `d = 2.0`:
+`d*d/4 = 1`, so **`s^2 = 1 - 1 = 0` EXACTLY** — not small, not asymptotically negligible, exactly
+zero. The injected series at this severity is therefore **`Z = M` alone** (the `W*s` term vanishes
+identically): a **pure two-point `±1σ` distribution** (`M = +1` or `-1`, each w.p. 1/2), not an
+overlapping continuous mixture the way every other registered severity (`d=1.0, 1.5`, and the
+matched-process `-ar1` cell at `d=1.5`) is. K6.4's own closed-form machinery (Step 1) still
+applies exactly, at this degenerate parameter value:
+
+```
+E[Z^4] = (d/2)^4 + 6*(d/2)^2*s^2 + 3*s^4 = (d/2)^4 = 1^4 = 1              (s=0 kills the other two terms)
+Var(Z) = (d/2)^2 + s^2 = 1 + 0 = 1                                        (still unit variance)
+raw kurtosis = E[Z^4]/Var(Z)^2 = 1                                        exact, not estimated
+deficit from Gaussian (3) = 3 - 1 = 2.0                                   (vs. the canonical d=1.5
+                                                                            deficit of 0.6328125,
+                                                                            a ratio of ≈3.16, not
+                                                                            the ≈3x this section's
+                                                                            own dispatch estimated
+                                                                            loosely)
+```
+
+**Consequence for the live-window statistic, each step derivable from the construction, not
+merely asserted:**
+
+- A live window of 30 iid draws from a genuine **two-point** distribution has a sample raw
+  kurtosis that **concentrates tightly** near its population value (1.0) — a two-point sample's
+  possible outcomes are far more constrained than a continuous Gaussian sample's, so its sampling
+  distribution is far narrower than the reference blocks' own (K6.4 Step 3's `sd≈0.70` figure was
+  measured for the mixture/Gaussian regime; it does not apply to this degenerate two-point
+  regime, which is why this document did not catch the consequence earlier).
+- The reference blocks (K6.1's own `m=333` calibration, drawn from the healthy Gaussian null)
+  scatter around raw kurtosis 3 with their own sampling spread; **disclosed median (Task-11a
+  adapter smoke, not independently re-derived here): ≈2.66** — below the population value 3,
+  consistent with K6.4 Step 3's own registered note that the small-sample kurtosis estimator's
+  sampling distribution is right-skewed (mean above median).
+- **Live `|dev| = |1.0 - 2.66| ≈ 1.66`** — large relative to the reference blocks' own typical
+  `|deviation from their median|` (on the order of the reference sd, well under 1) — so this
+  live value exceeds essentially every one of the 333 reference blocks' own deviations, driving
+  the kurtosis-feature `p` to or near the registered floor `1/(m+1) ≈ 1/334`, and the
+  kurtosis-feature `e` to or near the registered ceiling **`κ*(m+1)^(1-κ) ≈ 18.68`**
+  (K6.1.1's own bound, re-cited not re-derived: `0.1*334^0.9 = 18.6798`, node-verified again
+  here). The `absSkew` feature, by contrast, stays near its typical reference range (the two-point
+  construction is symmetric, `M=±1` each w.p. 1/2, so live skew is not driven extreme the way
+  kurtosis is) — **disclosed `eAvg ≈ 9–10`** (the average of the near-ceiling kurtosis `e` and a
+  middling `absSkew` `e`), giving **`log(eAvg) ≈ 2.25`** (re-verified: `log(9.5) = 2.2513`) per
+  window — **disclosed range "~2.2–2.3 per window."** Across the registered 6-window span
+  (K6.10): **`6 * log(9.5) ≈ 13.51`** (re-verified), matching the disclosed **"~13–14"** figure,
+  and both are **far above `log(20) ≈ 2.9957`** — crossing is expected well before the sixth
+  window (a cumulative log-wealth this large after even two windows, `≈4.5`, already clears the
+  bar).
+
+**The earlier disclosed `1/20000, 1/20000, 0/20000` measurement (K6.1.1) is WITHDRAWN, not merely
+superseded by a stronger number.** Stated plainly, per this task's own instruction: **the
+construction that produced those three figures cannot be identified from what was disclosed, and
+those figures no longer carry any evidential weight.** In its place: **the implementer confirmed
+`~0.96–1.0` three independent ways** (the `run-battery` harness at `n=20` and `n=500`
+trajectories, and a standalone driver calling `shapeBetWealth` directly against the module) —
+disclosed with this provenance, not independently re-run inside this document, same convention as
+every other Task-9/Task-11 probe this document discloses rather than reproduces.
+
+**K6.1.1's own corrected text is now itself corrected — quoted, then replaced:**
+
+> **Corrected: `idx 28 | 2.0 | ~0.000`** — every severity in the registered grid, including `d=2.0`,
+> now predicts `~0.000`, per the ceiling argument and the disclosed measurement above.
+
+**Re-corrected: `idx 28 | 2.0 | ~0.95–1.0`, expected POWERED** — the per-window ceiling argument
+(K6.1.1) is NOT wrong as a general statement (no single window can cross alone, at any severity);
+what was wrong was assuming the *typical* per-window `eAvg` stays near 1 (the null expectation)
+at every severity. At the degenerate `d=2.0` boundary, the typical `eAvg` itself is `≈9–10`, so
+the "at least two windows" compounding K6.1.1 correctly derives is *easily* satisfied, not
+*prevented* — the earlier correction conflated "no single window suffices" with "crossing is
+therefore rare," which does not follow once the per-window `eAvg` is this far from 1.
+
+> **Corrected: `detection_rate ≈ 0.000`** ... **`0.000 < 0.10` exactly as `0.03 < 0.10` did** —
+> `scoreS3` still reads this cell INERT, `overallVerdict` still caps at ADVISORY
+
+**Re-corrected: `detection_rate ≈ 0.95–1.0`.** `0.95 >= INERTNESS_FLOOR = 0.10` (indeed
+`>= COVERAGE_FLOOR = 0.50`): `scoreS3` reads this cell **POWERED**, not INERT (K6.2.2, below,
+registers the consequence for the card's overall verdict). Falsifier, re-corrected: `detection_rate`
+materially BELOW `~0.95` (approaching or below `0.50`) at `d=2.0` is now the surprise requiring
+investigation.
+
+> - **Grid cells.** ... idx 28 (`d=2.0`): predicted `~0.000` (ceiling-bound, K6.1.1, not
+>   "INERT-floor-adjacent" — the figure is now two orders of magnitude below the INERT floor, not
+>   adjacent to it); S3 arm prediction `~0.000`, expected INERT (K6.8 as corrected above);
+>   falsifier "materially above `~0.000`."
+
+**Re-corrected: idx 28 predicted `~0.95–1.0` (the s=0 two-point degeneracy, this section); S3 arm
+prediction `~0.95–1.0`, expected POWERED. Falsifier: materially below `~0.95` (approaching or
+below `0.50`).**
+
+**The Amendment-summary recap lines (Amendment v2.K6's own, and Amendment v2.K6.1's own
+restatement of it) are corrected a second time: `d=1.0→~0.000, d=1.5→~0.000, d=2.0→~0.95-1.0`.**
+`d=1.0` (idx 26) and `d=1.5` canonical/`-ar1` (idx 27, 29) are **unaffected by this correction** —
+`s^2 = 1 - d^2/4` is `0.75` at `d=1.0` and `0.4375` at `d=1.5` (K6.4 Step 1's own computation,
+re-cited), both strictly positive, so those three cells remain genuine overlapping mixtures, not
+two-point degeneracies, and their predicted rates stay `~0.000` exactly as K6.4/K6.1.1 registered.
+
+### K6.2.2 Corrected stage tuple and overall verdict; the K6 class answer is UNCHANGED
+
+**Corrects K6.7/K6.8's own expected-outcome language (not a quoted single sentence — the
+conclusion K6.7's S2 paragraph and K6.8's closing paragraph both state) and K6.14/K6.16's
+"expected ADVISORY" framing.** With the S3 arm re-corrected to POWERED (K6.2.1), the expected
+post-run stage tuple, checked against `overallVerdict` (`score.mjs:505-587`, cited unchanged, not
+re-read for this correction — its logic was already checked in K6.8's original text and does not
+change): **S1 MISSING** (v1 floor, unaffected — this card's `prior_evidence` carries stage
+`'design'`, not `'S1'`, K6's card, unchanged), **S2 PASS** (K6.7's `increment_estimator`/
+`crossing_rate` registration, unaffected by this correction — the healthy arm carries no
+injection at all, so `d=2.0`'s degeneracy is irrelevant to S2), **S3 POWERED, not INERT**
+(K6.2.1), **S4 PASS** (unaffected). **Composed: expected overall verdict `USE`, not `ADVISORY`**
+— `overallVerdict`'s `s3Powered.length === 0` branch (the valid-but-inert rule that capped this
+card at ADVISORY under the withdrawn `~0.000` S3 prediction) no longer applies once at least one
+claimed S3 cell clears `INERTNESS_FLOOR`; the function falls through to its `S4.status !== REFUSE
+&& !== UNPRICED` path, `USE` at tier `T1`.
+
+**The K6 CLASS answer is UNCHANGED, and this is registered explicitly so the correction above is
+not misread as a class-level reversal.** `coverageFor`'s decision rule (§8/A4, unchanged, cited
+not restated) reads the **canonical cell only** — idx 27, `mix-d1.5` — and that cell's predicted
+rate is `~0.000` (K6.4 Step 5, K6.1.1, unaffected by this correction, K6.2.1's own closing
+paragraph). **`~0.000 < COVERAGE_FLOOR = 0.50`: K6 stays NO.** The corrected expected COVERAGE.md
+row context, registered here in place of K6.8/K6.16's withdrawn "best: `shape_block_conformal_bet`
+ADVISORY (derived not-powered at class geometry)" framing:
+
+> **K6 row: NO. Context: "best: `shape_block_conformal_bet` COVERED?-no: NOT_POWERED at canonical
+> (powered only at the degenerate d=2.0 endpoint)."**
+
+A card reading overall `USE` while its own class reads NO is not a contradiction under this
+study's decision rule (A4, cited unchanged): `coverageFor`'s COVERED/NOT_POWERED status is
+computed per class from the canonical cell alone, independent of the card's overall verdict; a
+`USE` card whose canonical-severity power is genuinely absent simply does not carry that class,
+exactly the same structural shape `point_tail_bet_e_value`'s own `USE`-but-only-because-of-a-
+different-cell reasoning already establishes elsewhere in this document (A4's own text), applied
+here in the opposite direction (a `USE` card that does NOT cover the class it was built for,
+rather than a class covered by a card built for something else).
+
+### K6.2.3 Taxonomy note for the write-back: d=2.0 is a boundary-artifact severity, not a stronger instance of the same family
+
+**Registered for Task 12's wiki write-back, not adjudicated further here.** The grid's top
+severity (`d=2.0`) is not "the mixture, more separated" — per K6.2.1, it is a **different
+distribution family entirely** (a two-point `±1σ` law, `s=0` exactly, vs. every other registered
+severity's genuine overlapping-Gaussian-components mixture, `s>0`). This is a **boundary artifact
+of the grid's own parameterization** (`s = sqrt(max(0, 1-d²/4))` reaches its zero exactly at
+`d=2.0`, `inject.mjs:60-70`), not a property of "distributional shape change" as a fault class
+that happens to get easier to detect at higher severity. **This is why the decision rule reads
+the canonical cell only, and not the grid's max**: the canonical cell (`d=1.5`, idx 27) is the
+class-representative geometry this construction is meant to answer for, and the grid's own top
+cell, at this particular class's own injection formula, is not a scaled-up version of that
+geometry — it is a qualitatively different, considerably easier one. A future grid revision that
+wants a genuine "very separated mixture" cell at higher `d` would need `s>0` preserved (e.g. a
+grid point below `d=2.0`, or a differently-parameterized severity axis) — this document does not
+register such a revision, it only names the boundary artifact so the write-back does not read
+`d=2.0`'s power as evidence the class "is powerable at extreme severity" in the sense the
+canonical-cell decision rule cares about.
+
+### K6.2.4 Golden expectation, corrected
+
+**Pre-run golden expectation is UNCHANGED**: `shape_block_conformal_bet` enters at
+`NOT_EXECUTABLE` (S1/S2/S3 MISSING, S4 PASS, tier null) — no run of this candidate exists at this
+commit, and nothing in this amendment changes that pre-run state (`validation/certification/test/
+golden-verdicts.test.mjs`, committed at `657301a`, is not touched by this amendment). **Post-run
+expected golden delta, registered for Task 11's own commit, not made here**: `NOT_EXECUTABLE →
+USE`, tier `null → T1`, `S2 MISSING → PASS`, `S3 MISSING → POWERED`-mapped-`PASS` (S1 MISSING and
+S4 PASS unchanged) — per K6.2.2's corrected stage tuple. The named delta will be registered
+against the actual run's numbers when Task 11 lands it, not asserted here as already true.
+
+### Amendment summary
+
+Re-corrects Amendment v2.K6.1's own `d=2.0` correction (K6.1.1), a second-order correction: the
+`s = sqrt(max(0, 1-d²/4))` term is exactly zero at `d=2.0` (re-derived here, node-verified), so
+this severity is a pure two-point `±1σ` distribution, not an overlapping mixture — `E[Z^4]=1`,
+raw kurtosis `1.0`, deficit `2.0` (vs. canonical `0.6328`, ratio `≈3.16`). The live-window
+kurtosis statistic (tightly concentrated, two-point data) sits `≈1.66` from the Gaussian
+reference blocks' own disclosed median (`≈2.66`), driving the kurtosis feature to its registered
+ceiling `≈18.68` essentially every window; disclosed `eAvg≈9–10`, `log(eAvg)≈2.25`/window,
+`≈13–14` cumulative over 6 windows, far above `log(20)≈2.9957` — crossing near-certain. The
+earlier `1/20000,1/20000,0/20000` disclosed measurement is WITHDRAWN, its construction
+unidentifiable, no evidential weight; the implementer's `≈0.96–1.0`, confirmed three independent
+ways, is registered in its place with that provenance (K6.2.1). Corrects the expected stage
+tuple and overall verdict: S3 POWERED not INERT, overall expected `USE` not `ADVISORY` — the K6
+CLASS answer is explicitly UNCHANGED, still NO, decided by the canonical cell alone (`~0.000 <
+0.50`), with a corrected expected COVERAGE.md row context naming the degenerate d=2.0 endpoint as
+the only powered cell (K6.2.2). Registers the taxonomy point for the write-back: `d=2.0` is a
+grid-parameterization boundary artifact, a different distribution family, not a stronger instance
+of the canonical mixture — the reason the decision rule reads canonical only (K6.2.3). Golden
+expectation: pre-run `NOT_EXECUTABLE` unchanged; post-run expected `USE`, delta to be named at
+the run, not asserted here (K6.2.4). **No endpoint, floor, or seed in §1–14 or any earlier
+amendment moves — K6.1–K6.16's and K6.1.1–K6.1.4's registered constants, seeds, m-values, and
+stop conditions stand exactly as registered; only this candidate's own d=2.0 predictions and
+their downstream stage/verdict/coverage-context expectations move, a second time.**

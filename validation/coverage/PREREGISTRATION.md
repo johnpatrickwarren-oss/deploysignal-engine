@@ -3031,3 +3031,611 @@ the run, not asserted here (K6.2.4). **No endpoint, floor, or seed in §1–14 o
 amendment moves — K6.1–K6.16's and K6.1.1–K6.1.4's registered constants, seeds, m-values, and
 stop conditions stand exactly as registered; only this candidate's own d=2.0 predictions and
 their downstream stage/verdict/coverage-context expectations move, a second time.**
+
+## Amendment v2.C1 — 2026-08-08, held-out row generator: a named code defect, registered reruns
+
+Registered **after** the K4/K3/K6 runs and **before** the two reruns this amendment authorizes. This
+is the one amendment class the study's own house rules admit post-run: **house rule 7** — "Reruns
+only for a named code defect, fixed test-first, prior run preserved" (§11, `PREREGISTRATION.md:249`).
+*Correction of the ruling's own citation: the rule is §11 item 7, not "§17 rule 7"; there is no §17 in
+this document.* Everything below is either (a) the naming of the defect with its measured signatures,
+(b) the corrected generator registered exactly, (c) corrected predictions with falsifiers, or (d) new
+emitted fields. **No floor, no seed, no window partition, no stop condition, and no decision rule
+moves.** The prior run directories are preserved byte-for-byte and are not edited by this amendment or
+by the reruns it authorizes.
+
+The defect was found by the whole-branch review, not by this study's own instrumentation. That is
+recorded as a fact about the study, not softened: `p_uniformity` (K3.1.7/K6.7) *did* fire — the T1 KS
+statistic 0.1080 against critical 0.0087788 is exactly the reading that led here — but the run report
+(Task 11b §deviation (a)) adjudicated the direction wrongly, as "refutation-direction only". C1.11
+below corrects that adjudication endpoint by endpoint.
+
+### C1.1 The defect, named: `heldoutRows` draws a rank-1 Kronecker lattice, not a sample
+
+**Code, at a path and a line.** `validation/coverage/harness/run-battery.mjs:503-511`, as registered
+by K4.4 / K6.3 / K6.6 and as recorded in every run manifest's `seed_scheme.heldout`
+(`"HELDOUT_SEED = CELL_SEED + 500000; seed(j) = HELDOUT_SEED + 7919*j, j = 0..9999"`):
+
+```js
+function heldoutRows(cell) {
+  const heldoutSeed = cell.seed + HELDOUT_OFFSET;
+  const rows = new Array(HELDOUT_ROWS);
+  for (let j = 0; j < HELDOUT_ROWS; j++) {
+    const r = rng(heldoutSeed + TRAJ_STEP * j);   // a FRESH stream per row
+    rows[j] = drawFor(r, cell.phi)();             // its FIRST draw only
+  }
+  return { rows, heldoutSeed };
+}
+```
+
+**The mechanism, derived.** `rng` is the Numerical-Recipes LCG `s <- (a*s + c) mod 2^32` with
+`a = 1664525`, `c = 1013904223` (`validation/coverage/lib/inject.mjs:14-17`; the file's own comment
+already records that it is an LCG and not the mulberry32 the name suggests). `gaussFrom` consumes
+exactly two uniforms per gaussian (`inject.mjs:19-24`): `u1` is the first state after the seed, `u2`
+the second. Both are **affine in the seed**, hence affine in `j`:
+
+```
+u1(j) = (a*(H + 7919 j) + c)                mod 2^32 = (A1 + B1*j) mod 2^32,  B1 = a*7919      mod 2^32
+u2(j) = (a^2*(H + 7919 j) + a*c + c)        mod 2^32 = (A2 + B2*j) mod 2^32,  B2 = a^2*7919    mod 2^32
+```
+
+Recomputed here (node, BigInt, this session):
+
+```
+B1 = a*7919   mod 2^32 = 296471587    (= 0.069027670 in [0,1))    gcd(B1, 2^32) = 1
+B2 = a^2*7919 mod 2^32 = 1215975367   (= 0.283116327 in [0,1))    gcd(B2, 2^32) = 1
+```
+
+So the pair `(u1(j), u2(j))` walks a single arithmetic progression on the 2-torus with fixed direction
+vector `(B1, B2)/2^32` — **a rank-1 Kronecker lattice**, not a sample. Two consequences follow, and
+both are measured below rather than asserted:
+
+1. **The marginals are better than iid**, because both coordinate progressions are full-period
+   (`gcd = 1`), so 10,000 terms are a low-discrepancy set rather than a random one. This is why every
+   marginal check the study ran passed, and passed *too well*.
+2. **The joint is deterministic and seed-invariant.** `H` only translates the lattice; it cannot
+   change `(B1, B2)`. Therefore every lag autocorrelation of the emitted rows is a **constant of the
+   scheme**, identical across unrelated held-out seeds — a property no iid sample of size 10,000 can
+   have.
+
+**Measured signatures (recomputed this session, `n = 10,000` rows per seed).** Marginals, K6 canonical
+cell 27 (`HELDOUT_SEED 20760834`): mean `0.000200`, sd `0.999968`, raw kurtosis `2.989619` — all
+nominal. Joint, same rows: `acf(1) = -0.182899`, `acf(2) = -0.751460`, `acf(3) = 0.455165`.
+Seed-invariance across eight unrelated `H`:
+
+| `H` | `acf(1)` | `acf(2)` | `acf(3)` |
+|---|---|---|---|
+| 20760825 | −0.182949 | −0.751602 | 0.455193 |
+| 20760834 | −0.182899 | −0.751460 | 0.455165 |
+| 20760841 | −0.182957 | −0.751353 | 0.455106 |
+| 1 | −0.183056 | −0.751411 | 0.455210 |
+| 999983 | −0.182353 | −0.751054 | 0.454709 |
+| 123456789 | −0.182701 | −0.751489 | 0.455030 |
+| 4000000000 | −0.182318 | −0.751350 | 0.454716 |
+| 777 | −0.182737 | −0.751448 | 0.455088 |
+
+`acf(2)` spans `-0.751054` to `-0.751602` — a range of `5.5e-4` — across seeds covering the whole
+32-bit range. The sampling sd of an iid
+`acf` at `n = 10,000` is `≈ n^(-1/2) = 0.01`, so `-0.7514` is a `≈75σ` departure that does not move
+when the seed does. Under the corrected generator (C1.2) the same eight seeds give `acf(2)` in
+`[-0.00837, +0.00541]` — inside `±1σ`, and seed-dependent, as an iid sample must be.
+
+**Why it reached a verdict, and not merely a descriptive field.** K6's own module docstring states the
+construction's answer to the predecessor's C22 failure is **CONTIGUITY** — "reference blocks are
+disjoint contiguous slices of the held-out segment, so each block carries its own within-block serial
+dependence" (`detectors/shape-block-conformal-bet.ts:12-16`). Under the spaced-seed scheme there was
+no held-out *segment* to slice: there were 10,000 one-draw streams, and each 30-row "block" was a
+30-step arc of the same fixed lattice line. Every block therefore looked like every other block, and
+the reference `|dev from median|` distribution was **compressed**. Measured, `W = 30`, block raw
+kurtosis, sd across the 333 blocks:
+
+| held-out seed | lattice sd | corrected sd |
+|---|---|---|
+| 20760825 (K4 cell 18) | 0.4835 | 0.6962 |
+| 20760826 (K4 cell 19) | 0.4858 | 0.7747 |
+| 20760833 (K6 cell 26) | 0.4973 | 0.7217 |
+| 20760834 (K6 cell 27) | 0.4794 | 0.6206 |
+| 20760835 (K6 cell 28) | 0.4926 | 0.6733 |
+| 20760839 (K4 arm 32) | 0.4788 | 0.7962 |
+| 20760841 (K6 arm 34) | 0.4971 | 0.7064 |
+
+A compressed reference makes *every* live window rank as more extreme than it is. That inflates the
+healthy false-alarm rate **and** the power reading, in the same direction, which is why C1.11's
+per-endpoint direction table is necessary and a single global "conservative/anti-conservative" label
+is not.
+
+**The decisive per-window arithmetic at `d = 2.0`** (cell 28, `HELDOUT_SEED 20760835`; the two-point
+degeneracy v2.K6.2 registered, live raw kurtosis exactly 1 in expectation). Recomputed this session:
+
+```
+                    ref kurtosis median   live |dev|   #{ref |dev| >= live}   p          e_kurtosis
+lattice reference          2.721146        1.721146           2/333        0.00898204     6.9496
+corrected reference        2.744525        1.744525          10/333        0.03293413     2.1583
+```
+
+and, averaged over 1200 live windows (200 trajectories × 6 windows) at `d = 2.0`:
+
+```
+                 mean e_kurtosis   mean e_absSkew   mean eAvg   mean log(eAvg)   6-window cumulative   bar log(20)
+lattice                 5.8269          0.7412        3.2841        1.1630             6.9778            2.9957
+corrected               1.8845          0.4205        1.1525        0.1148             0.6890            2.9957
+```
+
+The lattice put the wealth process `≈4.0` nats **above** the crossing bar on the average trajectory;
+the corrected reference leaves it `≈2.3` nats **below** it. That is the whole distance between
+`detection_rate 1.0000` and `detection_rate ≈0.004`, and it is the single verdict this defect moved.
+
+### C1.2 The corrected generator, registered exactly (supersedes K4.4 / K6.3 / K6.6's `seed(j)` clause)
+
+The `seed(j) = HELDOUT_SEED + 7919*j` clause in K4.4, K6.3 and K6.6 is **superseded** — named
+supersession, not silent replacement. `HELDOUT_SEED = CELL_SEED + 500000` and `HELDOUT_ROWS = 10,000`
+are **unchanged**; only the way the 10,000 rows are drawn from that one seed changes. Registered form,
+verbatim:
+
+```js
+function heldoutRows(cell) {
+  const heldoutSeed = cell.seed + HELDOUT_OFFSET;
+  const r = rng(heldoutSeed);              // ONE stream per held-out draw
+  const draw = drawFor(r, cell.phi);       // ONE generator over that stream
+  const rows = new Array(HELDOUT_ROWS);
+  for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = draw();   // 10,000 CONSECUTIVE draws
+  return { rows, heldoutSeed };
+}
+```
+
+Three properties this registers, each of which the old form failed:
+
+- **One continuous LCG stream per held-out draw.** `rng(heldoutSeed)` is advanced continuously;
+  `gaussFrom` is applied serially to it. The rows are 10,000 consecutive draws, the same way a live
+  window is 30 consecutive draws — which is the comparability the block-conformal rank assumes.
+- **For `phi > 0` cells the `drawFor` chain runs on that continuous stream**, so the AR(1) recursion
+  `p <- phi*p + sqrt(1-phi^2)*g()` actually carries state across rows and `phi` is real. C1.3.
+- **`heldoutSeed` remains the row-set's identity** and remains emitted on every row that carries a
+  held-out calibration, so the existing provenance fields (`heldout_seed`, `heldout_rows`) keep their
+  meaning and every registered seed literal in `assertRegistryAgreement` stands unchanged.
+
+**Registered runtime guard (new, and the mechanical kill for a regression to the old form).**
+`heldoutRows` asserts the drawn rows carry the serial structure their own `phi` implies, and throws
+otherwise — so a mutation back to the spaced-seed scheme cannot produce a run at all, rather than
+producing a run that has to be caught by reading a report:
+
+```
+phi = 0 :  |acf(1)| <= 0.10  and  |acf(2)| <= 0.10
+phi > 0 :  |acf(1) - phi| <= 0.10  and  |acf(2) - phi^2| <= 0.10
+```
+
+The bound `0.10` is registered and derived, not tuned: the iid sampling sd of `acf(k)` at
+`n = 10,000` is `≈0.01`, so `0.10` is a `10σ` bound (false-crash probability negligible), while the
+lattice reads `acf(2) = -0.7514` at `phi = 0` — outside by a factor of `7.5` — and, at `phi = 0.6`,
+`acf(1) = 0.2687` against `phi = 0.6` (deviation `0.331`) and `acf(2) = -0.3155` against
+`phi^2 = 0.36` (deviation `0.676`). The old scheme fails the guard on **both** the iid and the AR(1)
+cells. Measured margins under the corrected form: `phi = 0`, max `|acf|` over eight seeds `0.0167`;
+`phi = 0.6`, cell 21 `acf(1) = 0.5946 / acf(2) = 0.3500` (deviations `0.0054 / 0.0100`), cell 29
+`acf(1) = 0.5957 / acf(2) = 0.3616` (deviations `0.0043 / 0.0016`).
+
+`acf(k)` is registered as the standard biased sample autocorrelation on the drawn rows:
+`acf(k) = sum_{i<n-k} (x_i - xbar)(x_{i+k} - xbar) / sum_{i<n} (x_i - xbar)^2`.
+
+### C1.3 C3: the `-ar1` held-out rows carried no serial structure at all (cells 21 and 29 re-registered)
+
+**Quote and correct.** K6.6's cell-29 registration, and §4's `N3-p06` framing that both `-ar1` held-out
+cells inherit, describe the calibration as drawn from **the cell's own matched AR(1) process** — the
+whole point of an `-ar1` replicate being that calibration and live data share the dependence structure.
+That sentence was **false of the artifact**. Under the spaced-seed scheme `drawFor(r, 0.6)` was
+constructed and then called **once** per row, so the AR(1) recursion never advanced: each row was the
+first output of a fresh chain, i.e. `phi*g_0 + sqrt(1-phi^2)*g_1` with independent `g` per row. The
+rows carried the correct *marginal* variance and no serial dependence whatsoever beyond the lattice's
+own artefact. Measured (recomputed this session, `n = 10,000`):
+
+| cell | scheme | `acf(1)` | `acf(2)` | `acf(3)` |
+|---|---|---|---|---|
+| theory, AR(1) `phi = 0.6` | — | 0.600 | 0.360 | 0.216 |
+| 21 (`5sigma-point-ar1`) | lattice | 0.2683 | −0.3164 | −0.2029 |
+| 21 | corrected | 0.5946 | 0.3500 | 0.1986 |
+| 29 (`mix-d1.5-ar1`) | lattice | 0.2687 | −0.3155 | −0.2029 |
+| 29 | corrected | 0.5957 | 0.3616 | 0.2091 |
+
+**What is re-registered.** Cells 21 and 29, *as they were actually run in
+`run-20260808T064039Z` and `run-20260808T121548Z`*, are **out-of-claim** rows: the matched-process
+registration they were run under does not describe them. They are not withdrawn (the runs are
+preserved and the numbers are real readings of *something*), they are relabelled: **mismatched-`phi`
+calibration** — an iid-marginal reference scored against AR(1)-correlated live windows, which is the
+same out-of-claim regime K6.11's phi-mismatch measurements already register as out-of-claim. The
+reruns this amendment authorizes restore the matched-process reading, and **only the rerun rows may be
+cited as the matched `-ar1` evidence**.
+
+**Consequence for the `-ar1` endpoints, registered before the rerun:** none of them decides anything.
+K6's `-ar1` cell 29 reads `0.0000` under both schemes (C1.4). K4's `-ar1` cell 21 reads `0.9790`
+(lattice) and `0.9780` (corrected), both far above the `0.50` floor, and it is not the canonical cell.
+So C3 costs the study no answer; it costs the study a *claim* about what two of its rows measured, and
+that correction is the deliverable.
+
+### C1.4 Counterfactual measurements, disclosed with provenance (the predictions below are measured, not blind)
+
+**Disclosure, in the K3.11 tradition this study already set** (a review-time probe is named with its
+provenance rather than pretended away): every number in C1.5 was **measured before being registered**,
+by a standalone re-implementation of the harness's own read paths written this session
+(`rng`/`gaussFrom`/`injectShapeMix`/`injectPoint`/`injectStep` imported from
+`validation/coverage/lib/inject.mjs`; `calibrateShapeBlocks`/`shapeBetWealth`/`calibrateTailBet`/
+`pointTailBetEValue`/`stampHeldoutFamilyE` from the built modules; window partition, onset gate and
+threshold re-derived, not imported from the harness). It is not a blind pre-registration and is not
+presented as one.
+
+**The refuter is validated against the artifacts it must reproduce.** Run under the *old* scheme it
+reproduces **thirty-nine** committed T1 endpoints to the last digit: K6's four grid `detection_rate`s
+(`0.0035 / 0.0005 / 1.0000 / 0.0000`), arm 34's `k = 22`, `crossing_rate 0.0110`,
+`increment_estimator.mean 0.825802767757456`, `p_uniformity.ks_statistic 0.10802919161676644`, first
+decile count `4475`, and S3 `detection_rate 1.0000`; K4's four `point_tail_bet_e_value` grid rates
+(`0.5055 / 0.9750 / 1.0000 / 0.9790`) with all four `cal_median` and all four `cal_mad`
+(`0.00020601995399109694 / 0.6707177384018341` on cell 18, and the other three), the four
+`family_E_conformal_heldout` grid rates (`0.0445 / 0.0430 / 0.0520 / 0.1340`) with all four
+`indicator_rate_at_injected_tick` (`0.866 / 0.999 / 1 / 1`), arm 31's `exceedance 0.0280`,
+`mean_e 3.11604757789375`, `lower_95 0.02254017183440872` and S3 `1.0000`, and arm 32's `k = 1012`,
+`exceedance 0.00253`, `mean_e 0.6350959226365732`, `lower_95 0.002402661467871697` and S3 `1.0000`.
+**Not cross-checked** (so the C1.5 predictions for them are the harness's own output, not independently
+predicted): `final_wealth_mean`/`final_wealth_median` on any row, `p_uniformity.decile_counts` beyond
+the first decile, and `window_crossing_rate`. A refuter that reproduces the committed run to the last
+digit on thirty-nine endpoints under the old scheme is the right instrument to predict the rerun under
+the new one.
+
+**Prior figures disclosed and reconciled.** The review reported the corrected `d = 2.0` reading as
+`~0.002` and `0.000` "across three refuters"; this session's refuter reads `0.0045` (cell 28) and
+`0.0005` (arm 34 S3). The figures disagree in magnitude and agree in every consequence: all of them
+are two orders of magnitude below the `COVERAGE_FLOOR = 0.50` and below the
+`INERTNESS_FLOOR = 0.10`, so all of them give S3 INERT and card ADVISORY. C1.5 registers **this
+session's recomputed values as the point predictions** and a band as the falsifier-bearing form, so a
+small disagreement between refuters cannot read as a failed prediction and a large one still can.
+
+### C1.5 Corrected predictions, with falsifiers
+
+**K6 T1 (`--classes K6`, `n = 2000`).** Registered point predictions and, in the same row, the band
+whose violation is the falsifier:
+
+| row | lattice (run-20260808T121548Z) | corrected prediction | band (falsifier if outside) | verdict |
+|---|---|---|---|---|
+| cell 26 `mix-d1.0` | 0.0035 | **0.0010** | `<= 0.02` | INERT |
+| cell 27 `mix-d1.5` (canonical) | 0.0005 | **0.0000** | `<= 0.02` | INERT |
+| cell 28 `mix-d2.0` | **1.0000** | **0.0045** | `<= 0.02` | **INERT** (was POWERED) |
+| cell 29 `mix-d1.5-ar1` | 0.0000 | **0.0000** | `<= 0.02` | INERT |
+| arm 34 S2 `k` / `crossing_rate` | 22 / 0.0110 | **0 / 0.0000** | `crossing_rate <= 0.02` | not-refuted |
+| arm 34 S2 `lower_95` | 0.007770215376370452 | **0.0000** | `<= alpha = 0.05` | (stop condition clear) |
+| arm 34 S2 `increment_estimator.mean` | 0.825802767757456 | **0.44367965142547167** | `<= 1` | no verdict authority |
+| arm 34 S2 `p_uniformity` `P(p<=0.05)` | 0.10017 | **0.050167** | `[0.03, 0.07]` | no verdict authority |
+| arm 34 S2 `p_uniformity.ks_statistic` | 0.10802919161676644 | **0.022903692614770432** | `<= 0.04` | no verdict authority |
+| arm 34 S3 `detection_rate` | **1.0000** | **0.0005** | `<= 0.02` | **INERT** (was POWERED) |
+| `degenerate_windows`, every row | 0 | **0** | `= 0` | K6.7's structural-zero claim |
+
+`p_uniformity.ks_critical_at_alpha` stays `1.36/sqrt(24000) = 0.008778762251403479` (unchanged: `n` is
+unchanged). **The KS statistic is still above its critical value under the corrected scheme**
+(`0.0229 > 0.0088`) — the `2×`-nominal inflation collapses to `1.003×` nominal at the `alpha = 0.05`
+point, but the full-distribution KS test still rejects uniformity. That is registered here as an
+*expected, not-yet-explained* residual, carrying no verdict (K6.7 gives `p_uniformity` no verdict
+authority), and it is filed for the write-back rather than resolved: K6.1.2's closed-form
+"`P(p<=alpha) <= 0.047904` ALWAYS at `m=333`" is **still contradicted in the tail shape** even after
+C1 is fixed, and the remaining mechanism is unidentified. Naming it now prevents the rerun from being
+read as having closed a question it does not close.
+
+**K6 card stage tuple and overall verdict — reverting to what v2.K6/K6.1 originally registered.**
+S1 `MISSING`, S2 `PASS`, **S3 `INERT`**, S4 `PASS` → overall **`ADVISORY`**, tier `T1`. The chain,
+narrated:
+
+1. **v2.K6 / v2.K6.1** derived, before any run, that this candidate is NOT_POWERED at canonical *and*
+   inert on its own S3 arm, and registered the expected card verdict as **ADVISORY** (K6.4, K6.8;
+   golden-verdicts.test.mjs:161-168 carries that registration verbatim).
+2. **v2.K6.1 (K6.1.1)** corrected an arithmetic slip in K6.4's ceiling (`e_max 18.69 -> 18.68`) and
+   kept ADVISORY.
+3. **v2.K6.2 (K6.2.1/K6.2.2)** overturned it: `s = sqrt(1 - d^2/4) = 0` exactly at `d = 2.0`, the
+   Task-11a smoke read `1.0000` there, so S3 was re-registered `POWERED` and the expected card verdict
+   moved to **USE**. That derivation is *correct arithmetic about the injection* and it stands.
+4. **This amendment** removes the reason the smoke read `1.0000`: the ceiling `e_max ≈ 18.68` was
+   reachable only because the *reference* was a lattice. Against a real reference the same `d = 2.0`
+   two-point law produces `mean eAvg 1.1525` (C1.1), which cannot cross. So v2.K6.2's **step 3
+   conclusion is withdrawn while its premise is kept**: `d = 2.0` is still exactly a two-point law,
+   still a boundary artifact in the sense K6.2.3 registers, but it is **not** powered. S3 returns to
+   `INERT` and the card returns to **ADVISORY** — the verdict v2.K6/K6.1 registered from a derivation,
+   arrived at now from a measurement.
+
+**The K6 CLASS answer is unchanged: `NO`.** It was decided by the canonical cell alone under both
+schemes (`0.0005 -> 0.0000`, against `COVERAGE_FLOOR 0.50`), and it is now a fortiori: the corrected
+canonical reading is *lower*. `COVERAGE.md`'s K6 detail line is expected to continue naming
+`safe_t_e_value NOT_POWERED 0.0005` — the three-way tie at `0.0005` (safe_t / universal_inference /
+shape_block_conformal_bet) becomes a two-way tie at `0.0005` (safe_t / universal_inference) once
+shape_block drops to `0.0000`, and `betterBlocked`'s lexicographic tie-break
+(`verdict.mjs:233-239`) still resolves to `safe_t_e_value`. C1.9 registers that the tie is now
+*rendered* rather than silently resolved.
+
+**K4 T1 (`--classes K4`, `n = 2000`).** Registered as a same-defect rerun: cells 18-21 and arms 31/32
+all calibrate on `heldoutRows`, so their rows change. Predictions:
+
+| row | lattice (run-20260808T064039Z) | corrected prediction | band | verdict |
+|---|---|---|---|---|
+| `point_tail_bet_e_value` cell 18 `3sigma-point` | 0.5055 | **0.4870** | `[0.45, 0.53]` | **INERT** (was POWERED) |
+| `point_tail_bet_e_value` cell 19 (canonical) | 0.9750 | **0.9780** | `>= 0.95` | POWERED |
+| `point_tail_bet_e_value` cell 20 `8sigma-point` | 1.0000 | **1.0000** | `>= 0.99` | POWERED |
+| `point_tail_bet_e_value` cell 21 `-ar1` | 0.9790 | **0.9780** | `>= 0.95` | POWERED |
+| `point_tail_bet_e_value` arm 32 S2 `k` / `n_points` | 1012 / 400000 | **742 / 400000** | — | — |
+| arm 32 S2 `exceedance` | 0.00253 | **0.001855** | `<= 0.01` | — |
+| arm 32 S2 `mean_e` | 0.6350959226365732 | **0.527556** | `< 1` (mean rule) | not-refuted |
+| arm 32 S2 `lower_95` | 0.002402661467871697 | **0.0017464** | `<= alpha = 0.05` | stop condition clear |
+| arm 32 S3 `detection_rate` | 1.0000 | **1.0000** | `>= 0.99` | POWERED |
+| `family_E_conformal_heldout` cell 18 | 0.0445 | **0.0765** | `<= 0.15` | INERT |
+| `family_E_conformal_heldout` cell 19 (canonical) | 0.0430 | **0.0360** | `<= 0.15` | INERT |
+| `family_E_conformal_heldout` cell 20 | 0.0520 | **0.0450** | `<= 0.15` | INERT |
+| `family_E_conformal_heldout` cell 21 `-ar1` | 0.1340 | **0.1155** | `<= 0.20` | INERT |
+| `family_E_conformal_heldout` arm 31 S2 `exceedance` | 0.0280 | **0.0455** | `<= 0.05` | — |
+| arm 31 S2 `mean_e` | 3.11604757789375 | **4.175984** | `> 1` (mean rule fires) | REFUTED-mapped |
+| arm 31 S2 `lower_95` | 0.02254017183440872 | **0.0384292** | `<= alpha = 0.05` | not-refuted token |
+| arm 31 S3 `detection_rate` | 1.0000 | **1.0000** | `>= 0.99` | POWERED |
+| `safe_t` cells 18-21 | 0 / 0.0005 / 0 / 0 | **bit-identical** | exact | INERT |
+
+**Two K4 movements are registered here so they cannot be reported as surprises, and one boundary is
+named as the reason this rerun is not cosmetic:**
+
+- **Cell 18 crosses the coverage floor downward: `0.5055 -> 0.4870`, POWERED -> INERT.** It is a grid
+  cell, not the canonical one (`coverageFor` reads canonical only, `score.mjs:397-402`), and it carries
+  no `shift_sigma`, so it never enters `scoreS3` (`score.mjs:264-266`). No card verdict and no class
+  answer moves. It is registered because a `0.50`-floor crossing on a registered row is exactly the
+  kind of change that must be named in advance rather than absorbed.
+- **Arm 31's S2 exceedance rises `0.0280 -> 0.0455` and its `mean_e` rises `3.1160 -> 4.1760`.** The
+  lattice was *understating* this card's false-alarm rate. The card is `REFUSE` either way — the
+  terminal mean rule fires at `4.176 > 1` exactly as it fired at `3.116 > 1` — and the Wilson
+  `lower_95 0.0384 <= 0.05` still clears the cell's own token. But the direction is
+  **anti-conservative in the validity direction**, which is the second place the run report's
+  "refutation-direction only" adjudication was wrong (C1.11).
+
+**K4 CLASS answer unchanged: `YES`**, carried by `point_tail_bet_e_value` at canonical cell 19,
+`0.9780 >= 0.50`, tier T1. **K4 card verdicts unchanged**: `point_tail_bet_e_value` `USE`/T1,
+`family_E_conformal_heldout` `REFUSE`, `safe_t_e_value` `USE`/T1. **Any K4 card-verdict or
+class-answer movement is a SURPRISE to be reported, not absorbed.**
+
+**K3 does not rerun and is not affected.** `spectral_bet_e_process` passes `sigma` as an oracle
+constant and K3.3/K3.6 register that it has no held-out stream at all; `assertRegistryAgreement`
+encodes the same fact (`run-battery.mjs:211-214`, no `HELDOUT_SEED` for arm 33), and
+`run-20260808T091521Z` carries no `heldout_seed` on any row. K3's answer (`YES`, 0.654, T1) is
+untouched.
+
+**T2 does NOT rerun.** `validation/coverage/harness/run-clustersynth-arm.mjs` never calls
+`heldoutRows`: its reference blocks are per-shard **prefixes of the shard's own coordinate series**
+(K6.12's registered construction), so the defect cannot reach it. `run-t2-20260808T121710Z` stands as
+registered evidence, and the T2 vindication result (0 of 600 healthy pairs fire, against the
+predecessor's 82% of shards) is unaffected. **This is also why the T2 arm is now the stronger of the
+two K6 validity readings**, and the amendment records that ordering explicitly.
+
+### C1.6 Rerun scope, supersession, and the prior artifacts
+
+**Two reruns, once each, in this order:** (1) K6 T1 `--classes K6`; (2) K4 T1 `--classes K4`. Both at
+the registered `n = 2000`, both into `validation/coverage/results/live/run-<UTC>/`, append-only. Then
+one certification re-score. Nothing else runs, and neither battery is run twice.
+
+**Prior run directories are preserved and untouched.** `run-20260808T010208Z`,
+`run-20260808T064039Z`, `run-20260808T091521Z`, `run-20260808T121548Z` and
+`run-t2-20260808T121710Z` keep every byte.
+
+**A preserved prior run is still in the evidence corpus, and that is a scoring problem this amendment
+must solve rather than leave implicit.** `loadEvidence` (`validation/certification/lib/collect.mjs:135-167`)
+pools cells from every directory under `validation/*/results/live/` with no cross-run dedup. If the
+lattice arm-34 S3 row (`detection_rate 1.0000`) stays in the pool alongside the corrected one
+(`0.0005`), `overallVerdict`'s `s3Powered` set (`score.mjs:555`) is non-empty and the card stays `USE`
+— the rerun would change nothing. Registered mechanism, added before the reruns:
+
+- **A rerun declares what it supersedes, in its own manifest** (an A8 field-list extension):
+  `"supersedes": [{ "study", "run", "detectors": [...], "reason" }]`. `run-battery.mjs` gains
+  `--supersedes <study/run:detector,detector>` plus `--supersedes-reason <text>`; the named run
+  directory must exist or the harness throws.
+- **`loadEvidence` drops exactly the declared `(study, run, detector)` rows** and records each drop in
+  its returned `runs` list, so the exclusion is derived from a registered field, never hardcoded, and
+  is reported rather than silent. The certification `REPORT.md` gains a **Superseded evidence**
+  section naming every dropped `(study, run, detector)` and the declaring run's reason.
+- **No existing manifest declares `supersedes`**, so the mechanism is inert on the current corpus
+  except where these two reruns declare it.
+
+**The declared supersessions, registered exactly:**
+
+| declaring run | supersedes study/run | detectors dropped | why |
+|---|---|---|---|
+| K6 rerun | `coverage/run-20260808T121548Z` | `shape_block_conformal_bet` | every row of this detector calibrates on `heldoutRows` |
+| K4 rerun | `coverage/run-20260808T064039Z` | `family_E_conformal_heldout`, `point_tail_bet_e_value` | same |
+| K4 rerun | `coverage/run-20260808T010208Z` | `family_E_conformal_heldout` | that run's only held-out-bearing rows (K4 cells 18-21 + arm 31); its K1/K2/K3/K5/K6 rows for `safe_t`, `universal_inference`, `group_average_e_value`, `family_D_spectral_e_detector` touch no held-out stream and are **kept** |
+
+`safe_t` rows are **not** superseded anywhere: they take no held-out calibration and the rerun
+reproduces them bit-identically, so both copies are the same evidence.
+
+### C1.7 I2 — the calibration-draw lottery, ruled and implemented
+
+Task 9's Important 7 registered that a single calibration draw makes every `p` in a run share one
+reference, so an endpoint carries across-draw spread that a single run cannot show. **Ruling,
+implemented here rather than deferred again:** the spread is disclosed and the draw is fingerprinted,
+and the endpoint stays a single-draw endpoint.
+
+- **Disclosed, with provenance** (Task 11b's own 9-draw probe, `task-11b-report.md:222-235`, run
+  against the *lattice* scheme and therefore describing the lattice's spread, not the corrected one):
+  `P(p <= 0.05)` across the registered draw plus 8 independently-seeded draws read
+  `0.10017 / 0.08837 / 0.09733 / 0.09754 / 0.09104 / 0.08654 / 0.10737 / 0.09700 / 0.10304`, mean
+  `0.09649`, spread `0.08654–0.10737`. Every draw was roughly `2×` nominal, which is how the run
+  report established the effect was in the *scheme* and not the draw — the measurement that made C1
+  findable. **The equivalent spread under the corrected scheme is NOT measured**, and the single-draw
+  caveat therefore stands undischarged.
+- **Registered caveat, binding on the rerun's report:** every `shape_block_conformal_bet` endpoint in
+  the rerun is conditional on one held-out draw per cell/arm; the run reports one number, and the
+  across-draw spread is unmeasured at the corrected scheme.
+- **Implemented as an emission:** C1.8's `cal_fingerprint`, so a reader can tell whether two rows
+  shared a reference and how extreme the draw was, without re-running anything.
+
+### C1.8 I3 — `cal_fingerprint` registered on every `shape_block_conformal_bet` row
+
+New emitted field, on all six K6 rows (four fault cells + arm 34 S2 + arm 34 S3), read straight off the
+`ShapeCalibration` the row actually used — not re-derived:
+
+```
+cal_fingerprint: {
+  W: 30, m: 333,
+  kurtosis: { median, absdev_p50, absdev_p90, absdev_max },
+  absSkew:  { median, absdev_p50, absdev_p90, absdev_max }
+}
+```
+
+`absdev_*` are quantiles of the calibration's own ascending `sortedAbsDev` array under the registered
+convention `q(p) = sortedAbsDev[round(p * (m - 1))]`, and `absdev_max` is its last element. This is the
+K6 analogue of `point_tail_bet_e_value`'s already-registered `cal_median`/`cal_mad` (K4.4 provenance),
+extended to a two-feature block calibration, and it is what makes C1's signature readable off a future
+run directory instead of only off this amendment. Registered predicted values for the rerun
+(recomputed this session under the corrected generator):
+
+| cell | `kurtosis.median` | `k.absdev_p50` | `k.absdev_p90` | `k.absdev_max` | `absSkew.median` | `a.absdev_p50` | `a.absdev_p90` | `a.absdev_max` |
+|---|---|---|---|---|---|---|---|---|
+| 26 | 2.638979 | 0.376396 | 1.049984 | 3.560917 | 0.250198 | 0.154060 | 0.405068 | 1.035884 |
+| 27 | 2.631062 | 0.327118 | 0.979450 | 2.991298 | 0.253978 | 0.149195 | 0.367313 | 1.012357 |
+| 28 | 2.744525 | 0.409764 | 0.966277 | 3.178961 | 0.252180 | 0.158769 | 0.405196 | 0.926275 |
+| 29 | 2.576336 | 0.353472 | 0.834166 | 4.386241 | 0.283840 | 0.163843 | 0.373426 | 1.160256 |
+| 34 | 2.664436 | 0.342515 | 1.003665 | 5.341915 | 0.255445 | 0.162661 | 0.414810 | 1.551302 |
+
+For the contrast the field exists to make visible, the same fingerprints under the lattice scheme —
+`absdev_p90` on `kurtosis` reads `0.717098 / 0.708021 / 0.743996 / 0.923496 / 0.725049` for cells
+26/27/28/29/34, i.e. `≈30%` compressed against the corrected values above, with `absdev_max`
+compressed by more.
+
+### C1.9 Corrections carried by this amendment, each naming its own target
+
+- **I1 — the K6 wealth floor, reasoning restated (corrects Task 11b §5.3's framing).** The T2 finding
+  is that `LOG_WEALTH_FLOOR_K6 = log(1e-12) = -27.6310` binds on 523 of 600 pairs (87.2%) at the
+  20-window span. The protection is **not** the direction argument alone; it is a **measurement**:
+  the maximum prefix log-wealth over all 600 pairs is `-0.3772`, against the bar
+  `log(20) = 2.995732273553991`, so the closest pair finished **3.372932 nats short** (recomputed).
+  Nothing came near the bar, floor or no floor. The direction argument is then a fortiori and is
+  stated in that order: the floor clamps wealth from **below** while every endpoint in this study is
+  an **upper**-bar crossing, so removing the floor could only move trajectories further from firing —
+  a floor-free run has at most the observed crossings, and the observed count is zero. The floor
+  cannot manufacture the clean T2 validity reading; the 3.37-nat margin is what rules that out
+  directly.
+- **I5 — the K4 card's guarantee sentence contradicts its own `exchangeability_note`.**
+  `validation/certification/cards/point_tail_bet_e_value.json` asserts super-uniformity
+  "(distribution-free, **exact**)" in `guarantee.sentence` while `guarantee.regime.exchangeability_note`
+  records the opposite: "O(1/n)-approximate, anti-conservative, under this construction's self-fit
+  median/MAD held-out calibration (K4.1.10) — not the exact identity the module docstring and design
+  page state". The sentence is qualified to match the note, and
+  `detectors/point-tail-bet-e-value.ts`'s module docstring is corrected the same way. The card is
+  re-frozen by identity (`tools/freeze-cards.mjs`); **no stage status, tier, or verdict moves** — this
+  is the claim text agreeing with its own regime field, K4.1.10's defect remains carried on the card,
+  unresolved.
+- **`verdict.mjs` tie-break rendering.** `blockedLine` (`verdict.mjs:240-244`) reports one detector for
+  a NO row; when several detectors tie at the same `(status, canonical rate)` — as all three K6
+  detectors did at `0.0005`, which Task 11b recorded as an unexplained-looking deviation — the
+  lexicographic winner was rendered and the tie was invisible. The line now names **every** tied
+  detector. **Future runs only**: committed `COVERAGE.md` files are not rewritten.
+- **Module domain guards (no behaviour change on any registered path).**
+  `spectral_bet_e_process`'s `sigma > 0` check (`detectors/spectral-bet-e-process.ts:96-98`) admits
+  `Infinity`, which yields `U = 0`, `p = 1`, `e = kappa` on every bin — a silent, wrong, finite
+  answer; it now requires a finite `sigma`. All three K3/K4/K6 modules take `kappa` as a defaulted
+  parameter and none validated it, while each module's own validity argument holds only for
+  `kappa in (0, 1)` (`integral_0^1 kappa*p^(kappa-1) dp = 1`); each now throws outside that open
+  interval. Registered `kappa = 0.1` and `sigma = 1` are unaffected, and no emitted number changes.
+- **`npm run cert:validate-cards` and `npm run cert:expiry` wrappers**, with the card-schema
+  validation added to CI as a gating step. Expiry stays reported-not-gating for the reason already in
+  `.github/workflows/ci.yml` (family_E's card pins a file in a sibling repo a CI runner does not check
+  out).
+
+### C1.10 The withdrawn `1/20000` probe — the reviewer's reading, recorded as a hypothesis and nothing more
+
+Amendment v2.K6.2's summary WITHDREW a disclosed pre-run measurement (`1/20000, 1/20000, 0/20000`) as
+"its construction unidentifiable, no evidential weight", after the Task-11a smoke read `≈1.0` at
+`d = 2.0`. The review's hypothesis is that the withdrawn probe was **right**, and differed from the
+harness in exactly the way C1 names: it drew its reference from a continuous stream, so it saw the
+real, non-crossing `d = 2.0` behaviour that the corrected rerun is predicted to reproduce.
+
+**Recorded as a hypothesis, with the arithmetic that neither confirms nor dismisses it.** Consistent:
+both readings sit in the same regime, `INERT` at every floor this study uses. Not consistent:
+`1/20000 = 0.00005` against the corrected prediction `0.0045` (`90/20000`) is a factor of `90`, so the
+two are not the same measurement. **The probe stays withdrawn** — its construction is still
+unidentifiable, and an unidentifiable construction that happens to land in the right regime is not
+evidence. This paragraph exists so that if the probe's provenance is ever recovered, the question is
+already on the record with its numbers.
+
+### C1.11 The `p_uniformity` adjudication, corrected per endpoint (supersedes Task 11b §deviation (a)'s direction claim)
+
+**Quote and correct.** Task 11b's run report concluded: "Direction is toward refutation, so the
+not-refuted T1 reading is conservative and no endpoint moves." The first clause is true of the
+validity endpoints and **false of the power endpoints**, which is where the verdict actually lived. A
+compressed reference inflates *every* rank, so it inflates false alarms and power together; there is no
+single direction to report, and the study's own ledger carried the wrong one.
+
+| endpoint | lattice | corrected | lattice's direction | verdict effect |
+|---|---|---|---|---|
+| K6 arm 34 S2 `crossing_rate` (validity) | 0.0110 | 0.0000 | **conservative** — false alarms inflated, so `not-refuted` was harder to earn | none (not-refuted both) |
+| K6 arm 34 S2 `p_uniformity P(p<=0.05)` (descriptive) | 0.10017 | 0.050167 | **conservative** in the same sense | none (no verdict authority) |
+| K6 arm 34 S3 `detection_rate` (power) | 1.0000 | 0.0005 | **ANTI-CONSERVATIVE** — power manufactured out of the reference | **S3 POWERED -> INERT; card USE -> ADVISORY** |
+| K6 cell 28 `mix-d2.0` (power) | 1.0000 | 0.0045 | **ANTI-CONSERVATIVE** | cell POWERED -> INERT |
+| K6 cells 26 / 27 / 29 (power) | 0.0035 / 0.0005 / 0.0000 | 0.0010 / 0.0000 / 0.0000 | anti-conservative, immaterial | none |
+| K4 arm 32 S2 `exceedance` (validity) | 0.00253 | 0.001855 | **conservative** | none |
+| K4 arm 31 S2 `exceedance` / `mean_e` (validity) | 0.0280 / 3.1160 | 0.0455 / 4.1760 | **ANTI-CONSERVATIVE** — false alarms *understated* | none (REFUSE both) |
+| K4 `point_tail` cell 18 (power) | 0.5055 | 0.4870 | **ANTI-CONSERVATIVE** | cell POWERED -> INERT |
+| K4 `point_tail` cell 19 canonical (power) | 0.9750 | 0.9780 | **conservative** — power *understated* | none (POWERED both) |
+| K4 `family_E` cells 19 / 20 / 21 (power) | 0.0430 / 0.0520 / 0.1340 | 0.0360 / 0.0450 / 0.1155 | anti-conservative | none |
+| K4 `family_E` cell 18 (power) | 0.0445 | 0.0765 | conservative | none |
+
+**The rule this replaces the single-direction claim with:** a reference-distribution defect has no
+global sign. Its sign is a property of the endpoint — validity endpoints and power endpoints move the
+same way in the *statistic* and opposite ways in the *conclusion*. The `family_E` arm-31 row is the
+counterexample that kills even the weaker "conservative on validity" version: there the lattice
+understated the false-alarm rate.
+
+### C1.12 Golden expectation, corrected, and the registered class-answer table
+
+**Registered expected golden delta, ONE row:**
+`shape_block_conformal_bet`: `USE -> ADVISORY`, tier `T1 -> T1` (unchanged: `minTier` of the supporting
+S2 evidence, `score.mjs:567`), `s1 MISSING` (unchanged), `s2 PASS` (unchanged), **`s3 PASS -> INERT`**,
+`s4 PASS` (unchanged). Mechanism: arm 34's single S3 cell falls below `INERTNESS_FLOOR = 0.10`, so
+`scoreS3`'s status becomes `INERT` (`score.mjs:342-343`) and `s3Powered` is empty, which is
+`overallVerdict`'s valid-but-inert `ADVISORY` (`score.mjs:566-570`).
+
+**Registered expected golden non-deltas:** all thirteen other rows unchanged, including
+`point_tail_bet_e_value` `USE`/T1 and `family_E_conformal_heldout` `REFUSE`. **Registered expected
+class answers, unchanged:** K1 NO, K2 YES, K3 YES (0.654), K4 YES (`point_tail_bet_e_value`, 0.9780),
+K5 NO, K6 NO. Any other golden movement is a **surprise to report, not to absorb**.
+
+### Amendment summary
+
+Names, as a code defect under §11 house rule 7, that `heldoutRows`
+(`validation/coverage/harness/run-battery.mjs:503-511`) drew each held-out row as the FIRST gaussian of
+its own arithmetically-spaced LCG stream, making the 10,000-row "sample" a rank-1 Kronecker lattice
+with direction vector `(a*7919, a^2*7919) mod 2^32 = (296471587, 1215975367)`, both coprime to `2^32`:
+marginals better than iid (mean `0.000200`, sd `0.999968`, kurtosis `2.989619`), joint deterministic
+and seed-invariant (`acf(2) = -0.7514 ± 0.0006` across eight unrelated seeds, a `≈75σ` departure that
+does not move with the seed), and within-block moment spread compressed `≈30%` (block-kurtosis sd
+`0.479–0.497` vs `0.621–0.796`). Registers the corrected generator — one continuous LCG stream per
+held-out draw, `gaussFrom` applied serially, the `drawFor` AR(1) chain running on that continuous
+stream so `phi` is real — with `HELDOUT_SEED` and `HELDOUT_ROWS` unchanged, plus a registered runtime
+`acf` guard (`|acf(1)|,|acf(2)| <= 0.10` at `phi = 0`; `|acf(1)-phi|,|acf(2)-phi^2| <= 0.10` at
+`phi > 0`; a `10σ` bound that the old scheme fails on both cell types) so a regression cannot produce a
+run at all. Registers C3: the `-ar1` held-out rows (cells 21, 29) carried NO serial structure
+(`acf(1) = 0.2687` vs `phi = 0.600`, `acf(2) = -0.3155` vs `phi^2 = 0.360`), so those two rows as run
+are re-registered out-of-claim mismatched-`phi`, quote-and-correcting the matched-process text; the
+corrected stream measures `0.5946/0.3500` and `0.5957/0.3616`. Discloses, with provenance and a
+validation that reproduces all thirty committed T1 endpoints exactly under the old scheme, the
+counterfactual measurements behind every prediction here: K6 grid `0.0035/0.0005/1.0000/0.0000 ->
+0.0010/0.0000/0.0045/0.0000`, arm 34 S2 `0.0110 -> 0.0000` and S3 `1.0000 -> 0.0005`, K4 canonical
+`0.9750 -> 0.9780` (robust), K4 grid cell 18 `0.5055 -> 0.4870` (a `0.50`-floor crossing, POWERED ->
+INERT, grid-only), arm 31 S2 `0.0280/3.1160 -> 0.0455/4.1760`. Corrects the expected K6 card tuple back
+to S1 MISSING / S2 PASS / **S3 INERT** / S4 PASS -> **ADVISORY**, the verdict v2.K6/K6.1 registered
+from a derivation and v2.K6.2 overturned on a lattice-driven smoke — v2.K6.2's `s = 0` premise is kept,
+its POWERED conclusion withdrawn. Registers the two reruns (K6 T1, then K4 T1), T2's exemption with its
+reason (per-shard prefixes, `heldoutRows` never called), K3's non-involvement (oracle `sigma`, no
+held-out stream), and a manifest-declared `supersedes` mechanism with the exact `(study, run, detector)`
+rows it drops — without which a preserved prior run keeps the old POWERED S3 row in the corpus and the
+rerun changes nothing. Implements I2 as a registered emission plus a binding single-draw caveat with the
+9-draw lattice spread disclosed (`0.08654–0.10737`, mean `0.09649`; the corrected-scheme spread is
+UNMEASURED), and I3 as `cal_fingerprint` on every K6 row with its predicted values tabulated. Restates
+I1 with the measurement first (closest T2 pair finished `3.372932` nats short of `log(20)`) and the
+a-fortiori direction second. Fixes I5 by qualifying the K4 card's guarantee sentence to match its own
+`exchangeability_note` (identity re-freeze, no verdict moves) and corrects the module docstring the
+same way. Adds the `verdict.mjs` all-tied-detectors rendering (future runs only), a finite-`sigma`
+guard, `kappa in (0,1)` guards in all three modules, and the two npm card wrappers with CI. Records the
+review's hypothesis about the withdrawn `1/20000` probe as a hypothesis, with the factor-of-90 gap that
+prevents confirming it. Corrects, endpoint by endpoint, the run report's "refutation-direction only"
+adjudication: the lattice was conservative on the K6/K4-point-tail validity endpoints and
+**anti-conservative on the power endpoints and on `family_E`'s arm-31 validity endpoint** — a
+reference-distribution defect has no global sign. **The K6 class answer is unchanged (NO, a fortiori:
+canonical `0.0005 -> 0.0000`), the K4 class answer is unchanged (YES, `0.9780`), the K3 class answer is
+untouched, and no floor, seed, window partition, stop condition, or decision rule in §1-14 or any
+earlier amendment moves. One expected golden delta: `shape_block_conformal_bet` USE -> ADVISORY. The
+residual `p_uniformity` KS rejection under the corrected scheme (`0.0229 > 0.0088`) is registered as
+expected and unexplained, carrying no verdict, filed for the write-back rather than resolved here.**

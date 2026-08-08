@@ -88,3 +88,56 @@ margin is what rules that out directly, and the direction argument only rules ou
   is 0.7947, not `> 1`, so `stats/terminal-mean-rule-contested` gains nothing from this arm.
 - **This arm carries the T2 tier, and the C1 defect never touched it.** Of the two K6 validity
   readings, this is the one whose substrate was never in question.
+
+---
+
+## 6. CORRECTION, appended 2026-08-08 — the provenance claim at the top of this file is too broad
+
+Appended, not edited: this file follows the same append-only discipline as the run directory it sits
+in, so the sentence below is quoted and corrected rather than rewritten in place.
+
+**Quote, §preamble (lines 5-6 of this file):**
+
+> Every number below is read off the committed `summary.json` beside this file.
+
+**That is true of §1 and §2 and false of §3, §4 and §5.** Scoped correctly:
+
+- **True as written for the census, the endpoint and the guard trips.** `summary.json`'s rows carry
+  exactly these fields and no others: `detector`, `arm`, `counter`, `shard_id`,
+  `n_reference_blocks`, `n_live_windows`, `k`, `n`, `t2_crossing_rate`, `skipped`, `skip_reason`,
+  `skipped_count`, `substrate_tier`, and on the pooled row `t2_pooled_lower_95` and `t2_verdict`.
+  So the 606-row census, `n_reference_blocks = 300` / `n_live_windows = 20` per pair, the pooled
+  `k = 0` / `n = 600` / `t2_pooled_lower_95 = 0.0000` / `t2_verdict = not-refuted`, and
+  `skipped_count = 0` are all read straight off the file.
+
+- **RE-DERIVATIONS, not readings — every figure in §3, §4 and §5.** None of the following is a
+  field in `summary.json`, and the original sentence should not have implied otherwise:
+
+  | figure | section |
+  |---|---|
+  | non-finite `p`: 0 of 24,000 | §3 |
+  | per-window `eAvg` range 0.102–7.000; 34–39 distinct `p` per pair | §3 |
+  | max prefix log-wealth: min −2.2612, p50 −1.7479, p99 −0.5773, max −0.3772 | §3 |
+  | wealth floor reached on 523 of 600 pairs (87.2%) | §4 |
+  | closest-pair margin 3.372932 nats | §4 |
+  | `P(p <= 0.05) = 0.01671` | §5 |
+  | `increment_estimator` one-sided lower 95% bound 0.7947 | §5 |
+
+  These come from re-running this arm's own construction against the **same** registered scenario
+  seed, shards, steps and window geometry the manifest beside this file records, and reading the
+  per-window internals that `summary.json` aggregates away. Their provenance is the Task 11b
+  session artifact (`.superpowers/sdd/2026-08-08-coverage-gap-detectors/task-11b-report.md` §5.2,
+  §5.3), which this repository does not track — the same disclosure convention §2 of the
+  `run-20260808T010208Z` report already uses for its own narrative. **They are reproducible from
+  the registered seeds and are not independently re-verified in this file.**
+
+  One is arithmetic on a re-derivation rather than a re-derivation itself, and is recomputable here:
+  the margin `3.372932` is `log(20) − (−0.3772) = 2.995732273553991 + 0.3772`, taking the
+  `−0.3772` maximum prefix log-wealth as given.
+
+**Nothing in §1-§5 changes.** No endpoint moves, and the T2 verdict — 0 of 600 healthy pairs fired,
+`t2_pooled_lower_95 = 0.0000 <= alpha = 0.05`, `not-refuted` — rests entirely on the fields that
+*are* in `summary.json`. What is corrected is this file's claim about where its supporting figures
+came from. The distinction matters for exactly the reason §4 exists: the 3.37-nat margin is offered
+there as the *protection* for the zero crossing rate, and a reader entitled to check that protection
+needs to know it is a re-derivation from the registered seeds and not a committed field.

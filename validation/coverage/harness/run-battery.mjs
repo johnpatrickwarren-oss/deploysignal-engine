@@ -874,6 +874,42 @@ const calibratesFromHeldout = (detId) => (
   || shapeSpecOf(detId) !== null              // K6.9 (shape_block) + K6A.1.10 (shape_ecdf)
 );
 
+// Amendment v2.C43.1 (WORKLIST C43): the `null_id` is per DETECTOR, not per cell. The id encodes
+// what the detector had to ESTIMATE, and in both studies that own the grammar `N1` means the phi
+// was handed to it -- h0-battery/harness/nulls.mjs:53 ("iid Gaussian, oracle params") and
+// terminal-evalue/harness/run.mjs:28 (`oracle: true`) feeding run.mjs:42-43
+// (`ns.oracle ? { ar1Phi: ns.phi } : undefined`). This harness threads nothing at phi=0
+// (`safeTOpts`, below) and cannot thread `universal_inference` at all, so `N1` on those rows
+// asserted a call shape never used -- and `phi_source`, the field the certification regime check
+// reads (validation/certification/lib/score.mjs:66), is derived from it. Erratum v1.5 records the
+// false inference the mislabel invited.
+//
+// A PER-DETECTOR TABLE, NOT A DEFAULT. The K6A.2.1 item-12 lesson: a dispatch fallback is where a
+// candidate gets forgotten. Every detector NOT in this table keeps the shared convention for its
+// own registered reason (C43.1.2): family_D_spectral_e_detector is genuinely oracle (A5, the
+// familyDDet.make call below passes {mu, sigma, phi}); the four held-out-calibrated candidates use
+// no phi at all and carry 'heldout-empirical' in `params` (K4.1.5/K6.9/K6A.1.10/C47.2), and the
+// NULL_ID grammar has no id for held-out calibration; spectral_bet_e_process's ids are K3.1.5's.
+const NULL_ID_BY_DETECTOR = {
+  safe_t: { iid: 'N2-m100', ar1: 'N3-p06' },                    // safeTOpts threads ar1Phi iff phi > 0
+  group_average_e_value: { iid: 'N2-m100', ar1: 'N3-p06' },     // K per-series safe_t through the same opts
+  universal_inference: { iid: 'N2-m100', ar1: 'N4-p06' },       // no options at all: fitAR1 fits phi too
+};
+// `m` in `N2-m100` is the calibration length the estimate came from: CAL.len === ONSET === 100.
+// CAL is deliberately not per class (see its definition) and none of the three detectors above is
+// registered on K6-slow, so there is no second calibration length to encode.
+const AR1_PHI = 0.6;                                            // §6's only non-zero grid phi
+const nullIdFor = (detId, phi) => {
+  if (phi !== 0 && phi !== AR1_PHI) {
+    throw new Error(`run-battery: no registered null_id for phi=${phi} `
+      + `(Amendment v2.C43.1 registers phi 0 and ${AR1_PHI}; the pre-C43.1 expression silently `
+      + 'mapped every phi > 0 to N3-p06)');
+  }
+  const own = NULL_ID_BY_DETECTOR[detId];
+  if (own) return phi === 0 ? own.iid : own.ar1;
+  return phi === 0 ? 'N1' : 'N3-p06';                           // the shared convention, unchanged
+};
+
 // §7 + A6: which detectors are scored on which class, and (family_D) on which cells.
 function detectorsFor(cell) {
   switch (cell.fault_class) {
@@ -1420,10 +1456,11 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       severity: cell.severity,
       canonical: canonicalOf(cell),
       cell_index: cell.idx,
-      // §4: the baseline is run.mjs's N1 null, the replicate its N3-p06 null. Recording the
-      // registered id lets the certification scorer's phi derivation (lib/nulls.mjs) agree
-      // with the phi recorded here instead of refusing the cell fail-closed.
-      null_id: cell.phi === 0 ? 'N1' : 'N3-p06',
+      // §4: the id is run.mjs's own vocabulary, so the certification scorer's phi derivation
+      // (lib/nulls.mjs) agrees with the phi recorded here instead of refusing the cell
+      // fail-closed. Amendment v2.C43.1: which id is per DETECTOR -- `N1` asserts a threaded
+      // phi that three of this battery's detectors never receive (see `nullIdFor`).
+      null_id: nullIdFor(detId, cell.phi),
       phi: cell.phi,
       // Amendment v2.K4.1, K4.1.5: point_tail_bet_e_value stamps its own accurate literal
       // rather than reusing 'oracle' (Erratum v1.3's defect class) — its median/MAD are
@@ -1672,7 +1709,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     // from K3's 'K3-arm-oracle' because this arm's calibration is EMPIRICAL, not oracle.
     // Amendment v2.K6A.1, K6A.1.10: arm 47's own literal is 'K6slow-arm-heldout', taken from
     // SHAPE_DETECTORS so the two shape arms cannot share one string by accident.
-    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : (arm.phi === 0 ? 'N1' : 'N3-p06'),
+    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : nullIdFor(detId, arm.phi),   // v2.C43.1
     phi: arm.phi,
     params: calibratesFromHeldout(detId) ? 'heldout-empirical' : 'oracle',   // v2.C47.2 C47.2.3
     alpha: ALPHA,
@@ -1744,7 +1781,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     detector: detId,
     arm: 'power',
     cell_index: arm.idx,
-    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : (arm.phi === 0 ? 'N1' : 'N3-p06'),
+    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : nullIdFor(detId, arm.phi),   // v2.C43.1
     phi: arm.phi,
     params: calibratesFromHeldout(detId) ? 'heldout-empirical' : 'oracle',   // v2.C47.2 C47.2.3
     // K6A.1.12's cell-47 S3 row: `shift_sigma: 3` IS the d = 2.0 injectShapeMix above for a

@@ -2209,3 +2209,79 @@ test('C38.1/C39.5 (v2.C45 review round): mean_e_lower_95 is READ from the increm
   assert.doesNotMatch(src, /Math\.max\(0, mu - 1\.645 \* inc\.sd/,
     'the recomputed form is the one this round removed; it must not come back');
 });
+
+// ===========================================================================
+// Amendment v2.C43.1 (WORKLIST C43) -- the null_id is per DETECTOR.
+// ===========================================================================
+
+// C43.1.5 test item 1, POSITIVE scope. `N1` means "iid Gaussian, ORACLE params" in the grammar this
+// battery borrows (h0-battery/harness/nulls.mjs:53), and in terminal-evalue that id THREADS phi into
+// safe-t (run.mjs:28's `oracle: true` feeding run.mjs:42-43). This harness threads nothing at phi=0
+// and cannot thread universal_inference at all, so those rows carry the ids that say what was
+// actually estimated. This is the field the certification regime check reads through `phi_source`
+// (validation/certification/lib/{collect,score}.mjs), so the mis-stamp Erratum v1.5 documents was
+// mechanical, not cosmetic.
+test('C43.1: safe_t, group_average and universal_inference carry the estimated-provenance null_id', () => {
+  const { summary } = smoke();
+  const EXPECT = {
+    safe_t: { 0: 'N2-m100', 0.6: 'N3-p06' },                   // ar1Phi threaded iff phi > 0
+    group_average_e_value: { 0: 'N2-m100', 0.6: 'N3-p06' },    // same opts, per series
+    universal_inference: { 0: 'N2-m100', 0.6: 'N4-p06' },      // never threaded: fitAR1 fits phi
+  };
+  const rows = summary.cells.filter((c) => EXPECT[c.detector] !== undefined);
+  assert.ok(rows.length >= 55, `expected the three detectors' rows, got ${rows.length}`);
+  for (const c of rows) {
+    assert.equal(c.null_id, EXPECT[c.detector][c.phi],
+      `${c.detector} ${c.fault_class ?? c.arm} ${c.severity ?? ''} phi=${c.phi}: null_id`);
+  }
+  // The one mapping that crosses the axis `phi_known` reads (C43.1.3 item 2): it must be present,
+  // so a table that quietly loses the universal_inference row fails here rather than in a re-score.
+  const uiAr1 = rows.filter((c) => c.detector === 'universal_inference' && c.phi === 0.6);
+  assert.ok(uiAr1.length > 0, 'universal_inference must have -ar1 rows to carry N4-p06');
+  for (const c of uiAr1) assert.equal(c.null_id, 'N4-p06');
+  // And no row of the three keeps the id that asserts a threading they never received.
+  assert.equal(rows.some((c) => c.null_id === 'N1'), false,
+    'no relabelled detector may still stamp N1');
+});
+
+// C43.1.5 test item 2, NEGATIVE scope. The mutation this kills is a dispatch that relabels too
+// much -- the K6A.2.1 item-12 failure shape. family_D_spectral_e_detector is named explicitly: it is
+// GENUINELY oracle (A5 passes {mu, sigma, phi}), so N1/N3-p06 is accurate for it and relabelling it
+// would be a new, false claim.
+test('C43.1 negative scope: every other detector keeps the shared convention or its own literal', () => {
+  const { summary } = smoke();
+  const RELABELLED = new Set(['safe_t', 'group_average_e_value', 'universal_inference']);
+  const OWN_LITERAL = new Set(['K3-arm-oracle', 'K6-arm-heldout', 'K6slow-arm-heldout']);
+  const others = summary.cells.filter((c) => !RELABELLED.has(c.detector));
+  assert.ok(others.length >= 35, `expected the untouched detectors' rows, got ${others.length}`);
+  for (const c of others) {
+    if (OWN_LITERAL.has(c.null_id)) continue;                  // K3.1.5 / K6.7 / K6A.1.10
+    assert.equal(c.null_id, c.phi === 0 ? 'N1' : 'N3-p06',
+      `${c.detector} ${c.fault_class ?? c.arm}: null_id must keep the shared convention`);
+  }
+  const familyD = others.filter((c) => c.detector === 'family_D_spectral_e_detector');
+  assert.ok(familyD.length >= 2, 'family_D must be present on its canonical and -ar1 cells');
+  for (const c of familyD) {
+    assert.equal(c.null_id, c.phi === 0 ? 'N1' : 'N3-p06',
+      'family_D is genuinely oracle (Erratum v1.3 "stays valid" item 1) — it must NOT be relabelled');
+  }
+});
+
+// C43.1.5 test item 3. The helper is module-local in a CLI harness (as `calibratesFromHeldout` is),
+// so its contract is pinned at the source. Two mutations die here: dropping the per-detector table
+// back to a per-cell ternary, and dropping the phi guard that the pre-C43.1 expression lacked --
+// it mapped EVERY phi > 0 to N3-p06, so an unregistered phi = 0.9 cell would have been mislabelled
+// silently.
+test('C43.1: the null_id dispatch is a per-detector table, and unregistered phi throws', () => {
+  const src = fs.readFileSync(HARNESS, 'utf8');
+  assert.match(src, /const NULL_ID_BY_DETECTOR = \{/,
+    'the mapping must be a per-detector table, not a default with exceptions');
+  assert.match(src, /null_id: nullIdFor\(detId, cell\.phi\)/,
+    'the fault-cell site must dispatch per detector');
+  assert.match(src, /null_id: spectralKind \? 'K3-arm-oracle' : shapeKind \? spec\.armNullId : nullIdFor\(detId, arm\.phi\)/,
+    'both arm sites must dispatch per detector behind the two out-of-grammar branches');
+  assert.equal(/null_id: cell\.phi === 0 \? 'N1' : 'N3-p06'/.test(src), false,
+    'the pre-C43.1 per-cell expression must not survive anywhere');
+  assert.match(src, /if \(phi !== 0 && phi !== AR1_PHI\) \{\s*\n\s*throw new Error/,
+    'nullIdFor must throw on a phi outside the registered {0, 0.6}');
+});

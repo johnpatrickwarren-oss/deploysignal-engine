@@ -262,7 +262,7 @@ export function scoreS3(card, cells) {
 
   for (const cell of candidates) {
     if (cell.shift_sigma !== INERTNESS_SHIFT_SIGMA) {
-      bump(offShift, `${cell.detector} ${cell.shift_sigma}`, { detector: cell.detector, shift_sigma: cell.shift_sigma ?? null });
+      bump(offShift, `${cell.detector}\0${cell.shift_sigma}`, { detector: cell.detector, shift_sigma: cell.shift_sigma ?? null });
       continue;
     }
     // C2 note: S3 does NOT fail closed on an unmeasured phi. A pooled power control

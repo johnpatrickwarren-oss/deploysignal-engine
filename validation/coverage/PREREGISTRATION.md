@@ -8074,3 +8074,30 @@ which registers only the mirror YES rule; and the superseded smoke screen's cost
 `0.11 s`, the quoted figure having omitted the five calibrations from one side of its own comparison.
 **The gate verdict, the frozen configuration, the H = 6,000 PASS and `K6 = NO` at the deploy-gate
 geometry all stand.**
+
+---
+
+### Erratum to K6A.5.3, dated 2026-08-08 (carry-tier, appended not edited)
+
+**Quoted, v2.K6A.5 K6A.5.3:**
+
+> **The real gap is that NOTHING RUNS IT.**
+
+**Correct: CI runs it, non-gating.** `.github/workflows/ci.yml:92-95` has a step
+*"Certification card expiry (reported, not gating — see comment)"* running `npm run cert:expiry`
+with `continue-on-error: true`, and the workflow's own comment states why: a runner checks out this
+repo only, `family_E_conformal` pins `../deploysignal/tools/calibrators/family-e.ts`, and
+`expiry-check.mjs` cannot distinguish *"changed"* from *"not present here"*, so a gating step would
+fail every run for a reason that says nothing about the cards.
+
+**The corrected statement of the gap: the expiry check RUNS on every CI run and its finding reaches
+a log, but NO GATE ENFORCES IT** — not the CI step (`continue-on-error`), and not any suite
+(`expiry.test.mjs` exercises `checkExpiry` on temp fixtures only). So a drifted card still passes
+`npm test`, `test:cert`, `test:coverage-battery` and CI. **The correction is against this
+document's own convenience: "nothing runs it" made the gap sound like an oversight, and the truth is
+that it is run deliberately in a non-gating shape for a stated reason. That is a harder gap to
+close, and the write-back obligation K6A.5.3 filed now has the sibling-pin problem attached to it:
+making the check gating requires either checking out the sibling repo with `CERT_SIBLING_ROOT` set,
+or teaching the tool to report an unreadable sibling pin separately from a changed hash.** No claim
+of K6A.5.3 moves otherwise, and the 0/9/9/0 expiry measurement stands.
+

@@ -96,3 +96,93 @@ Reproduced from the coverage run's own `REPORT.md` §2, which generates it from 
 | T2 `t2_increment_mean` | `0.960274` in `[0.94, 0.98]` | **`1.051073`** | **outside; `gpu_temp_c` `2.028722` against four at `≈0.805`** |
 | cell 44 median time-to-cross | `4,950` in `[3,300, 5,700]` | **not measured** | no emitted field; no code item registered one |
 
+
+---
+
+## APPEND 2026-08-08 — the whole-branch review's blockers B1 and B2 (append-only; nothing above is edited)
+
+### B1(i) The `p_uniformity` reading this file omitted entirely
+
+Arm 47's S2 row carries a pooled `p` distribution and **this narrative did not report it at all**,
+which left the file's own §"What S2 PASS and S3 PASS rest on" incomplete. From the committed
+`summary.json`:
+
+```
+p_uniformity.n                 80000        = 2000 trajectories x 40 windows, as registered
+ks_statistic                   0.04114977544910181
+ks_critical_at_alpha           0.004808326112068524   = 1.36/sqrt(80000)
+ratio                          8.56x the critical value
+decile_counts                  [8840, 7655, 7233, 7283, 7512, 6667, 9812, 9155, 7423, 8420]
+                               (sum 80000, expected 8000 per decile; chi-square 1133.6 on 9 df)
+```
+
+The decile grid is **consistent with the KS reading rather than an independent one**: the same
+departure shows as a deficit in deciles 3-6 and a `9812`/`9155` excess in 7-8. K6A.1.10 gives this
+field **no verdict authority** (`p` is discrete on 501 values) and K6A.1.12 registers no band for
+the KS statistic, so it decides nothing and is reported.
+
+### B1(ii) The FOUR-WAY joint statement — a reader of this file alone must see it
+
+**Four readings on this one calibration draw all point the same way, and the fourth is the one that
+produces the YES.** Each is individually inside its registered rule; there is **no registered
+combiner** for them, and this file previously stated only some of them:
+
+| # | reading | its registered rule | inside the rule? |
+|---|---|---|---|
+| 1 | canonical `mix-d1.5` detection **`0.8515`** | prediction band `[0.333, 0.848]`, consistency interval `[0.333, 0.958]` (K6A.2.4(a)) | **yes** — above p95, inside the interval, dispositioned CONSISTENT |
+| 2 | arm 47 S2 healthy point rate **`0.0540`** | α = 0.05; the falsifier is the Wilson LB, `0.046273` ≤ α (K6A.1.10 (1)) | **yes** — the bound cleared; the point rate is above α, one of the `≈7.9%` |
+| 3 | arm 47 S2 `increment_estimator.mean` **`1.024959`** | falsifier range `[0.97, 1.01]` (K6A.1.12) — **FIRED**; no verdict authority (K6A.1.10) | the range is **breached**; the stage verdict is unaffected by allocation |
+| 4 | `p_uniformity` KS **`8.56×`** critical | no band registered; no verdict authority | **yes** — vacuously, because nothing bounds it |
+
+**Two numbers the review added, which strengthen reading 3 rather than soften it:**
+
+- The increment mean is **`16.26` SE above the EXACT registered null** `E[e|null] = 0.991433`
+  (`(1.0249590993997122 − 0.991433)/0.002062168276681482`), not merely `12.10` SE above `1`. The
+  registered null is the sharper comparator and it is the one the construction's own closed form
+  supplies.
+- **`Var[e]` is FINITE here.** At the frozen `κ = 0.682` the calibrator's tail index is
+  `1/(1−κ) = 3.145 > 2`, which K6A.1.10 already records. **So the infinite-variance objection that
+  neutralises a mean-of-`e` reading on the sibling arms does not apply to this one**: the SE above
+  is CLT-backed rather than a statistic of a distribution with no second moment. The reading is
+  therefore evidence about this draw's calibrator, not an artifact of a heavy tail.
+
+**Stated plainly, because no rule states it:** the canonical cell reads high, the healthy arm pages
+more often than predicted, the null's own mean-`e` is `16` SE above where the exact law puts it with
+finite variance, and the pooled `p` distribution is `8.6×` off uniform. **Each is permitted by its
+own registered rule; together they say this calibration draw's null is not where the exact law puts
+it, and the class YES is read off that same draw.** The protocol has no instrument that combines
+them, so this paragraph is the combination — it carries no verdict and moves no endpoint.
+
+### B2 The median time-to-cross falsifier is UNEVALUABLE, not merely unmeasured
+
+K6A.1.12 registers, for cell 44: prediction `4,950` ticks, band `[3,300, 5,700]`, and a **falsifier**
+of *"a median `< 3,000` or a censored median with detection `> 0.50`"*. **No field in this run
+carries a crossing time.** `ecdfAccumulatorWealth` returns `crossingIndex` per trajectory and the
+harness adapter discards it; no code item of K6A.1.13 or K6A.2.1 registered a field for it.
+
+**Which makes the registered falsifier unevaluable on the branch this draw makes live.** At
+detection `0.8515` the median is NOT censored, so the *censored-median-with-detection-`> 0.50`*
+branch cannot fire — and the surviving branch, **median `< 3,000`**, is exactly the one that would
+have to be checked, and cannot be. A registered falsifier with no measurable quantity is not a
+cleared falsifier; **it is an unevaluated one, and this run does not clear it.**
+
+**Named not-done:** registering a crossing-time field (the module already computes it) so this
+falsifier becomes evaluable. That is a code item plus its registration, and neither belongs to a
+run-directory append.
+
+
+### B3 The T2 contiguity reading is CONFOUNDED by A-placement — measured 2026-08-08
+
+The `0.013333` T2 pooled crossing and the `2.028722` `gpu_temp_c` increment mean, reported in the
+prediction table above as deviations, are **artifacts of where the reference segment `A` is cut**.
+Reproducing the review's delegated probe on the registered substrate (seed `20260855`, `W = 150 /`
+`nA = 2250 / m = 45`, live ticks `9000..9600`, the same 9,000 reference ticks split two ways):
+`gpu_temp_c` crosses **8/120 with A = the first 2,250 ticks and 0/120 with A = the last 2,250**;
+`power_w` crosses under neither but flips side on 118/120 shards. First shard, digit for digit:
+first-A `0.0435 / 0.0217 / 0.0217 / 0.0435`, last-A `0.9783 / 0.9130 / 0.8478 / 0.9783`. So the T2
+deviation is temporal drift in the reference, **not** an answer to K6.12's contiguity question, and
+K6A.1.11's A-placement disclaimer covers A's SIZE under an iid draw, not its POSITION in a
+non-stationary series. The T2 stop condition still cleared on its registered instrument (pooled
+Wilson LB `0.007528` ≤ α); no endpoint moves. Full method and seeds:
+`../../../coverage/results/live/run-t2-20260809T040552Z/REPORT.md`.
+

@@ -257,10 +257,13 @@ test('K6A.2.1: this CLI writes report_format 6, and every committed run stays at
     );
   }
   assert.ok(sixRowDirs >= 8, `expected at least the eight committed six-row COVERAGE.md files K6A.2.1 counts, found ${sixRowDirs}`);
-  // And the gate is not vacuous in the other direction either: once a format-6 run is committed,
-  // the seven-class branch is exercised against a real artifact rather than only against the
+  // And the gate is not vacuous in the other direction either. As first written this read
+  // `sevenRowDirs + 1 >= 1`, which is true of every integer >= 0 and therefore asserted nothing --
+  // the review caught it. A format-6 run IS committed (the first K6-slow re-score), so the
+  // seven-class branch is now exercised against a real committed artifact and not only against the
   // temp run above.
-  assert.ok(sevenRowDirs + 1 >= 1, 'the fresh temp run always exercises the format-6 branch');
+  assert.ok(sevenRowDirs >= 1,
+    `expected at least one committed format-6 COVERAGE.md to exercise the seven-class branch, found ${sevenRowDirs}`);
 });
 
 // ── Amendment v2.C1 C1.9: the NO-row tie is rendered, not silently resolved ────────────────

@@ -136,3 +136,63 @@ of `0.0540`: **on this calibration draw the null is not sitting where the exact 
 That is a statement about one draw, it is what the registered per-draw bands exist to absorb, and
 no endpoint moves because of it.
 
+
+---
+
+## APPEND 2026-08-08 — the whole-branch review's blockers B1 and B2 (append-only; §1-§6 above are unedited)
+
+### B1 §6's joint statement was THREE-way and omitted the endpoint that produces the YES
+
+§6 above names the increment mean, the healthy rate and the KS reading. **It leaves out the fourth:
+the canonical cell's `0.8515`, which is the number the class YES is read off.** The joint statement
+is therefore restated here as FOUR-way, which is what a reader has to see:
+
+**On this one calibration draw: the canonical cell reads `0.8515` against a predicted `0.62` (above
+the band's p95, inside the consistency interval); the healthy arm's point rate `0.0540` is above α
+with its Wilson bound cleared at `0.046273`; the S2 `increment_estimator.mean` is `1.024959`, which
+FIRES K6A.1.12's `[0.97, 1.01]` range and sits `16.26` SE above the exact registered null
+`E[e|null] = 0.991433` (LB `1.021567`); and the pooled `p` distribution is `8.56×` its KS critical
+value (`0.04114977544910181` against `0.004808326112068524`, decile grid consistent). Each of the
+four is inside its own registered rule or explicitly stripped of verdict authority. All four point
+the same way. There is no registered instrument that combines them, and the class YES is read off
+the same draw.**
+
+**And the finite-variance point, which removes the usual escape.** At the frozen `κ = 0.682` the
+tail index is `1/(1−κ) = 3.145 > 2`, so `Var[e]` is finite (K6A.1.10 records this). The
+infinite-variance objection that neutralises a mean-of-`e` reading elsewhere **does not apply**: the
+`16.26` SE is CLT-backed. This paragraph carries no verdict and moves no endpoint; it exists
+because §6 stated three quarters of it.
+
+### B2 The median time-to-cross falsifier is UNEVALUABLE on its live branch
+
+§2 above records that the median time-to-cross was not measured. **The consequence it did not draw:**
+K6A.1.12's registered falsifier for that endpoint is *"a median `< 3,000` or a censored median with
+detection `> 0.50`"*. At detection `0.8515` the median is not censored, so the second branch cannot
+fire; the first — **median `< 3,000`** — is the live branch on this draw, and there is no quantity to
+check it against. `ecdfAccumulatorWealth` returns `crossingIndex` and the adapter discards it; no
+code item registered a field. **This run does not clear that falsifier; it leaves it unevaluated.**
+Registering a crossing-time field is **named not-done**.
+
+
+### B3 The T2 contiguity reading above is CONFOUNDED by A-placement — measured 2026-08-08
+
+§4's sentence at lines 86-90 (*"this coordinate's live span is not exchangeable with its own
+reference, which is precisely the contiguity question this arm exists to answer"*) is **over-claimed,
+and is corrected here rather than there.** Reproducing the review's delegated probe on the registered
+T2 substrate (scenario seed `20260855`, geometry `W = 150 / nA = 2250 / m = 45`, live ticks
+`9000..9600`, the SAME 9,000 reference ticks split two ways):
+
+| coordinate | crossings, A = first 2,250 (the harness) | crossings, A = last 2,250 | mean-`p` side flips |
+|---|---|---|---|
+| `gpu_temp_c` | **8 / 120** | **0 / 120** | 112 / 120 |
+| `power_w` | 0 / 120 | 0 / 120 | 118 / 120 |
+
+First shard `gpu_temp_c`, digit for digit: first-A `0.0435 / 0.0217 / 0.0217 / 0.0435`, last-A
+`0.9783 / 0.9130 / 0.8478 / 0.9783`. **Every crossing this run recorded disappears when `A` is taken
+from the other end of the same reference window**, so the `0.0133` pooled rate and the `2.028722`
+increment mean are artifacts of temporal A-placement on non-stationary telemetry — not an answer to
+K6.12's contiguity question. K6A.1.11's A-placement disclaimer rests on v2.K6A Table 4's **iid**
+evidence about A's SIZE and licenses nothing about its POSITION. Full method, seeds and the
+whole-arm table: `../run-t2-20260809T040552Z/REPORT.md`. The T2 stop condition still cleared on its
+registered instrument (pooled LB `0.007528` ≤ α) and no endpoint moves.
+

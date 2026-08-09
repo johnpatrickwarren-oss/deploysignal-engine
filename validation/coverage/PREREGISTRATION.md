@@ -7875,3 +7875,202 @@ came from ONE gaussian per spaced seed; here each seed yields a whole 150-value 
 affine structure 150-fold), so **K6A.3.1's seed bands stand** and K6A.2.3's one-orbit limitation is
 still inherited unchanged. **The gate verdict, the frozen configuration, the H = 6,000 PASS and
 `K6 = NO` at the deploy-gate geometry all stand.**
+
+---
+
+## Amendment v2.K6A.5 — 2026-08-08, the pre-run fix round: an eighth manifest field, a boundary stated two incompatible ways, a silent 14-card re-freeze disclosed, and three cosmetic corrections
+
+Registered after the C49 task-5 review (spec PASS, quality APPROVED, RUNS-MAY-PROCEED) found four
+things, **before the registered runs**. **Prereg text only, own commit.** Nothing re-measures. **No
+candidate endpoint, band, floor, seed, prediction or verdict moves**; the H = 6,000 gate verdict PASS
+stands. Two of the four corrections are against **this author's own amendments of the same day**, and
+one discloses **a change that rode silently in this author's own commit**.
+
+### K6A.5.1 `manifest.null_growth_screen` has an EIGHTH field the rider did not name — the same defect class K6A.3.2 exists for, inside the rider's own enumerated object
+
+**Quoted, v2.K6A.3 K6A.3.1**, enumerating the manifest field it registers:
+
+> the run manifest gains `null_growth_screen` — `{draws, mc_windows_per_draw, positive, kappa,
+> seed_bands, g_null: {mean, sd, max, p99}, screen_mode}`
+
+**The driver emits an eighth key: `forced_positive_hook`.** Registered here as part of the object.
+
+**And the defect class is worth naming rather than just fixing, because it is the second instance in
+two days.** K6A.3.2 exists precisely because the build emitted a manifest field (`class_spans`) that
+no registration named. **The rider that registered that field then enumerated its own new object and
+under-counted it** — same class, one level deeper: an enumeration is a specification, and a
+specification that omits an emitted key is exactly as wrong as an unregistered field. **Registered as
+a standing reading rule for this document: an enumerated manifest object is a CLOSED list, and any
+key the code emits beyond it is a registration defect, not an addition.**
+
+**The duplication, named, with one side made authoritative.** The same fact is now recorded twice on a
+run manifest: `screen_positive_hook` at the top level (the harness's registered hook-recording
+convention, beside `force_throw_hook`, `spectral_force_degenerate_hook`,
+`shape_force_degenerate_hook`, `heldout_lattice_hook`) and `null_growth_screen.forced_positive_hook`
+inside the screen object. **Registered: on a RUN MANIFEST the top-level `screen_positive_hook` is
+authoritative** — it is the field a reader already checks for every other hook, and a consumer
+scanning hooks must not have to know which nested objects also carry them. **Inside a
+screen-failure record the nested `forced_positive_hook` is authoritative, because that artifact has
+no manifest and no top-level hook block.** Both are emitted; neither is removed; a disagreement
+between them is a defect in the harness.
+
+### K6A.5.2 The smoke/registered boundary is stated two incompatible ways — the code's reading is registered
+
+**Quoted, v2.K6A.3 K6A.3.1**, two sentences that do not describe the same set of runs:
+
+> A run at the registered `n = 2000` with no test hook engaged — the only run that may write to
+> `results/live` — **must screen at `250 × 8,000` and may not override either number**; the harness
+> refuses `--screen-draws`/`--screen-mc` at `n === REGISTERED_N`.
+
+**The first clause is `MODE === 'live'` (`n = 2000` AND no hook). The second is `n === REGISTERED_N`
+ALONE.** They differ on exactly one kind of run: `n = 2000` **with** a hook engaged — which the first
+clause calls a smoke run and the second forbids from overriding the counts. **The implementation
+takes the first reading** (`const registered = MODE === 'live';`, governing both the count selection
+and the override refusal, and its error message says so: *"n === 2000, no hook engaged"*).
+
+**Registered, as the single reading: `registered = MODE === 'live'`, i.e. `n === REGISTERED_N` AND no
+test hook engaged.** A run at `n = 2000` with a hook engaged is a **smoke** run for every purpose —
+it screens at the smoke counts, accepts the overrides, is flagged `smoke` only via `mode: 'sim'`
+routing, and can never reach `results/live`. **Rationale, so the choice is not merely a deference to
+the code: the property that matters is "may this run become evidence", and that property is exactly
+`MODE === 'live'`. A hook-engaged run at the registered `n` is already barred from the evidence path,
+so binding it to the registered screen counts would cost 50 s to protect a run nothing can cite.**
+The second clause is corrected, not the first.
+
+### K6A.5.3 DISCLOSURE: a 14-card re-freeze rode silently inside this author's card commit, and it un-expired 9 cards this author's own earlier commit had expired
+
+**Measured, not recalled** (card `source_files` shas against the file contents at each commit):
+
+| commit | what it changed | cards EXPIRED at that commit |
+|---|---|---|
+| `d281e3d` (BASE) | — | **0** |
+| `8486229` (C49 task 4, item 11) | `verdict.mjs` `report_format 5 → 6` | **9** |
+| `6d51dc5` (C49 task 4, items 1–10, 12) | harness, constants, tests | 9 |
+| `77b86ee` (C49 task 5, the card) | the new card **+ a 14-card re-freeze** | **0** |
+
+**Nine cards pin `validation/certification/verdict.mjs`** (`family_A_betting_e_process`,
+`family_A_mixture_supermartingale`, `family_C_safe_hotelling`, `family_D_spectral_e_detector`,
+`family_E_conformal`, `safe_t_e_value`, `sequential_mmd_betting_e_process`,
+`sequential_ui_e_process`, `universal_inference_e_value`), and five of them pin
+`lib/score.mjs` as well. **The `report_format 5 → 6` bump of item 11 therefore EXPIRED nine cards,
+and that commit did not re-freeze them or say so.** The freeze in `77b86ee` re-stamped every card's
+`source_files` sha as well as its `engine_pin`, which **cleared all nine** — and that commit's
+message described the operation only as *"freeze-cards re-stamped all fifteen cards' engine_pin, the
+same way every prior freeze did"*. **The engine_pin half was disclosed; the source-sha half — the
+half that silently un-expired nine cards — was not.**
+
+**Registered, so the record is not left resting on a commit message:**
+
+- **The re-freeze was PINS-ONLY.** No `guarantee`, `regime`, `falsifier`, `shipped_path`, `budget`,
+  `prior_evidence`, `class` or `aliases` field of any of the fourteen sibling cards changed; the diff
+  is `engine_pin.sha` on all fourteen plus `source_files[].sha256` on the nine that pin the two
+  certification files. **No claim any card makes moved.** (Verifiable from `git show 77b86ee` —
+  fourteen 2-to-4-line diffs.)
+- **What the expiry actually meant, stated rather than waved past:** `report_format` is
+  *"the shape of this run's emitted markdown, NOT the protocol version"* (`verdict.mjs:64`), so the
+  edit that expired nine cards changed no scoring rule and no guarantee. **The expiry was correct
+  anyway and the mechanism worked as designed** — a card pins the file that produces its verdicts,
+  and that file changed. **The defect was the silence, not the expiry.**
+- **The ordering lesson, registered because this build will not be the last to hit it:** a commit
+  that touches a file any card pins **must either re-freeze in the same commit and say so, or state
+  that it leaves cards expired and name them.** Nine cards spent two commits expired with nothing in
+  the record saying so.
+
+**And the gap that let it pass every gate, MEASURED and corrected against the review's own
+statement.** The review reported that `expiry-check.mjs` *"exits 0 even when reporting EXPIRED"*.
+**That is not what it does:** on a drifted card it prints `EXPIRED <card>: <path> (changed)` to stderr
+and **exits 1** (`process.exit(drifted.length ? 1 : 0)`, verified by injecting a wrong sha). **The
+real gap is that NOTHING RUNS IT.** `test:cert`'s `expiry.test.mjs` exercises `checkExpiry` against
+temp fixtures only and never against the real `cards/` directory, and `cert:expiry` is a separate
+npm script in no suite. **So a drifted real card passes `npm test`, `test:cert` and
+`test:coverage-battery`, and only a manual `npm run cert:expiry` catches it.** That is the same shape
+as C48(3) — *changes to the evidence path expire nothing that any gate enforces*. **Filed as a
+write-back obligation, NOT fixed here** (adding a real-cards assertion to `test:cert` would fail the
+suite the moment any pinned file is edited, which is a protocol decision about when a card must be
+re-frozen and belongs to the certification protocol's own rules, not to this coverage amendment).
+
+### K6A.5.4 Three cosmetic corrections, quote-and-correct
+
+**(a) The `4.30`-sd margin belongs to the MEAN, not to the worst draw, and the card juxtaposed them.**
+Quoted, the `shape_ecdf_accumulator` card's third quantifier:
+
+> measured 0/280 draws positive, worst draw 1.501e-2 below zero, 4.30 sd margin
+
+**Correct: K6A.1.5's `4.30 sd` is the MEAN's margin** (`6.754e-2 / 1.571e-2 = 4.30` across-draw sd
+below zero); **the worst observed draw's own margin is `1.501e-2`, which is `0.96` across-draw sd.**
+Reading the two clauses in sequence implies the worst draw is 4.30 sd clear of zero, which is `4.5×`
+its actual distance. **Registered wording: the per-draw mean sits `4.30` across-draw sd below zero
+and the worst of the 280 draws sits `1.501e-2` (`0.96` sd) below zero.** The card is corrected in the
+commit that follows this one; K6A.1.5's own text, which states the two figures on separate lines of
+its own table, is not at fault and is unchanged.
+
+**(b) The lottery band/interval rule is K6A.2.4(a), not (b).** Quoted, the same card's notes:
+
+> THE LOTTERY REPORTING RULE, BOTH DIRECTIONS, quoted from Amendment v2.K6A.2 K6A.2.4(b)
+
+**Correct: (b) registers only the MIRROR rule for YES.** The prediction band `[0.333, 0.848]`, the
+consistency interval `[0.333, 0.958]` and the `(0.848, 0.958]` disposition — all of which that
+passage also states — are **K6A.2.4(a)**, as K6A.3.4(a) itself records. **Registered attribution:
+the single-draw NO wording and the mirror single-draw YES wording are K6A.2.4(b); the band, the
+interval and the disposition are K6A.2.4(a).**
+
+**(c) The smoke screen's superseded cost is `0.128 s`, not `0.11 s`.** Quoted, v2.K6A.4 K6A.4.1:
+
+> `10,000` scored windows — `≈ 0.34 s` at the measured `22.5 µs`, against `≈ 0.11 s` for the count it
+> replaces
+
+**Correct: `≈ 0.128 s`.** The `5 × 200` count costs `1,000` windows at `22.5 µs` (`0.0225 s`) **plus
+the five 100,000-row calibrations at `21 ms` each (`0.105 s`)**, which the `0.11 s` figure left out of
+one side of a comparison it included on the other. The `0.34 s` for `5 × 2,000` is unchanged
+(`0.225 + 0.105`). **No decision rests on either figure**; the correction is registered because a
+document that pins numbers may not round one side of its own comparison.
+
+### K6A.5.5 House rules, mapped
+
+(1) **Committed before the runs it clears the way for**, and before the card re-freeze it authorizes.
+(2) A failed endpoint is a publishable result; nothing here is an endpoint. (3) No post-hoc analysis:
+**this amendment re-measures no candidate quantity.** Its only measurements are of the REPOSITORY —
+card expiry at four commits, and the `expiry-check` CLI's exit code under an injected wrong sha —
+both properties of the record-keeping, not of the accumulator. (4)–(6) No new cell, seed, fallback or
+result. (7) **Quote-and-correct five times**: twice against this author's own v2.K6A.3, once against
+this author's own v2.K6A.4, once against this author's own card, and **once against the review's own
+statement about `expiry-check.mjs`** — with the originals intact. (8) Every candidate endpoint and
+verdict stands as K6A.1.12 registers them.
+
+**Write-back obligations, unchanged, plus one added:** the certification protocol needs a rule for
+when a card must be re-frozen and a gate that enforces it — nine cards were expired for two commits
+and every suite stayed green.
+
+### Amendment summary
+
+The **pre-run fix round**, prereg text only, with no candidate quantity moved. **(1)** The rider's own
+enumerated manifest object under-counted itself: `manifest.null_growth_screen` emits an **eighth key,
+`forced_positive_hook`**, now registered — **the same defect class K6A.3.2 exists for, recurring one
+level deeper inside the amendment that registered it**, so an enumerated manifest object is registered
+as a CLOSED list and any extra emitted key is a registration defect; the duplication with the
+top-level `screen_positive_hook` is named and resolved by making the **top-level field authoritative
+on a run manifest and the nested one authoritative inside a screen-failure record**, which has no
+manifest (K6A.5.1). **(2)** K6A.3.1 stated the smoke/registered boundary **two incompatible ways** —
+`MODE === 'live'` for the counts, `n === REGISTERED_N` alone for the override refusal — differing on a
+run at the registered `n` with a hook engaged; **the code's reading is registered
+(`registered = MODE === 'live'`)** on the stated ground that the property that matters is whether a
+run can become evidence, which a hook-engaged run cannot (K6A.5.2). **(3) DISCLOSED: a 14-card
+re-freeze rode silently inside this author's own card commit.** Nine cards pin
+`validation/certification/verdict.mjs`, so task 4's `report_format 5 → 6` bump (`8486229`)
+**EXPIRED nine cards** — measured: 0 expired at BASE, 9 from `8486229`, 0 after `77b86ee` — and
+`77b86ee`'s freeze re-stamped `source_files[].sha256` as well as `engine_pin`, clearing all nine while
+its message disclosed only the `engine_pin` half. **The re-freeze was PINS-ONLY** (no guarantee,
+regime, falsifier, shipped_path, budget, prior_evidence, class or alias field of any sibling card
+changed), the expiry itself was correct and the mechanism worked, and **the defect was the silence**;
+registered as an ordering rule for future commits, plus the gap that let it pass — **and the review's
+own claim that `expiry-check.mjs` "exits 0 even when reporting EXPIRED" is CORRECTED: it prints
+`EXPIRED` to stderr and exits 1; the real gap is that NO SUITE RUNS IT**, `expiry.test.mjs` testing
+only temp fixtures, so a drifted real card passes every suite — filed as a write-back obligation and
+deliberately not fixed here (K6A.5.3). **(4)** Three cosmetic corrections (K6A.5.4): the card's
+**`4.30`-sd juxtaposition** is corrected — `4.30` sd is the per-draw MEAN's margin, the worst of the
+280 draws is `1.501e-2` = **`0.96` sd** below zero, and reading the clauses in sequence overstated the
+worst draw's clearance by `4.5×`; the lottery **band/interval/disposition is K6A.2.4(a)**, not (b),
+which registers only the mirror YES rule; and the superseded smoke screen's cost is **`0.128 s`**, not
+`0.11 s`, the quoted figure having omitted the five calibrations from one side of its own comparison.
+**The gate verdict, the frozen configuration, the H = 6,000 PASS and `K6 = NO` at the deploy-gate
+geometry all stand.**

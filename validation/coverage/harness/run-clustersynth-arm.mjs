@@ -60,6 +60,10 @@ const STUDY = path.dirname(HERE);
 const ENGINE_ROOT = path.resolve(STUDY, '..', '..');
 const require = createRequire(import.meta.url);
 const shapeBlockBet = require(path.join(ENGINE_ROOT, 'dist/detectors/shape-block-conformal-bet.js'));
+// Amendment v2.K6A.1, K6A.1.11: the K6-slow accumulator's own T2 validity arm — K6.12's
+// construction applied UNCHANGED with detector: 'shape_ecdf_accumulator', at the m = 45 geometry
+// that amendment derives by arithmetic rather than discovers at run time.
+const shapeEcdfAcc = require(path.join(ENGINE_ROOT, 'dist/detectors/shape-ecdf-accumulator.js'));
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 
@@ -72,10 +76,64 @@ const DT_S = 30;
 const REGISTERED_STEPS = 9600;           // K6.12: window.steps
 const REGISTERED_SHARDS = 120;           // K6.12: sc.gpuIds.slice(0, 120), CLUSTERSYNTH-PREREG.md's default
 const REFERENCE_TICKS = 9000;            // K6.12/K6.3: fixed regardless of --steps; floor(9000/30)=300
-const W = shapeBlockBet.W_K6;
-if (W !== 30) throw new Error(`run-clustersynth-arm: shapeBlockBet.W_K6 is ${W}, PREREGISTRATION.md K6.1 registers 30`);
 const THRESHOLD = 20;                    // 1/alpha, ALPHA=0.05, same class endpoint as K6.10
 const ALPHA = 0.05;
+
+// ── the two T2 candidates, keyed by detector id ───────────────────────────────────────────────
+// K6.12 registered this arm for shape_block_conformal_bet; Amendment v2.K6A.1 K6A.1.11 registers
+// it for shape_ecdf_accumulator with the SAME scenario, shards, counters, skip accounting and
+// field names, and ONE difference stated as arithmetic: W = 150 cannot be fed m = 500, because
+// 500*150 = 75,000 >> the 9,000 reference ticks the scenario supplies. Preserving the frozen 1:3
+// A/B ratio instead gives A = 2,250 and B = 6,750 -> m = floor(6750/150) = 45 blocks EXACTLY
+// (2,250 + 45*150 = 9,000), with 600/150 = 4 live windows. Both consequences K6A.1.11 registers
+// are carried here rather than rediscovered: T2's m is 45 and NOT T1's 500, and the T2 healthy
+// falsifier is very nearly VACUOUS at this W (per-window ceiling 0.834782 nats, so a crossing is
+// possible only at window 4 and needs S_4 >= 14.2347 of a maximum 4*log 46 = 15.3146 against
+// E[S_4|null] = 3.7535; predicted T2 pooled healthy crossing 0.0000).
+const K6SLOW_T2_SCENARIO_SEED = 20260855; // BASE_SEED(20260807) + 48, K6A.1.9
+if (K6SLOW_T2_SCENARIO_SEED !== 20260807 + 48) throw new Error('run-clustersynth-arm: K6SLOW_T2_SCENARIO_SEED != BASE_SEED + 48');
+
+const T2_DETECTORS = Object.freeze({
+  shape_block_conformal_bet: Object.freeze({
+    W: shapeBlockBet.W_K6,
+    mRegistered: 300,                    // floor(9000/30), K6.3
+    aTicks: null,                        // no A/B split: the whole reference is blocked
+    scenarioSeed: K6_T2_SCENARIO_SEED,
+    prereg: '../PREREGISTRATION.md (Amendment v2.K6, K6.12; Amendment v2.K6.1, K6.1.3/K6.1.4)',
+    calibrate: (reference) => shapeBlockBet.calibrateShapeBlocks(reference, shapeBlockBet.W_K6),
+    wealthLog: (windows, cal) => shapeBlockBet.shapeBetWealth(windows, cal).log,
+    windowE: null,
+    // K6.1.3 fixes THIS arm's field set and registers no increment field on it, so none is
+    // emitted here: v2.K6A.2 K6A.2.6's t2 increment prediction belongs to the accumulator.
+    emitIncrement: false,
+  }),
+  shape_ecdf_accumulator: Object.freeze({
+    W: shapeEcdfAcc.W_K6SLOW,
+    mRegistered: 45,                     // K6A.1.11, by the arithmetic in this block's comment
+    aTicks: 2250,                        // the frozen 1:3 ratio against B = 6,750
+    scenarioSeed: K6SLOW_T2_SCENARIO_SEED,
+    prereg: '../PREREGISTRATION.md (Amendment v2.K6A.1, K6A.1.11 + K6A.1.9; K6.12/K6.1.3 applied unchanged)',
+    calibrate: (reference) => shapeEcdfAcc.calibrateEcdfAccumulator(reference, { W: shapeEcdfAcc.W_K6SLOW, nA: 2250, m: 45 }),
+    wealthLog: (windows, cal) => shapeEcdfAcc.ecdfAccumulatorWealth(windows, cal).log,
+    windowE: (window, cal) => shapeEcdfAcc.ecdfAccumulatorWindow(window, cal).e,
+    emitIncrement: true,                 // v2.K6A.2 K6A.2.6's registered T2 prediction
+  }),
+});
+const DETECTOR = arg('--detector', 'shape_block_conformal_bet');
+const SPEC = T2_DETECTORS[DETECTOR];
+if (!SPEC) {
+  throw new Error(`run-clustersynth-arm: --detector "${DETECTOR}" is not a registered T2 candidate `
+    + `(${Object.keys(T2_DETECTORS).join(' | ')})`);
+}
+const W = SPEC.W;
+if (DETECTOR === 'shape_block_conformal_bet' && W !== 30) throw new Error(`run-clustersynth-arm: shapeBlockBet.W_K6 is ${W}, PREREGISTRATION.md K6.1 registers 30`);
+if (DETECTOR === 'shape_ecdf_accumulator' && W !== 150) throw new Error(`run-clustersynth-arm: shapeEcdfAcc.W_K6SLOW is ${W}, PREREGISTRATION.md K6A.1.2 registers 150`);
+// The A/B arithmetic, asserted rather than trusted: it is what makes m exact and not floored.
+if (SPEC.aTicks !== null && SPEC.aTicks + SPEC.mRegistered * W !== REFERENCE_TICKS) {
+  throw new Error(`run-clustersynth-arm: ${DETECTOR}'s A(${SPEC.aTicks}) + m(${SPEC.mRegistered})*W(${W}) `
+    + `!= the ${REFERENCE_TICKS} reference ticks the scenario supplies (K6A.1.11)`);
+}
+const SCENARIO_SEED = SPEC.scenarioSeed;
 
 const STEPS = Number(arg('--steps', REGISTERED_STEPS));      // smoke override
 const REQUESTED_SHARDS = Number(arg('--shards', REGISTERED_SHARDS)); // smoke override
@@ -141,7 +199,7 @@ const lower95 = (k, n) => {
 const t0 = Date.now();
 
 // K6.12's registered scenario: faults:false (healthy only), family/pods/window fixed.
-const sc = cs.buildScenario({ family: FAMILY, pods: PODS, seed: K6_T2_SCENARIO_SEED, window: { steps: STEPS, dt_s: DT_S }, faults: false });
+const sc = cs.buildScenario({ family: FAMILY, pods: PODS, seed: SCENARIO_SEED, window: { steps: STEPS, dt_s: DT_S }, faults: false });
 const shardIds = sc.gpuIds.slice(0, REQUESTED_SHARDS);
 if (shardIds.length < REQUESTED_SHARDS) {
   throw new Error(`run-clustersynth-arm: scenario only has ${sc.gpuIds.length} shards, requested ${REQUESTED_SHARDS}`);
@@ -176,25 +234,33 @@ for (const shardId of shardIds) {
     // K6.12: "Task 11's adapter must catch that throw per (shard, coordinate) and record it,
     // not let it abort the whole arm." The ONE registered exception to "no bare catch."
     try {
-      cal = shapeBlockBet.calibrateShapeBlocks(reference, W);
+      cal = SPEC.calibrate(reference);
     } catch (err) {
       skipped = true;
       skipReason = err?.message ?? String(err);
     }
 
     let k = null, n = null, t2CrossingRate = null, nRefBlocks = null, nLiveWindows = null;
+    let windowEs = null;
     if (!skipped) {
       nRefBlocks = cal.m;
-      if (nRefBlocks !== 300) {
-        throw new Error(`run-clustersynth-arm: shard ${shardId} ${counter}: n_reference_blocks ${nRefBlocks} != registered 300 (K6.3)`);
+      if (nRefBlocks !== SPEC.mRegistered) {
+        throw new Error(`run-clustersynth-arm: shard ${shardId} ${counter}: n_reference_blocks ${nRefBlocks} `
+          + `!= registered ${SPEC.mRegistered} (${DETECTOR === 'shape_ecdf_accumulator' ? 'K6A.1.11' : 'K6.3'})`);
       }
       const windows = [];
       for (let w = 0; (w + 1) * W <= live.length; w++) windows.push(live.slice(w * W, w * W + W));
       nLiveWindows = windows.length;
       // K6.12: "a crossing iff wealth >= 20 at any of the 20 disjoint live-window checkpoints
       // (K6.10's own any-prefix reading, reused at this arm's own 20-window span)."
-      const { log } = shapeBlockBet.shapeBetWealth(windows, cal);
+      const log = SPEC.wealthLog(windows, cal);
       const crossed = log.some((l) => l >= Math.log(THRESHOLD));
+      // Amendment v2.K6A.2, K6A.2.6: the T2 increment mean is a REGISTERED prediction of its own
+      // (0.960274 at m = 45, band [0.94, 0.98]) because the null law shifts with m and T1's
+      // 0.9914 must not be carried across — a T2 reading near 0.99 would indicate the wrong m.
+      // Prefixed `t2_` like every other field on this arm (K6.1.3's binding rule), so it can
+      // never be read as the S2 instrument `increment_estimator` by the certification scorer.
+      if (SPEC.emitIncrement) windowEs = windows.map((w) => SPEC.windowE(w, cal));
       // K6.1.4: k=1 if this pair crossed, 0 otherwise (a single binary outcome, not a
       // sub-count over its windows); n=1, the row's own weight.
       k = crossed ? 1 : 0;
@@ -205,7 +271,7 @@ for (const shardId of shardIds) {
     // K6.1.3's registered field set (superseding the plan's own literal line, which would
     // VOID the run): t2_crossing_rate (not crossing_rate), no fault_class at all.
     cells.push({
-      detector: 'shape_block_conformal_bet',
+      detector: DETECTOR,
       arm: 'T2-clustersynth',
       counter,
       shard_id: shardId,
@@ -214,6 +280,7 @@ for (const shardId of shardIds) {
       k,
       n,
       t2_crossing_rate: t2CrossingRate,
+      ...(windowEs ? { t2_increment_mean: windowEs.reduce((a, b) => a + b, 0) / windowEs.length } : {}),
       skipped,
       skip_reason: skipReason,
       substrate_tier: 'T2',
@@ -229,13 +296,15 @@ for (const counter of COUNTER_NAMES) {
   const skippedCount = cells.filter((c) => c.arm === 'T2-clustersynth' && c.counter === counter && c.skipped).length;
   const k = rows.reduce((a, c) => a + c.k, 0);
   const n = rows.length;
+  const incs = rows.map((c) => c.t2_increment_mean).filter((x) => typeof x === 'number');
   cells.push({
-    detector: 'shape_block_conformal_bet',
+    detector: DETECTOR,
     arm: 'T2-clustersynth-coordinate',
     counter,
     k,
     n,
     t2_crossing_rate: n ? k / n : null,
+    ...(incs.length ? { t2_increment_mean: incs.reduce((a, b) => a + b, 0) / incs.length } : {}),
     skipped_count: skippedCount,
     substrate_tier: 'T2',
   });
@@ -251,13 +320,15 @@ for (const counter of COUNTER_NAMES) {
   const n = rows.length;
   const t2CrossingRate = n ? k / n : null;
   const t2PooledLower95 = n ? lower95(k, n) : NaN;
+  const incs = rows.map((c) => c.t2_increment_mean).filter((x) => typeof x === 'number');
   cells.push({
-    detector: 'shape_block_conformal_bet',
+    detector: DETECTOR,
     arm: 'T2-clustersynth-pooled',
     counter: null,
     k,
     n,
     t2_crossing_rate: t2CrossingRate,
+    ...(incs.length ? { t2_increment_mean: incs.reduce((a, b) => a + b, 0) / incs.length } : {}),
     t2_pooled_lower_95: t2PooledLower95,
     // K6.13's own T2 stop condition, same vocabulary as K3.1.3/K6.7 (run.mjs:115): a fired
     // stop condition = REFUTED, filed as 'FAIL'; otherwise 'not-refuted'. Bug fix
@@ -303,7 +374,8 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   // study in this repo already uses (validation/shape-battery's 'shape-clustersynth' /
   // 'clustersynth-ui').
   study: 'coverage-t2-clustersynth',
-  prereg: '../PREREGISTRATION.md (Amendment v2.K6, K6.12; Amendment v2.K6.1, K6.1.3/K6.1.4)',
+  prereg: SPEC.prereg,
+  detector: DETECTOR,
   git_sha: gitSha,
   engine_pin: enginePin,
   engine_version: enginePin,
@@ -315,12 +387,14 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   pods: PODS,
   dt_s: DT_S,
   faults: false,
-  scenario_seed: K6_T2_SCENARIO_SEED,
+  scenario_seed: SCENARIO_SEED,
   registered_shards: REGISTERED_SHARDS,
   registered_steps: REGISTERED_STEPS,
   shards: REQUESTED_SHARDS,
   steps: STEPS,
   reference_ticks: REFERENCE_TICKS,
+  reference_a_ticks: SPEC.aTicks,
+  n_reference_blocks_registered: SPEC.mRegistered,
   live_ticks: LIVE_TICKS,
   w: W,
   alpha: ALPHA,

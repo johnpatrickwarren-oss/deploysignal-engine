@@ -75,3 +75,31 @@ the re-freeze must be LAST for `cert:expiry` to be current at branch HEAD.
 - Also named in the README's freeze table: the gap it inherited — the table's last recorded pin was
   `597a97c` while the cards stood at `4a48450`, with four merges touching `cards/` in between and no
   row for any of them. Not reconstructed; named.
+
+## Review fix round — executed 2026-08-09 (review APPROVED, four items)
+
+| order | item | commit | expiry after |
+|---|---|---|---|
+| 1 | code: `mean_e_lower_95` identity made structural + comment overclaim corrected | `b74803b` | EXPIRED (by design) |
+| 2 | prereg correction append to v2.C45 / v2.C38.1 (items 2 and 4) + probe `--shared-only` mode | `3b09139` | EXPIRED |
+| 3 | README freeze-table column corrected by a row, blank line restored, snippet extended | `3952ea0` | EXPIRED |
+| 4 | dedicated card re-freeze, LAST | `00131c1` | **all cards current** |
+
+- `test:coverage-battery` 140 → **141** (+1: the source pin that kills the recompute mutation).
+- **Every reviewer figure verified independently before use.** `K_0.95 = 1.358099` →
+  `0.074423` (m=333) / `0.060736` (m=500); `sd[K] = 0.260333` from
+  `pi^2/12 - (sqrt(pi/2)ln2)^2`; shared arm at `R = 80` reproduced at `0.038451` (K6-slow, ratio to
+  closed form **0.9897**) and `0.035812` (K6, ratio **0.7523**), both CIs containing the review's
+  ranges.
+- **One reviewer claim I had to correct in the other direction:** my new exact assertion does NOT
+  kill the recompute mutation behaviourally at these seeds — I measured it surviving. That is the
+  finding restated, not a gap, so the kill is a source pin (K6A.3.1's precedent) and the comment
+  claiming a behavioural kill is corrected in the same commit.
+- Paired smoke diff for the structural change: **103 rows, 0 fields changed** — bit-for-bit
+  identical output.
+- Re-freeze diff: 15 files, **16 insertions / 16 deletions, only `"sha"` and `"sha256"` lines**.
+  Fourteen cards moved `engine_pin.sha` alone (`3f55f55` → `3952ea0`); `shape_ecdf_accumulator` also
+  moved its `run-battery.mjs` pin (`26f3e078…` → `6d3ccb16…`).
+- Named-not-done, registered: the `heldout_seed`/`params` invariant test is one-directional
+  (6 of 24 pairs) and is **not** expanded; v2.C45's arms other than `D = 1` are not settled at
+  higher `R`.

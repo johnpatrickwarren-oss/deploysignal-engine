@@ -10797,3 +10797,199 @@ by being in regime. Precisely: **3 per-null cells survive the strict reading, 2 
 survive independently of it, 6 per-null cells drop, all 6 at rate `1.0000`.** The row's decisive
 figure is untouched — min surviving per-null rate `0.897` against `INERTNESS_FLOOR = 0.10`, S3
 `PASS` either way.
+
+---
+
+## Amendment v2.C43.1 — 2026-08-09, before the emission exists: `null_id` becomes per-DETECTOR, and `N1` stops asserting a φ threading three detectors never receive
+
+WORKLIST `C43`, forward fix, on operator ruling of 2026-08-09 (Erratum v1.5 §C43.8 named it
+not-done; this amendment does it). Sections §1–14 and every prior Amendment and Erratum stay intact.
+This amendment **changes one registered field's VALUE on future emissions of three detectors' rows**
+and changes nothing else: no endpoint, no floor, no threshold, no seed, no grid, no falsifier, no
+detector, no substrate. **Committed rows are not edited** — Erratum v1.5 is their correction.
+
+### C43.1.1 The convention `N1` carries, quoted from both studies that own it
+
+`lib/nulls.mjs`'s header names its source of truth: "`validation/h0-battery/harness/nulls.mjs`'s
+NULLS table … So one grammar covers both studies, and any study that reuses the id vocabulary
+inherits it." In that table:
+
+```
+{ id: 'N1', label: 'iid Gaussian, oracle params, disjoint windows',   // h0-battery/harness/nulls.mjs:53
+```
+
+and in `terminal-evalue`, whose literals this battery copied (`run-battery.mjs:1423`: "the baseline
+is run.mjs's N1 null, the replicate its N3-p06 null"), `N1` carries `oracle: true` and that flag is
+what threads φ into safe-t:
+
+```
+{ id: 'N1',       m: 100, phi: 0,   oracle: true,  gen: (r) => gaussFrom(r) },   // run.mjs:28
+...
+    run: (vals, cal, test, ns) => safeT.safeTwoSampleTEValue(vals, cal, test,
+      ns.oracle ? { ar1Phi: ns.phi } : undefined) },                             // run.mjs:42-43
+```
+
+**This battery does not do that.** `safeTOpts(phi) = (phi > 0 ? { ar1Phi: phi } : undefined)`
+(`run-battery.mjs:616`) threads nothing at φ=0, and `universal_inference` cannot be threaded at all
+(`universalInferenceMeanShiftEValue(values, cal, test)` takes no options;
+`detectors/universal-inference-e-value.ts:186-190`). So `N1` on those rows asserts a call shape the
+harness never used, and `phi_source` — the field the scorer's regime check actually reads
+(`lib/score.mjs:66`) — is derived from it (`lib/collect.mjs:16-27`). Erratum v1.3 found this defect
+class on `params` and Erratum v1.4/Amendment v2.C47.2 closed it for `family_E_conformal_heldout`.
+**This is the same defect on the scorer-mechanical field.** Erratum v1.5 §C43.4 records how the
+mislabel invited a false inference: WORKLIST `C43` read these cells as out-of-regime evidence
+carrying three class answers.
+
+### C43.1.2 REGISTERED: the per-detector mapping, and every detector left unchanged with its reason
+
+The vocabulary is `terminal-evalue`'s own literals, verbatim (`run.mjs:28-37`) — this battery
+borrows that study's forms and keeps borrowing them.
+
+| detector | what it is handed | φ=0 | φ=0.6 |
+|---|---|---|---|
+| `safe_t` | `safeTOpts(phi)`: `{ar1Phi: phi}` iff φ>0 (`:616`); μ/σ never passed | **`N2-m100`** (was `N1`) | `N3-p06` (unchanged) |
+| `group_average_e_value` | K per-series `safe_t` calls through the same `safeTOpts` (`:635`) | **`N2-m100`** (was `N1`) | `N3-p06` (unchanged) |
+| `universal_inference` | nothing: `fitAR1` fits mean, φ and variance | **`N2-m100`** (was `N1`) | **`N4-p06`** (was `N3-p06`) |
+
+`N2-m100` is exact rather than approximate: `m` is the calibration length the estimate came from,
+and `CAL = { start: 0, len: ONSET }` with `ONSET = 100` (`:79,89`). `CAL` is deliberately not
+per-class (`:100-102`) and none of these three detectors is registered on `K6-slow`
+(`detectorsFor`, `:890`), so **`m = 100` holds for every row this mapping touches** — there is no
+second calibration length to encode.
+
+**Unchanged, each for its own reason** (a per-detector list, not a default — the K6A.2.1 item-12
+lesson that a dispatch fallback is where a candidate gets forgotten):
+
+- `family_D_spectral_e_detector` — **genuinely oracle**, A5 passes `{mu: 0, sigma: 1, phi: cell.phi,
+  alpha, windows}` (`:679`), which is exactly what `N1`/`N3-p06` assert. Erratum v1.3's
+  "stays valid" item 1.
+- `point_tail_bet_e_value`, `shape_block_conformal_bet`, `shape_ecdf_accumulator`,
+  `family_E_conformal_heldout` — they use **no φ at all**, and their `params` already carries the
+  accurate `'heldout-empirical'` (K4.1.5 / K6.9 / K6A.1.10 / C47.2). The `NULL_ID` grammar has no id
+  for held-out calibration, and inventing one would put them on `derivePhiParams`' fail-closed path
+  for no gain (`nulls.mjs:60-63`). K3.1.5's out-of-grammar precedent is available if that is ever
+  wanted; it is **not** taken here.
+- `spectral_bet_e_process` — its ids are K3.1.5's own registration (`'K3-arm-oracle'` on cell 33,
+  the shared convention on fault cells 12–17) and are **not reopened**.
+
+**Registered guard, new:** `nullIdFor` throws on any φ outside `{0, 0.6}`. The pre-change expression
+mapped every φ>0 to `N3-p06`, so an unregistered φ=0.9 cell would have been silently mislabelled.
+The grid registers exactly these two values (`:373`'s `phi === 0.6` filter, §6's cell table).
+
+### C43.1.3 What the new ids derive, and the scoring consequence MEASURED rather than asserted
+
+Derived by `derivePhiParams` (`lib/nulls.mjs:60-86`):
+
+| id | `phi` | `phi_source` | `params` (only if absent; `annotatePhi` never overwrites) |
+|---|---|---|---|
+| `N1` (before) | 0 | `oracle` | `oracle` |
+| `N2-m100` (after) | 0 | `iid-by-construction` | `estimated-moments` |
+| `N3-p06` | 0.6 | `oracle` | `oracle-phi` |
+| `N4-p06` (after, UI only) | 0.6 | `estimated` | `estimated-phi` |
+
+**Disclosed probe** (scratchpad `c43/relabel-rescore.mjs`; reads only the committed
+`validation/certification/results/run-20260809T080049Z/*.card.json`, substitutes the new ids,
+re-annotates exactly as `lib/collect.mjs:16-27` does, and re-runs the **real** `scoreS2`, `scoreS3`,
+`coverageFor` and `pairingGaps`):
+
+| card | rows relabelled | S2 | S3 | coverage | pairing |
+|---|---|---|---|---|---|
+| `safe_t_e_value` | 34 of 101 (φ=0 `N1`→`N2-m100`) | `PASS` → `PASS`, out-of-regime `14` → `14` | `PASS` → `PASS` | K1/K2/K5 `COVERED`, rest unchanged | `[]` → `[]` |
+| `group_average_e_value` | 9 of 10 | `REFUTED` → `REFUTED`, out-of-regime `0` → `0` | `PASS` → `PASS` | K2 `COVERED` | `[]` → `[]` |
+| `universal_inference_e_value` | 27 of 93 (both mappings) | `PASS` → `PASS` | `INERT` → `INERT` | unchanged | `[]` → `[]` |
+| `point_tail_bet_e_value` | 0 of 6 | `PASS` → `PASS` | `PASS` → `PASS` | K4 `COVERED` | `[]` → `[]` |
+
+**Nothing moves.** The three checks that could have moved something, named:
+
+1. **`group_average_e_value`'s `REFUSE` rests on exactly one S2 cell** — the arm-30 healthy row,
+   which is the only cell in its S2 (`perCell` length 1) and is one of the rows this amendment
+   relabels. `'iid-by-construction'` is not `'estimated'`, so `regimeCheck` (`:66`) still admits it
+   and it still reads `REFUTED`. Had the mapping put it on `'estimated'`, this card's whole S2 would
+   have emptied.
+2. **`universal_inference`'s φ=0.6 rows become `'estimated'`** — the one mapping that crosses the
+   axis `phi_known` reads. Its card carries no `phi_known` (`cards/universal_inference_e_value.json`,
+   and `test/golden-verdicts.test.mjs:386` asserts it is `undefined`), and φ=0.6 ≤ its `phi_max`
+   `0.99`, so the branch cannot fire. No other card claims `universal_inference` — `aliases` are
+   `['ui', 'universal_inference']` on that card and `['sequential_ui', 'seq_ui']` on
+   `sequential_ui_e_process`, checked against both files.
+3. **No cross-study identity collision.** `identityKey` (`lib/collect.mjs:33`) keys on
+   `(detector, null_id, control, shift_sigma, alpha)` and is used **only** inside
+   `loadRunCells(dir)` against that one run's own aggregate (`:122-123`), so a coverage
+   `safe_t`/`N2-m100` row cannot dedupe against `terminal-evalue`'s `safe_t`/`N2-m100` cells.
+
+### C43.1.4 Scope: future emissions only
+
+Committed rows keep `N1`. `results/` is append-only (§11 rule 6), and Erratum v1.5 plus its REPORT
+append are their correction. **Counted, not estimated** — rows of the three affected detectors
+carrying `N1` (the ones a re-emission would change), per live run:
+
+| run | rows | affected-detector rows | `N1` | `N3-p06` |
+|---|---|---|---|---|
+| `run-20260808T010208Z` | 66 | 58 | **47** | 11 |
+| `run-20260808T064039Z` | 16 | 4 | **3** | 1 |
+| `run-20260808T091521Z` | 23 | 12 | **10** | 2 |
+| `run-20260808T121548Z` | 14 | 8 | **6** | 2 |
+| `run-20260808T133746Z` | 14 | 8 | **6** | 2 |
+| `run-20260808T133859Z` | 16 | 4 | **3** | 1 |
+| `run-20260808T201635Z` | 44 | 44 | **36** | 8 |
+| `run-20260809T035934Z` | 6 | 0 | 0 | 0 |
+| the three `run-t2-*` runs | 606 each | 0 | 0 | 0 |
+
+**111 committed rows carry the wrong id**, across seven runs, and they stay. The `-t2` runs and
+`run-20260809T035934Z` carry none, and `run-acrossdraw-20260809T065107Z` emits no `summary.json`
+cell set of this shape. **No re-score is registered**: the scored run is unaffected because its rows
+are unaffected, and C43.1.3 measures what a future run's rows will score to.
+
+### C43.1.5 Registered code and test items
+
+**Code item 1 (the only code change).** A per-detector `nullIdFor(detId, phi)` in
+`harness/run-battery.mjs`, next to `calibratesFromHeldout` (`:871`), replacing the two-branch
+per-cell expression at the fault-cell site (`:1426`) and the tail of the arm sites (`:1675`,
+`:1747`). The arm expression's head — `spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId :`
+— is unchanged, and `test/run-battery.test.mjs:1721`'s source pin on it must keep matching.
+
+**Test item 1.** Positive scope, at smoke: every `safe_t` and `group_average_e_value` row carries
+`N2-m100` at φ=0 and `N3-p06` at φ=0.6; every `universal_inference` row carries `N2-m100` at φ=0 and
+`N4-p06` at φ=0.6; asserted on fault cells and on arm 30's two rows.
+
+**Test item 2.** Negative scope, at smoke: every other detector's rows still carry the shared
+`N1`/`N3-p06` convention or their own out-of-grammar literal, `family_D_spectral_e_detector`
+included by name. This is the mutation guard for a dispatch that relabels too much — the K6A.2.1
+item-12 failure shape.
+
+**Test item 3.** The φ guard throws outside `{0, 0.6}`, asserted on the helper's own contract via a
+source pin (the helper is module-local in a CLI harness, as `calibratesFromHeldout` is).
+
+**Paired smoke, required before the code commit lands:** `--n 20`, same seeds,
+`COVERAGE_RESULTS_DIR` redirected, before and after. **Prediction: every emitted row is
+bit-identical except `null_id` on exactly the rows C43.1.2's table names, and no other field moves
+on any row.**
+
+### C43.1.6 Disclosures
+
+1. **`cert:expiry` will report `shape_ecdf_accumulator` EXPIRED.** It is the one card pinning
+   `validation/coverage/harness/run-battery.mjs` (K6A.1's freeze). Resolved **last**, in a dedicated
+   pins-only commit, per the K6A.5.3 lesson and the `f487800` / `3f55f55` / `3952ea0` precedents:
+   `tools/freeze-cards.mjs` has no per-card mode, so fourteen cards take an `engine_pin.sha` bump as
+   the disclosed collateral, and no `guarantee`, `regime`, `falsifier`, `shipped_path`, `budget`,
+   `prior_evidence`, `class`, `aliases` or `detector_id` field changes.
+2. **`params` is untouched by this amendment.** `'oracle'` still rides on these three detectors' rows
+   (Erratum v1.3's original finding). `annotatePhi` fills `params` only when absent
+   (`lib/collect.mjs:25`), so the derived `'estimated-moments'` / `'estimated-phi'` will **not**
+   replace it; the accurate provenance now lives in `phi_source`, and the `params` half stays as
+   v1.3 left it. Named so the residue is a stated boundary, not a silence.
+3. **This does not narrow any card.** No card's `regime` is touched. `safe_t_e_value` keeps
+   `phi_known: true`, which Erratum v1.5 §C43.6 found correct.
+4. **The class-answer layer still reads no regime** (`lib/score.mjs:358-404`). This amendment makes
+   the provenance field honest; it does not make the class answers depend on it.
+
+### C43.1.7 House rules, mapped
+
+(1) **Registered before the code exists** — this amendment is committed before the harness change.
+(2) The only value that moves is a provenance label; no endpoint, floor or threshold exists to move
+under a reading, and C43.1.3 measures the scoring outcome under the new labels rather than asserting
+it. (3) C43.1.3 is a clearly-labelled probe over already-published rows and carries no verdict.
+(4) §9's fallback untouched. (5) No substrate is drawn: no seed, generator or detector changes.
+(6) `results/` untouched — no run directory written, no row edited. (7) No rerun and no re-score.
+(8) Every number the probe produced is stated in C43.1.3, including the one that is not comfortable
+(`group_average_e_value`'s `REFUSE` rests on a single relabelled cell).

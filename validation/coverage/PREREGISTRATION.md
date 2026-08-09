@@ -10199,3 +10199,15 @@ marginal, which the exact null and the across-draw increment centring speak to; 
 measured is the single-draw lottery K6A.1.7 already registered, in a statistic whose critical value
 assumed the lottery away. **The single-draw protocol question (C51 item 4) stays open, and
 `computePUniformity`'s critical value is deliberately NOT changed here.**
+
+### Clarification append to Amendment v2.C38.1 C38.1.1, dated 2026-08-09 (appended not edited)
+
+C38.1.1's `54` is counted **per terminal-class card**: cells matched to a card by `detector_id` or
+alias that carry either terminal instrument (`mean_e` or `exceedance`). A **corpus-wide** count of
+cells carrying `mean_e_lower_95` — every detector, power arms included — is **`72`**
+(`2026-08-terminal-evalue/run-20260807T215034Z` `58`,
+`2026-08-phi-identifiability/run-20260807T215105Z` `14`). The `54` splits as `40` in the first run
+(`20` `safe_t` + `20` `universal_inference`) and `14` in the second (`7` + `7`). Both counts are
+correct for their own scope; stated here so neither can be mis-quoted against the other. **The
+finding does not turn on which is used: under either count the WORKLIST claim of zero is false, and
+under both the residue is the same — 0 of this battery's 3 terminal-class S2 rows.**

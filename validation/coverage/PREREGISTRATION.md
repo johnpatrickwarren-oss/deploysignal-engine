@@ -7730,3 +7730,148 @@ corrected to **`1.2` combined-SE** (`0.0025 / sqrt(0.0014² + 0.0014²)`), with 
 assumption named and the correction acknowledged as **strengthening the replication it corrects**.
 **The gate verdict, the frozen configuration, the H = 6,000 PASS, v2.K6A's H = 3,000 refutation and
 `K6 = NO` at the deploy-gate geometry all stand unchanged.**
+
+---
+
+## Amendment v2.K6A.4 — 2026-08-08, correcting v2.K6A.3's own smoke screen: it FIRED on noise on the first run, the count is raised, and a suspected lattice defect is measured and found ABSENT
+
+**Registered because the code v2.K6A.3 authorized was run and the rider's own smoke path aborted a
+clean run.** This corrects **this document's own amendment of the same day**, by quote-and-correct,
+with the original intact. **No candidate endpoint, band, floor, prediction or verdict moves. The
+candidate is NOT refuted by the event described here** — the reason it is not is the whole content of
+K6A.4.1. **Prereg text only, own commit, before the corrected code lands.**
+
+### K6A.4.1 The smoke screen fired on MC noise — quoted, measured, and the count raised
+
+**Quoted, v2.K6A.3 K6A.3.1:**
+
+> Every other run (`n != 2000`, or any hook engaged: `MODE = 'sim'`) screens at a reduced
+> **`SCREEN_DRAWS_SMOKE = 5`, `SCREEN_MC_WINDOWS_SMOKE = 200`**
+
+and, in the same section, the reason that count is too small, which the rider **stated and then wired
+the stop rule to anyway**:
+
+> | 200 | `0.021924` | `0.68` — **unusable: MC noise alone exceeds the margin** |
+
+**What happened, first run of the driver** (`--n 5 --classes K6-slow`, `MODE = sim`, smoke screen
+`5 × 200`): draw 3 (`cal_seed 41000003`) read `g_null = +0.008760`, the stop condition fired, the
+run aborted and wrote its screen-failure record. **The abort was mechanically correct and the reading
+was noise.** Re-measured on the same draw, same seeds, nothing else changed:
+
+| draw (`cal_seed`) | `M = 200` | `M = 2,000` | `M = 8,000` |
+|---|---|---|---|
+| **3 (41000003)** | **`+0.008760` POSITIVE** | `-0.041339` | `-0.047401` |
+| 2 (41000002) | `-0.025797` | `-0.072754` | `-0.072265` |
+| 0 (41000000) | `-0.089994` | `-0.053410` | `-0.061964` |
+
+**Registered: draw 41000003 does NOT have positive null growth. `shape_ecdf_accumulator` is NOT
+refuted by this event**, and the screen-failure record it produced is a record of a smoke-path
+defect in this document's own rider, not of a construction defect. Nothing about the frozen `κ`, the
+`m = 500` law, or K6A.1.5's `0/280` is disturbed.
+
+**The correction, with the arithmetic the rider should have done before wiring the count.** The
+quantity that matters is not MC noise alone but the probability that a draw whose true `g_null` is
+negative READS positive, composing MC noise with the across-draw spread K6A.1.5 registers
+(`sd = 1.571e-2` about a mean of `-6.754e-2`):
+
+| `M` | MC SE | combined sd | `z` | P(one draw reads positive) | P(any draw in the run) |
+|---|---|---|---|---|---|
+| `200` (as registered) | `0.021924` | `0.026966` | `2.50` | `6.2e-3` | **`3.0%` over 5 draws** |
+| **`2,000` (registered here)** | `0.006933` | `0.017163` | `3.93` | `4.2e-5` | **`2.1e-4` over 5 draws** |
+| `8,000` (the registered run) | `0.003466` | `0.016078` | `4.20` | `1.3e-5` | **`0.34%` over 250 draws** |
+
+**Registered: `SCREEN_MC_WINDOWS_SMOKE = 2,000`, superseding K6A.3.1's `200`.** At `5 × 2,000` the
+smoke screen's own false-STOP probability is `2.1e-4` per run instead of `3.0%`, and it costs
+`10,000` scored windows — `≈ 0.34 s` at the measured `22.5 µs`, against `≈ 0.11 s` for the count it
+replaces. **A falsifier that fires on 3% of clean smoke runs is not a wiring check, it is a flaky
+test that would eventually be silenced**, which is the failure mode this correction exists to
+prevent.
+
+**And a correction to K6A.3.1's own false-STOP figure for the REGISTERED path, in the conservative
+direction.** Quoted:
+
+> across 250 draws the screen's **false-STOP rate is `≈ 0.2%`**
+
+**Correct: `≈ 0.34%`.** The `0.2%` composed MC noise alone against K6A.1.5's single worst observed
+draw; the figure above composes MC noise with the across-draw distribution, which is the population
+the 250 draws are actually sampled from. **The registered `250 × 8,000` does not change. Only the
+number stating its own false-fire rate does, upward.**
+
+**The enforcement rule, made explicit because this event raised it.** The obvious alternative repair
+— have the smoke screen REPORT without stopping — is **rejected and registered as rejected**: a
+screen that does not stop is the citation K6A.1.10 forbade, and a rule that enforces on one path and
+not another is a rule a reader cannot check. **Registered: the screen ENFORCES on every run it runs
+on, one rule for both paths, and the smoke count is set high enough that enforcement is not
+noise-driven.** The positive control still exercises the abort, because the control's whole purpose
+is a draw that genuinely has positive null growth.
+
+### K6A.4.2 A suspected lattice defect, MEASURED and found ABSENT — the seed scheme stands
+
+**The first hypothesis for the false fire was that K6A.3.1's MC seed scheme reproduces C1.1's defect
+in a new place**, and it is registered here as **not supported**, because a suspicion recorded
+without its measurement becomes folklore.
+
+K6A.3.1 draws the MC null windows at arithmetically-spaced seeds (`42,000,000 + 10,000d + j`), which
+is the same *shape* as the pre-C1 held-out draw Amendment v2.C1 (C1.1) found to be a rank-1
+Kronecker lattice. **Measured against the alternative** — one continuously-advanced stream per draw,
+consumed as `M` consecutive disjoint 150-blocks, which is C1.2's corrected form and K6A.1.3's own
+"consecutive disjoint blocks of ONE continuously advanced stream":
+
+| draw | spaced-seed `M = 8,000` | one-stream `M = 8,000` | difference |
+|---|---|---|---|
+| 3 | `-0.047401` | `-0.048393` | `0.000992` |
+| 2 | `-0.072265` | `-0.078611` | `0.006346` |
+| 0 | `-0.061964` | `-0.062194` | `0.000230` |
+
+**All three agree inside the `M = 8,000` MC SE of `0.003466` except draw 2, which is `1.8` SE — i.e.
+sampling noise, with no consistent sign.** No bias is detectable, and the reason is mechanical and
+worth stating: **C1.1's lattice arose because each spaced seed produced exactly ONE gaussian**, so
+both uniforms `gaussFrom` consumes were affine in the seed index. **Here each seed produces a whole
+150-value window from its own stream**, so the affine-in-`j` structure is confined to the first draw
+of each window and is diluted 150-fold. **Registered: K6A.3.1's MC seed scheme STANDS as registered.
+The one-orbit limitation K6A.2.3 registered still applies and is still inherited, unchanged — this
+measurement bounds a bias, not the segment-overlap question.**
+
+**Named not-done:** the same check at the registered `250 × 8,000` (this compares three draws, not
+250), and any characterization of the spaced-seed scheme at consumption levels other than one
+150-block per seed.
+
+### K6A.4.3 House rules, mapped
+
+(1) **Committed before the corrected code** — the driver's smoke count is changed in the commit that
+follows this one, and no K6-slow run exists. (2) **A failed endpoint is a publishable result, and
+this amendment is one**: the rider's own smoke path was refuted by its first execution, the record it
+wrote is retained in the build scratchpad, and nothing is quietly retuned. (3) No post-hoc analysis
+of any candidate endpoint: the numbers here are the screen's own diagnostics (`g_null` at three MC
+counts on three screen draws) plus closed-form probability arithmetic on already-registered
+quantities (`sd = 1.571e-2`, mean `-6.754e-2`, `sd(-log p) = 0.975005`). **No candidate cell, arm or
+class endpoint was read to produce them** — the aborted run generated no trajectory of any class.
+(4) No new seeds: the bands of K6A.3.1 stand and are re-affirmed by K6A.4.2's measurement.
+(5)–(6) No new cell, fallback or result; `results/` untouched. (7) **Quote-and-correct**, twice
+against **this document's own amendment of the same day** (the smoke count and its own false-STOP
+figure), with the originals intact and both corrections against this author's convenience: one
+admits the rider wired a count it had itself called unusable, the other raises the screen's stated
+false-fire rate. (8) Every candidate endpoint and verdict stands as K6A.1.12 registers them.
+
+### Amendment summary
+
+Corrects **v2.K6A.3, the same day, after its own driver was run**: the registered smoke screen
+(`5 × 200`) **fired on the first execution** — draw `41000003` read `g_null = +0.008760` and the run
+aborted — and **re-measurement on the same draw and the same seeds gives `-0.041339` at `M = 2,000`
+and `-0.047401` at `M = 8,000`, so the reading was MC noise and the candidate is NOT refuted**. The
+rider had itself tabulated `M = 200` as *"unusable: MC noise alone exceeds the margin"* and then
+wired the stop rule to it. **Registered: `SCREEN_MC_WINDOWS_SMOKE = 2,000`**, which takes the smoke
+path's false-STOP probability from **`3.0%` per run to `2.1e-4`** at a cost of `≈ 0.34 s`, composing
+MC noise with K6A.1.5's across-draw spread rather than MC noise alone; **and K6A.3.1's own
+false-STOP figure for the registered `250 × 8,000` path is corrected upward from `≈ 0.2%` to
+`≈ 0.34%`** by the same composition. The obvious alternative repair — a smoke screen that reports
+without stopping — is **registered as REJECTED**, because a screen that does not stop is the citation
+K6A.1.10 forbade: **the screen enforces on every run it runs on, and the count is what makes
+enforcement honest.** Separately, the first hypothesis for the fire — that the MC seed scheme
+reproduces C1.1's rank-1 lattice — is **measured and found ABSENT** (spaced-seed against
+one-continuous-stream at `M = 8,000` on three draws: `0.000992`, `0.006346`, `0.000230` apart, no
+consistent sign, all within or at `1.8` MC SE), with the mechanical reason registered (C1.1's lattice
+came from ONE gaussian per spaced seed; here each seed yields a whole 150-value window, diluting the
+affine structure 150-fold), so **K6A.3.1's seed bands stand** and K6A.2.3's one-orbit limitation is
+still inherited unchanged. **The gate verdict, the frozen configuration, the H = 6,000 PASS and
+`K6 = NO` at the deploy-gate geometry all stand.**

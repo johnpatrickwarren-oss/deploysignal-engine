@@ -10993,3 +10993,157 @@ it. (3) C43.1.3 is a clearly-labelled probe over already-published rows and carr
 (6) `results/` untouched — no run directory written, no row edited. (7) No rerun and no re-score.
 (8) Every number the probe produced is stated in C43.1.3, including the one that is not comfortable
 (`group_average_e_value`'s `REFUSE` rests on a single relabelled cell).
+
+## Correction append to Erratum v1.5 and Amendment v2.C43.1, dated 2026-08-09 (appended not edited): the price sheet was incomplete, the row count short by ten, and four smaller defects — all against this author's own text
+
+Review of the C43 branch (APPROVED with findings). Every finding below is against text this author
+wrote earlier in this document; each is reproduced before it is corrected. Nothing here changes an
+endpoint, a seed, a floor, a detector or a card's regime.
+
+### F1 (the substantive one) — C43.5's price sheet MISSED A CLASS, and the mechanism it missed is worse than the one it found
+
+C43.5 says the class answers "move only under a **second** change nobody has registered — gating the
+class-answer layer on the regime". **That is wrong.** One class flips under the strict reading
+**alone**, through the card verdict rather than the coverage layer, and C43.5 never looked there.
+
+**The mechanism.** A class answers YES iff *some card with overall verdict `USE`* has it `COVERED`
+(`verdict.mjs:362`). The strict reading can therefore strike a class answer by demoting the
+**carrier card**, with `coverageFor` left entirely alone. Two cards are one S2 cell wide:
+
+| card | `phi_known` | its whole S2 | under the strict reading |
+|---|---|---|---|
+| `point_tail_bet_e_value` | `true` | **1 cell** — arm 32's healthy row, `null_id: 'N1'`, φ=0, `excluded: []` | that cell leaves the regime, `inRegimeMapped.length === 0` (`score.mjs:229-230`) → S2 `PASS` → **`MISSING`**, S3 `PASS` → `MISSING`, overall **`USE`/T1 → `NOT_EXECUTABLE`** |
+| `group_average_e_value` | `true` | **1 cell** — arm 30's healthy row, `null_id: 'N1'`, φ=0, `excluded: []` | same mechanism: S2 `REFUTED` → `MISSING`, overall **`REFUSE` → `NOT_EXECUTABLE`** |
+
+**Verified with the real scorer, portfolio-wide** (probe `tools/strict-phi-counterfactual.mjs`, now
+extended to all fifteen cards and to `overallVerdict`, committed with this append). The corrected
+price sheet:
+
+| class | HEAD | strict reading **alone** | strict + regime-gated coverage |
+|---|---|---|---|
+| K1 | YES (`safe_t`, `universal_inference`) | YES (both) | YES (`universal_inference`) |
+| K2 | YES (`safe_t`) | YES (`safe_t`) | **NO** |
+| K3 | YES (`spectral_bet_e_process`) | YES | YES |
+| **K4** | YES (`point_tail_bet_e_value`) | **NO** | **NO** |
+| K5 | YES (`safe_t`) | YES (`safe_t`) | **NO** |
+| K6 | NO | NO | NO |
+| K6-slow | YES (`shape_ecdf_accumulator`) | YES | YES |
+
+**Corrected total: three class answers (K2, K4, K5) and two card verdicts.** C43.5 named K2 and K5
+and put both behind a second change; K4 needs no second change, and the two card-verdict movements
+were not priced at all. `safe_t_e_value` itself is unmoved — `USE`/T1 either way, on its 12 threaded
+cells — so C43.5's headline about the card the row was written against still holds. **What does not
+hold is the claim that the reading is free at HEAD's protocol.** It is not: it costs K4 outright.
+
+**Probe limitation, disclosed.** The re-score reads each card's committed `perCell` arrays, so cells
+the published scorer had already routed to `excluded`/`missing` are not in its input.
+`family_E_conformal` is therefore mis-reported by the probe as S2 `VOID` → `MISSING` — an artifact:
+all 66 of its S2 cells sit in `excluded` (voided run), so no re-score from `perCell` can reproduce
+`VOID`. **The three `phi_known: true` cards — the only cards the strict reading can touch — each
+carry `excluded: []` and `missing: []` on S2, so their inputs are complete and F1's numbers are
+exact.** No other card in the portfolio declares `phi_known`.
+
+### F2 — "111 committed rows" undercounts by ten, and the ten are the ones whose honest tag is `estimated`
+
+C43.1.4 states: "**111 committed rows carry the wrong id**". That counts only rows stamped `N1`. It
+omits `universal_inference`'s φ=0.6 rows, which are stamped `N3-p06` (oracle φ) and whose accurate id
+is `N4-p06` — the only mapping in C43.1.2 that crosses onto `phi_source: 'estimated'`. Counted:
+
+| run | `N1` | UI `N3-p06` |
+|---|---|---|
+| `run-20260808T010208Z` | 47 | 4 |
+| `run-20260808T064039Z` | 3 | 0 |
+| `run-20260808T091521Z` | 10 | 1 |
+| `run-20260808T121548Z` | 6 | 1 |
+| `run-20260808T133746Z` | 6 | 1 |
+| `run-20260808T133859Z` | 3 | 0 |
+| `run-20260808T201635Z` | 36 | 3 |
+| **total** | **111** | **10** |
+
+**Corrected: 121 committed rows carry an id this amendment would change**, not 111. The
+`safe_t`/`group_average_e_value` `N3-p06` rows (18 across the same runs) are correct as stamped and
+are not in either count.
+
+### F3 — C43.10 item 6 contradicts the commit it was written in
+
+C43.10 item 6 reads: "`results/` untouched — **no run directory written, no row edited.**" The commit
+carrying Erratum v1.5 also filed a **48-line dated append** into
+`results/live/run-20260808T010208Z/REPORT.md`. **Corrected sentence:** *no run directory was written
+and no emitted row was edited; one dated append was filed into one REPORT, which is the append-only
+route §11 rule 6 prescribes for exactly this correction.* The claim as written was false about its
+own commit.
+
+### F4 — a literal NUL byte in `lib/score.mjs`, and it sat under this branch's own headline evidence
+
+`lib/score.mjs:265` carried a **literal NUL** as a Map-key separator inside a template literal.
+Consequence: `grep` classifies the file as binary and, with `-n` and without `-a`, prints **nothing**
+for a matching pattern — an empty result that reads as "no match". This branch hit it while citing
+that very file: every line number in Erratum v1.5 §C43.3 had to be recovered with `python3` after
+`grep` returned silence, and §C43.3's central claim is an **argument from absence** ("`regimeCheck`,
+`inRegime` and `effectivePhi` appear … **zero times** between `:358` and `:404`"). A reader
+re-checking that claim with `grep` would have got an empty result and no way to tell verification
+from breakage. **Fixed** in a scoped commit: the literal byte becomes the `\0` escape — same string
+value, one character of source, no behavioural change, and the pins of the nine cards that hash
+`lib/score.mjs` move accordingly. The absence claim was re-verified after the fix with plain `grep`
+and holds.
+
+### F5 — the second probe is committed too
+
+`c43/relabel-rescore.mjs` produced C43.1.3's table and was left in the scratchpad, which is the
+standard `tools/README.md` exists to forbid and which this branch already corrected once for the
+other probe. It is committed as `tools/relabel-rescore.mjs`, with its README row.
+
+### F6 — this document misquoted its own probe filename
+
+The correction append above quotes C43.5 as saying "scratchpad `c43/strict-phi-counterfactual.mjs`".
+C43.5 actually says **`c43/strict-reading-counterfactual.mjs`**. The committed file is
+`tools/strict-phi-counterfactual.mjs`. Both names appear in this document because the script was
+renamed when it was committed; the quote should have carried the pre-rename name.
+
+### F7 — cites that no longer resolve, because this branch's own change moved them
+
+`nullIdFor`'s insertion moved every line below it. Erratum v1.5 and Amendment v2.C43.1 were both
+written before the harness commit (`431894a`) and cite the pre-change file, which was correct at
+registration. At current HEAD:
+
+| cited | was | is now | note |
+|---|---|---|---|
+| fault-cell `null_id` stamp | `:1426` | **`:1463`** | and the line's content is the fix itself |
+| the two arm `null_id` sites | `:1675`, `:1747` | **`:1712`**, **`:1784`** | |
+| `detectorsFor` / its `K6-slow` case | `:878` / `:890` | **`:914`** / **`:926`** | |
+| the "run.mjs's N1 null" comment | `:1423` | rewritten | replaced by C43.1's own comment |
+
+Unmoved and still exact: `safeTOpts` `:616`, `calibratesFromHeldout` `:871`, `familyDDet.make`
+`:679`, the `phi === 0.6` filter `:373`, `ONSET` `:79`, `CAL` `:89`. **One imprecision, corrected:**
+Erratum v1.5 §C43.4 cites `:89` for both `CAL` and `ONSET = 100`; `ONSET` is at `:79`.
+
+### F8 — the inconsistency the fix creates on the row itself, named
+
+Amendment v2.C43.1's disclosure list did not say this plainly, so it is said here: a future emitted
+row of these three detectors will carry **`null_id: 'N2-m100'` beside `params: 'oracle'`** — an
+internally inconsistent pair, one field saying the moments were estimated from the calibration window
+and the other saying they were oracle constants. C43.1.6 item 2 records why `params` was left alone
+(it is Erratum v1.3's finding and needs its own forward fix, and `annotatePhi` will not overwrite a
+present literal). **The pair must not be read as evidence that φ was oracle.** `phi_source` is the
+field the scorer reads and it is now accurate; `params` is the stale half, and closing it is the open
+item.
+
+### F9 — cross-reference to F1: `point_tail_bet_e_value`'s tags rest on nothing threaded, and that IS the K4 exposure
+
+C43.1.2 leaves the four held-out-calibrated candidates on `N1`/`N3-p06` because "the `NULL_ID`
+grammar has no id for held-out calibration". True, and the consequence is now visible in F1: those
+rows' `phi_source: 'oracle'` asserts a threading that **cannot** happen for a detector that takes no
+φ at all, and `point_tail_bet_e_value`'s single S2 cell is exactly such a row. It is why K4 — not K2,
+not K5 — is the class that falls under the strict reading with no second change. The two findings are
+one finding seen from two ends: **an id that claims oracle provenance for a detector that was handed
+nothing is the whole exposure**, and C43.1 fixed it for the three detectors that estimate φ while
+leaving it standing for the four that ignore φ. Registering an out-of-grammar literal for them
+(K3.1.5's precedent) is now a **named open item with a measured consequence**, not the cosmetic
+choice C43.1.2 implied.
+
+### What this append does NOT change
+
+The verdict of Erratum v1.5 stands and is unweakened: WORKLIST `C43`'s premise is false at HEAD — no
+coverage cell is out of regime, the coverage layer reads no regime, and `safe_t_e_value` holds
+`USE`/T1 under both readings. F1 sharpens the price of the reading the protocol rejected; it does not
+revive the row's claim. No card regime is narrowed, no endpoint moves, and no run is re-scored.

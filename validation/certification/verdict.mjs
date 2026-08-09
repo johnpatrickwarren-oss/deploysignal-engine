@@ -69,11 +69,17 @@ const gitSha = execSync('git rev-parse HEAD', { cwd: repoRoot }).toString().trim
 // sections (C1.6, C1.1); format 5 splits those sections by provenance -- a registry-declared drop
 // gets its own section, and a legacy declaration a registry covers moves out of "STILL SCORED"
 // (which is no longer true of it) into a section that says what closed it (h0-battery Amendment
-// A1). Preserved runs written under an earlier format are never rewritten --
+// A1); format 6 emits a SEVENTH class row -- coverage Amendment v2.K6A.1 (K6A.1.13 item 1) adds
+// `K6-slow` to FAULT_CLASSES and `coverageFor`/`classRow` iterate its keys, so every COVERAGE.md
+// this CLI writes from here on carries seven class rows where the eight committed run directories
+// carry six. The row-count machine check in test/report-consistency.test.mjs is gated on this
+// field for exactly that reason (the controller's ruling, registered at v2.K6A.2 K6A.2.1): format
+// >= 6 is checked against the seven-class shape, format < 6 against the frozen six-class list.
+// Preserved runs written under an earlier format are never rewritten --
 // results/ is append-only -- so the machine check in test/report-consistency.test.mjs reads this
 // field to know which columns and which detail lines to expect.
 writeFileSync(join(outDir, 'manifest.json'), JSON.stringify({
-  study: 'detector-certification', protocol_version: 1, report_format: 5, git_sha: gitSha,
+  study: 'detector-certification', protocol_version: 1, report_format: 6, git_sha: gitSha,
   node: process.version, cards: cardFiles.map((f) => ({ file: f, sha256: fileSha256(join(here, 'cards', f)) })),
 }, null, 2) + '\n');
 

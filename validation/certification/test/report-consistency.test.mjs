@@ -48,6 +48,17 @@ function coveringCellFor(covClass) {
 // checkRunDir already applies to REPORT.md. A class answers YES iff at least one card
 // with overall.verdict === 'USE' has that class COVERED; a YES row's tier must equal the
 // min tier of the supporting cards' covering canonical cells.
+// The six class rows every committed COVERAGE.md was written with, frozen as a literal. A
+// seventh class (`K6-slow`, coverage Amendment v2.K6A.1 K6A.1.13 item 1) makes
+// `Object.keys(FAULT_CLASSES)` seven long, and the eight committed run directories' COVERAGE.md
+// files have six rows each and are never rewritten (verdict.mjs:322 "FUTURE RUNS ONLY --
+// committed COVERAGE.md files are not rewritten"). The controller's registered ruling
+// (v2.K6A.2 K6A.2.1) is the report_format gate below: format >= 6 is checked against today's
+// class list, format < 6 against this frozen list. Reading the frozen list off FAULT_CLASSES
+// minus the new keys would defeat the point -- an older run is checked against the shape it was
+// WRITTEN under, which is a literal, not a derivation.
+const FROZEN_SIX_CLASS_ROWS = ['K1', 'K2', 'K3', 'K4', 'K5', 'K6'];
+
 function checkCoverageDir(dir) {
   const coveragePath = join(dir, 'COVERAGE.md');
   if (!existsSync(coveragePath)) return;
@@ -55,7 +66,7 @@ function checkCoverageDir(dir) {
   const cards = readdirSync(dir).filter((n) => n.endsWith('.card.json'))
     .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')));
 
-  const classIds = Object.keys(FAULT_CLASSES);
+  const classIds = reportFormat(dir) >= 6 ? Object.keys(FAULT_CLASSES) : FROZEN_SIX_CLASS_ROWS;
   const rows = coverage.split('\n').filter((l) => classIds.some((k) => l.startsWith(`| ${k} |`)));
   assert.equal(rows.length, classIds.length, `${dir}: expected ${classIds.length} class rows in COVERAGE.md, got ${rows.length}`);
 
@@ -204,6 +215,41 @@ test('verdict.mjs run against a temp CERT_RESULTS_DIR produces a self-consistent
   const missing = readFileSync(join(dir, 'MISSING-CELLS.md'), 'utf8');
   assert.match(missing, /clustersynth-ui \/ 13 wide-format studies: 426 cells carry no detector field/, 'standing gap 1 not carried verbatim into MISSING-CELLS.md');
   assert.match(missing, /power-per-cell \+ phi-sweep \(2026-08-05\): runs exist only under terminal-evalue\/results\/sim\//, 'standing gap 2 not carried verbatim into MISSING-CELLS.md');
+});
+
+// ── coverage Amendment v2.K6A.2 (K6A.2.1) — the row-count gate, pinned from both ends ──────
+// The controller's ruling has two halves and this test asserts each one against the artifacts
+// rather than against the prose: (1) this CLI now writes report_format 6, so a run emitted today
+// is checked against today's class list; (2) every COMMITTED run directory is format < 6 and its
+// COVERAGE.md carries exactly the frozen six rows, which is the premise that makes gating on the
+// format safe. Reverting the format bump in verdict.mjs fails (1); rewriting a committed
+// COVERAGE.md to a seventh class, or bumping a committed manifest's format, fails (2).
+test('K6A.2.1: this CLI writes report_format 6, and every committed run stays at the frozen six-row shape', (t) => {
+  const tmpRoot = mkdtempSync(join(tmpdir(), 'cert-format6-'));
+  t.after(() => rmSync(tmpRoot, { recursive: true, force: true }));
+  execFileSync(process.execPath, [verdictScript], { cwd: certDir, env: { ...process.env, CERT_RESULTS_DIR: tmpRoot }, stdio: 'pipe' });
+  const fresh = readdirSync(tmpRoot).filter((d) => d.startsWith('run-')).map((d) => join(tmpRoot, d));
+  assert.equal(fresh.length, 1, 'expected exactly one fresh run directory');
+  assert.equal(reportFormat(fresh[0]), 6,
+    'v2.K6A.2 K6A.2.1: the K6-slow build bumps report_format to 6 — the row-count gate reads this field');
+
+  const committed = runDirs().map((r) => join(resultsRoot, r));
+  assert.ok(committed.length > 0, 'no committed certification run to check');
+  let withCoverage = 0;
+  for (const dir of committed) {
+    assert.ok(reportFormat(dir) < 6,
+      `${dir}: a committed run must not claim format 6 — committed COVERAGE.md files are never rewritten (verdict.mjs:322)`);
+    const coveragePath = join(dir, 'COVERAGE.md');
+    if (!existsSync(coveragePath)) continue;
+    withCoverage += 1;
+    const rows = readFileSync(coveragePath, 'utf8').split('\n')
+      .filter((l) => /^\| [A-Za-z0-9-]+ \| (YES|NO) \|/.test(l));
+    assert.deepEqual(
+      rows.map((l) => l.split('|')[1].trim()), FROZEN_SIX_CLASS_ROWS,
+      `${dir}: a committed COVERAGE.md must still carry exactly the frozen six class rows, in order`,
+    );
+  }
+  assert.ok(withCoverage >= 8, `expected at least the eight committed COVERAGE.md files K6A.2.1 counts, found ${withCoverage}`);
 });
 
 // ── Amendment v2.C1 C1.9: the NO-row tie is rendered, not silently resolved ────────────────

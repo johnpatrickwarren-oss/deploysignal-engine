@@ -10,11 +10,15 @@ Four items, four commits, one per item, each pathspec-scoped. Prereg before code
 | 3 | C39 — increment estimator as the terminal-class REPORTED mean instrument | `6bc0afa` | Amendment v2.C39 | harness + 3 tests |
 | 4 | C45 probe — KS residual decomposition | `f6608fb` | Amendment v2.C45 (design + numbers) | `tools/ks-decomposition.mjs` |
 
+Two follow-up commits: `3a846aa` appends a scoping clarification to C38.1.1's census (54 per-card
+against 72 corpus-wide), and `1c6c94a` / this file carry the ledger.
+
 ## Three corrections this batch had to make first
 
 1. **C38.1's premise is false at HEAD.** The WORKLIST says *"no run anywhere in the repo records
-   that field"*. **54 cells record `mean_e_lower_95`** — `terminal-evalue/run-20260807T215034Z`
-   (40 cells) and `phi-identifiability/run-20260807T215105Z` (14) — registered by
+   that field"*. **54 cells record `mean_e_lower_95`**, counted per terminal-class card —
+   `terminal-evalue/run-20260807T215034Z` (40) and `phi-identifiability/run-20260807T215105Z` (14);
+   the corpus-wide count including power arms is **72**. Registered by
    `POWER-PER-CELL-ADDENDUM-2026-08-07.md` change (a) and described in
    `validation/certification/README.md`. safe-t's frozen falsifier is already evaluable on **27 of
    its 47** candidate cells. The residue is real and is this battery's alone: **0 of its 3
@@ -115,7 +119,8 @@ only (the terminal-instrument S2 rows of arms 30, 31, 32): `mean_e_sd`, `mean_e_
 
 ## Wiki write-backs owed (wiki is READ-ONLY here)
 
-1. `C38` row (1): the "no run records that field" claim is false at HEAD — 54 cells, two runs.
+1. `C38` row (1): the "no run records that field" claim is false at HEAD — 54 cells per card (72
+   corpus-wide), two runs.
 2. `C47` row (2): scope is 6 rows per run × 3 runs = 18, not arm 31 alone.
 3. `C45` row: `0.02290` (KS, T1) and `0.01671` (`P(p<=0.05)`, T2) are different statistics; the
    mechanism is closed; the diagnostic's critical value never applied and `m` is the governing `n`.

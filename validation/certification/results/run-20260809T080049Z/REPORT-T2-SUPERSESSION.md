@@ -83,3 +83,32 @@ gives verdict authority to, cleared at `t2_pooled_lower_95 = 0.007528 <= α`.
 
 `cert:expiry` reads **all cards current** — no card pins the T2 harness, the coverage
 pre-registration, or anything else this branch edited — and `cert:validate-cards` reads **15/15 OK**.
+
+---
+
+## Append, 2026-08-09 — the "one observable moved" accounting was incomplete
+
+Registered in `../../../coverage/PREREGISTRATION.md`, v2.K6A.7's correction append, item F5. **No
+tuple moves; the golden delta is still NONE, 0 of 15.**
+
+The section above is headed "The one observable that moved". Diffing all fifteen `*.card.json`
+against `run-20260809T040659Z` shows **two further movements, on every card**:
+
+```
+source_files[].sha  0522faf1586dbb544473067dcd92185b8b5d1228 -> 4a48450ce3d489c4354fd5b61455241a1203a092
+source_files[]      + { path: "validation/certification/lib/collect.mjs",
+                        sha256: "62389a1377c4f3e742c87c17069a4d839ae868e17f152ccef3cb567585e66e37" }
+```
+
+**Neither belongs to C50.** Both come from ancestor commits on `main` — `4a48450` ("pin
+`lib/collect.mjs` on all fifteen cards") and its follow-on `07a0a54` — and the prior re-score
+`run-20260809T040659Z` was emitted at `563bfee`, which `git merge-base --is-ancestor 563bfee
+4a48450` confirms is an ancestor. **The card definitions themselves changed between the two
+re-scores, independently of this branch.**
+
+**The accounting rule this got wrong, registered:** a re-score diff against the previous re-score is
+not a diff of this branch's effect unless the two re-scores share a card freeze. They do not here.
+Scoped correctly, **C50's own effect on the fifteen cards is exactly one field —
+`shape_ecdf_accumulator.card.json`'s `generated_from.runs` — plus `COVERAGE.md`'s header engine
+sha.** The inherited pin movements change no tuple either, and `cert:expiry` reads all cards
+current.

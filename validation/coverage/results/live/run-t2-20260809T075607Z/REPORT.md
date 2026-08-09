@@ -184,3 +184,54 @@ arm's constants, cells, seeds and predictions, `K6 = NO` at the deploy-gate geom
 `K6-slow YES at this calibration draw` reading. T2 rows carry no `fault_class` and none of the field
 names `isValidityCell`/`isPowerCell` test, so they are candidates for nothing scored — K6A.7.7
 registered that prediction against the code and section 4's finding does not change it.
+
+---
+
+## Append, 2026-08-09 — two corrections to this REPORT, filed after an independent review
+
+Added without touching this run's committed `summary.json` or `manifest.json` (committed at
+`5b6e611`), in the shape §11 rule 3 requires. Registered in `../../PREREGISTRATION.md`, v2.K6A.7's
+correction append, items F4 and F2. **No endpoint in §1 or §2 moves: the stop condition stays
+cleared at `t2_pooled_lower_95 = 0.007528`, `gpu_temp_c` still crosses on `8` of `120`, and the two
+recorded deviations stand.**
+
+**F4 — §4's per-pair null crossing figures were 36× too high, in the CONSERVATIVE direction.**
+Quoted from §4 above:
+
+> `0` crossings in `120,000` draws […] a one-sided 95% bound of about `2.5e-5` per pair. Expected
+> crossings over 120 pairs: **at most `0.003`. Observed: `8`.**
+
+and the `~4.9e-5` / `~3.7e-5` figures §4 inherits from K6A.7.3. **All of these are
+`P(>= 3 of 4 windows at the p-floor)`, and three floors is not the clearing condition:** three
+floors plus a fourth window at `p = 46/46` gives `S_4 = 11.4859` against the required
+`14.2347005`, far short. The exact condition is `p <= 2/46` on the fourth window.
+
+Only window 4 can cross (three windows attain at most `3 × 0.834782 = 2.504 < log 20 = 2.9957323`),
+so the per-pair probability is exactly `P(S_4 >= 14.2347005)` under uniform `p` on the 46-point
+grid. Enumerated over all `46^4 = 4,477,456` vectors:
+
+```
+clearing vectors: 5   ->  P(cross per pair) = 1.1167e-6   exact, not a bound
+   all four at 1/46, and the four permutations of three at 1/46 with one at 2/46
+expected crossings over n = 120:  1.340e-4      (this REPORT said "at most 0.003")
+```
+
+**The correction strengthens §4's finding rather than weakening it.** `gpu_temp_c`'s departure is
+`8` observed against `1.34e-4` expected, not against `0.003`. **The contiguity answer of §4 is
+unchanged and better supported.** Also corrected: this REPORT's `14.2337` is a digit transposition
+of `14.23470`, which K6A.1.11 had right.
+
+**F2 — §3's and the geometry note's premise that the overlap is forced is FALSE.** The review
+constructed a disjoint full-span layout at the frozen geometry: **A = every 4th BLOCK** (15 blocks
+of 150 = 2250 ticks, spread over the whole span), **B = the other 45 blocks** in order. Disjoint,
+full-span, every B block still 150 consecutive ticks, at the frozen `n_A = 2250` and `m = 45`.
+Measured at `R = 120,000`: block-strided sits on the exact null (`−0.30` SE) where this run's
+tick-strided layout carries `+0.012198 ± 0.000237` (`51.52` SE paired).
+
+**This run is NOT superseded and is not rerun.** Its bias is measured, registered and
+endpoint-safe — `E[e] = 0.972328 <= 1`, so the e-value property and Ville's bound hold; the overlap
+spends `30.6%` of the null's margin below one, not the guarantee; and `0` of `120,000` i.i.d. pairs
+crossed in any layout. **Block-strided A is registered as the layout for any FUTURE T2 run.**
+Measured across 12 fresh clustersynth seeds, the switch leaves `gpu_temp_c` crossings identical
+(`7/1440` both) and every increment mean within `0.01`, **so it would not have changed §4's answer
+either** — which is why leaving this run scored is not a convenience.

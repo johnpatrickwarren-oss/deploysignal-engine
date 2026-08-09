@@ -1,0 +1,79 @@
+{
+  "protocol_version": 1,
+  "detector_id": "shape_ecdf_accumulator",
+  "aliases": [
+    "ecdf_accumulator",
+    "k6slow_bet"
+  ],
+  "family": null,
+  "class": "test_martingale",
+  "engine_pin": {
+    "version": "0.6.6-pre",
+    "sha": "c5c0688903729173d998a22d0211deeff1807de6"
+  },
+  "source_files": [
+    {
+      "path": "detectors/shape-ecdf-accumulator.ts",
+      "sha256": "e03ea3662342eb3dc2c5dd79c85800aa0f5a07a2b93d643a1288d843b726b9b8"
+    },
+    {
+      "path": "validation/coverage/harness/run-battery.mjs",
+      "sha256": "e7d47350a6a54ed7d46be2f5284e484b69e5f79ca1511f6cc134cb70bc25c7a9"
+    }
+  ],
+  "guarantee": {
+    "sentence": "block-conformal energy-distance accumulator on a held-out reference ECDF, read over an HOURS-SCALE horizon: per registered held-out draw of n=100,000 rows at phi=0 (A = rows 1..25,000 -> Fhat_A; B = rows 25,001..100,000 -> m = 500 disjoint contiguous W=150 blocks, exactly, no remainder), T(w) = (2/(W*n_A))*SUM|x_i - a_j| - (1/W^2)*SUM|x_i - x_k| is the two-sample energy distance against Fhat_A with the constant reference term dropped (rank-invariant); p = (1+#{ref T(B_j) >= T(live)})/(m+1) is super-uniform under block exchangeability of the m reference blocks and the live window's own statistic (stationarity across the calibration+live span -- the registered regime; O(1/m) discreteness qualifier at finite m, not the continuous-rank identity exactly); e = kappa*p^(kappa-1) satisfies E[e|H0] <= 1 with kappa = 0.6820 a FROZEN literal (not re-derived on the data that reports the endpoint -- PREREGISTRATION.md Amendment v2.K6A K6A.6's circularity removal), giving E[e|null] = 0.991433 exactly at m = 500; this construction has ONE feature, so there is no per-window averaging step, and across the 40 disjoint W=150 windows of the registered post-onset span [300,6300) the per-window e combine by PRODUCT in the log domain (ADR 0026), a genuine test martingale, never by max. Registered horizon, and the whole of what distinguishes this card from shape_block_conformal_bet: H = 6,000 post-onset ticks (T = 6,300, ONSET = 300), where the SAME construction at the deploy-gate H = 3,000 is REFUTED on the record (Amendment v2.K6A K6A.7, un-withdrawn; v2.K6A.1's own fresh draw reproduces it at 0.250). The H = 3,000 -> 6,000 bar was re-ratified by OPERATOR DECISION AFTER the first measurement missed it (v2.K6A.1 K6A.1.1) -- a post-measurement relaxation, disclosed as such and paid for with a fresh gate on fresh seeds. Registered before any run: canonical (d=1.5) detection 0.62 with a per-calibration-draw band [0.333, 0.848], so a single-draw reading is a draw and not a class answer (see notes). Out of claim, by design: contamination robustness (a contaminated calibration segment is NOT covered -- the exchangeability argument assumes the same stationary continuous law in every reference block and in the live window, and the module throws on a degenerate or constant reference rather than scoring it), any T3 real-telemetry claim, and any wall-clock guarantee.",
+    "quantifiers": [
+      {
+        "text": "block-conformal rank super-uniformity under block exchangeability, O(1/m) qualifier at finite m; E[e|null] = kappa*(m+1)^(-kappa)*SUM k^(kappa-1) = 0.991433 at m = 500 and 0.960274 at the T2 m = 45",
+        "tag": "proof",
+        "proof_artifact": "conformal rank identity (integral of kappa*p^(kappa-1) dp = 1 for kappa in (0,1)) + tie-inclusive >= countGte, detectors/shape-ecdf-accumulator.ts:228-235,289-296,419-447; the energy form's prefix-sum identity pinned against the literal W*n_A double sum at the REGISTERED geometry (W=150, n_A=25,000, relative 1e-12) and at a hand-computed W=4 fixture, plus degenerate-reference/constant-block/zero-spread throw fixtures, test/shape-ecdf-accumulator.test.ts; the two m-dependent null laws PREREGISTRATION.md Amendment v2.K6A.2 K6A.2.6"
+      },
+      {
+        "text": "healthy crossing rate over 40 disjoint W=150 windows at phi=0, marginal over the calibration draw (Ville applies to the marginal supermartingale): predicted 0.0181, and 7.9% of calibration draws page above alpha within H = 6,000 by the lottery alone",
+        "tag": "empirical",
+        "proof_artifact": null
+      },
+      {
+        "text": "reference-conditional null growth g_null(S) = log kappa + (1-kappa)*E[-log p|null,S] < 0 at the frozen kappa: measured 0/280 draws positive, worst draw 1.501e-2 below zero, 4.30 sd margin -- and re-checked on fresh draws AT RUN TIME as a registered stop condition, never inherited from the amendment",
+        "tag": "empirical",
+        "proof_artifact": null
+      }
+    ],
+    "regime": {
+      "phi_max": null,
+      "m_min": 45,
+      "baseline": "heldout-empirical",
+      "nulls": "stationary",
+      "stationarity": true,
+      "contamination_out_of_claim": true,
+      "phi_regime": "matched-calibration",
+      "phi_regime_note": "validity is not gated by a phi ceiling -- it requires the calibration blocks and the live window to share the SAME generating process (matched). The registered T1 cells cover phi=0 (cells 43/44/45, arm 47) and a phi=0.6 replicate (cell 46) whose calibration draw is matched to its own live stream. MISMATCHED calibration/live process is out-of-claim, inherited unchanged from the sibling construction's measurement (PREREGISTRATION.md Amendment v2.K6 K6.11) and NOT re-measured for this geometry -- named as a gap, not as a covered case. m_min = 45 is the SMALLEST registered m across both tiers, not the T1 value: T1 runs at m = 500 (75,000/150 exactly, SATURATED per v2.K6A Table 3) and the T2 clustersynth arm runs at m = 45, because 9,000 reference ticks cannot supply 75,000 and the frozen 1:3 A/B ratio is preserved instead (Amendment v2.K6A.1 K6A.1.11). The discrete null law differs materially between them -- E[e|null] 0.991433 at m=500 against 0.960274 at m=45 -- so a T2 reading near 0.99 indicates the wrong m was used (Amendment v2.K6A.2 K6A.2.6). At m = 45 with 4 live windows the T2 healthy falsifier is very nearly VACUOUS (a crossing requires all four windows within a whisker of the p-floor; predicted T2 pooled healthy crossing 0.0000), disclosed rather than routed around: a T2 PASS on validity carries little information at W = 150, and the arm still runs because K6.12's contiguity question is answered by its skip/degeneracy accounting and its p marginals whether or not the crossing endpoint can move."
+    }
+  },
+  "shipped_path": {
+    "kind": "block-conformal energy-distance accumulator on a held-out reference ECDF, 40 disjoint 150-tick live windows over an hours-scale horizon (H = 6,000 post-onset ticks), one feature, product-combined in the log domain against an analytical 1/alpha = 20 threshold (no bootstrap substitution) (K6-slow distributional-shape-change candidate)",
+    "estimator": null,
+    "notes": "K6-slow (distributional shape change, hours-scale accumulator) candidate; not deploysignal's shipped selector path. THE SAME construction is REFUTED at the deploy-gate horizon H = 3,000 (PREREGISTRATION.md Amendment v2.K6A K6A.7) and that refutation is not withdrawn; K6 at 300 ticks is answered NO on the record twice (shape_block_conformal_bet, k6-ecdf-successor). What this card claims is the hours-scale reading only, at a bar re-ratified by operator decision after the first measurement missed it. THE SATURATION DEPENDENCY, registered as mechanism at Amendment v2.K6A.3 K6A.3.3 and stated here because a reader must not have to intersect an amendment with a task report to find it: the route past score.mjs:567's valid-but-inert ADVISORY cap runs through arm 47's S3 row, and that row cannot evidence its own fault class. At d = 2.0 the mixture's component sd is s = sqrt(1 - d^2/4) = 0 exactly, so the injection is a two-point +-1sigma law (Amendment v2.K6A.1 K6A.1.8 rules it a boundary artifact and NOT evidence of shape sensitivity); every one of the 40 windows then returns the rank floor p = 1/501, e = 4.924167, and a data-independent wealth of 4.9352693425143e+27. A 3-sigma MEAN STEP saturates the identical rank -- measured: substituting injectStep(delta=3) for the registered injectShapeMix(d=2.0) leaves the emitted S3 row bit-identical. So S3 POWERED here proves the module fires, not what it fires on; the cell-level half of this dependency is Amendment v2.K6A.2 K6A.2.2 (the card's USE route rests on the mix-d2.0 cell), and an informative d = 1.5 arm is named NOT-DONE because changing the S3 severity is a protocol change (K6E.9's ruling reused). THE LOTTERY REPORTING RULE, BOTH DIRECTIONS, quoted from Amendment v2.K6A.2 K6A.2.4(b) and binding on every report of this card: a single-draw NO is reported as \"class NO at this calibration draw\" rather than as a falsification, and -- the mirror obligation, because v2.K6A.1 caveated only the outcome that would disappoint -- a single-draw YES is reported as \"class K6-slow YES at this calibration draw; gate P(YES) approx 0.79\" and NEVER as a settled class answer. The operative band is the empirical [0.333, 0.848] with consistency interval [0.333, 0.958]; a reading in (0.848, 0.958] is CONSISTENT with the gate (an upper-tail draw inside the 280-draw observed support) and is not to be reported as a falsification. The calibration-draw sd dominates the run's binomial noise by a factor of 13.0 (Amendment v2.K6A.2 K6A.2.4c), which is why the draw, not the run, is the unit of uncertainty. This class row rests on ONE detector by registration (Amendment v2.K6A.1 K6A.1.9: safe_t and universal_inference are deliberately not scored on a 6,300-tick scenario nothing registers for them), so it has no paired-comparison partner and pairingGaps will name it -- the honest cost of a single-candidate class row. source_files pins the collection path (validation/coverage/harness/run-battery.mjs) as well as the detector module, so a change to how this card's evidence is PRODUCED expires the card: the C48(3) lesson, applied here as far as one card can. lib/collect.mjs -- how evidence is COLLECTED -- is still pinned by no card, and that remains open as a protocol amendment rather than something this card can close."
+  },
+  "budget": {
+    "participating": true,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
+  "falsifier": "T1 healthy-arm (cell 47) crossing_rate Wilson one-sided 95% lower bound > alpha = 0.05, reported with the null-growth screen's reading beside it (screen-clean plus paging-fired is the calibration lottery's signature, approx a few percent of draws by lottery alone; screen-dirty plus paging-fired is a construction defect); OR T2 pooled t2_crossing_rate Wilson 95% lower bound > alpha across scored (shard, coordinate) pairs; OR the null-growth screen itself -- >= 1 of 250 fresh calibration draws at the frozen kappa with g_null(S) > 0, checked at run time before any endpoint is read, which STOPS the run and REFUTES this candidate on the record (PREREGISTRATION.md Amendment v2.K6A.1 K6A.1.10, driver v2.K6A.3 K6A.3.1); OR cell 47 S2 increment_estimator.mean outside [0.97, 1.01]; OR any nonzero degenerate_windows or non_finite_wealth count, both registered as STRUCTURAL zeros",
+  "prior_evidence": [
+    {
+      "stage": "S2",
+      "study": "coverage",
+      "runs": "coverage/results/live/*",
+      "wiki": "methodology/fault-class-coverage-matrix"
+    },
+    {
+      "stage": "design",
+      "study": "k6-accumulator",
+      "runs": null,
+      "wiki": "methodology/k6-accumulator"
+    }
+  ]
+}

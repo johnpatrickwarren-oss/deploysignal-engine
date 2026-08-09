@@ -9,7 +9,7 @@
   "class": "test_martingale",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "0f1349f7460b4532df7dcb7941fef70a156a792a"
+    "sha": "c5c0688903729173d998a22d0211deeff1807de6"
   },
   "source_files": [
     {

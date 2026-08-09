@@ -45,3 +45,33 @@ commit: **0 pre-existing fields changed on any of the 66 emitted rows.** New fie
 ## Excluded, by the brief
 
 C38.2–6 · C47.1 · C43. Each named in the task report.
+Task 1: COMPLETE (c232345 C47.2 erratum / ee0d188 C38.1 / 6bc0afa C39 / f6608fb C45 probe / 3a846aa census append). C45 MECHANISM CLOSED: the KS excess is the shared calibration draw's own m-sample Kolmogorov statistic — 0.8687/sqrt(m) predicts the 100-draw mean to 0.969 and sd to 0.901; residual 0.61-3.70%; diagnostic tested against 1.36/sqrt(n_p) where the governing size is m; arm 34 a -0.87 sd draw, arm 47 +0.99 sd. Five independent confirmations. Concerns: expiry delta needs dedicated re-freeze (RULED, dispatched); C47.2 forward fix dispatched; three WORKLIST rows wrong at HEAD (C38.1 'no run records' FALSE — falsifier already evaluable 27/47 cells; C47.2 scope 18 rows; C45 row pairs unlike statistics) — wiki write-back items; K6.1.2 side-finding (T2 confirmation cannot distinguish claim from nominal, -1.02 draw-sd); C38.3 possibly part-stale (a wide adapter exists at collect.mjs:66-95).
+Fix round: re-freeze (last, dedicated) + C47.2 forward micro-amendment+code dispatched.
+
+## Fix round — executed 2026-08-09, in the coordinator's REORDERED sequence
+
+The two additions were dispatched as "1. re-freeze / 2. C47.2 forward fix" and are committed in the
+**reverse** order, on the coordinator's own instruction: the harness change re-expires the card, so
+the re-freeze must be LAST for `cert:expiry` to be current at branch HEAD.
+
+| order | item | commit | expiry after |
+|---|---|---|---|
+| 1st | C47.2 forward fix — Amendment v2.C47.2 + `calibratesFromHeldout` + 3 tests | `3f55f55` | **EXPIRED** (by design — the harness pin moved) |
+| 2nd | dedicated card re-freeze, carrying nothing else | `f3503ce` | **all cards current** |
+
+- `test:coverage-battery` 137 → **140** (+3 for C47.2). `npm test` 351, `test:cert` 179,
+  `validate-cards` 15 OK — all unchanged.
+- Re-freeze diff, at the git level: **15 files, 16 insertions, 16 deletions, and the only changed
+  lines are `"sha"` and `"sha256"` values.** Fourteen cards moved `engine_pin.sha` alone
+  (`4a48450` → `3f55f55`); `shape_ecdf_accumulator` also moved `source_files[1].sha256` — its
+  `run-battery.mjs` pin, `e7d47350a6a5…` → `26f3e0789742…`. No detector source sha moved anywhere.
+- C47.2 paired smoke diff: **103 rows compared, exactly 6 fields changed** — `params` on
+  `family_E_conformal_heldout` cells 18–21 and arm 31's two rows. No other field, no new field.
+- Mutation kills for C47.2: revert either arm ternary (2 fail), revert the fault-cell ternary
+  (2 fail), make the predicate a `kind` test (3 fail).
+- Corrected by append in the same round: C38.1.7's and v2.C39's paired-smoke row count was `66`
+  (a live run's cell count transcribed into a smoke run's description); the smoke run emits `103`.
+  The check covered more rows than claimed, not fewer.
+- Also named in the README's freeze table: the gap it inherited — the table's last recorded pin was
+  `597a97c` while the cards stood at `4a48450`, with four merges touching `cards/` in between and no
+  row for any of them. Not reconstructed; named.

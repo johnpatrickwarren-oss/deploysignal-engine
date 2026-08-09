@@ -1,0 +1,203 @@
+{
+ "study": "coverage / across-draw replication (C51.2)",
+ "prereg": "PREREGISTRATION.md Amendment v2.K6A.6",
+ "draws": 100,
+ "traj_per_arm": 500,
+ "quantile_convention": "nearest rank, q(p) = sorted[round(p*(n-1))] (the harness's own calQuantile form)",
+ "canonical_detection": {
+  "n": 100,
+  "mean": 0.6251399999999999,
+  "sd": 0.15293816139904784,
+  "se_of_mean": 0.015293816139904784,
+  "min": 0.278,
+  "p05": 0.364,
+  "p25": 0.518,
+  "p50": 0.634,
+  "p75": 0.746,
+  "p95": 0.872,
+  "max": 0.93,
+  "deconvolved_sd": 0.15139815471570717,
+  "binomial_sd_at_traj": 0.021649017548147537
+ },
+ "healthy_crossing_rate": {
+  "n": 100,
+  "mean": 0.01702000000000001,
+  "sd": 0.013872420135075222,
+  "se_of_mean": 0.0013872420135075223,
+  "min": 0,
+  "p05": 0.002,
+  "p25": 0.008,
+  "p50": 0.014,
+  "p75": 0.022,
+  "p95": 0.044,
+  "max": 0.064
+ },
+ "increment_mean": {
+  "n": 100,
+  "mean": 0.989903048784322,
+  "sd": 0.019138982724526635,
+  "se_of_mean": 0.0019138982724526635,
+  "min": 0.9540592623662524,
+  "p05": 0.9609010171525862,
+  "p25": 0.97607634460713,
+  "p50": 0.9883960352406318,
+  "p75": 1.0026727541118723,
+  "p95": 1.0228955877812544,
+  "max": 1.041632828143284
+ },
+ "ks_statistic": {
+  "n": 100,
+  "mean": 0.037645714570858295,
+  "sd": 0.010502257510977511,
+  "se_of_mean": 0.0010502257510977512,
+  "min": 0.018115169660678665,
+  "p05": 0.02289141716566867,
+  "p25": 0.029820758483033893,
+  "p50": 0.03653702594810382,
+  "p75": 0.04277445109780437,
+  "p95": 0.05702994011976048,
+  "max": 0.06854990019960083
+ },
+ "g_null": {
+  "n": 100,
+  "mean": -0.06821085308239437,
+  "sd": 0.01379211120977735,
+  "se_of_mean": 0.001379211120977735,
+  "min": -0.09615649961471162,
+  "p05": -0.08886087235985712,
+  "p25": -0.07863532426539599,
+  "p50": -0.06935573859202038,
+  "p75": -0.05894467164350076,
+  "p95": -0.04458304761800269,
+  "max": -0.03149441720146512
+ },
+ "derived": {
+  "p_detection_below_0_50": 0.21,
+  "fraction_healthy_above_alpha": 0.03,
+  "fraction_wilson_lb_would_fire": 0,
+  "screen_positive_draws": 0,
+  "exact_null_e": 0.991433,
+  "ks_critical_at_alpha": 0.009616652224137047
+ },
+ "predictions": [
+  {
+   "endpoint": "E1",
+   "what": "across-draw mean canonical detection-within-6,000",
+   "predicted": 0.6207,
+   "band": [
+    0.593,
+    0.648
+   ],
+   "measured": 0.6251399999999999,
+   "verdict": "PREDICTION HELD",
+   "source": "K6A.1.4 mean, K6A.2.4c sd"
+  },
+  {
+   "endpoint": "E2",
+   "what": "across-draw sd of canonical detection (deconvolved)",
+   "predicted": 0.1416,
+   "band": [
+    0.117,
+    0.166
+   ],
+   "measured": 0.15139815471570717,
+   "verdict": "PREDICTION HELD",
+   "source": "K6A.2.4c"
+  },
+  {
+   "endpoint": "E3",
+   "what": "P(canonical detection < 0.50)",
+   "predicted": 0.196,
+   "band": [
+    0.12,
+    0.28
+   ],
+   "measured": 0.21,
+   "verdict": "PREDICTION HELD",
+   "source": "K6A.2.4c"
+  },
+  {
+   "endpoint": "E4",
+   "what": "fraction of draws with healthy rate > alpha = 0.05",
+   "predicted": 0.079,
+   "band": [
+    0.03,
+    0.15
+   ],
+   "measured": 0.03,
+   "verdict": "PREDICTION HELD",
+   "source": "K6A.1.10 (22/280)"
+  },
+  {
+   "endpoint": "E5",
+   "what": "fraction of draws where the T1 Wilson-LB stop condition would fire",
+   "predicted": 0.039,
+   "band": [
+    0.01,
+    0.1
+   ],
+   "measured": 0,
+   "verdict": "DEVIATION — recorded, not corrected",
+   "source": "K6A.1.10 (11/280)"
+  },
+  {
+   "endpoint": "E6",
+   "what": "across-draw mean of increment_estimator.mean vs the exact null 0.991433",
+   "predicted": 0.991433,
+   "band": null,
+   "measured": 0.989903048784322,
+   "verdict": "DESCRIPTIVE — no band registered",
+   "source": "K6A.1.5 exact null; disposition rule K6A.6.5",
+   "disposition": {
+    "reading": "A",
+    "name": "TAIL DRAW",
+    "consequence": "the lottery explanation gains its evidence",
+    "gap_from_exact_null": -0.0015299512156780048,
+    "se_of_across_draw_mean": 0.0019138982724526635,
+    "gap_in_se": -0.7993900395329633,
+    "run_draw_inside_support": true,
+    "rule": "PREREGISTRATION.md Amendment v2.K6A.6 K6A.6.5, registered before the run"
+   }
+  },
+  {
+   "endpoint": "E7",
+   "what": "draws with positive null growth at the registered M = 8,000",
+   "predicted": 0.0013,
+   "band": [
+    0,
+    0
+   ],
+   "measured": 0,
+   "verdict": "PREDICTION HELD",
+   "source": "K6A.4.1 (1.3e-5 per draw)"
+  },
+  {
+   "endpoint": "E8",
+   "what": "across-draw distribution of p_uniformity KS",
+   "predicted": null,
+   "band": null,
+   "measured": 0.03653702594810382,
+   "verdict": "DESCRIPTIVE — no band registered",
+   "source": "NO PREDICTION REGISTERED — descriptive and exploratory (K6A.6.4 E8)"
+  }
+ ],
+ "run_draw_quantiles": {
+  "note": "K6A.6.4: DESCRIPTIVE, no verdict attached and no disposition contingent on these",
+  "run": "run-20260809T035934Z",
+  "canonical_detection": {
+   "value": 0.8515,
+   "fraction_at_or_below": 0.93,
+   "inside_support": true
+  },
+  "healthy_crossing_rate": {
+   "value": 0.054,
+   "fraction_at_or_below": 0.97,
+   "inside_support": true
+  },
+  "increment_mean": {
+   "value": 1.0249590993997122,
+   "fraction_at_or_below": 0.97,
+   "inside_support": true
+  }
+ }
+}

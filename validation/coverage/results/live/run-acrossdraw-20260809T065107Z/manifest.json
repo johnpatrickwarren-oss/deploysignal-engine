@@ -1,0 +1,44 @@
+{
+ "study": "coverage / across-draw replication (C51.2)",
+ "prereg": "PREREGISTRATION.md Amendment v2.K6A.6",
+ "geometry": {
+  "W": 150,
+  "n_A": 25000,
+  "m": 500,
+  "n_rows": 100000,
+  "kappa": 0.682,
+  "H": 6000,
+  "windows": 40,
+  "span": "[300,6300)",
+  "threshold": 20,
+  "canonical_d": 1.5
+ },
+ "seed_bands": {
+  "calibration": "51000000 + d, d = 0..99",
+  "canonical_alt": "52000000 + d, d = 0..99",
+  "healthy": "53000000 + d, d = 0..99",
+  "screen_mc": "57000000 + 10000*d + j, j = 0..M-1"
+ },
+ "draws": 100,
+ "traj_per_arm": 500,
+ "screen_mc_windows": 8000,
+ "trajectory_convention": "ONE continuously advanced stream per (calibration draw, arm), consecutive disjoint blocks (K6A.1.3, K6A.6.1)",
+ "module": {
+  "path": "dist/detectors/shape-ecdf-accumulator.js",
+  "sha256": "d57b5dd257a890d0fb0417bd4f52bbdfcc76e32188baeaec5be10a2f684d2b6a"
+ },
+ "replication_control": false,
+ "mode": "live",
+ "registered_size": {
+  "draws": 100,
+  "traj_per_arm": 500,
+  "screen_mc_windows": 8000
+ },
+ "git_sha": "e61e0ca7f01854609d6f10be123a051f5bb3d46c",
+ "engine_pin": "0.6.6-pre",
+ "node": "v25.9.0",
+ "generated_at": "20260809T065107Z",
+ "elapsed_s": 227.967,
+ "scores_no_card": true,
+ "moves_no_coverage_row": true
+}

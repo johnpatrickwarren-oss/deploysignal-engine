@@ -8101,3 +8101,529 @@ making the check gating requires either checking out the sibling repo with `CERT
 or teaching the tool to report an unreadable sibling pin separately from a changed hash.** No claim
 of K6A.5.3 moves otherwise, and the 0/9/9/0 expiry measurement stands.
 
+
+---
+
+## Amendment v2.K6A.6 — 2026-08-08, the ACROSS-DRAW replication study: the single-draw lottery measured directly, before the driver exists
+
+Registered before `validation/coverage/harness/run-acrossdraw.mjs` exists and before one draw of it
+runs. **Every prior K6-slow amendment registers the calibration-draw lottery as the dominant
+uncertainty and then reports a single draw** (K6A.1.7's `sd = 0.1527`, corrected to `0.1416` at
+K6A.2.4c; K6A.2.4b's mirror rule; the run's own "class K6-slow YES **at this calibration draw**").
+This amendment registers the study that measures the across-draw distributions instead of citing
+them, on 100 fresh calibration draws at the frozen geometry, on the real harness path.
+
+**What this study is NOT, registered first so no reader has to infer it.** It does **not** re-score
+`shape_ecdf_accumulator`'s card, does **not** move the K6-slow class row, does **not** touch
+`COVERAGE.md`, and does **not** replace or supplement the registered single-draw run
+`run-20260809T035934Z`. **The one-attempt rule is untouched and the class answer stays
+"K6-slow YES at this calibration draw" exactly as K6A.2.4b requires.** Its write-back is to the
+WORDING of the wiki's context sentences — "across-draw mean detection X ± Y, `P(< 0.50)` Z" in place
+of a citation to a 280-draw probe — and to the contested-page question of K6A.6.5.
+
+### K6A.6.1 The frozen configuration, transcribed from K6A.1.2, nothing re-derived
+
+```
+W        = 150                     window length, disjoint W-blocks of the post-onset stream
+n        = 100,000                 calibration substrate rows per draw (ONE continuously advanced stream)
+A / B    = 25,000 / 75,000         A -> the fixed reference ECDF Fhat_A; B -> m contiguous disjoint blocks
+m        = 500                     = 75,000/150 exactly, no remainder
+feature  = energy distance vs Fhat_A, the form frozen at v2.K6A K6A.2, verbatim
+kappa    = 0.6820                  FROZEN LITERAL, not re-derived on this study's data
+H        = 6,000  ->  N = 40       disjoint windows of 150; span [300, 6300), T = 6,300, ONSET = 300
+endpoint = wealth >= 20  (log >= log 20 = 2.995732) at any window checkpoint
+```
+
+**Every per-window number comes from the shipped module**, `dist/detectors/shape-ecdf-accumulator.js`
+(source `detectors/shape-ecdf-accumulator.ts` at HEAD): `calibrateEcdfAccumulator` (`:336`),
+`ecdfAccumulatorWindow` (`:419`), `ecdfAccumulatorWealth` (`:458`), `nullGrowthScreen` (`:487`).
+The driver is an orchestrator and **reimplements no scored quantity**. The generators are
+`inject.mjs`'s `rng` (`:14-17`), `gaussFrom` (`:19-24`) and `injectShapeMix` (`:60-70`), imported
+not copied.
+
+**The per-draw reads reproduce the registered run's own arithmetic, at the HEAD line numbers:**
+
+| quantity | the registered run's site at HEAD | this study |
+|---|---|---|
+| canonical alt series | `run-battery.mjs:607` (`injectShapeMix`, `d = 1.5`, A5's `r` pinning) | same call, same pinning |
+| healthy series | `run-battery.mjs:1505` (`span.T` draws, `drawFor(r, 0)`) | same |
+| per-window `p`, `e` | `run-battery.mjs:807` (`ecdfAccumulatorWindow`) | same |
+| crossing | `run-battery.mjs:811-812` (`ecdfAccumulatorWealth`, `log.some(l => l >= log 20)`) | same |
+| detection / crossing rate | `run-battery.mjs:1045-1046` (`fires` / `finite`) | same |
+| `increment_estimator` | `run-battery.mjs:1053` + `summarise` (`:1102-1108`) | same, `mean(out.eAvgs)` per trajectory |
+| `p_uniformity` | `computePUniformity` (`:1114-1123`) | same |
+| C1.2 serial guard | `assertHeldoutSerialStructure` (`:903-916`), bound `0.10` (`:902`) | same, on every one of the 100 draws |
+| geometry enforcement | `assertRegisteredGeometryK6slow` (`:208-214`) against `:161` | same |
+| null-growth screen | `nullGrowthScreen` via `run-battery.mjs:1210`, `screenNullWindow` (`:1177-1180`) | same |
+
+**One registered departure from the registered run's path, with its citation.** The registered run
+seeds each live trajectory separately (`cellSeed(cell, i) = cell.seed + 7919*i`,
+`run-battery.mjs:572`, used at `:593` and `:1504`). **This study instead consumes ONE continuously
+advanced stream per (calibration draw, arm), as consecutive disjoint blocks** — which is what
+K6A.1.3 registers for the 280-draw MC that supplies every prediction below ("trajectories are
+consecutive disjoint blocks of ONE continuously advanced stream per (calibration draw, arm), never
+spaced per-trajectory seeds") and what K6A.3 registers for the sweep. **Registered rationale: the
+object being replicated is the gate's across-draw MC, so the MC's own convention governs; the
+scored path — every `p`, `e`, wealth and rate — is the shipped module's, bit for bit.** This is a
+deviation from the task brief's "same scoring path", recorded rather than silently resolved, and it
+is the prereg's convention that is kept.
+
+### K6A.6.2 The NEW seed band, with exact-seed disjointness ENUMERATED (the K6A.2.3 standard)
+
+```
+calibration substrate   51,000,000 + d                  d = 0..99          100 seeds
+canonical alt live      52,000,000 + d                  d = 0..99          100 seeds
+healthy live            53,000,000 + d                  d = 0..99          100 seeds
+null-growth screen MC   57,000,000 + 10,000*d + j       j = 0..7,999   800,000 seeds
+                                                        (stride 10,000 > M = 8,000, so no
+                                                         two draws' MC bands can overlap —
+                                                         K6A.3.1's own discipline)
+```
+
+**Band ordering is NOT the argument. K6A.2.3 withdrew that argument and it is not re-used here.**
+Disjointness rests on **exact-seed enumeration modulo `2^32`**, asserted by
+`test/run-acrossdraw.test.mjs` rather than claimed: every seed of this study is compared against
+every seed of every prior family whose FORM this document states, all reduced `mod 2^32` so a
+wrapping family is caught re-entering from below:
+
+| prior family, as this document states its form | enumerated |
+|---|---|
+| registered study `20260807 + idx + 7919*i + 104729*k`, `idx 0..47`, `i 0..1999`, `k 0..9` | 960,048 |
+| `HELDOUT_SEED = 20260807 + idx + 500000`, `idx 0..47` | (in the above) |
+| K6A.3.1 screen `41,000,000 + d` and `42,000,000 + 10,000*d + j`, `d 0..249`, `j 0..7,999` | 2,000,250 |
+| K6A.1.3 probe `{1.30e9, 1.42e9, 1.54e9} + 300007*rep + 7919*offset`, `rep 0..400`, 8 offsets | 9,624 |
+| K6A.3 sweep `{6.0e8, 7.5e8, 9.0e8} + 300007*rep + 7919*cfg`, `rep 0..400`, `cfg 0..60` | 73,383 |
+| K6A.4 anchor `1.1e9 + {1000003, 7000019, 13000027}*rep`, `rep 0..800` | 2,401 |
+| **total** | **3,045,706** |
+
+**Measured: 0 collisions.** The `13000027` family is the one K6A.2.3 names as wrapping, and the
+enumeration confirms it: from `rep = 246` it re-enters low as `3,039,346 + 13,000,027*(rep-246)`,
+putting members at `42,039,427`, `55,039,454` and `68,039,481`. **`55,039,454` lies between this
+study's healthy band and its MC band and `53,041,520` lies just above its healthy band — which is
+precisely why the bands were chosen against the enumeration rather than by ordering.**
+
+**One limitation of the enumeration, registered because it is a real gap and not a formality.**
+This document names eight earlier K6-probe seed *bases* (`1.7e9`, `2.5e9`, `2.6e9`, `3.0e9`,
+`3.5e9`, `3.7e9`, `3.8e9`, `4.1e9`, K6A.1.3/K6A.3) **without stating their forms**, so those
+families cannot be enumerated and are **not** covered by the `0 collisions` above. Manufacturing
+plausible forms and then enumerating against the manufacture would be an argument about this
+author's own invention, and it is refused. What can be said: all eight bases are `>= 1.7e9`, so a
+member can reach this study's bands only by wrapping `mod 2^32`, and no such family's form is on
+record to check. **Registered as a disclosed gap in the freshness argument, not as a clean sheet.**
+
+**And the one-orbit limitation, restated with THIS study's own consumption, which is worse than
+any prior probe's.** K6A.2.3, quoted:
+
+> the registered `rng` is a 32-bit LCG with a single full-period orbit, so distinct seeds are
+> **offsets into one sequence**, not independent streams; exact-seed disjointness guarantees no two
+> streams *start* at the same point, **not** that their consumed segments never overlap.
+
+Arithmetic for this study, stated rather than gestured at. `gaussFrom` draws 2 uniforms per
+gaussian; `injectShapeMix` draws 3 per post-onset tick (1 for `b`, 2 for `w`). Per draw:
+alt arm `500 × (6,300×2 + 6,000×3) = 15.3e6` uniforms; healthy arm `500 × 6,300×2 = 6.3e6`;
+substrate `2e5`; screen MC `8,000 × 150 × 2 = 2.4e6`. **Total over 100 draws `≈ 2.42e9` uniforms
+against an orbit of `2^32 = 4.295e9` — 56% of the orbit.** At that consumption, of the 2.42e9
+positions drawn an expected `2.42e9 − 4.295e9·(1 − e^{−0.564}) ≈ 5.6e8` (23%) are re-visits of
+positions some other stream already used. **Registered consequence: the 100 draws are NOT
+independent, and the measured across-draw sd is therefore an estimate whose own error is not
+quantified by `sd/sqrt(100)` alone.** Not corrected — the generator is the harness's, and changing
+it would make the study measure a different object than the gate's 280-draw MC did (whose own
+consumption was `≈ 8.7e8`, 20% of the orbit, the same limitation one third as large).
+**This is the study's principal limitation and it is registered before the run, not after it.**
+
+### K6A.6.3 Replicates, and the precision this buys
+
+`R = 100` calibration draws × `TJ = 500` trajectories per arm = **50,000 trajectories per arm**.
+`TJ = 500` is a runtime bound, chosen and disclosed as one.
+
+**The per-draw binomial SE this leaves, stated because it is the thing that must be small relative
+to what is being measured:** at a detection near `0.62`,
+`sqrt(0.62 × 0.38 / 500) = 0.0217`. **Against the `0.1416` calibration-draw sd of K6A.2.4c that is
+a ratio of `6.5`, so the measured spread is calibration-draw variance and not trajectory noise** —
+but it is not negligible, and it is **registered that the raw sd of the 100 draw-means CONTAINS it**
+and must be deconvolved exactly as K6A.2.4c deconvolved the gate's `TJ = 72` figure:
+
+```
+reported: raw sd of the 100 draw-means (contains TJ = 500 binomial noise)
+reported: deconvolved sd = sqrt(raw_sd^2 - phat*(1-phat)/500), the K6A.2.4c form
+```
+
+**Registered: the DECONVOLVED sd is the estimate of calibration spread and the RAW sd is reported
+beside it.** Reporting only the raw sd would overstate the lottery by the amount of this study's own
+measurement noise, in the direction that makes the study look more necessary.
+
+### K6A.6.4 REGISTERED ENDPOINTS AND PREDICTIONS — every prediction from the gate's own 280-draw MC
+
+All predictions come free from already-registered numbers (K6A.1.4, K6A.1.5, K6A.1.7, K6A.1.10,
+K6A.2.4c). **Nothing below is fitted on this study's data, and no prediction is stated as a range
+wide enough to be unfalsifiable.**
+
+| # | endpoint | prediction | band / falsified if | source |
+|---|---|---|---|---|
+| **E1** | across-draw MEAN canonical detection-within-6,000 | **`0.6207`** | `± 1.96 × 0.1416/sqrt(100) = ± 0.0278` → **`[0.593, 0.648]`**; outside is a DEVIATION | K6A.1.4 mean, K6A.2.4c sd |
+| **E2** | across-draw sd of canonical detection (deconvolved) | **`0.1416`** | `[0.117, 0.166]` (the chi-square 95% interval at `df = 99`) | K6A.2.4c |
+| **E3** | `P(canonical detection < 0.50)` | **`0.196`** | `[0.12, 0.28]` (binomial 95% at `n = 100`); the empirical `TJ = 72` figure `0.214` is inside it and is NOT the operative prediction | K6A.2.4c |
+| **E4** | fraction of draws with healthy 6,000-tick rate `> α = 0.05` | **`0.079`** | `[0.03, 0.15]` | K6A.1.10 (`22/280`) |
+| **E5** | fraction of draws where the T1 Wilson-LB stop condition WOULD fire | **`0.039`** | `[0.01, 0.10]`; reported, **no verdict authority** — this study cannot refute the card | K6A.1.10 (`11/280`) |
+| **E6** | across-draw MEAN of `increment_estimator.mean` | **`0.991433`** | see K6A.6.5 — **the claim-settling endpoint** | K6A.1.5 exact null |
+| **E7** | draws with positive null growth at the registered `M = 8,000` | **`0.0013` expected count of 100** | `>= 1` is a DEVIATION to record, not a stop | K6A.4.1 (`1.3e-5` per draw) |
+| **E8** | across-draw median of `p_uniformity` KS | **no prediction is registered** | this document has never measured the KS statistic's across-draw distribution; **registered as descriptive, exploratory, with no band and no verdict** | — |
+
+**E7's arithmetic, because the task brief states it differently and the prereg governs.** The brief
+predicts "`≈ 0.03` of 100 from K6A.4.1". **That figure is K6A.4.1's `3.0% over 5 draws` at the
+SUPERSEDED `M = 200`**, which K6A.4.1 replaced precisely because it was too noisy to enforce on.
+At the registered `M = 8,000` K6A.4.1 gives `1.3e-5` per draw, so the expected count over 100 draws
+is **`0.0013`, not `0.03`** — 23× smaller. **Registered: E7 as stated above; the brief's figure is
+recorded as a mis-citation of a superseded count, and this study screens at `M = 8,000`, the
+registered path's own number.** A positive draw is **RECORDED, FLAGGED and INCLUDED** in every
+distribution — K6A.1.10's stop condition is a rule for the registered scoring run, and this study is
+exactly where a screen-positive draw belongs rather than where it aborts.
+
+**The registered run's own three values, located as quantiles of the measured distributions.**
+Transcribed from `results/live/run-20260809T035934Z/summary.json` at HEAD: canonical cell 44
+`detection_rate = 0.8515`; arm 47 healthy `crossing_rate = 0.054`; arm 47
+`increment_estimator.mean = 1.0249590993997122`. **Registered as DESCRIPTIVE, with no verdict
+attached and no disposition contingent on where they land** — a quantile read on 100 draws has a
+resolution of one percentile and the run draw is one draw; reporting where it sits is context for
+K6A.2.4b's "at this calibration draw" wording, not a test of anything.
+
+### K6A.6.5 E6, the claim-settling endpoint: BOTH readings dispositioned IN ADVANCE
+
+The contested wiki page `stats/terminal-mean-rule-contested` carries a third claim, filed 2026-08-08
+by ruling as its own claim: `shape_ecdf_accumulator`'s S2 `increment_estimator.mean = 1.024959` fired
+its registered `[0.97, 1.01]` range at a κ where `Var[e]` is finite (tail index
+`1/(1−κ) = 3.145 > 2`, K6A.1.10), putting it `16.26` SE above the exact null `0.991433` — the first
+reading on that page whose variance objection does not apply. **That page names what would settle
+it, verbatim: "the across-draw distribution of `increment_estimator.mean` at κ = 0.682 under the
+corrected substrate".** E6 is that distribution.
+
+**Both dispositions are registered here, before the run, so neither can be chosen after seeing the
+number:**
+
+```
+READING A — TAIL DRAW.
+  Condition: the across-draw mean of increment_estimator.mean is consistent with the exact
+  null 0.991433 (|mean - 0.991433| <= 1.96 * sd/sqrt(100)), AND 1.024959 lies inside the
+  measured across-draw support.
+  Disposition: THE LOTTERY EXPLANATION GAINS ITS EVIDENCE. The 1.024959 reading is a
+  calibration-draw tail, the distribution is where the exact null puts it, and the
+  finite-variance claim does not acquire across-draw support. The 16.26-SE figure is then
+  correctly read as a WITHIN-draw SE against a BETWEEN-draw spread it does not model — the
+  same category error K6A.2.4c corrected on detection.
+
+READING B — DISPLACED DISTRIBUTION.
+  Condition: the across-draw mean of increment_estimator.mean is above 0.991433 by more than
+  1.96 * sd/sqrt(100).
+  Disposition: THE FINITE-VARIANCE CLAIM GAINS ITS ACROSS-DRAW EVIDENCE. The displacement is
+  a property of the construction at kappa = 0.6820 and m = 500, not of one draw, and the
+  contested page's third claim is supported by the measurement it asked for.
+
+READING C — registered because A and B do not partition the outcomes.
+  Condition: the across-draw mean is BELOW 0.991433 by more than 1.96 * sd/sqrt(100), or
+  1.024959 lies OUTSIDE the measured support.
+  Disposition: NEITHER claim gains evidence and the result is filed as a new contradiction
+  under SCHEMA section 9 (both claims recorded, confidence: contested, no resolution) — a
+  distribution centred below the exact null, or a run draw outside 100 draws' support, is
+  not something either claim predicts.
+```
+
+**What E6 cannot do, registered.** It does not restore S2 authority to `increment_estimator` (a
+protocol decision, K6A.1.10/K6E.9's ruling, not an amendment's call), does not re-score the card,
+and does not withdraw the `[0.97, 1.01]` range — K6A.5's rejection of "withdrawing the range after
+watching it fire" stands. **The write-back is to the contested page, as evidence for one of three
+dispositions chosen before the number existed.**
+
+### K6A.6.6 Execution, output, and the tests
+
+- **Driver** `validation/coverage/harness/run-acrossdraw.mjs`. Results to
+  `validation/coverage/results/live/run-acrossdraw-<stamp>/`, **append-only** — no existing run
+  directory is read, written or superseded, and this study emits no card and no `COVERAGE.md` row.
+- **Registered field list.** `rows.json`: one object per draw with
+  `draw`, `cal_seed`, `alt_seed`, `healthy_seed`, `cal_fingerprint`, `acf1`, `acf2`,
+  `canonical_detection`, `canonical_fires`, `canonical_n`, `healthy_crossing_rate`, `healthy_k`,
+  `healthy_n`, `healthy_lower95`, `healthy_above_alpha`, `healthy_lb_would_fire`,
+  `increment_estimator` (the `summarise` object), `p_uniformity` (the `computePUniformity` object),
+  `null_growth_screen` (`{ mc_windows, mean_neg_log_p, g_null, positive, mc_seed_first,
+  mc_seed_last }`), `screen_positive`.
+  `distributions.json`: for each of `canonical_detection`, `healthy_crossing_rate`,
+  `increment_mean`, `ks_statistic`, `g_null` — `{ n, mean, sd, min, p05, p25, p50, p75, p95, max }`,
+  plus `deconvolved_sd` for `canonical_detection`, plus the E1–E8 verification table, plus the
+  three run-draw quantile reads. `manifest.json`: geometry, seed bands, module path and `sha256`,
+  `git_sha`, `engine_pin`, node version, `draws`, `traj_per_arm`, `screen_mc_windows`, `mode`,
+  `prereg` = `Amendment v2.K6A.6`, and `replication_control` (the hook, `false` on the study run).
+- **Tests**, `validation/coverage/test/run-acrossdraw.test.mjs`, each with its mutation kill:
+  1. **driver census** — 100 draws × 4 registered endpoints present and finite on every row.
+  2. **seed-band guard** — the driver THROWS when asked for a draw index outside `0..99`, so a
+     seed outside the registered band cannot be drawn.
+  3. **exact-seed disjointness** — the enumeration of K6A.6.2, run as an assertion.
+  4. **module-path assertion, positive control** — the driver's scored numbers are asserted
+     EQUAL to `dist/detectors/shape-ecdf-accumulator.js` called directly on the same window, and
+     the test fails if the driver ever computes a `p` or `e` itself.
+  5. **replication control** — under the named test-only hook the driver re-scores the registered
+     run's own draw and reproduces `run-20260809T035934Z`'s `0.8515` / `0.054` / `1.0249590993997122`
+     exactly. **This is the strongest available evidence that the path is the registered path**, and
+     it is a test rather than a claim.
+- **Run once.** Every registered prediction is verified in `distributions.json`. **Deviations are
+  RECORDED, not corrected.** `REPORT.md` is generated from the committed JSON.
+- **Stop condition: none.** Beyond the per-draw screen of E7, which records and flags rather than
+  aborting, this study has no stop condition, because it has no verdict to protect.
+
+### K6A.6.7 House rules, mapped
+
+(1) **Committed before the driver exists and before any draw of it runs.** (2) A failed endpoint is
+a publishable result: E1–E7 each have a band and a deviation is reported as one. (3) No post-hoc
+analysis — every prediction above is arithmetic on numbers already registered at K6A.1.4, K6A.1.5,
+K6A.1.7, K6A.1.10, K6A.2.4c and K6A.4.1, and E8 is registered as having NO prediction rather than
+given a band this document cannot justify. (4) **A new seed band is registered, with its
+enumeration and with the gap in that enumeration named** (K6A.6.2). (5) No fallback is registered:
+a draw that throws the C1.2 guard or the geometry assertion crashes the study, because a defective
+substrate is not an observation. (6) The result is append-only and touches no existing record.
+(7) **Quote-and-correct once, against the task brief**: its `≈ 0.03 of 100` screen prediction cites
+a superseded `M = 200` count (K6A.6.4 E7), and its "same scoring path" is departed from in the
+trajectory-seed dimension for the reason K6A.6.1 states. (8) **Every K6-slow endpoint and verdict
+of K6A.1.12 stands unchanged**, including `K6-slow YES at this calibration draw`.
+
+**Write-back obligations this study creates:** the wiki's K6-slow context sentences move from
+citing a 280-draw probe to citing a measured across-draw distribution; the contested page
+`stats/terminal-mean-rule-contested` receives whichever of K6A.6.5's three dispositions the
+measurement selects. **Neither is done in this commit.**
+
+### Amendment summary
+
+The **across-draw replication study**, registered before its driver exists. **100 fresh calibration
+draws** at the frozen K6-slow geometry (`W = 150`, `n = 100,000`, `A/B = 25,000/75,000`, `m = 500`,
+`κ = 0.6820`, `H = 6,000`), `500` trajectories per arm per draw, on a **NEW seed band whose
+disjointness is established by exact enumeration of 3,045,706 prior seeds modulo `2^32` with
+0 collisions** — band ordering is not the argument, K6A.2.3's withdrawal is honoured, and **the gap
+is named: eight earlier K6-probe bases whose FORMS this document never states cannot be enumerated
+and are excluded from that claim**. The one-orbit limitation is restated with this study's own
+arithmetic: **`≈ 2.42e9` uniforms against a `4.295e9` orbit, 56%, an expected 23% of drawn positions
+re-visited — so the 100 draws are NOT independent and `sd/sqrt(100)` is not the whole error.**
+**Eight registered endpoints, every prediction free from the gate's own 280-draw MC**: mean
+detection `0.6207 [0.593, 0.648]`; deconvolved across-draw sd `0.1416`; `P(detection < 0.50)`
+`0.196`; healthy-above-α fraction `0.079`; Wilson-LB would-fire fraction `0.039`; the increment
+mean against the exact null `0.991433`; screen positives `0.0013` expected of 100 — **correcting
+the brief, whose `0.03` cites the superseded `M = 200` smoke count**; and the KS statistic
+registered with **NO prediction**, because this document has never measured its across-draw
+distribution. **E6 is the claim-settling endpoint for the contested page
+`stats/terminal-mean-rule-contested`, and all THREE dispositions are registered in advance** —
+tail-draw → the lottery explanation gains its evidence; displaced-distribution → the
+finite-variance claim gains its across-draw evidence; centred-below-null or run-draw-outside-support
+→ a new contradiction filed under SCHEMA §9 with neither claim gaining. **This study re-scores no
+card, moves no class row, touches no `COVERAGE.md` row, and leaves the one-attempt rule and
+`K6-slow YES at this calibration draw` exactly as they stand.**
+
+---
+
+### Results append to v2.K6A.6, dated 2026-08-08 (appended not edited)
+
+`run-acrossdraw-20260809T065107Z`, one run, `mode: live`, at `e61e0ca`, `227.97 s`. Numbers are
+readable off `results/live/run-acrossdraw-20260809T065107Z/{rows,distributions,manifest}.json`;
+the narrative is that directory's `REPORT.md`. **Six of seven banded predictions HELD.**
+
+| # | predicted | band | measured | verdict |
+|---|---|---|---|---|
+| E1 | `0.6207` | `[0.593, 0.648]` | `0.62514` | HELD (`+0.29` SE) |
+| E2 | `0.1416` | `[0.117, 0.166]` | `0.151398` | HELD |
+| E3 | `0.196` | `[0.12, 0.28]` | `0.21` | HELD |
+| E4 | `0.079` | `[0.03, 0.15]` | `0.03` | HELD, at the lower edge |
+| E5 | `0.039` | `[0.01, 0.10]` | `0.00` | **DEVIATION** |
+| E6 | `0.991433` | disposition rule | `0.989903` (`−0.80` SE) | **READING A — TAIL DRAW** |
+| E7 | `0.0013` | `0` | `0` | HELD |
+| E8 | none registered | — | KS median `0.036537` | DESCRIPTIVE |
+
+**E6's disposition, selected by K6A.6.5's rule and not after the fact.** The across-draw
+distribution of `increment_estimator.mean` is centred on the exact null (`0.989903` against
+`0.991433`, `−0.80` SE of the across-draw mean), across-draw sd `0.019139`, and the registered
+run's `1.024959` lies inside the measured support at the 97th percentile, **`1.75` across-draw sd**
+above the exact null. **READING A: the lottery explanation gains its across-draw evidence; the
+finite-variance claim does not acquire across-draw support.** The registered run's `16.26 SE`
+figure quoted the **within-draw** Wald SE `0.002062` against a **between-draw** spread of
+`0.019139`, a factor of `9.3` — **K6A.2.4c's category error, now measured on the increment field
+rather than on detection.** No card is re-scored, no S2 authority moves, and the `[0.97, 1.01]`
+range is not withdrawn.
+
+**E7 reproduces K6A.1.5's screen distribution on a disjoint seed band**, unprompted: `g_null` mean
+`−6.821e-2` against `−6.754e-2`, sd `1.379e-2` against `1.571e-2`, `0/100` positive.
+
+**DEVIATION E5, and its measured mechanism — filed against this document's own REGISTRATION, not
+against the endpoint, which stands as measured.** `0/100` at a registered `p = 0.039` is a `1.9%`
+outcome. **E4 and E5 are both defined on an OBSERVED healthy rate, so both are functions of the
+trajectory count at which that rate is observed, and K6A.1.10 estimated them from a `TJ = 72`
+probe while this study measures at `TJ = 500`.** Replaying K6A.1.10's own two rules on this study's
+own 100 draw-level rates, at the gate's own `TJ = 72`: the `> α` rule gives **`0.081`** against the
+gate's `22/280 = 0.079`, and the Wilson-LB rule gives **`0.039`** against the gate's
+`11/280 = 0.039`. **The draw-level healthy-rate distribution REPLICATES the gate's; only `TJ`
+differs.** At `TJ = 500` the same rules give `0.041` and `0.011` against measured `0.030` and
+`0.000`, both inside binomial noise on 100 draws.
+
+**The registration defect this exposes, filed as a write-back obligation and NOT fixed here.**
+K6A.1.10's E5 rule applies an `n = 2000` Wilson threshold (point rate `0.0585`) to a rate measured
+on `72` trajectories, where the granularity is `1/72 = 0.0139` and the threshold is effectively
+"`k >= 5`". **A stop condition's false-fire rate estimated that way is a property of the probe's
+trajectory count, not of the stop condition.** Nothing in K6A.1.10 moves: this study has no
+authority over a stop condition, and the `≈ 4%` figure it registers is left standing with this
+measurement recorded beside it.
+
+**Quote-and-correct against THIS amendment's own text, in the direction against its convenience.**
+Quoted, K6A.6.4 E2:
+
+> `[0.117, 0.166]` (the chi-square 95% interval at `df = 99`)
+
+**Correct: the exact chi-square 95% interval about `0.1416` at `df = 99` is `[0.1219, 0.1613]`.**
+The registered band is **wider** than the interval it names, so it was easier to hit than it
+claimed to be. E2's `0.151398` is inside both and the verdict does not change; the correction is
+recorded because a band that misdescribes itself is a band a reader cannot check.
+
+**One comparability limit on E8, stated because the number invites a comparison it cannot carry.**
+`p_uniformity` pools `TJ × 40` values, so this study reads KS at `n = 20,000` and the registered run
+read it at `n = 80,000`. **The KS statistic exceeds its critical value on `100/100` draws here, the
+smallest at `1.88×`** — so the registered run's `8.56×` is not a hot-draw property but what this
+discrete-`p` construction does on every draw, which is the ground K6.7/K3.1.7 stripped the field's
+verdict authority on. E8 registered no prediction and none is claimed.
+
+**The registered run located, descriptive per K6A.6.4:** canonical `0.8515` at fraction `0.93`,
+healthy `0.0540` at `0.97`, increment `1.024959` at `0.97`, **all three inside the measured
+support**. The "hot draw" is measured rather than asserted, and it is one draw of the 100.
+
+**Unchanged by this run:** `K6-slow YES at this calibration draw`, the one-attempt rule, every
+K6A.1.12 endpoint, `K6 = NO` at the deploy-gate geometry, and every `COVERAGE.md` row.
+
+---
+
+### Correction append to v2.K6A.6's results, dated 2026-08-09 (appended not edited)
+
+Four corrections from an independent review of `run-acrossdraw-20260809T065107Z`, three of them
+against this amendment's own text and one against a band v2.K6A.1 registered and this amendment's
+summary declared unchanged. **No measurement is re-run and no endpoint verdict moves**; the review
+re-derived the rows byte-identically and confirmed E6's disposition was forced by the registered
+rule.
+
+#### (1) The E5 replay MIXED TWO RULES — corrected with the like-for-like table
+
+**Quoted, the results append:**
+
+> At `TJ = 500` the same rules give `0.041` and `0.011`, against measured `0.030` and `0.000`
+
+**Correct: "the same rules" is FALSE for E5.** The `0.039` replayed at `TJ = 72` is the
+**point-rate `> 0.0585`** rule; the `0.011` quoted at `TJ = 500` is the **Wilson-LB-at-`n`** rule.
+Those are two different rules, so the pair is not a like-for-like comparison. **Like-for-like at
+`TJ = 500` for the point-rate rule is `0.0229`, not `0.011`.** All three rules at all three counts,
+computed on this study's own 100 draw-level rates:
+
+| rule | `TJ = 72` | `TJ = 500` | `TJ = 2000` |
+|---|---|---|---|
+| observed rate `> α = 0.05` (**E4's own rule**) | `0.0807` | **`0.0413`** | `0.0380` |
+| observed rate `> 0.0585` (the `n = 2000` LB proxy) | **`0.0395`** | `0.0229` | `0.0231` |
+| Wilson LB at `n` `> α` (**E5's own rule**) | `0.0084` | **`0.0109`** | `0.0240` |
+
+**Each endpoint against its OWN rule, which is the honest comparison:**
+
+- **E4**'s rule is `rate > α`. Its registered `0.079` is that rule at `TJ = 72` (replicated here at
+  `0.0807`); at `TJ = 500` the same rule predicts `0.0413`; measured `0.030`. Consistent.
+- **E5**'s rule is the Wilson LB at `n`. Its registered `0.039` is **NOT that rule** — it is the
+  point-rate proxy at `TJ = 72` (replicated at `0.0395`). E5's own rule at `TJ = 500` predicts
+  `0.0109`, i.e. `1.09` draws of 100, and `P(0 | 1.09) = 0.34`. **Measured `0`: unremarkable
+  against the rule E5 actually applies.** The DEVIATION verdict against the registered
+  `[0.01, 0.10]` band stands as recorded — the band is what was registered.
+
+#### (2) "A property of the probe's trajectory count, not of the stop condition" OVERSTATES
+
+**Quoted, the results append and K6A.6's REPORT.md §5:**
+
+> **A stop condition's false-fire rate estimated that way is a property of the probe's trajectory
+> count, not of the stop condition.**
+
+**Correct, and against this document's own rhetorical convenience: the `TJ = 72` estimate inflates
+the figure, it does not create it.** At the stop condition's real `n = 2000` the Wilson-LB rule
+still false-fires on **`2.40%`** of calibration draws from the lottery alone (table above). The
+gate's `3.9%` came from the point-rate proxy at `TJ = 72`, which reads `0.0395` — an inflation of
+**`×1.64`**, not a fabrication. **The stop condition genuinely has a lottery-driven false-fire rate
+of about `2.4%`, and K6A.1.10's qualitative claim that it has one is CORRECT.**
+
+**Consequence, stated because it weakens this document's own filing: the write-back obligation
+against K6A.1.10 is WEAKER than the results append claimed.** It is no longer "the registered
+figure measures the wrong object"; it is "the registered `≈ 4%` should read `≈ 2.4%`, the `1.6×`
+gap being the `TJ = 72` proxy". A number to correct, not a method to withdraw. K6A.1.10's two-sided
+reporting rule (screen-clean plus paging-fired is the lottery's signature) is untouched and is
+confirmed by the `2.4%`.
+
+#### (3) READING A has stronger evidence than the results append reported — and it CONTRADICTS a band K6A.1.12 registered
+
+**Unreported by this author, measured by the review on the committed `rows.json`:**
+
+```
+draws outside the registered FALSIFIER range [0.97, 1.01]       32/100   (15 above, 17 below)
+draws whose one-sided LB > 1.01 (the run's own filing condition)  9/100
+draws outside K6A.1.12's registered per-draw band [0.985, 0.998] 74/100
+measured p05-p95                                    [0.9609, 1.0229]
+                                                     width 0.061995  vs  0.013 registered
+                                                     -> 4.77x wider
+```
+
+**This is the strongest single piece of READING-A evidence in the study and it was left out.** The
+`[0.97, 1.01]` range fires on **roughly a third of calibration draws from the lottery alone**, and
+the run's own filing condition (`LB > 1.01`) is met on `9/100`. A range that fires on `32%` of clean
+draws is not an instrument that detected something on the registered run.
+
+**And a MEASURED CONTRADICTION of a registered band, filed as an erratum to v2.K6A.1 K6A.1.12.**
+Quoted, K6A.1.12:
+
+> | cell 47 S2 `increment_estimator.mean` | `0.9914` | `[0.985, 0.998]` (exact `E[e|null] = 0.991433`) | outside `[0.97, 1.01]` |
+
+with K6A.1.12's own framing: *"Bands are per-calibration-draw (K6A.1.7), which is the quantity a
+one-draw run realizes."* **Measured: `74/100` draws fall outside `[0.985, 0.998]`. As a
+per-calibration-draw band it is wrong by a factor of `4.77` in width.**
+
+**The erratum is to the BAND, not to the field or the point prediction.** K6A.1.12's point
+prediction `0.9914` and the exact null `0.991433` are **CONFIRMED** by this study
+(measured across-draw mean `0.989903`, `−0.80` SE). What was wrong was the spread attached to it:
+`[0.985, 0.998]` is approximately the interval a *within-draw* SE implies, not the across-draw
+spread K6A.1.12 said its bands were. **Registered: the per-calibration-draw band for
+`increment_estimator.mean` is the measured `[0.9609, 1.0229]` (p05–p95, `R = 100`), superseding
+`[0.985, 0.998]`; the falsifier range `[0.97, 1.01]` is left as registered with its measured
+`32%` lottery false-fire rate recorded beside it.** K6A.5's rejection of withdrawing a range after
+watching it fire still stands: the range is not withdrawn, it is characterised.
+
+**The precision that matters, because it isolates the defect rather than smearing it across
+K6A.1.12.** The other two per-draw bands in the same table are RIGHT: detection's `[0.333, 0.848]`
+excludes `8/100` and healthy's `[0.000, 0.056]` excludes `3/100`, both what a p05–p95 band should
+do. **Only the increment row's band is wrong. The band-setting method is not in question; one row
+is.**
+
+**Quote-and-correct against this amendment's own summary, twice.** Quoted, K6A.6.7 (8):
+
+> **Every K6-slow endpoint and verdict of K6A.1.12 stands unchanged**
+
+and, quoted, the results append:
+
+> **Unchanged by this run:** `K6-slow YES at this calibration draw`, the one-attempt rule, every
+> K6A.1.12 endpoint, [...]
+
+**Correct: K6A.1.12's `increment_estimator.mean` BAND does NOT stand — it is contradicted at
+`74/100`.** Every K6A.1.12 **endpoint, point prediction and verdict** does stand, including
+`K6-slow YES at this calibration draw`, the class row, `K6 = NO` at the deploy-gate geometry and
+every `COVERAGE.md` row. **The blanket "stands unchanged" was written before the review measured
+the band and is corrected here rather than quietly narrowed.**
+
+#### (4) Four errata, one line each
+
+- **K6A.6.5's readings B and C OVERLAP.** B fires on `gap > 1.96·SE`; C fires on
+  `gap < −1.96·SE` **OR** the run draw outside the measured support. A result with
+  `gap > 1.96·SE` *and* the run draw outside support satisfies both. **The driver resolves it
+  B-first, which K6A.6.5 never registered** — an unregistered precedence rule in the disposition
+  code. **Not triggered here** (`gap = −0.80` SE, run draw inside support → A unambiguously), and
+  registered now so a future run cannot have it chosen after the fact.
+- **K6A.6.5 says `sd` without saying which.** The driver uses the sample sd (`n − 1`),
+  `0.019139`; the population form (`n`) gives `0.019043`. Gaps `−0.799` and `−0.803` SE
+  respectively — **both select READING A**, so nothing turns on it, and the `n − 1` convention is
+  registered as the operative one.
+- **E4's band comparison is INCLUSIVE in the driver and unstated in the prereg.** Measured `0.03`
+  equals the band's lower bound `0.03` exactly; `measured >= band[0]` returns HELD. **Under an
+  exclusive reading E4 would be a DEVIATION.** Registered: the comparison is inclusive at both
+  ends, stated now because a boundary hit is exactly where an unstated convention decides a
+  verdict.
+- **E1's `+0.29 SE` mixes denominators.** REPORT.md §2 divides the `0.00444` gap by this study's
+  *measured* SE `0.015294`, giving `+0.29`; against the *registered* `0.1416/sqrt(100) = 0.01416`
+  the gap is **`+0.31` SE**. Both are far inside the band and E1 holds either way; the registered
+  denominator is the one E1's band was built from and `+0.31` is the figure that matches it.

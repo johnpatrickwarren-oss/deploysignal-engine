@@ -582,3 +582,196 @@ finding behind it: `lib/collect.mjs` is pinned by **no card**, so the change tha
 which evidence is scored would have expired nothing, and five cards pin neither the scorer nor the
 report writer. Naming that gap, not closing it — it belongs to the certification protocol's own
 pre-registration.
+
+## Amendment A2 — 2026-08-08, two of A1's supersession rules could be satisfied by evidence that does not exist, and the collector is still pinned by no card
+
+Registered **before** the collector change it authorizes and before the card re-freeze it
+authorizes. Sections 1–12 stay intact; A1.1–A1.8 and Erratum A1.1 stand as written except for the
+three clauses corrected below by quote-and-correct. No endpoint, threshold, α, N, T, null, seed,
+registered expectation or verdict rule moves, and no run of this battery is re-run. Authorized by
+the operator 2026-08-08 (WORKLIST C48, the follow-on validation gaps C44's review named).
+
+**Lead with the correction, and it is a correction to this amendment's own authority.** Erratum A1.1
+closed with: "Naming that gap, not closing it — it belongs to the certification protocol's own
+pre-registration." A2 closes it here instead. The reason is not that A1.1 was wrong about where the
+rule belongs; it is that there is no separate certification pre-registration document to put it in.
+The certification protocol's registered rules live in the study pre-registrations that change it —
+A1.7 registered the collector's supersession contract, Erratum A1.1 authorized the re-freeze route —
+and the operator assigned C48 to this study. Recorded as a deviation from A1.1's stated preference,
+not as agreement with it: if a certification-protocol pre-registration is ever written, A2.5 is one
+of the sections it should absorb.
+
+**One count in Erratum A1.1 is stale, and its finding is not.** A1.1 tallied "all fourteen
+`source_files` lists". There are now **fifteen** cards: `shape_ecdf_accumulator` was frozen
+afterwards (C49 task 5). The tally A1.1 reports — `verdict.mjs` 9, `lib/score.mjs` 9,
+`detectors/validity-envelope.ts` 9, `lib/collect.mjs` **0** — is unchanged by the fifteenth card,
+which pins `detectors/shape-ecdf-accumulator.ts` and `validation/coverage/harness/run-battery.mjs`
+and neither the scorer nor the collector. Measured 2026-08-08 across
+`validation/certification/cards/*.json`.
+
+### A2.1 What C44's review found — three gaps, each measured
+
+Measured this session by reading `validation/certification/lib/collect.mjs`
+`supersessionIndex`/`assertEntryShape` at `main` `b852059` and by exercising each path against
+temporary-directory fixtures.
+
+1. **An unknown detector name in a supersedes entry validates silently, on BOTH paths.**
+   `assertEntryShape` checks that an entry carries `study`, `run`, a non-empty `detectors` array and
+   a `reason`; each path then checks self-supersession (manifest), own-study reach (registry) and
+   target-in-corpus (both). Nothing checks that a **named detector exists in the target run**. Pass
+   2 resolves a drop by exact string match on `cell.detector`, so a typo, a rename, or an alias the
+   cells do not carry drops nothing, reports nothing, and reads as an honoured declaration. Today's
+   only mitigation is arithmetic: `collect.test.mjs`'s exact-count censuses would move if a real
+   entry stopped matching. That catches a regression in the corpus; it does not catch a
+   never-correct entry.
+2. **The no-self-erasure rule can be satisfied by a run that never measured the detector.** A1.7
+   registered the clause as quoted in A2.3, and the implementation is faithful to it:
+   `runsOfStudy.some((m) => !dropped.get(key)?.has(det))`. A run that carries no cell of `det` is
+   not in `dropped` for `det`, so the predicate is trivially true of it and it counts as the
+   surviving run. A study whose only measurement of `det` is in the superseded run therefore passes
+   the rule while leaving `det` with no evidence — the outcome the rule exists to forbid. Safe on
+   the current corpus (A2.4), vacuous as a guarantee.
+3. **`lib/collect.mjs` is pinned by no card**, restated from Erratum A1.1 and quoted in A2.5.
+
+### A2.2 Registered rule change 1 — a named detector must be one the target run carries
+
+**Both paths, one shared check, fail-closed.** For every supersedes entry, manifest array or
+registry alike, every name in `detectors` must appear in at least one cell of the target run. An
+unmatched name throws, and the error names three things: the entry's source (the declaring run's
+locator, or the registry's path), the target locator, and the unmatched detector, together with the
+detector names the target does carry.
+
+- **The target run, not the corpus.** A drop resolves per `(run, detector)`, so a name carried by
+  some other run of the same study is not a match.
+- **Detector names come from the wide-format adapter's output**, not from the raw `detector` field.
+  `clustersynth-ui`'s cells fold two detectors into one row with no top-level `detector`, so reading
+  the raw field would refuse an entry naming a detector the run genuinely measures. Registered as
+  the direction this rule must not fail in.
+- **Checked after each path's own target checks**, so an entry naming a run outside the corpus, or
+  itself, or another study, keeps the error that names that fault instead of being reported as an
+  unknown detector.
+- **A run whose layout `loadRunCells` cannot read carries no detector names**, so a supersedes entry
+  naming it now throws where it previously passed. Fail-closed and intended: a declaration against
+  an unreadable run supersedes nothing. No such entry exists in the corpus.
+
+### A2.3 Registered rule change 2 — surviving means carrying cells for the detector
+
+**Quote, A1.7 rule 2** (and its restatement in the Amendment summary):
+
+> 2. **No self-erasure.** For every `(study, detector)` a registry names, at least one run of that
+>    study must survive un-superseded for that detector.
+
+**Corrected clause**: at least one run of that study must survive un-superseded for that detector
+**and carry at least one cell for it**. Everything else about the rule — registry-only scope, the
+check running after every drop is in, the failure being a crash — stands.
+
+The reviewer's fixture, registered as the positive control the change must fail without: a study
+with `run-old` carrying detector `d` and `run-empty` carrying only some other detector, and a
+registry dropping `run-old` for `d`. Under A1.7's clause this passed. It now throws.
+
+### A2.4 Registered expectation: nothing moves on the current corpus
+
+A2.2 and A2.3 are strengthenings, so the committed
+`validation/h0-battery/results/live/SUPERSESSIONS.json` and every committed manifest must still
+validate. Measured by `loadEvidence('validation')` before and after the change, disclosed as a
+probe run before this amendment was written:
+
+- **Pooled corpus 2266 cells, 46 runs, both before and after**, with the same per-study
+  breakdown, including `2026-07-h0-battery` 148 — `run-20260801T064627Z` alone, at its full 148
+  cells, exactly as A1.6 registered.
+- **The same six runs carry drops, at the same counts**: `coverage/run-20260808T010208Z` 64,
+  `coverage/run-20260808T064039Z` 12, `coverage/run-20260808T121548Z` 6 (manifest-declared), and
+  `2026-07-h0-battery` `run-20260801T062612Z` 144, `run-20260801T062824Z` 148,
+  `run-20260801T064237Z` 148 (registry).
+- **Both 2026-08-01 legacy declarations are still reported**, still annotated
+  `covered_by_registry: true`.
+- **Every named detector resolves.** The three registry entries each name all four h0-battery
+  detectors and each target run carries all four. The coverage manifests name
+  `shape_block_conformal_bet` on `run-20260808T121548Z`; `family_E_conformal_heldout` and
+  `point_tail_bet_e_value` on `run-20260808T064039Z`; and `family_E_conformal_heldout`, `safe_t`,
+  `universal_inference` and `group_average_e_value` on `run-20260808T010208Z` — every one present in
+  that run's own cells. Note that `safe_t` and `universal_inference` are the strings the **cells**
+  carry, not the card `detector_id`s `safe_t_e_value` and `universal_inference_e_value`; the rule
+  matches cell strings, and an entry written in card-id spelling would now throw.
+- **No card verdict, tier or stage status moves**, because no cell is added to or removed from the
+  pool. This is the registered expectation, and a moved verdict falsifies it.
+
+### A2.5 Registered action: `lib/collect.mjs` joins all fifteen cards' `source_files`
+
+**Quote, Erratum A1.1, the finding this closes:**
+
+> **And the finding that makes this erratum worth more than a bookkeeping note.**
+> `validation/certification/lib/collect.mjs` is pinned by **no card**. Tallied across all fourteen
+> `source_files` lists: `verdict.mjs` 9, `lib/score.mjs` 9, `detectors/validity-envelope.ts` 9, and
+> `lib/collect.mjs` **0**. The collector is what decides which evidence a card is scored on — it is
+> the file this whole amendment changes — so **A1.7's substantive change would have expired
+> nothing**.
+
+**Registered action.** `{"path": "validation/certification/lib/collect.mjs"}` is appended to the
+`source_files` list of **all fifteen** cards, and every card is re-stamped by
+`validation/certification/tools/freeze-cards.mjs` in its own commit after the code commit. The list
+entry and the two pin fields are the only changes: no claim, regime, guarantee, alias,
+`prior_evidence`, endpoint, notes or errata text is touched.
+
+**Why all fifteen and not the nine already inside the scorer's expiry set.** The collector decides
+which evidence every card is scored on, including the five cards A1.1 measured as outside the
+scorer's expiry set entirely and the fifteenth card frozen since. A card whose evidence selection
+can change without its expiry firing is the gap, and it is the same gap on all fifteen.
+
+**The route, and its verification.** `lib/freeze.mjs` `stampPins` rewrites exactly two fields,
+`engine_pin` and each `source_files[].sha256`. Re-verified this session at fifteen cards: stamping
+every card in memory against a dummy sha and diffing every top-level key reports `engine_pin` on all
+fifteen and **no other key**, and no `source_files[].sha256` moves, which also confirms every
+currently pinned file is at its recorded hash. Same two-step as `7ab3b4d` then `77deeb1`, and as
+Erratum A1.1's own authorization.
+
+**The cost, accepted and registered.** After this, **any** edit to `lib/collect.mjs` expires **all
+fifteen** cards — including an edit to a comment. That is the intended behaviour: the alternative is
+the state A1.1 measured, in which a 440-cell change to what the cards are scored on left every card
+reading "current". Registered as the verification of the action itself: mutating
+`lib/collect.mjs` must make `npm run cert:expiry` exit 1 and report **fifteen** `EXPIRED` lines, one
+per card.
+
+### A2.6 Explicitly out of scope
+
+- **Any re-run of this battery**, any harness, null, seed, α, N or T. No new run directory.
+- **Any card content beyond the one `source_files` list entry and the two pin fields.**
+- **`shape_ecdf_accumulator`'s notes sentence, which this amendment makes stale.** It reads:
+  "`lib/collect.mjs` — how evidence is COLLECTED — is still pinned by no card, and that remains open
+  as a protocol amendment rather than something this card can close." A2.5 is that protocol
+  amendment, so from this commit the sentence is false about the very card it sits on. Corrected
+  **here** and deliberately not on the card: editing that prose is a card content change, and the
+  re-freeze A2.5 authorizes is confined to pins and the list entry. A later card-content commit
+  should correct the sentence; until then this paragraph is the correction of record.
+- **`validation/certification/README.md`'s freeze table.** Its heading still reads "why the sha
+  moved six times" and it has not recorded a freeze since `597a97c`, four freezes ago. A2 does not
+  extend a table that is already behind; catching it up is its own commit.
+- **Widening the no-self-erasure rule to manifest declarations.** A1.7 registered it as a
+  registry-only rule because a manifest declaration is checked against its declaring run, and A2
+  changes the rule's content, not its scope.
+- **A1.3's second gap and A1.2's third measurement.** Both still named-not-done, unchanged.
+
+### Amendment summary
+
+Closes the three gaps C44's review found in what A1 registered. **(1)** Every detector a supersedes
+entry names — manifest array or registry — must appear in at least one cell of the **target run**,
+resolved through the wide-format adapter so a genuinely-measured detector is never refused, checked
+after each path's own target checks, and throwing an error that names the entry, the target and the
+unmatched detector. Until now an unknown name dropped nothing and reported nothing, and read as
+honoured. **(2)** A1.7's no-self-erasure clause is corrected by quote-and-correct: a surviving run
+must carry **at least one cell** for the detector, not merely escape being dropped for it, because a
+run that never measured the detector satisfied the old predicate trivially and left the detector with
+no evidence. **(3)** Erratum A1.1's `lib/collect.mjs` **0** finding is closed rather than restated:
+the collector is appended to all **fifteen** cards' `source_files` and every card is re-stamped by
+`freeze-cards.mjs` in its own commit, `stampPins`-confined to `engine_pin` and
+`source_files[].sha256` — re-verified at fifteen cards by dummy-sha diff of every top-level key — so
+any collector edit now expires every card, and a mutation to `lib/collect.mjs` must make
+`cert:expiry` exit 1 with fifteen `EXPIRED` lines. Both rule changes are **strengthenings**: measured
+before and after, the pooled corpus is **2266 cells across 46 runs** either way, the same six runs
+carry drops at the same counts (64/12/6 manifest, 144/148/148 registry), both legacy declarations
+stay reported and `covered_by_registry`, and **no card verdict, tier or stage status moves** — a
+moved verdict falsifies this amendment. Also records that Erratum A1.1's card count is stale at
+fourteen (fifteen since C49 task 5) while its tally stands, that closing the collector-pin gap here
+deviates from A1.1's own view that it belongs to a certification-protocol pre-registration that does
+not exist, and that `shape_ecdf_accumulator`'s notes sentence calling the gap open becomes false at
+this commit and is corrected in A2.6 rather than on the card.

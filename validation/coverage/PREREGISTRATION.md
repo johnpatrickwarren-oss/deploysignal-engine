@@ -10517,3 +10517,258 @@ structural**, the estimator's algebra exists once in `summarise`, and the mutati
 is killed by a source pin because it is measurably not killed behaviourally. **The C45 verdict —
 mechanism closed, the excess is the shared draw's own `m`-sample Kolmogorov statistic, the
 diagnostic's critical value never applied — is unchanged and better supported.**
+
+---
+
+## Erratum v1.5 — 2026-08-09 (post-run, discloses, changes nothing): WORKLIST `C43`'s premise is wrong at HEAD — the φ-estimated cells are INSIDE `safe_t_e_value`'s known-φ regime, and the class answers never pass through the regime check
+
+WORKLIST `C43`, the follow-up Erratum v1.3 item 4 asked for and Erratum v1.4 item 3 left open. This
+is an **erratum, not an amendment**: it postdates every run it describes, so it cannot register
+anything. It **changes no endpoint, no floor, no threshold, no seed, no grid, no falsifier, and no
+verdict.** Nothing in §1–14, any Amendment, or Errata v1.3/v1.4 is superseded. No cell is edited and
+no run is re-run.
+
+### C43.0 LEAD WITH THE CORRECTION — the row, quoted, and what is wrong with it
+
+> | C43 | **NEW — φ-known erratum follow-up (I1).** K1's and K2's YES rest on cells measured with φ
+> estimated, under `safe_t_e_value`'s card regime narrowed to `phi_known: true`. Either measure a
+> φ-estimated variant of safe-t at the battery's own cells, or narrow the card's declared regime to
+> match what was actually measured. |
+
+Three of the row's claims, checked against HEAD (`235efa8`):
+
+| claim | verdict | mechanism |
+|---|---|---|
+| the canonical cells were measured with φ estimated | **TRUE** | `harness/run-battery.mjs:616` passes `undefined` at φ=0; `detectors/safe-t-e-value.ts:136` then estimates |
+| that puts them outside the card's `phi_known: true` regime | **FALSE** | `phi_source` reads `'oracle'`, so `regimeCheck` (`lib/score.mjs:61-76`) returns `in: true` — and under the accurate tag it would still be in, by a ruling recorded in `lib/nulls.mjs:28-49` before this row existed |
+| the class answers therefore rest on out-of-regime evidence | **FALSE, twice** | `coverageFor` (`lib/score.mjs:358-404`) contains no regime check at all, and the USE half of the answer rests on cells where φ **is** threaded |
+| remedy option 1, "measure a φ-estimated variant" | **INCOHERENT as written** | the battery's own cells *are* the φ-estimated variant; the variant that does not exist is the φ-KNOWN one |
+| the row's scope, "K1's and K2's" | **INCOMPLETE** | K5's canonical is `slope1e-2` after Amendment v2.K5R, also φ=0, also carried by `safe_t` — three classes, not two |
+
+### C43.1 What is TRUE, at the lines
+
+`safeTOpts` threads a known φ only when φ is positive:
+
+```
+const safeTOpts = (phi) => (phi > 0 ? { ar1Phi: phi } : undefined);      // run-battery.mjs:616
+```
+
+and both `safe_t` (`:625`) and `group_average_e_value` (`:635`, K per-series safe-t calls) read
+through it. With `opts` undefined the detector fits φ itself:
+
+```
+const phi = opts?.ar1Phi ?? computePerSignalAr1Phi(calValues, mean(calValues));   // safe-t-e-value.ts:136
+```
+
+So at **every φ=0 cell — which is every canonical cell `safe_t` carries a class on** — φ is a
+100-tick calibration-window estimate, not a supplied constant. The three cells, from the scored run
+`validation/certification/results/run-20260809T080049Z`:
+
+| class | idx | severity | φ | `null_id` | `phi_source` | detection rate |
+|---|---|---|---|---|---|---|
+| K1 | 1 | `1.5sigma` | 0 | `N1` | `oracle` | `1.0000` |
+| K2 | 7 | `K10-e0.5sigma` | 0 | `N1` | `oracle` | `0.6105` |
+| K5 | 40 | `slope1e-2` | 0 | `N1` | `oracle` | `0.9995` |
+
+Erratum v1.3 cited `run-battery.mjs:215` for the `safeTOpts` line and K5R.7 cited `:347`; at HEAD it
+is `:616`. The line is unchanged in content; the file grew.
+
+### C43.2 What is FALSE (a): the cells are in-regime, by two independent mechanisms
+
+**Mechanism 1, the one the scorer actually runs.** `annotatePhi` (`lib/collect.mjs:16-27`) derives
+`phi_source` from `null_id`; `derivePhiParams('N1')` returns `{phi: 0, phi_source: 'oracle', params:
+'oracle'}` (`lib/nulls.mjs:67-70`); `phiIsEstimated` (`:94-98`) reads `phi_source` first and returns
+`false`; `regimeCheck`'s narrowing branch is
+
+```
+if (regime.phi_known === true && phiIsEstimated(cell)) {          // lib/score.mjs:66
+```
+
+so it does not fire. **Verified in the committed output, not inferred:** `safe_t_e_value.card.json`
+carries `out_of_regime: true` on **14 of 47** S2 cells and every one of them is an `N4-p*` cell
+(`estimated phi (N4-p06)`, `(N4-p09)`, `(N4-p03)`, `(N4-p08)`, `(N4-p095)`, `(N4-p099)`) from
+`2026-08-terminal-evalue` / `2026-08-phi-identifiability`. **No coverage-battery cell is out of
+regime, and none ever was.**
+
+**Mechanism 2, the ruling that predates the row.** `lib/nulls.mjs:28-49` splits the ids on this axis
+and records the decision explicitly:
+
+> A stricter reading is available and NOT taken here: PREREGISTRATION section 5 threads
+> `opts.ar1Phi` only for N1 and N3, so under "phi is known iff the caller passed it" N2/N5/N6 would
+> also fall outside a known-phi regime. That reading was rejected because a regime bounds
+> DATA-GENERATING conditions, not API call shapes -- phi is 0 and known to the operator on an iid
+> null whatever the detector does internally -- and because it changes no verdict.
+
+`'iid-by-construction'` is the tag for exactly this case ("the null has no AR(1) term, so phi is 0
+and known even though the detector still ran its estimator on the cal window", `:36-38`), and it is
+not `'estimated'`, so it does not narrow anything either. **Under both the stamped tag and the
+accurate one, a φ=0 coverage cell is inside a `phi_known` regime.** The question v1.3 item 4 filed
+as open "for the wiki write-back rather than answered" was already answered in code, at a line, six
+days earlier.
+
+### C43.3 What is FALSE (b): the class answers never pass through the regime check
+
+A class answer has two legs (`verdict.mjs:362`): *"A class answers YES iff at least one card with
+overall verdict USE has that class COVERED"*.
+
+**The COVERED leg is not regime-gated at all.** `coverageFor` (`lib/score.mjs:358-404`) applies
+`applyGuards`, a `canonical === true` filter and `powerRate >= COVERAGE_FLOOR` (`:398`) — and
+nothing else. Verified by absence: `regimeCheck`, `inRegime` and `effectivePhi` appear at `:61-78`,
+`:166`, `:218-229` (S2) and `:275-277` (S3), and **zero times between `:358` and `:404`**. The
+reason is registered in the sibling stage's own comment (`:271-277`, `:332`): *"Power is not a
+validity guarantee"* — an unmeasured or estimated φ is recorded as a gap and the power cell is
+scored anyway.
+
+**These cells reach no other stage.** `safe_t`'s coverage rows carry no `shift_sigma`, so `scoreS3`
+files all 43 of them under *"power cell with no shift_sigma recorded x43 ... not scored for INERT"*,
+and `safe_t` has no coverage healthy arm (A1/A6 give arms to `group_average_e_value`,
+`family_E_conformal_heldout`, `point_tail_bet_e_value`, `spectral_bet_e_process`,
+`shape_block_conformal_bet`, `shape_ecdf_accumulator` — not to `safe_t`). **`safe_t`'s S2 perCell
+holds 47 cells and not one of them comes from this battery.** So the φ-estimated coverage cells
+contribute **no validity evidence to this card whatsoever**; they are power readings and nothing
+else.
+
+**The USE leg rests on threaded-φ cells.** In the study the id grammar comes from, `N1` is
+`oracle: true` and safe-t is handed `{ ar1Phi: 0 }`
+(`validation/terminal-evalue/harness/run.mjs:28` and `:43`, `ns.oracle ? { ar1Phi: ns.phi } :
+undefined`; same table at `validation/h0-battery/harness/nulls.mjs:53`). safe_t's S2 PASS and S3
+PASS are carried by those cells.
+
+### C43.4 The defect the row did not name: `N1` asserts a threading this harness does not perform
+
+This battery stamps `null_id: cell.phi === 0 ? 'N1' : 'N3-p06'` (`run-battery.mjs:1426`) on every
+detector's row for a cell. In the source-of-truth grammar `N1` means "iid Gaussian, **oracle
+params**, disjoint windows" — and in both studies that own the grammar, `N1` **threads φ to the
+detector**. This battery does not thread it (`:616`). So the id claims a call shape the harness does
+not use: **the same defect class as Erratum v1.3's `params: 'oracle'`, but on the field that is
+scorer-mechanical.** The accurate id for a φ=0 `safe_t`/`universal_inference`/
+`group_average_e_value` row is `N2-m100` (iid, moments and φ from the 100-tick window, `CAL = {start:
+0, len: ONSET}` with `ONSET = 100`, `:89`), which derives `phi_source: 'iid-by-construction'`,
+`params: 'estimated-moments'` (`lib/nulls.mjs:71-74`).
+
+**Measured consequence of the mislabel: none.** Both tags are non-`'estimated'`, `phi` is recorded
+as `0` on the row either way, `derivePhiParams` propagates no `m` (`lib/collect.mjs:19-25` sets
+`phi`, `phi_derived_from`, `phi_source`, `params` and nothing else), and this card's `m_min` is
+`null`. The stamp misleads a reader; it moves no verdict. The forward fix is **named-not-done**
+below.
+
+### C43.5 THE MEASUREMENT — the strict reading priced, from committed JSON
+
+**A disclosed probe** (this document's DISCLOSED convention, K5R.7/K6.4/C45.2). It reads **only**
+committed artifacts: `validation/certification/results/run-20260809T080049Z/*.card.json`. No run was
+made, no cell emitted, no seed drawn. The script lives outside the repo
+(scratchpad `c43/strict-reading-counterfactual.mjs`); every number below is reproducible from what
+this section states. Its one non-mechanical input is the per-harness threading predicate, verified at
+the three call sites named above: threaded iff `null_id` matches `^N1$|^N3-p` for
+`terminal-evalue`/`h0-battery` rows, iff `phi > 0` for `coverage` rows.
+
+**Question.** If the rejected stricter reading (`nulls.mjs:43-49`) were adopted — φ known iff the
+harness passed `opts.ar1Phi` — what moves for `safe_t_e_value`?
+
+| stage | in-regime at HEAD | in-regime under the strict reading | dropped cells' verdicts | status |
+|---|---|---|---|---|
+| S2 | 33 | 12 (`N1`, `N3-p06`, `N3-p09`) | `CLEARED x21` (`N2-m30`, `N2-m100`, `N2-m500`, `N5`, `N6`) | **PASS → PASS** |
+| S3 | 11 | 3 named + 2 pooled controls | 6 per-null rows, all rate `1.0000` | **PASS → PASS** (min surviving rate `0.897` vs `INERTNESS_FLOOR = 0.10`) |
+
+**Every dropped cell was a clearing cell.** Nothing that refutes is hidden by the drop, and enough
+threaded-φ evidence survives to carry both stages, so **`overall` stays `USE`, tier stays `T1`,
+under the reading the protocol rejected as much as under the one it took.**
+
+**The coverage leg, as a hypothetical.** `coverageFor` does not read the regime, so this leg moves
+only under a **second** change nobody has registered — gating the class-answer layer on the regime.
+Priced together with the strict reading:
+
+| class | HEAD | canonical cells surviving the strict reading | class answer if both changes were made |
+|---|---|---|---|
+| K1 | `COVERED 1.0000` (safe_t) | 0 of 1 | **YES**, carried by `universal_inference_e_value` (`COVERED 0.9875`, `USE`, no `phi_known` in its regime) |
+| K2 | `COVERED 0.6105` (safe_t) | 0 of 1 | **NO** — the only other COVERED card is `group_average_e_value` (`0.9985`) and its own verdict is `REFUSE` |
+| K5 | `COVERED 0.9995` (safe_t) | 0 of 1 | **NO** — no other card measures K5 above the floor (`universal_inference` `NOT_POWERED 0.003`) |
+
+So the row's worry has a real price tag, and it is `K2` and `K5`, not `K1` — but it is payable only
+if **both** unregistered changes are made at once. At HEAD, neither is.
+
+### C43.6 The verdict on the row's two options, and why no run is registered
+
+**Option 1, "measure a φ-known variant at the battery's own cells": NOT registered, and the reason
+is not cost.** Such cells would answer a question the protocol has already ruled on (C43.2,
+mechanism 2), for a configuration the detector does not default to — `opts.ar1Phi` is documented as
+an *override* (`safe-t-e-value.ts:55-61`) and the card's own `shipped_path.kind` is "terminal
+e-value, phi plug-in" (`cards/safe_t_e_value.json:59`), the estimated-φ path in ADR 0005's own
+words. Re-registering K1/K2/K5's **canonical** designation onto φ-threaded cells would move the
+class answers off the configuration the shipped path describes and onto one that exists only inside
+a harness argument. **Measuring more is right when the measurement can move a reading; here the
+reading is measured to be identical under both readings of the regime** (C43.5), and the class
+answers do not read the regime at all (C43.3).
+
+**Option 2, "narrow the card's declared regime": NOT registered, and it would be wrong.**
+`phi_known: true` is the machine form of the frozen guarantee sentence's own clause, "given known
+phi <= 0.95" (`cards/safe_t_e_value.json:37,55`), and it is doing exactly the work it exists for —
+excluding the 14 `N4-p*` cells whose `mean_e` reaches `9,710` and `4.4e31`. Dropping or weakening it
+to accommodate power cells that never enter the check would re-admit those refutations into a
+regime the detector demonstrably fails in. **The card is right; the row's model of the scorer was
+wrong.**
+
+### C43.7 The WORKLIST correction, for write-back (the wiki is not edited from here)
+
+`C43` should be closed as **premise false at HEAD**, with the three specifics: (1) no
+coverage-battery cell is or was out of regime — the 14 out-of-regime cells on this card are all
+`N4-p*` from two other studies; (2) the class-answer path applies no regime check by registered
+design (`lib/score.mjs:358-404`, `:332`), so the answers were never regime-gated evidence; (3) the
+row's scope should have read K1, K2 **and K5**, and its option 1 names the variant that already
+exists. The residual defect is the `N1` stamp of C43.4, which is a provenance-accuracy item, not a
+regime item, and **is not closed by this erratum**.
+
+### C43.8 Named-not-done
+
+- **The harness is NOT changed.** Making `null_id` per-detector-accurate (`N2-m100` for a φ=0
+  `safe_t`/`universal_inference`/`group_average_e_value` row, `N1` kept for
+  `family_D_spectral_e_detector`, whose oracle threading A5 registers at `:679`; `N4-p06` for
+  `universal_inference`'s φ=0.6 rows, which cannot be handed a φ at all) changes a registered field's
+  value on every future emission of this battery, across every card that reads it. An erratum
+  registers nothing. **It needs its own amendment and its own paired smoke**, and it expires
+  `shape_ecdf_accumulator`'s card (the one card pinning this harness). Recommended as a new WORKLIST
+  row rather than folded in here.
+- **`params: 'oracle'` on `safe_t`/`universal_inference`/`group_average_e_value` rows** stays as
+  Erratum v1.3 left it, for the same reason.
+- **`validation/certification/README.md` is not appended to.** The protocol-side statement of C43.3
+  belongs there; this erratum states it in the battery's own document only.
+- **The `phi_known` semantics are not re-opened.** If the operator wants the strict reading, C43.5
+  is the price sheet; adopting it is a protocol change with a card-regime consequence, not an
+  erratum.
+
+### C43.9 Disclosure pins (mutation-kill on behaviour this erratum's verdict rests on)
+
+Two assertions are added to the certification suite. They **change no behaviour** and register
+nothing; they pin two properties of already-registered code that this erratum's verdict depends on,
+so a silent change surfaces as a red test instead of a stale erratum:
+
+1. `test/score.test.mjs` — under a `phi_known: true` card, `N1`, `N2-m100`, `N5` and `N6` cells read
+   `out_of_regime: false` while `N4-p06` reads `true` (the C43.2 ruling, and the mutation that
+   would flip `phi_source === 'estimated'` to `!== 'oracle'` in `phiIsEstimated`).
+2. `test/coverage-score.test.mjs` — a canonical cell carrying `phi_source: 'estimated'` under a
+   `phi_known: true` card still reads `COVERED` (the C43.3 property: the class-answer layer applies
+   no regime check; the mutation that would add one is killed).
+
+### C43.10 House rules, mapped
+
+(1) Registration before code: nothing is registered and no endpoint code changes; the two suite
+assertions carry no emission. (2) No endpoint, floor or threshold moves, so nothing could move under
+a reading. (3) **This section IS the clearly-labelled post-hoc analysis** and it carries **no
+verdict**: every number in C43.5 is read from an already-published scored run. (4) §9's fallback
+untouched. (5) No substrate is drawn. (6) `results/` untouched — no run directory written, no row
+edited; the disclosure is the correction (§11 rule 6). (7) No rerun. (8) Every number the probe
+produced is stated above, including the ones that do not help the finding (the strict reading would
+cost K2 and K5 their YES if the coverage layer were also gated).
+
+### Erratum summary
+
+**`C43`'s premise does not survive contact with the code.** The φ=0 coverage cells do estimate φ
+(`run-battery.mjs:616`, `safe-t-e-value.ts:136`) — and they are inside the card's known-φ regime
+under the stamped tag, under the accurate tag, and under the strict reading the protocol rejected in
+`nulls.mjs:43-49`; the 14 cells this card actually loses to `phi_known` are `N4-p*` cells from two
+other studies. The class answers never passed through the regime check at all: `coverageFor` has no
+regime token in its body, by the registered reason that power is not a validity claim, and `safe_t`
+has **zero** coverage-battery cells in its S2. Priced: `USE`/`T1`, S2 `PASS`, S3 `PASS` and
+K1/K2/K5 `COVERED` all hold identically under both readings. **What is genuinely wrong is smaller
+and sharper than the row: the `N1` stamp on a cell whose φ was never threaded**, mechanically inert,
+named here and left for its own amendment.

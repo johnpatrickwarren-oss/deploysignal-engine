@@ -1945,3 +1945,86 @@ test('K6A.3.1: the registered run screens at 250 x 8,000 — the branch, pinned 
   assert.match(src, /const NULL_GROWTH_SCREEN = CLASSES_RUN\.includes\('K6-slow'\) \? runNullGrowthScreen\(CLASSES_RUN\) : null;/,
     'the driver call site is registered: iff K6-slow is in scope');
 });
+
+// ── Amendment v2.C38.1 — `mean_e_sd` / `mean_e_lower_95` on the terminal-instrument S2 rows ──
+// WORKLIST C38 item (1). The field safe-t's frozen card falsifier names ("one-sided 95% lower bound
+// of mean(e) > 1") existed in `terminal-evalue`'s rows and on no row this battery emits, so on this
+// battery's evidence the mean rule fell back to the point estimate. These three tests pin the
+// emission, its arithmetic, and its registered absence.
+
+const C38_TERMINAL_ARMS = ['group_average_e_value', 'family_E_conformal_heldout', 'point_tail_bet_e_value'];
+const C38_NON_TERMINAL_ARMS = ['spectral_bet_e_process', 'shape_block_conformal_bet', 'shape_ecdf_accumulator'];
+// The `n` the bound's sqrt divides by, per C38.1.2's per-kind table: the per-POINT count on the
+// K4.1.4 row, the per-trajectory count everywhere else.
+const c38SampleN = (row) => (row.detector === 'point_tail_bet_e_value' ? row.n_points : row.n);
+
+test('C38.1.2: the terminal-instrument S2 rows carry mean_e_sd and mean_e_lower_95; the spectral/shape S2 rows and every S3 row do not', () => {
+  const { summary } = smoke();
+  for (const det of C38_TERMINAL_ARMS) {
+    const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === det);
+    assert.ok(s2, `${det}: no healthy (S2) arm`);
+    assert.ok(Number.isFinite(s2.mean_e_sd), `${det}: mean_e_sd ${s2.mean_e_sd}`);
+    // Strictly positive on every row: a 0 sd is what "the spread was never accumulated" looks
+    // like, and on the point row it is the only observable that the Welford pass in record() ran
+    // at all (mutation kill: delete the pointM2 update and this fails on point_tail_bet_e_value).
+    assert.ok(s2.mean_e_sd > 0, `${det}: mean_e_sd must be strictly positive, got ${s2.mean_e_sd}`);
+    assert.ok(Number.isFinite(s2.mean_e_lower_95), `${det}: mean_e_lower_95 ${s2.mean_e_lower_95}`);
+    assert.ok(s2.mean_e_lower_95 >= 0, `${det}: the bound is clamped at 0, got ${s2.mean_e_lower_95}`);
+    assert.ok(s2.mean_e_lower_95 <= s2.mean_e,
+      `${det}: a LOWER bound cannot exceed the point estimate (${s2.mean_e_lower_95} > ${s2.mean_e})`);
+    const s3 = summary.cells.find((c) => c.arm === 'power' && c.detector === det);
+    assert.ok(!('mean_e_lower_95' in s3) && !('mean_e_sd' in s3),
+      `${det}: the S3 row carries no mean instrument, so it must carry neither field`);
+  }
+  // K3.1.1/K3.1.2 and K6.7 put these arms on the other branch: no `mean_e`, so a bound on the
+  // mean would be a field with no sample behind it.
+  for (const det of C38_NON_TERMINAL_ARMS) {
+    for (const row of summary.cells.filter((c) => c.detector === det)) {
+      assert.ok(!('mean_e_sd' in row), `${det} ${row.arm ?? row.severity}: mean_e_sd must be absent`);
+      assert.ok(!('mean_e_lower_95' in row), `${det} ${row.arm ?? row.severity}: mean_e_lower_95 must be absent`);
+    }
+  }
+  // And no fault (S3) cell of any detector gains either field.
+  for (const row of summary.cells.filter((c) => c.fault_class != null)) {
+    assert.ok(!('mean_e_lower_95' in row), `fault cell ${row.cell_index} ${row.detector}: mean_e_lower_95 must be absent`);
+  }
+});
+
+test('C38.1.2 provenance: mean_e_lower_95 recomputes from the row\'s own mean_e, mean_e_sd and n — the clamp and z = 1.645 both pinned by a row that exercises them', () => {
+  const { summary } = smoke();
+  let clamped = 0;
+  let unclamped = 0;
+  for (const det of C38_TERMINAL_ARMS) {
+    const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === det);
+    const n = c38SampleN(s2);
+    const raw = s2.mean_e - 1.645 * s2.mean_e_sd / Math.sqrt(n);
+    assert.equal(s2.mean_e_lower_95, Math.max(0, raw),
+      `${det}: max(0, ${s2.mean_e} - 1.645*${s2.mean_e_sd}/sqrt(${n})) != ${s2.mean_e_lower_95}`);
+    if (raw < 0) clamped += 1; else unclamped += 1;
+    // z: the 1.96 quantile gives a strictly lower bound wherever the clamp is not active, so a
+    // z mutation is observable exactly on the unclamped rows.
+    if (raw > 0) {
+      assert.notEqual(s2.mean_e_lower_95, Math.max(0, s2.mean_e - 1.96 * s2.mean_e_sd / Math.sqrt(n)),
+        `${det}: the emitted bound must be the 1.645 quantile, not 1.96`);
+    }
+  }
+  // MUTATION KILL, both directions, and both are exercised at the smoke seeds: dropping the clamp
+  // is caught by the clamped row (family_E_conformal_heldout reads a raw -0.0229), moving z is
+  // caught by the unclamped rows. If either count ever falls to 0 this test stops killing its
+  // mutation and must be re-seeded rather than relaxed.
+  assert.ok(clamped >= 1, 'no terminal S2 row exercises the 0 clamp — the clamp mutation is unkilled');
+  assert.ok(unclamped >= 1, 'no terminal S2 row leaves the clamp inactive — the z mutation is unkilled');
+});
+
+test('C38.1.2: n < 2 emits the bound and its sd as absent (NaN), not as a number', () => {
+  // A one-trajectory run: the sample variance has no n-1 denominator, so the addendum's own
+  // convention (terminal-evalue/harness/run.mjs:67) is NaN for both fields — which JSON writes as
+  // null, and which `meanRule`'s Number.isFinite test reads as "no interval recorded".
+  const { summary } = runHarness(['--n', '1', '--classes', 'K2']);
+  const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === 'group_average_e_value');
+  assert.ok(s2, 'no healthy (S2) arm at n = 1');
+  assert.equal(s2.n, 1);
+  assert.ok(Number.isFinite(s2.mean_e), 'the point estimate still exists at n = 1');
+  assert.equal(s2.mean_e_sd, null, 'mean_e_sd must be NaN (JSON null) at n < 2');
+  assert.equal(s2.mean_e_lower_95, null, 'mean_e_lower_95 must be NaN (JSON null) at n < 2');
+});

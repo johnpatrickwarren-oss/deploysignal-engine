@@ -982,6 +982,11 @@ const freshAcc = () => ({
   // post-onset window, read by K4.1.4's healthy (S2) arm; windowCrossed is the K4.6
   // descriptive secondary (fault cells) and K4.5's own per-trajectory reading (S3 arm).
   pointFinite: 0, pointNonFinite: 0, pointK: 0, pointSumE: 0, windowCrossed: 0,
+  // Amendment v2.C38.1, C38.1.2 (registered code item 1): Welford accumulators for the per-POINT
+  // sample's sd, which the per-point `mean_e_lower_95` needs and which `pointSumE` alone cannot
+  // give. ADDED BESIDE the existing counters, never replacing them: `mean_e` on the point row
+  // stays `pointSumE / pointFinite` bit-for-bit, and `pointMeanW` is used only for the variance.
+  pointMeanW: 0, pointM2: 0,
   // spectral_bet_e_process only (`kind: 'spectral'`): degenerateWindows sums, across every
   // trajectory AND window scored for the cell, the count of individual spectralBetWindow
   // calls whose eAvg was non-finite (K3.1.6). spectralEAvgMeans holds one number per
@@ -1033,6 +1038,10 @@ function record(acc, detId, out) {
       if (Number.isFinite(e)) {
         acc.pointFinite += 1;
         acc.pointSumE += e;
+        // Amendment v2.C38.1, C38.1.2: Welford, in the same pass, for the per-point sd only.
+        const d = e - acc.pointMeanW;
+        acc.pointMeanW += d / acc.pointFinite;
+        acc.pointM2 += d * (e - acc.pointMeanW);
         if (e >= THRESHOLD) { acc.pointK += 1; anyFired = true; }
       } else {
         acc.pointNonFinite += 1;
@@ -1096,6 +1105,18 @@ const median = (xs) => {
   const mid = Math.floor(n / 2);
   return n % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
+
+// Amendment v2.C38.1, C38.1.2: the one-sided 95% lower bound on a MEAN, transcribed from the
+// addendum that owns the field name `mean_e_lower_95`
+// (validation/terminal-evalue/POWER-PER-CELL-ADDENDUM-2026-08-07.md change (a), emitted at
+// validation/terminal-evalue/harness/run.mjs:70-71) so one field name cannot mean two statistics
+// across two studies. `z = 1.645` is the same quantile `lower95` above uses for the exceedance
+// bound on the same row. The CLAMP AT 0 is the one difference from summarise()'s
+// `lower95_one_sided` and it is deliberate: e >= 0, and clamping can only lower the bound, so it
+// can never make a falsifier fire. NaN at n < 2, which is the field's registered absence.
+const meanLower95 = (mu, sd, n) => (
+  n < 2 || !Number.isFinite(sd) || !Number.isFinite(mu) ? NaN : Math.max(0, mu - 1.645 * sd / Math.sqrt(n))
+);
 
 // K3.1.1, copied verbatim from validation/detector-audit/harness/run-sequential.mjs:37-44
 // (PREREGISTRATION.md's own citation for cell 33's increment_estimator shape).
@@ -1557,6 +1578,22 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   const s2Lower95 = pointKind
     ? (s2PointN ? lower95(s2PointK, s2PointN) : NaN)
     : (s2n ? lower95(s2k, s2n) : NaN);
+  // Amendment v2.C38.1, C38.1.2: the terminal-instrument row's mean, the spread that produced it,
+  // and its one-sided 95% lower bound — all three over the SAME sample `mean_e` is already the mean
+  // of, per adapter kind (C38.1.2's table). `terminal`/`process` hold the whole sample in
+  // `acc.es`, so the sd is two-pass and `summarise` supplies it; `point` holds running aggregates
+  // only, so the sd is Welford's (record(), point branch) and `mean_e` stays `pointSumE /
+  // pointFinite` bit-for-bit. `meanSd`'s n < 2 -> NaN convention
+  // (validation/terminal-evalue/harness/run.mjs:67) is kept, so the sd and the bound are absent
+  // together or present together.
+  const s2MeanN = pointKind ? s2PointN : s2n;
+  const s2MeanE = pointKind
+    ? (s2PointN ? healthy.pointSumE / s2PointN : NaN)
+    : (healthy.es ? mean(healthy.es) : NaN);
+  const s2MeanSd = pointKind
+    ? (s2PointN > 1 ? Math.sqrt(healthy.pointM2 / (s2PointN - 1)) : NaN)
+    : (healthy.es && healthy.es.length > 1 ? summarise(healthy.es).sd : NaN);
+  const s2MeanLower95 = meanLower95(s2MeanE, s2MeanSd, s2MeanN);
   const s2 = {
     detector: detId,
     arm: 'healthy',
@@ -1586,7 +1623,14 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       ? { k: s2k, crossing_rate: s2n ? s2k / s2n : NaN }
       : {
         exceedance: pointKind ? (s2PointN ? s2PointK / s2PointN : NaN) : (s2n ? s2k / s2n : NaN),
-        mean_e: pointKind ? (s2PointN ? healthy.pointSumE / s2PointN : NaN) : (healthy.es ? mean(healthy.es) : NaN),
+        mean_e: s2MeanE,
+        // Amendment v2.C38.1, C38.1.2 (registered code item 2): the field safe-t's frozen card
+        // falsifier names ("one-sided 95% lower bound of mean(e) > 1"), and the spread it cannot
+        // be read without. `meanRule` (validation/certification/lib/guards.mjs) is refusal-only
+        // and tests this bound and the point estimate INDEPENDENTLY, so emitting the field can
+        // only add refutations — it can never clear a cell the point estimate refutes.
+        mean_e_sd: s2MeanSd,
+        mean_e_lower_95: s2MeanLower95,
       }),
     lower_95: s2Lower95,
     ...(spectralKind ? {

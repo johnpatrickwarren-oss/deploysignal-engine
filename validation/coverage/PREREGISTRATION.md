@@ -9503,3 +9503,213 @@ REPORTs correct that.
   than a silence.
 - **C47 item (1)** — the O(1/n)-approximate, mildly anti-conservative conformal exchangeability
   identity (K4.1.10) — is untouched by this erratum and remains open.
+
+---
+
+## Amendment v2.C38.1 — 2026-08-09, before the emission exists: `mean_e_lower_95` on this battery's terminal-class S2 rows, and a WORKLIST claim corrected at HEAD
+
+WORKLIST `C38` item (1). Sections §1–14 and every prior Amendment and Erratum stay intact; this
+amendment **adds two fields to one row shape** and moves no endpoint, floor, threshold, seed, grid,
+falsifier or verdict. Registered **before** the harness change it authorizes, and **no run is
+re-run**: the fields appear on the next run that touches these rows.
+
+### C38.1.1 LEAD WITH THE CORRECTION — "no run anywhere in the repo records that field" is FALSE at HEAD
+
+The WORKLIST row reads:
+
+> safe-t's frozen falsifier names `mean_e_lower_95`, a one-sided lower bound on the mean, and no
+> run anywhere in the repo records that field — the scorer falls back to testing the point estimate.
+
+**Measured over the corpus `validation/certification/lib/collect.mjs`'s `loadEvidence` actually
+returns, at this commit: 54 cells record it.** Census, by card and by run, counting cells that carry
+either terminal instrument (`mean_e` or `exceedance`):
+
+| card | validity-candidate cells | of which carry `mean_e_lower_95` |
+|---|---|---|
+| `safe_t_e_value` | 47 | **27** — `2026-08-terminal-evalue/run-20260807T215034Z` (20/20), `2026-08-phi-identifiability/run-20260807T215105Z` (7/7); `2026-08-terminal-evalue/run-20260802T041353Z` 0/20 |
+| `universal_inference_e_value` | 77 | **27** — the same two runs at 20/20 and 7/7; `run-20260802T041353Z` 0/20, `clustersynth-ui` 0/30 |
+| `family_E_conformal_heldout` | 1 | 0 |
+| `point_tail_bet_e_value` | 1 | 0 |
+| `group_average_e_value` | 1 | 0 |
+| `family_E_conformal` | 0 | — |
+
+The field was registered by `validation/terminal-evalue/POWER-PER-CELL-ADDENDUM-2026-08-07.md`
+change (a) and emitted at `validation/terminal-evalue/harness/run.mjs:116`
+(`mean_e: mean, mean_e_sd: sd, mean_e_lower_95: meanLo`). `validation/certification/README.md`'s
+"Which run is current" section already describes what it did and did not fire on. **So safe-t's
+frozen falsifier is evaluable today, on 27 of its 47 candidate cells.**
+
+**The residue the row is right about, restated exactly: THIS battery records neither field on any
+of its terminal-class S2 rows.** Three such rows exist in the corpus, and all three are
+scored on the point estimate:
+
+| run | card | `exceedance` | `mean_e` | recorded token |
+|---|---|---|---|---|
+| `run-20260808T133859Z` | `family_E_conformal_heldout` | `0.0455` | **`4.175984181731008`** | `not-refuted` |
+| `run-20260808T133859Z` | `point_tail_bet_e_value` | `0.001855` | `0.5275562291180412` | `not-refuted` |
+| `run-20260808T201635Z` | `group_average_e_value` | `0.0005` | **`1.9140717432761356`** | `not-refuted` |
+
+Two of the three carry `mean_e` above `TERMINAL_MEAN_BOUND = 1`, so
+`meanRule` (`validation/certification/lib/guards.mjs`) already overrides their recorded
+`not-refuted` to REFUTED on the point estimate — **those are the two historical mean-rule
+overrides, and this amendment recomputes nothing about them** (see C38.1.5).
+
+### C38.1.2 The emission, registered: which rows, and the exact estimator
+
+**WHICH ROWS.** The S2 (`arm: 'healthy'`) row of any A1 arm whose emission takes the
+**terminal instrument pair** branch — the `else` of the ternary at
+`harness/run-battery.mjs:1585-1592`, which emits `exceedance` and `mean_e`, the pair
+`CLASS_INSTRUMENTS.terminal_e_value` registers (`validation/certification/lib/constants.mjs:11`).
+At this commit that is exactly three arms: **30** (`group_average_e_value`, `kind: 'terminal'`),
+**31** (`family_E_conformal_heldout`, `kind: 'process'`) and **32** (`point_tail_bet_e_value`,
+`kind: 'point'`). The scoping is the branch, not a detector-id list, so a future terminal-class arm
+inherits it without a further amendment. `spectral_bet_e_process` and the two shape detectors take
+the other branch (K3.1.1/K3.1.2, K6.7) and are **excluded**: they carry no `mean_e` and this field
+would be meaningless on them.
+
+**THE ESTIMATOR.** Transcribed from the addendum that owns the field name, so one field name cannot
+mean two things across two studies
+(`validation/terminal-evalue/POWER-PER-CELL-ADDENDUM-2026-08-07.md`, change (a)):
+
+```
+n     = the count of finite reads in the row's own sample   (the sample mean_e is the mean of)
+mu    = mean_e
+s^2   = sum (e_i - mu)^2 / (n - 1)                          (sample variance, n-1 denominator)
+lower = max(0, mu - 1.645 * s / sqrt(n))                    -> mean_e_lower_95
+```
+
+`NaN` when `n < 2`. `z = 1.645` is the constant `lower95(k, n)`
+(`harness/run-battery.mjs:1086-1090`) already uses for the exceedance bound on the same row, so
+both intervals on a row use one quantile. **`mean_e_sd` (`s`) is registered alongside it**, for the
+addendum's own stated reason — the bound cannot be read without the spread that produced it, and
+recording both makes the bound recomputable by a reader from `mean_e`, `mean_e_sd` and `n` without
+a re-run.
+
+**WHICH SAMPLE, per adapter kind.** The sample is always the one `mean_e` on that row is already
+the mean of — this amendment introduces no second sample:
+
+| kind | arm | the sample | `n` field on the row |
+|---|---|---|---|
+| `terminal` | 30 | the per-trajectory terminal e-values, `acc.es` | `n` (`healthy.finite`) |
+| `process` | 31 | the per-trajectory final wealth `M_T`, `acc.es` | `n` (`healthy.finite`) |
+| `point` | 32 | the per-POINT e-values across the whole post-onset window (K4.1.4's per-point row) | `n_points` (`healthy.pointFinite`) |
+
+**CONSISTENCY WITH `lower95_one_sided`, and the ONE difference, stated because it is a real
+difference.** `summarise` (`harness/run-battery.mjs:1101-1108`, K3.1.1's verbatim copy) computes
+`lower95_one_sided = mean - 1.645 * se` with the same `n-1` variance and the same `z`. It is
+**unclamped**; `mean_e_lower_95` is **clamped at 0**. The clamp is part of the field's own
+registered estimator (`e >= 0`, and it can only lower the bound, so it can never make a falsifier
+fire), and it is kept rather than dropped so that a `mean_e_lower_95` emitted by this battery and
+one emitted by `terminal-evalue` are the same statistic. On the terminal path the relation is
+therefore exactly `mean_e_lower_95 === max(0, summarise(sample).lower95_one_sided)`, and Amendment
+v2.C39 registers that identity as a checked invariant.
+
+**NUMERICAL NOTE, disclosed.** On the `terminal`/`process` path the whole sample is in memory
+(`acc.es`), so `s` is the two-pass sample sd. On the `point` path only running aggregates are kept
+(`pointSumE`, `pointFinite`), so `s` is accumulated by **Welford** in `record()`. `mean_e` itself
+is **unchanged, bit-for-bit**: it stays `pointSumE / pointFinite`, and Welford's running mean is
+used only for the variance. The two means agree to floating-point rounding and the recorded `mean_e`
+remains the one a reader recomputes from.
+
+### C38.1.3 What this changes in the scorer: nothing, and the direction is checked
+
+`mean_e_lower_95` is read at exactly one site, `meanRule`
+(`validation/certification/lib/guards.mjs`), and that rule is **refusal-only**. Its FIX 1 form
+tests the recorded bound and the point estimate **independently**, and neither branch can clear:
+
+- recorded bound `> 1` → override to REFUTED;
+- otherwise point estimate `mean_e > 1` → override to REFUTED, with the recorded bound named as
+  *uninformative, not exculpatory*.
+
+So emitting the field on a row **can only add refutations, never remove one**. It is not an
+instrument under `CLASS_INSTRUMENTS`, so `applyGuards` cannot read it as a foreign instrument and
+no cell can be VOIDed by its presence. `isValidityCell` (`lib/score.mjs:11`) already admits these
+rows on `exceedance`/`mean_e`, so candidacy does not move either.
+
+### C38.1.4 When the falsifier becomes evaluable, stated plainly
+
+**On this battery's rows it is NOT evaluable now and will not be until a run emits it.** The three
+rows above stay exactly as committed. The next `run-battery.mjs` run that scores a terminal-class
+arm — any run of classes K2 or K4, or of arms 30/31/32 — will carry `mean_e_sd` and
+`mean_e_lower_95`, and safe-t's frozen falsifier clause *"one-sided 95% lower bound of mean(e) > 1"*
+becomes literally evaluable on that row at that point. **No such run is authorized by this
+amendment and none is performed with it.**
+
+### C38.1.5 Named-not-done
+
+1. **No rerun.** The three existing rows are not re-measured. The bound is **not recoverable** from
+   them: only the sample mean was recorded, so `s` cannot be reconstructed without re-running.
+2. **The two historical mean-rule overrides are not recomputed** (`group_average_e_value`,
+   `family_E_conformal_heldout`). Re-examining them requires reruns, which are out of scope here.
+3. **`safe_t`'s own coverage rows are untouched.** Its A6 rows on K2/K4 are fault (S3) rows carrying
+   `detection_rate`, not S2 rows carrying `mean_e`, so no field of theirs moves.
+4. **WORKLIST `C38` items (2)–(6) are untouched** and each stays open independently.
+5. **The WORKLIST row itself is not edited** — the wiki is not this repository's to correct; the
+   census in C38.1.1 is filed for write-back.
+
+### C38.1.6 Registered code and test items
+
+| # | item | site |
+|---|---|---|
+| 1 | Welford `pointM2`/`pointMeanW` accumulators, updated beside the existing `pointFinite`/`pointSumE` and never replacing them | `harness/run-battery.mjs` `freshAcc` + `record` (`point` branch) |
+| 2 | `mean_e_sd` and `mean_e_lower_95` on the terminal-instrument S2 branch, per-kind sample as tabled | `harness/run-battery.mjs` S2 emission |
+| 3 | the estimator as one helper (`meanLower95`), so the clamp and the `z` exist once | `harness/run-battery.mjs` |
+| 4 | test: the two fields are present on a terminal-class S2 row and absent from spectral/shape S2 rows | `test/run-battery.test.mjs` |
+| 5 | test: `mean_e_lower_95 === max(0, mu - 1.645*s/sqrt(n))` recomputed from the row's own `mean_e`, `mean_e_sd` and `n` — **mutation kill: drop the clamp, or move `z` to `1.96`, and the test fails** | `test/run-battery.test.mjs` |
+| 6 | test: `n < 2` gives `NaN`, not a number | `test/run-battery.test.mjs` |
+
+### C38.1.7 DISCLOSURE — this change EXPIRES one card, and the card is deliberately NOT re-frozen
+
+`validation/certification/cards/shape_ecdf_accumulator.json` pins
+`validation/coverage/harness/run-battery.mjs` in its `source_files[]` expiry surface (the only card
+that does). So the moment the harness changes, `npm run cert:expiry` reports
+
+```
+EXPIRED shape_ecdf_accumulator: validation/coverage/harness/run-battery.mjs (changed)
+```
+
+**That is the mechanism working, not a defect**, and it is disclosed here rather than discovered by
+the next reader of CI. Three facts about it:
+
+1. **No claim, endpoint or verdict of that card moves.** The change adds two fields to a row shape
+   that card does not read: `shape_ecdf_accumulator`'s arm-47 S2 row takes the `crossing_rate`
+   branch (K6.7/K6A.1.10), so it gains neither field. Verified by a paired smoke run at the same
+   seeds: **0 pre-existing fields changed on any of the 66 emitted rows, 2 new fields added**, and
+   the new fields appear on 3 rows and no others.
+2. **The card is NOT re-frozen by this amendment.** `validation/certification/tools/freeze-cards.mjs`
+   has no per-card mode — it restamps `engine_pin.sha` on **all 15 cards** — and a re-freeze riding
+   silently inside an unrelated commit is the exact defect **K6A.5.3** disclosed and this document
+   refuses to repeat. A freeze is a deliberate act with its own row in
+   `validation/certification/README.md`'s freeze table.
+3. **The expiry check is a reported, non-gating CI step** (`validation/certification/README.md`,
+   `CERT_SIBLING_ROOT` section), so the EXPIRED status blocks nothing and hides nothing. It stands
+   until a freeze is taken as its own decision.
+
+### C38.1.8 House rules, mapped
+
+(1) **Committed before the code**: this section commits in the commit that precedes the harness
+change, and no run of the changed harness exists. (2) No endpoint or threshold moves, so nothing
+can move under a reading. (3) The census in C38.1.1 is a **corpus count, not a post-hoc analysis of
+a candidate endpoint** — it reads which cells carry a field, no rate and no verdict.
+(4) The fallback rule (§9) is untouched; a `NaN` bound at `n < 2` is the field's own registered
+absence, not a fallback. (5) No new substrate. (6) `results/` untouched — **no run is written, and
+none of the three existing rows is edited.** (7) No rerun. (8) Binding on the report of the next
+run that emits these fields: it must state both numbers with the row's `n`. **And the card expiry of
+C38.1.7 is part of the record, not a side effect left unstated.**
+
+### Amendment summary
+
+**Registers `mean_e_sd` and `mean_e_lower_95` on this battery's terminal-instrument S2 rows**
+(arms 30, 31, 32 at this commit; the scoping is the `exceedance`/`mean_e` branch, so a future
+terminal-class arm inherits it), with the estimator transcribed verbatim from the addendum that
+owns the field name — `max(0, mu - 1.645*s/sqrt(n))`, `n-1` variance, `NaN` at `n < 2`, clamped
+where `summarise`'s `lower95_one_sided` is not, and the clamp kept so the field means one thing
+across studies. **And corrects the WORKLIST claim it is filed against:** "no run anywhere in the
+repo records that field" is **false at HEAD — 54 cells record it**, on
+`terminal-evalue/run-20260807T215034Z` and `phi-identifiability/run-20260807T215105Z`, so safe-t's
+frozen falsifier is already evaluable on 27 of its 47 candidate cells. The residue is real and is
+this battery's alone: **0 of its 3 terminal-class S2 rows carry the bound**, and two of those three
+already refute on the point estimate at `mean_e` `4.176` and `1.914`. **Nothing is re-run and
+nothing is recomputed** — the bound is not recoverable from a recorded mean, so it becomes evaluable
+on this battery only on the next run that touches these rows, which this amendment does not
+authorize.

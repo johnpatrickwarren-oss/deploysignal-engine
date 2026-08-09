@@ -10380,3 +10380,140 @@ description; corrected here by append, with the original intact.
 **exactly `6` fields changed** — `params` on `family_E_conformal_heldout`'s cells `18`, `19`, `20`,
 `21` and arm `31`'s two rows, `'oracle'` → `'heldout-empirical'`. **No other field on any row, and no
 new field.** Those are precisely the six rows per run Erratum v1.4 enumerates.
+
+---
+
+## Correction append to Amendment v2.C45 and v2.C38.1, dated 2026-08-09 (appended not edited): three quantitative corrections from review, all against this author's own numbers
+
+Quote-and-correct, originals intact. **No endpoint, floor, threshold, seed, grid, falsifier, verdict,
+cell or class row moves.** Two of the three corrections make the closed form's agreement **tighter**
+than v2.C45 claimed and one removes two figures that should never have been quoted at all.
+
+### (a) C45.3's two draw-level z-scores are UNSTABLE ESTIMATES and are WITHDRAWN
+
+**Quoted, from C45.3 and repeated in v2.C45's Amendment summary:**
+
+> **AND THE TWO READINGS THE TASK NAMES ARE ORDINARY DRAWS OF THIS MECHANISM.** Arm 34's `0.022904`
+> sits at **`-0.87` sd** of the shared arm's own spread; arm 47's `0.041150` at **`+0.99` sd** of the
+> shared arm at its own `n_p = 80,000`, and at `+0.33` sd of the registered 100-draw distribution.
+
+**Correct: both z-scores are estimates against a mean and sd measured at `R = 12` and `R = 4`, and
+neither is stable at that `R`.** Re-measured at `R = 80` on committed code
+(`tools/ks-decomposition.mjs --shared-only --reps 80`):
+
+| construction | C45.3's z (at `R = 12` / `R = 4`) | at `R = 80` | review's independent value |
+|---|---|---|---|
+| K6 arm 34, `0.022904` | `-0.87` | **`-1.14`** | `-1.06` / `-1.10` |
+| K6-slow arm 47, `0.041150` | `+0.99` | **`+0.25`** | `+0.19` / `+0.59` |
+
+The K6-slow figure moves by `0.74` sd between estimates of its own reference. **A quantity that
+unstable is not a finding and is withdrawn.** The `+0.33` sd against the registered 100-draw
+distribution stands — that reference is measured at `n = 100` and is the one stable comparison of the
+three.
+
+**REGISTERED IN THEIR PLACE, the stable statement, which needs no Monte Carlo at all.** Under the
+corrected reference of C45.4 the reading's null is the Kolmogorov law scaled by `1/sqrt(m)`, so its
+95th percentile is `K_0.95 / sqrt(m)` with `K_0.95 = 1.358099`:
+
+| construction | `m` | `K_0.95 / sqrt(m)` | reading | verdict |
+|---|---|---|---|---|
+| K6 arm 34 | 333 | **`0.074423`** | `0.022904` | **does not reject** |
+| K6-slow arm 47 | 500 | **`0.060736`** | `0.041150` | **does not reject** |
+| K6-slow across-draw mean | 500 | **`0.060736`** | `0.037646` | **does not reject** |
+
+**NEITHER READING REJECTS against its own reference distribution**, and that statement is closed
+form, seed-free and `R`-free. It is what C45.4's correction to the diagnostic actually implies, and it
+is strictly stronger than the two withdrawn z-scores were.
+
+### (b) C45.3's headline shared-arm figures are HIGH at `R = 12`, and the closed form agrees BETTER than claimed
+
+**Quoted, from C45.3:**
+
+> `(b) D-SWEEP D=1     0.042637  sd 0.016530 …`  and  **"K6-slow … reads `1.098` of its closed
+> form"**, and: **"On K6 the probe's shared arm reads `0.037574` where the closed form predicts
+> `0.047604` — a ratio of `0.789`."**
+
+**Correct: those are `R = 12` estimates of `E[shared KS]` and both are high.** Settled at `R = 80`:
+
+```
+K6-slow   mean 0.038451   sd 0.010908   se 0.001220   95% CI [0.036061, 0.040841]
+          closed form 0.038849            measured/closed = 0.9897      (C45.3 said 1.098)
+K6        mean 0.035812   sd 0.011305   se 0.001264   95% CI [0.033334, 0.038289]
+          closed form 0.047604            measured/closed = 0.7523      (C45.3 said 0.789)
+```
+
+Both CIs contain the review's independently settled ranges (`0.0386`–`0.0393` and
+`0.0356`–`0.0360`). **The direction of the correction is against this author's own presentation and
+in favour of the finding: on K6-slow the closed form is accurate to `1.0%`, not the `9.8%` C45.3
+implied.** The two-feature attenuation ratio on K6 is **`0.75`** (review's range `0.68`–`0.76`), not
+`0.789`; C45.3's mechanical explanation of it is unchanged, only its number.
+
+**C45.3's other arms are NOT re-measured and their `R` stands as printed** — the `D`-sweep's shape,
+the full-independence residual and the `n_p` discriminator each rest on a comparison at matched `R`
+within their own arm, and the verdict of C45.4 turns on those comparisons rather than on the absolute
+level of `D = 1`. **Named-not-done: settling the `D`-sweep and the residual arms at `R = 80` as
+well.**
+
+### (c) C45.2's `sd[K]` and C45.3's "within 6%"
+
+- **`sd[K] = 0.260333`**, not `0.2606` as C45.2 states. Exactly:
+  `Var[K] = pi^2/12 - (sqrt(pi/2) ln 2)^2 = 0.822467033 - 0.754693832 = 0.067773204`. The predicted
+  across-draw sd at `m = 500` is therefore `0.011642` and the measured `0.010502` is **`0.902`** of it
+  — the ratio C45.3 quoted, unchanged, so nothing downstream moves.
+- **C45.3's "predicts all five measured quantiles to within `6%`" is `6.15%`**, at p75
+  (`0.042774 / 0.045579 = 0.9385`); p95 is `6.10%`. Four of the five are within `1.5%`. The claim was
+  rounded in its own favour by `0.15` points; corrected.
+- `E[K] = sqrt(pi/2) ln 2 = 0.868731161` is confirmed from theory, as C45.2 states.
+
+### (d) v2.C38.1 / v2.C39: the registered identity was true by FLOATING-POINT LUCK, and is now structural
+
+**C39.5 registers** `max(0, increment_estimator.lower95_one_sided) === mean_e_lower_95`, and
+C38.1.6 item 3 registered the estimator as one helper *"so the clamp and the `z` exist once"*.
+**Correct: it did not exist once.** `summarise` builds its bound from `se = sqrt(varr / n)`; the
+helper recomputed `1.645 * sd / sqrt(n)` = `1.645 * sqrt(varr) / sqrt(n)`. **The two routes differ in
+the last bit, and the identity held only because the re-rounding and the `0` clamp happened to hide
+the gap** — a review measured a reseed that breaks it with no defect present.
+
+**Registered: the bound IS the increment estimator's own `lower95_one_sided`, clamped at `0`.** The
+convention does not move — the `z` and the `n-1` variance are `summarise`'s (K3.1.1), the clamp is the
+addendum's, and `n < 2` or a non-finite spread still gives `NaN` rather than the `0` a clamped
+`-Infinity` would produce. **C38.1.6 item 3 is superseded: the estimator's algebra now exists once in
+`summarise` and nowhere else, which is what that item was trying to say.** Verified: the structural
+form reproduces **every emitted value bit-for-bit** at the smoke seeds (103 rows, 0 fields changed).
+
+**And the test that checks it is corrected in the same direction.** Two assertions asserted exact
+equality across the two algebraic routes and passed on this seed only — the same trap. They now carry
+a stated relative tolerance, the exact assertion is made against the structural source instead, and
+**the recompute mutation is killed by a source pin, because it is measurably NOT killed
+behaviourally at these seeds** (reverting the harness to the recomputed form fails no behavioural
+test — that is the finding, not a gap).
+
+### (e) Named-not-done, from the same review
+
+- **The `heldout_seed`/`params` invariant test is ONE-DIRECTIONAL.** It checks that a row carrying
+  `heldout_seed` does not say `'oracle'`, and that a row saying `'heldout-empirical'` is a registered
+  candidate — but **not** that every registered candidate's rows carry `heldout_seed`, so a candidate
+  that silently stopped taking a held-out draw would keep its label and pass. The review measured the
+  test's coverage at **6 of 24 (detector, direction) pairs**. **Registered as not-done and NOT
+  expanded here** — widening it is a test-coverage change with its own scope, and this round is
+  corrections only.
+- **v2.C45's arms other than `D = 1` are not settled at higher `R`** (see (b)).
+- **C47.2.3's own prose was right and the harness comment was wrong.** The comment claimed the
+  invariant is *"true by construction"*; it is not — `heldout_seed` is stamped by separate conditions
+  and the invariant holds because a test checks every row, which is how C47.2.3 states it. The
+  comment is corrected to mirror the registration.
+
+### Correction summary
+
+**Three of this author's numbers corrected against review, two of them in the finding's favour.**
+C45.3's two draw-level z-scores (`-0.87`, `+0.99`) are `R = 12`/`R = 4` estimates that move to
+`-1.14` and `+0.25` at `R = 80`; **withdrawn** and replaced by the seed-free statement that under
+`K_0.95/sqrt(m)` — `0.074423` at `m = 333`, `0.060736` at `m = 500` — **neither reading rejects**.
+The shared-arm headline figures settle to `0.038451` (K6-slow) and `0.035812` (K6) at `R = 80`, so
+the closed form is accurate to **`1.0%`** on K6-slow rather than the `9.8%` C45.3 implied, and the
+two-feature ratio is `0.75`, not `0.789`. `sd[K]` is `0.260333`; "within `6%`" is `6.15%`.
+**And the registered `mean_e_lower_95` identity was true by floating-point luck: it is now
+structural**, the estimator's algebra exists once in `summarise`, and the mutation that would undo it
+is killed by a source pin because it is measurably not killed behaviourally. **The C45 verdict —
+mechanism closed, the excess is the shared draw's own `m`-sample Kolmogorov statistic, the
+diagnostic's critical value never applied — is unchanged and better supported.**

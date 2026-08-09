@@ -229,6 +229,33 @@ function report(name) {
   }
 }
 
+// ── the settled shared arm, on its own, at whatever R the caller can afford ───
+// Added at the C45 correction append (v2.C45 correction, item (b)): the R = 12 headline figures in
+// C45.3 are ~10% (K6-slow) and ~5% (K6) high as estimates of E[shared KS], and a review measured the
+// settled values at R = 80. This mode exists so those figures rest on committed code rather than on
+// a scratch loop. `--reps N` sets R; `--shared-only` selects this mode; `--n-p N` overrides n_p.
+function reportSharedOnly(name, R, nP) {
+  const c = CONSTRUCTIONS[name];
+  const vals = reps((i) => armPooled(c, nP, 1, c.seedBase + 1100000 + i), R);
+  const closed = 0.8687 / Math.sqrt(c.m);
+  const mu = mean(vals);
+  const se = sd(vals) / Math.sqrt(R);
+  console.log(`${c.label}  shared arm (D = 1), n_p = ${nP}, R = ${R}`);
+  console.log(`  mean ${f6(mu)}  sd ${f6(sd(vals))}  se(mean) ${f6(se)}  `
+    + `95% interval [${f6(mu - 1.96 * se)}, ${f6(mu + 1.96 * se)}]`);
+  console.log(`  closed form 0.8687/sqrt(${c.m}) = ${f6(closed)}   measured/closed = ${f6(mu / closed)}`);
+  console.log(`  run reading ${f6(c.runReading.single_draw)}  ->  (reading - mean)/sd = `
+    + `${f6((c.runReading.single_draw - mu) / sd(vals))}   [an UNSTABLE draw-level z; see v2.C45's `
+    + 'correction append item (a) — the stable statement is against K_0.95/sqrt(m)]');
+}
+
 const only = process.argv.find((a) => a === 'k6' || a === 'k6slow');
-for (const name of only ? [only] : ['k6slow', 'k6']) report(name);
+const numArg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? Number(process.argv[i + 1]) : d; };
+if (process.argv.includes('--shared-only')) {
+  const R = numArg('--reps', 80);
+  const nP = numArg('--n-p', 20000);
+  for (const name of only ? [only] : ['k6slow', 'k6']) reportSharedOnly(name, R, nP);
+} else {
+  for (const name of only ? [only] : ['k6slow', 'k6']) report(name);
+}
 console.log('\nprobe complete — no run directory written, no cell emitted, no registered seed read.');

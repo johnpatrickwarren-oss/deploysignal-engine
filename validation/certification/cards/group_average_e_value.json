@@ -8,7 +8,7 @@
   "class": "terminal_e_value",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "893afe026e3e9d592e5e2f7b2f636c1c703fa6a9"
+    "sha": "4a48450ce3d489c4354fd5b61455241a1203a092"
   },
   "source_files": [
     {
@@ -18,6 +18,10 @@
     {
       "path": "detectors/safe-t-e-value.ts",
       "sha256": "8a5103401ab08215f376453cad49528842a6024901564191a96441035991573b"
+    },
+    {
+      "path": "validation/certification/lib/collect.mjs",
+      "sha256": "62389a1377c4f3e742c87c17069a4d839ae868e17f152ccef3cb567585e66e37"
     }
   ],
   "guarantee": {

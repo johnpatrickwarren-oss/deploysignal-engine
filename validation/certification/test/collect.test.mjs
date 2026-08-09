@@ -584,3 +584,112 @@ test('A1: a registry wins over a manifest array naming the same (run, detector)'
   assert.equal(s.reason, 'the amendment says so',
     'the amendment is the later and more specific artifact, so its reason is the reported one');
 });
+
+// ── h0-battery PREREGISTRATION.md Amendment A2: the two rules A1 left able to pass vacuously ──────
+// WORKLIST C48(1) and C48(2), both found by C44's review. Until A2 a supersedes entry could name a
+// detector that no cell of its target run carries — a typo, a rename, an alias the cells do not use
+// — and the entry would drop nothing, report nothing, and read as honoured; and the registry's
+// no-self-erasure rule counted a run that never measured the detector as the surviving run, so it
+// could be satisfied by evidence that does not exist.
+
+test('A2 C48(1): a manifest entry naming a detector the target run does not carry fails closed', () => {
+  const root = supersedeFixture([
+    ['coverage', 'run-old', { study: 'coverage', git_sha: 'a' }, { cells: [cell('safe_t', 1)] }],
+    ['coverage', 'run-new', {
+      study: 'coverage', git_sha: 'b',
+      supersedes: [{ study: 'coverage', run: 'run-old', detectors: ['safe_t_e_value'], reason: 'r' }],
+    }, { cells: [cell('safe_t', 0)] }],
+  ]);
+  // The error has to name all three: which entry declared it, which run it targets, and which name
+  // did not match — a report that says only "unknown detector" cannot be acted on.
+  assert.throws(() => loadEvidence(root), (e) => {
+    assert.match(e.message, /^coverage\/run-new:/);
+    assert.match(e.message, /names detector safe_t_e_value on target coverage\/run-old/);
+    assert.match(e.message, /appears in no cell of that run/);
+    assert.match(e.message, /carries safe_t$/);
+    return true;
+  });
+});
+
+test('A2 C48(1): a registry entry naming a detector the target run does not carry fails closed', () => {
+  const root = withRegistry(twoRunStudy(), 'h0-battery', [regEntry({ detectors: ['family_B_typo'] })]);
+  assert.throws(() => loadEvidence(root),
+    /SUPERSESSIONS\.json: supersedes entry names detector family_B_typo on target h0-battery\/run-old/);
+});
+
+test('A2 C48(1): the target run is what must carry the name, not the corpus', () => {
+  // safe_t exists in this study — in run-new — and the old rule would have been satisfied by any
+  // spelling that matched something somewhere, because it matched nothing at all. The drop resolves
+  // per (run, detector), so the name must be carried by the RUN being superseded.
+  const root = supersedeFixture([
+    ['h0-battery', 'run-old', { study: 'h0-battery', git_sha: 'a' }, { cells: [cell('d', 1)] }],
+    ['h0-battery', 'run-new', { study: 'h0-battery', git_sha: 'b' },
+      { cells: [cell('d', 0), cell('safe_t', 0)] }],
+  ]);
+  withRegistry(root, 'h0-battery', [regEntry({ detectors: ['safe_t'] })]);
+  assert.throws(() => loadEvidence(root), /names detector safe_t on target h0-battery\/run-old/);
+});
+
+test('A2 C48(1): a wide-format target resolves its detector names through the adapter, not falsely', () => {
+  // clustersynth-ui's rows fold two detectors into one cell with no top-level `detector` field, so
+  // the check reads the names the wide adapter would produce. Without that expansion this entry
+  // would throw on a name the run genuinely carries — the false-positive direction of the rule.
+  const wide = { arm: 'a', counter: 1, sui_crossing: 0.01, sui_verdict: 'CLEARED', ui_exceedance: 0, ui_verdict: 'CLEARED' };
+  const root = supersedeFixture([
+    ['clustersynth-ui', 'run-old', { study: 'clustersynth-ui', git_sha: 'a' }, { cells: [wide] }],
+    ['clustersynth-ui', 'run-new', {
+      study: 'clustersynth-ui', git_sha: 'b',
+      supersedes: [{ study: 'clustersynth-ui', run: 'run-old', detectors: ['sequential_ui_e_process'], reason: 'r' }],
+    }, { cells: [wide] }],
+  ]);
+  const ev = loadEvidence(root);
+  assert.equal(ev.cells.filter((c) => c.__run === 'run-old' && c.detector === 'sequential_ui_e_process').length, 0,
+    'the named half of the wide cell is dropped');
+  assert.equal(ev.cells.filter((c) => c.__run === 'run-old' && c.detector === 'universal_inference_e_value').length, 1,
+    'and the unnamed half of the same wide cell survives');
+});
+
+test('A2 C48(1): every committed declaration in the real corpus names only detectors its target carries', () => {
+  // The corpus-level positive control for the strengthening: it is a strengthening only if the
+  // committed SUPERSESSIONS.json and every committed manifest still validate. loadEvidence throws
+  // if any named detector is unmatched, so reaching the census at all is the assertion.
+  const ev = loadEvidence(join(HERE, '..', '..'));
+  assert.equal(ev.cells.length, 2266, 'the pooled corpus is unchanged by A2 — no cell is added or dropped');
+  const drops = ev.runs.filter((r) => r.superseded)
+    .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);
+  assert.deepEqual(Object.fromEntries(drops), {
+    'run-20260808T010208Z': 64,
+    'run-20260808T064039Z': 12,
+    'run-20260808T121548Z': 6,
+    'run-20260801T062612Z': 144,
+    'run-20260801T062824Z': 148,
+    'run-20260801T064237Z': 148,
+  }, 'the same six runs at the same counts as before A2 — three manifest-declared, three registry');
+});
+
+// C44's reviewer's fixture, verbatim in structure: run-old measures detector d, run-empty measures
+// something else, and the registry drops run-old for d. Under A1.7's rule this PASSED — run-empty
+// was not dropped for d, so it counted as the run that survives scoring d, while carrying no cell
+// of d at all. d ends with no evidence, which is exactly what the rule forbids.
+test('A2 C48(2): a surviving run must carry cells for the detector, not merely escape the drop', () => {
+  const root = supersedeFixture([
+    ['h0-battery', 'run-old', { study: 'h0-battery', git_sha: 'a' }, { cells: [cell('d', 1)] }],
+    ['h0-battery', 'run-empty', { study: 'h0-battery', git_sha: 'b' }, { cells: [cell('other', 0)] }],
+  ]);
+  withRegistry(root, 'h0-battery', [regEntry({ detectors: ['d'] })]);
+  assert.throws(() => loadEvidence(root),
+    /leaves no run of h0-battery scoring d with cells for it/);
+});
+
+test('A2 C48(2): a run that does carry the detector still counts as the survivor', () => {
+  // The negative control for the same rule: the strengthening must not refuse a registry whose
+  // replacement run really does measure the detector.
+  const root = supersedeFixture([
+    ['h0-battery', 'run-old', { study: 'h0-battery', git_sha: 'a' }, { cells: [cell('d', 1)] }],
+    ['h0-battery', 'run-new', { study: 'h0-battery', git_sha: 'b' }, { cells: [cell('d', 0)] }],
+  ]);
+  withRegistry(root, 'h0-battery', [regEntry({ detectors: ['d'] })]);
+  const ev = loadEvidence(root);
+  assert.equal(ev.cells.filter((c) => c.detector === 'd').length, 1);
+  assert.equal(ev.cells.find((c) => c.detector === 'd').__run, 'run-new');
+});

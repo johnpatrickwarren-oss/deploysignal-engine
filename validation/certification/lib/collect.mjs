@@ -195,8 +195,17 @@ function loadRunCells(dir) {
 //   1. OWN-STUDY ONLY -- an entry's `study` must be one a run under this registry's own
 //      results/live/ declares. A registry's authority is one study's pre-registration.
 //   2. NO SELF-ERASURE -- for every (study, detector) a registry names, at least one run of that
-//      study must survive un-superseded for that detector. A registry that drops the replacement
-//      along with the defect is the failure the field exists to prevent.
+//      study must survive un-superseded for that detector, AND CARRY AT LEAST ONE CELL FOR IT
+//      (Amendment A2, quote-and-correct; A1.7 registered the clause without the second half and
+//      that made the rule vacuously satisfiable -- see A2 and the comment on the check itself).
+//      A registry that drops the replacement along with the defect is the failure the field exists
+//      to prevent.
+//
+// A THIRD RULE, ON BOTH PATHS (Amendment A2). Every detector a supersedes entry names must appear in
+// at least one cell of the TARGET RUN. Until A2 an unknown detector name -- a typo, a renamed
+// detector, an alias the cells do not carry -- dropped nothing and reported nothing: the entry
+// passed shape validation, the target existed, and `perDetector.get(ec.detector)` in pass 2 simply
+// never matched. The declaration read as honoured and was inert. Fail closed instead.
 //
 // Every drop carries its `source` ('manifest' | 'registry') so REPORT.md can show provenance, and
 // every drop and every unhonoured declaration is reported on the returned `runs` entry, so neither
@@ -212,7 +221,39 @@ function assertEntryShape(d, where) {
   }
 }
 
-const inCorpus = (manifests, target) => manifests.some((m) => `${m.studyName}/${m.runName}` === target);
+// Amendment A2's named-detector rule, also shared by both paths, because an unknown name is equally
+// inert whichever path declared it: manifest arrays and registries alike resolve a drop by exact
+// string match on `cell.detector` in pass 2, so a name no cell carries drops nothing and reports
+// nothing. Called AFTER each path's own target checks (self-supersession, own-study reach, corpus
+// membership), so a wrong target keeps the error message that names the wrong target.
+function assertDetectorsCarried(d, where, detectorsByRun) {
+  const target = `${d.study}/${d.run}`;
+  const carried = detectorsByRun.get(target) ?? new Set();
+  for (const det of d.detectors) {
+    if (carried.has(det)) continue;
+    throw new Error(`${where}: supersedes entry names detector ${det} on target ${target}, which `
+      + `appears in no cell of that run — ${target} carries `
+      + `${[...carried].sort().join(', ') || '(no readable cells)'}`);
+  }
+}
+
+// "study/run" -> the set of detector names that run's own cells carry, keyed on the same locator
+// supersessionIndex builds. Three jobs: corpus membership is `has(target)`, Amendment A2's
+// named-detector rule reads the set, and A2's strengthened no-self-erasure rule asks whether a
+// candidate survivor measured the detector at all. Wide-format cells are expanded first, so a run
+// whose evidence only names its detectors through the sui_/ui_ prefixes still resolves.
+function detectorsByRunIndex(manifests) {
+  const idx = new Map();
+  for (const { studyName, runName, rawCells } of manifests) {
+    const key = `${studyName}/${runName}`;
+    const set = idx.get(key) ?? new Set();
+    for (const c of rawCells ?? []) {
+      for (const ec of expandWideCell(c) ?? []) if (ec.detector != null) set.add(ec.detector);
+    }
+    idx.set(key, set);
+  }
+  return idx;
+}
 
 function applyDrop(dropped, target, detectors, by, reason, source) {
   const perDetector = dropped.get(target) ?? new Map();
@@ -223,6 +264,7 @@ function applyDrop(dropped, target, detectors, by, reason, source) {
 function supersessionIndex(manifests, registries = []) {
   const dropped = new Map();      // "study/run" -> Map(detector -> {by, reason, source})
   const unhonoured = [];          // legacy declarations, reported not applied
+  const detectorsByRun = detectorsByRunIndex(manifests);
   for (const { studyName, runName, manifest } of manifests) {
     const decls = manifest.supersedes;
     if (decls == null) continue;
@@ -246,10 +288,11 @@ function supersessionIndex(manifests, registries = []) {
       }
       // A declaration naming a run this scorer cannot see would silently supersede nothing, which
       // is exactly the failure mode the field exists to prevent. Fail closed.
-      if (!inCorpus(manifests, target)) {
+      if (!detectorsByRun.has(target)) {
         throw new Error(`${studyName}/${runName}: manifest.supersedes names ${target}, which is not `
           + 'in the evidence corpus');
       }
+      assertDetectorsCarried(d, `${studyName}/${runName}`, detectorsByRun);
       applyDrop(dropped, target, d.detectors, `${studyName}/${runName}`, d.reason, 'manifest');
     }
   }
@@ -275,23 +318,37 @@ function supersessionIndex(manifests, registries = []) {
           + "registry's reach is the study whose pre-registration authorized it");
       }
       const target = `${d.study}/${d.run}`;
-      if (!inCorpus(manifests, target)) {
+      if (!detectorsByRun.has(target)) {
         throw new Error(`${reg.path}: names ${target}, which is not in the evidence corpus`);
       }
+      assertDetectorsCarried(d, reg.path, detectorsByRun);
       applyDrop(dropped, target, d.detectors, d.declared_by, d.reason, 'registry');
     }
   }
 
   // Rule 2, checked once every drop is in: a registry may not leave a detector with no scoring run
   // in the study it just superseded.
+  //
+  // AMENDMENT A2, QUOTE-AND-CORRECT. A1.7 registered the rule as "at least one run of that study
+  // must survive un-superseded for that detector", and this loop used to implement exactly that:
+  // `!dropped.get(key)?.has(det)`. Any run of the study that was not itself dropped for `det`
+  // counted as the survivor -- INCLUDING a run that never measured `det` at all, for which the
+  // predicate is trivially true. So the rule was vacuously satisfiable: a study with one run
+  // carrying detector d and one run carrying nothing of d could drop the only run that measured d
+  // and pass, leaving d with no evidence, which is the outcome the rule exists to forbid. Carrying
+  // at least one cell for the detector is now part of surviving.
   for (const reg of registries) {
     for (const d of reg.entries) {
       const runsOfStudy = manifests.filter((m) => m.studyName === d.study);
       for (const det of d.detectors) {
-        const survives = runsOfStudy.some((m) => !dropped.get(`${m.studyName}/${m.runName}`)?.has(det));
+        const survives = runsOfStudy.some((m) => {
+          const key = `${m.studyName}/${m.runName}`;
+          return detectorsByRun.get(key)?.has(det) && !dropped.get(key)?.has(det);
+        });
         if (!survives) {
           throw new Error(`${reg.path}: superseding ${d.study}/${d.run} for ${det} leaves no run of `
-            + `${d.study} scoring ${det} — a registry may not drop the replacement along with the defect`);
+            + `${d.study} scoring ${det} with cells for it — a registry may not drop the replacement `
+            + 'along with the defect');
         }
       }
     }
@@ -327,7 +384,11 @@ export function loadEvidence(validationRoot) {
       const manifest = existsSync(mPath) ? readJson(mPath) : { study: study.name, git_sha: null };
       const studyName = manifest.study ?? study.name;
       studyNames.add(studyName);
-      manifests.push({ dir, runName: run.name, studyName, manifest });
+      // Cells are read HERE, in pass 1, and carried on the entry so pass 2 re-reads nothing.
+      // Amendment A2's two rules ask what detectors a run's cells carry, and both are checked
+      // before any cell is emitted, so the read has to happen before the index is built. `null`
+      // (unsupported layout) is preserved as null and still reported by pass 2, unchanged.
+      manifests.push({ dir, runName: run.name, studyName, manifest, rawCells: loadRunCells(dir) });
     }
     // The registry names studies by the value the runs' own manifests carry (h0-battery's runs
     // declare study '2026-07-h0-battery', not the directory name), which is the same locator
@@ -337,9 +398,8 @@ export function loadEvidence(validationRoot) {
   }
   const { dropped, unhonoured } = supersessionIndex(manifests, registries);
 
-  // Pass 2: load cells, skipping the declared (study, run, detector) rows.
-  for (const { dir, runName, studyName, manifest } of manifests) {
-    const rawCells = loadRunCells(dir);
+  // Pass 2: emit cells, skipping the declared (study, run, detector) rows.
+  for (const { dir, runName, studyName, manifest, rawCells } of manifests) {
     if (rawCells === null) {
       process.stderr.write(`skipped: ${dir}\n`);
       continue;

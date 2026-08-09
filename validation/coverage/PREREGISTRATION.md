@@ -10211,3 +10211,172 @@ cells carrying `mean_e_lower_95` — every detector, power arms included — is 
 correct for their own scope; stated here so neither can be mis-quoted against the other. **The
 finding does not turn on which is used: under either count the WORKLIST claim of zero is false, and
 under both the residue is the same — 0 of this battery's 3 terminal-class S2 rows.**
+
+---
+
+## Amendment v2.C47.2 — 2026-08-09, the micro-amendment Erratum v1.4 named as not-done: `family_E_conformal_heldout` stamps `'heldout-empirical'` on future emissions, and the stamp stops being an enumeration
+
+WORKLIST `C47` item (2), forward fix. Sections §1–14 and every prior Amendment and Erratum stay
+intact. This amendment **changes one registered field's VALUE on future emissions of one detector's
+rows** and moves no endpoint, floor, threshold, seed, grid, falsifier, verdict or cell. Registered
+**before** the harness change it authorizes. **No run is re-run and no committed row is edited** —
+every historical row stays exactly as Erratum v1.4 records it.
+
+### C47.2.1 What this closes, quoted from the erratum that could not close it
+
+Erratum v1.4's own "Named-not-done", quoted:
+
+> **The harness is NOT changed.** Emitting `'heldout-empirical'` for this candidate on future runs
+> would change a registered field's value, and on the three sibling candidates that took a
+> registration each (K4.1.5, K6.9, K6A.1.10). This erratum cannot register it — an erratum registers
+> nothing. **The forward fix requires its own amendment**, and until one exists the stamp on future
+> runs will still read `'oracle'`.
+
+**This is that amendment.**
+
+### C47.2.2 The registration, matching the three siblings it is modelled on
+
+**Registered: every row this battery emits for `family_E_conformal_heldout` stamps
+`params: 'heldout-empirical'`.** The literal, the reason and the wording are taken from the three
+registrations that already exist for it, cited rather than re-derived:
+
+| candidate | registered at | the registered reason |
+|---|---|---|
+| `point_tail_bet_e_value` | **K4.1.5** | *"stamps its own accurate literal rather than reusing `'oracle'` (Erratum v1.3's defect class) — its median/MAD are empirical statistics of an independent held-out sample, not oracle constants"* |
+| `shape_block_conformal_bet` | **K6.9** | *"stamps the same accurate literal … its calibration is an empirical statistic of an independent held-out sample (K6.3), not an oracle constant like K3's sigma"* |
+| `shape_ecdf_accumulator` | **K6A.1.10** | *"stamps the same accurate literal for the same reason — its calibration is an empirical statistic of an independent held-out draw (K6A.1.9's 100,000 rows)"* |
+
+`family_E_conformal_heldout` satisfies the identical condition and always did: fixed `Σ = [[1]]`
+(A2) plus `HELDOUT_ROWS = 10,000` rows at `HELDOUT_SEED = CELL_SEED + HELDOUT_OFFSET` (§6's K4
+block, A7's T1 substrate), stamped through `stampHeldoutFamilyE`. **It is the candidate Erratum v1.3
+singled out as "neither" and the one that never got the literal.**
+
+**`family_D_spectral_e_detector` keeps `'oracle'`, and that is not an oversight.** It is genuinely
+oracle — `{ mu: 0, sigma: 1, phi: cell.phi, alpha, windows: 'disjoint' }` is passed at the call site
+(A5, and Erratum v1.3's "Scope — what stays valid" item 1). It shares `kind: 'process'` with
+`family_E_conformal_heldout`, which is exactly why the predicate below cannot be a kind test.
+
+### C47.2.3 THE MECHANISM CHANGE, and it is the point: the stamp stops being an enumeration
+
+**Registered: the `params` literal is derived from whether the detector takes a held-out calibration
+draw — the same predicate that already decides whether the row is stamped with `heldout_seed` and
+`heldout_rows` — and not from a list of candidate names.**
+
+The defect Erratum v1.4 recorded was not a typo. It was **three separate ternaries, each enumerating
+the calibrated candidates by name, each one forgetting the same candidate**:
+
+```
+run-battery.mjs:1364   (detId === 'point_tail_bet_e_value' || shapeSpecOf(detId) !== null) ? 'heldout-empirical' : 'oracle'
+run-battery.mjs:1593   (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle'
+run-battery.mjs:1652   (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle'
+```
+
+Three enumerations of one fact is three chances to forget a candidate, and the fourth candidate would
+have the same exposure. **Registered: one predicate, `calibratesFromHeldout(detId)`, at all three
+sites, defined to agree by construction with the held-out stamping condition the harness already
+uses** (`detId === 'family_E_conformal_heldout' || pointKind || shapeKind`, the arm path's own test,
+and `needsHeldout`'s on the fault-cell path).
+
+**AND THE INVARIANT THAT MAKES IT CHECKABLE, registered:**
+
+```
+no row may carry `heldout_seed` and `params: 'oracle'` at the same time
+```
+
+A row that records the seed of the held-out draw it calibrated from, while naming its parameters
+oracle, is self-contradictory on its face. **That contradiction was emitted on 18 committed rows and
+no test could see it, because every `params` test was scoped to a detector-name list.** The
+invariant is registered as a test over **every** emitted row, so a fifth calibrated candidate cannot
+reintroduce the defect by being forgotten.
+
+### C47.2.4 What is NOT changed
+
+1. **No historical row moves.** The 18 rows Erratum v1.4 enumerates (cells 18–21 and arm 31's two
+   rows, across `run-20260808T010208Z`, `run-20260808T064039Z`, `run-20260808T133859Z`) stay
+   byte-for-byte as committed, and the erratum plus its three dated REPORT appends remain the record
+   for them. **`results/` is append-only and this amendment does not touch it.**
+2. **No rerun**, and none is authorized.
+3. **No verdict, endpoint or class row moves.** `params` reaches the certification scorer only
+   through `phiIsEstimated`'s `'estimated-phi'` literal (`lib/nulls.mjs`); `'heldout-empirical'` is
+   not that literal and neither is `'oracle'`, so the change is inert to the mechanical verdict in
+   both directions — the same property Erratum v1.4 checked and stated.
+4. **`family_D_spectral_e_detector` keeps `'oracle'`** (C47.2.2).
+5. **C47 item (1) stays open** — the O(1/n)-approximate, mildly anti-conservative exchangeability
+   identity (K4.1.10) is untouched by this amendment.
+
+### C47.2.5 DISCLOSURES
+
+**(a) An existing test's registered scope widens, and it is named rather than quietly edited.**
+`test/run-battery.test.mjs`'s *"params negative scope: every row outside the two heldout-empirical
+candidates keeps params=oracle"* holds an exclusion list that K6.9 and K6A.1.10 each already
+extended (to three). **This amendment extends it to four**, adding
+`family_E_conformal_heldout` — and the mutation the test exists to kill (a collapsed or swapped
+ternary) is still killed, because 8 of the smoke run's 12 detectors' rows remain on `'oracle'`.
+
+**(b) The card expiry re-fires with this commit, and the commit AFTER it closes it.**
+`cards/shape_ecdf_accumulator.json` pins `validation/coverage/harness/run-battery.mjs` (C38.1.7), so
+this harness change moves that pin's sha256 again and `cert:expiry` reports `EXPIRED` at this commit.
+**That is sequenced deliberately: the dedicated card re-freeze is the NEXT and LAST commit on this
+branch, so `cert:expiry` is current at branch HEAD and the re-freeze rides in no other change** —
+K6A.5.3's lesson, applied to the shape of the commit sequence rather than only to its disclosure.
+
+### C47.2.6 Registered code and test items
+
+| # | item | site |
+|---|---|---|
+| 1 | `calibratesFromHeldout(detId)` — one predicate, agreeing by construction with the held-out stamping condition | `harness/run-battery.mjs` |
+| 2 | the predicate replaces the enumerated ternary at all three `params` sites | `harness/run-battery.mjs` :1364, :1593, :1652 |
+| 3 | test: every `family_E_conformal_heldout` row (4 fault cells + 2 arm rows) stamps `'heldout-empirical'` | `test/run-battery.test.mjs` |
+| 4 | test: the C47.2.3 invariant over EVERY emitted row — `heldout_seed` present implies `params !== 'oracle'`. **Mutation kill: revert any one of the three ternaries and this fails, where the name-scoped tests do not** | `test/run-battery.test.mjs` |
+| 5 | the negative-scope test's exclusion list gains a fourth detector (C47.2.5a) | `test/run-battery.test.mjs` |
+| 6 | test: `family_D_spectral_e_detector` still stamps `'oracle'` on every row — the genuinely-oracle `kind: 'process'` sibling, which a kind-based predicate would have broken | `test/run-battery.test.mjs` |
+
+### C47.2.7 House rules, mapped
+
+(1) **Committed before the code.** (2) No endpoint or threshold moves. (3) No post-hoc analysis: this
+amendment reads no cell and no endpoint. (4) §9's fallback untouched. (5) No new substrate or seed —
+the held-out draw, its seed formula and its row count are all unchanged; only the label of what they
+are is corrected. (6) `results/` untouched; **no run written, no committed row edited.** (7) No
+rerun. (8) Binding on the next run that emits these rows: its report states the stamp.
+
+### Amendment summary
+
+**Closes the forward fix Erratum v1.4 named as not-done.** `family_E_conformal_heldout` stamps
+`params: 'heldout-empirical'` on future emissions, on the identical condition and in the identical
+words as the three siblings registered at **K4.1.5**, **K6.9** and **K6A.1.10** — it is the candidate
+Erratum v1.3 singled out as "neither" and the only calibrated one that never got the literal.
+**And the stamp stops being an enumeration:** the defect was three separate ternaries each listing
+the calibrated candidates by name and each forgetting the same one, so the literal is now derived
+from **one predicate** that agrees by construction with the condition already deciding whether a row
+carries `heldout_seed`. **Registered with it, the invariant no test could previously see:** no row
+may carry `heldout_seed` beside `params: 'oracle'` — a self-contradiction that was emitted on 18
+committed rows precisely because every `params` test was scoped to a detector-name list.
+`family_D_spectral_e_detector` keeps `'oracle'` and is pinned by its own test, because it is
+genuinely oracle and shares `kind: 'process'` with the candidate being fixed — which is why the
+predicate cannot be a kind test. **Nothing historical moves:** the 18 rows stay byte-for-byte as
+committed and Erratum v1.4 plus its three dated REPORT appends remain their record. Disclosed: this
+re-expires `shape_ecdf_accumulator`, and the **dedicated re-freeze is the next and last commit**, so
+`cert:expiry` is current at branch HEAD and rides in nothing else.
+
+### Correction append to C38.1.7 and C39, dated 2026-08-09 (appended not edited): the paired-smoke row count was 103, not 66
+
+C38.1.7 item 1 states the invariance check as *"0 pre-existing fields changed on any of the **66**
+emitted rows"*, and Amendment v2.C39's summary carries the same figure. **`66` is wrong: it is the
+cell count of `results/live/run-20260808T010208Z`, not of the smoke run the check was performed on.
+The smoke run (`--n 20`, all seven classes) emits `103` rows.** Re-measured at this commit:
+
+```
+paired smoke diff, --n 20, same seeds, COVERAGE_RESULTS_DIR redirected
+  rows compared                    103
+  pre-existing fields changed        0   (Amendments v2.C38.1 and v2.C39)
+  new fields                         3   mean_e_sd, mean_e_lower_95, increment_estimator, on 3 rows
+```
+
+**The finding is unchanged and is strengthened rather than weakened — the check covered 103 rows,
+not 66.** The wrong number was a transcription of a live run's cell count into a smoke run's
+description; corrected here by append, with the original intact.
+
+**And the same check for Amendment v2.C47.2, stated at its own commit:** `103` rows compared,
+**exactly `6` fields changed** — `params` on `family_E_conformal_heldout`'s cells `18`, `19`, `20`,
+`21` and arm `31`'s two rows, `'oracle'` → `'heldout-empirical'`. **No other field on any row, and no
+new field.** Those are precisely the six rows per run Erratum v1.4 enumerates.

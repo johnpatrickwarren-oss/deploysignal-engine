@@ -845,6 +845,29 @@ const SHAPE_DETECTORS = Object.freeze({
 });
 const shapeSpecOf = (detId) => SHAPE_DETECTORS[detId] ?? null;
 
+// Amendment v2.C47.2, C47.2.3: THE ONE PREDICATE the `params` literal is derived from — does this
+// detector calibrate from a held-out empirical draw? It is the same condition that already decides
+// whether a row is stamped with `heldout_seed`/`heldout_rows` (the arm path's own test, and
+// `needsHeldout` on the fault-cell path), which is what makes the registered invariant "no row
+// carries `heldout_seed` beside params: 'oracle'" true by construction rather than by three
+// separate sites happening to agree.
+//
+// WHY IT EXISTS. The defect Erratum v1.4 recorded was not a typo: three separate ternaries each
+// enumerated the calibrated candidates BY NAME and each forgot the same one
+// (`family_E_conformal_heldout`), so 18 committed rows named their parameters oracle while carrying
+// the seed of the held-out draw they had calibrated from. Three enumerations of one fact is three
+// chances to forget a candidate, and a fifth candidate would have had the same exposure.
+//
+// WHY IT IS NOT A `kind` TEST. `family_D_spectral_e_detector` shares `kind: 'process'` with
+// `family_E_conformal_heldout` and is GENUINELY oracle — A5 passes it {mu: 0, sigma: 1, phi, ...}
+// directly (Erratum v1.3's "Scope — what stays valid" item 1). A kind-based predicate would relabel
+// it and be wrong; test/run-battery.test.mjs pins it on 'oracle' for exactly this reason.
+const calibratesFromHeldout = (detId) => (
+  detId === 'family_E_conformal_heldout'      // A2 + §6's K4 block (registered: v2.C47.2 C47.2.2)
+  || detId === 'point_tail_bet_e_value'       // K4.1.5
+  || shapeSpecOf(detId) !== null              // K6.9 (shape_block) + K6A.1.10 (shape_ecdf)
+);
+
 // §7 + A6: which detectors are scored on which class, and (family_D) on which cells.
 function detectorsFor(cell) {
   switch (cell.fault_class) {
@@ -1393,7 +1416,11 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       // Amendment v2.K6A.1, K6A.1.10: shape_ecdf_accumulator stamps the same accurate literal
       // for the same reason — its calibration is an empirical statistic of an independent
       // held-out draw (K6A.1.9's 100,000 rows), not an oracle constant.
-      params: (detId === 'point_tail_bet_e_value' || shapeSpecOf(detId) !== null) ? 'heldout-empirical' : 'oracle',
+      // Amendment v2.C47.2, C47.2.2/C47.2.3: family_E_conformal_heldout joins them — the candidate
+      // Erratum v1.3 singled out as "neither" and the only calibrated one that never got the
+      // literal (Erratum v1.4). The enumeration is GONE: `calibratesFromHeldout` is the one
+      // predicate, and it agrees by construction with the held-out stamping condition below.
+      params: calibratesFromHeldout(detId) ? 'heldout-empirical' : 'oracle',
       alpha: ALPHA,
       n: N,
       ticks: spanFor(cell.fault_class).T,
@@ -1627,7 +1654,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     // SHAPE_DETECTORS so the two shape arms cannot share one string by accident.
     null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : (arm.phi === 0 ? 'N1' : 'N3-p06'),
     phi: arm.phi,
-    params: (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle',
+    params: calibratesFromHeldout(detId) ? 'heldout-empirical' : 'oracle',   // v2.C47.2 C47.2.3
     alpha: ALPHA,
     n: s2n,
     ticks: span.T,
@@ -1699,7 +1726,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     cell_index: arm.idx,
     null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : (arm.phi === 0 ? 'N1' : 'N3-p06'),
     phi: arm.phi,
-    params: (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle',
+    params: calibratesFromHeldout(detId) ? 'heldout-empirical' : 'oracle',   // v2.C47.2 C47.2.3
     // K6A.1.12's cell-47 S3 row: `shift_sigma: 3` IS the d = 2.0 injectShapeMix above for a
     // shape arm (the same equivalence K6.1.1/K6.8 registered for arm 34), not a mean step.
     shift_sigma: 3,

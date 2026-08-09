@@ -438,12 +438,15 @@ test('K4.1.8 mutation guard: cell 32 S2 mean_e is within the registered 3-sd ban
     `K4.1.8 predicts mean_e ~0.6246 (3-sd band at n_points=${s2.n_points} smoke); got ${s2.mean_e}`);
 });
 
-test('params negative scope: every row outside the two heldout-empirical candidates keeps params=oracle', () => {
+test('params negative scope: every row outside the heldout-empirical candidates keeps params=oracle', () => {
   const { summary } = smoke();
   // Amendment v2.K6, K6.9: shape_block_conformal_bet joins point_tail_bet_e_value as the
   // second heldout-empirical candidate — both excluded here, everything else must still
   // read 'oracle'. Amendment v2.K6A.1, K6A.1.10: shape_ecdf_accumulator is the third.
-  const HELDOUT_EMPIRICAL_DETECTORS = ['point_tail_bet_e_value', 'shape_block_conformal_bet', 'shape_ecdf_accumulator'];
+  // Amendment v2.C47.2, C47.2.5(a): family_E_conformal_heldout is the FOURTH, and the widening is
+  // registered rather than quietly edited. The mutation this test exists to kill (a collapsed or
+  // swapped ternary) is still killed — the remaining detectors' rows are all on 'oracle'.
+  const HELDOUT_EMPIRICAL_DETECTORS = ['point_tail_bet_e_value', 'shape_block_conformal_bet', 'shape_ecdf_accumulator', 'family_E_conformal_heldout'];
   const nonHeldoutRows = summary.cells.filter((c) => !HELDOUT_EMPIRICAL_DETECTORS.includes(c.detector));
   assert.ok(nonHeldoutRows.length > 0);
   for (const c of nonHeldoutRows) {
@@ -2101,4 +2104,61 @@ test('C39.5: the n < 2 boundary is exactly as registered — summarise\'s zero-w
   // conventions DISAGREE here by construction, which is what C39.5 registers.
   assert.equal(s2.mean_e_sd, null, 'the addendum\'s convention is NaN at n < 2, not 0');
   assert.equal(s2.mean_e_lower_95, null);
+});
+
+// ── Amendment v2.C47.2 — family_E's params provenance, and the invariant no name-scoped test saw ──
+// WORKLIST C47 item (2), forward fix. Erratum v1.4 recorded the mis-stamp and could not fix it (an
+// erratum registers nothing); v2.C47.2 registers the literal and replaces three enumerated ternaries
+// with one predicate. Historical rows stay exactly as the erratum records them.
+
+test('C47.2.2: every family_E_conformal_heldout row stamps heldout-empirical', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'family_E_conformal_heldout');
+  assert.equal(rows.length, 6, '4 K4 fault cells + healthy(S2) + power(S3) arm rows');
+  for (const c of rows) {
+    assert.equal(c.params, 'heldout-empirical',
+      `cell ${c.cell_index} ${c.fault_class ?? c.arm}: A2 + §6's K4 block — fixed Sigma with an `
+      + `empirical held-out draw, never oracle constants (${JSON.stringify(c.params)})`);
+  }
+});
+
+test('C47.2.3 (binding): NO row carries heldout_seed beside params=oracle — the invariant the name-scoped tests could not see', () => {
+  const { summary } = smoke();
+  // A row that records the seed of the held-out draw it calibrated from, while naming its
+  // parameters oracle, is self-contradictory on its face. 18 committed rows carried exactly that
+  // contradiction (Erratum v1.4) and every params test was scoped to a detector-name list, so none
+  // of them could see it. This one is scoped to EVERY emitted row, so a fifth calibrated candidate
+  // cannot reintroduce the defect by being forgotten.
+  //
+  // MUTATION KILL: revert ANY ONE of the three `params` ternaries to its pre-C47.2 enumeration and
+  // this fails, where a per-detector positive test only fails for the detector it names.
+  let checked = 0;
+  for (const c of summary.cells) {
+    if (!('heldout_seed' in c)) continue;
+    checked += 1;
+    assert.notEqual(c.params, 'oracle',
+      `${c.detector} cell ${c.cell_index} ${c.fault_class ?? c.arm}: carries heldout_seed `
+      + `${c.heldout_seed} and params 'oracle' — a row cannot calibrate from a held-out draw and `
+      + 'call its parameters oracle (v2.C47.2 C47.2.3)');
+  }
+  assert.ok(checked >= 6, `expected the calibrated candidates' rows to carry heldout_seed, saw ${checked}`);
+  // And the converse direction, so the predicate cannot be satisfied by stamping everything:
+  // a row whose params is 'heldout-empirical' must be one of the registered calibrated candidates.
+  const REGISTERED = new Set(['point_tail_bet_e_value', 'shape_block_conformal_bet', 'shape_ecdf_accumulator', 'family_E_conformal_heldout']);
+  for (const c of summary.cells.filter((r) => r.params === 'heldout-empirical')) {
+    assert.ok(REGISTERED.has(c.detector),
+      `${c.detector}: stamps heldout-empirical without a registration (K4.1.5 / K6.9 / K6A.1.10 / v2.C47.2)`);
+  }
+});
+
+test('C47.2.2: family_D_spectral_e_detector still stamps oracle — the genuinely-oracle process sibling a kind-based predicate would have broken', () => {
+  const { summary } = smoke();
+  // family_D shares `kind: 'process'` with family_E_conformal_heldout but is genuinely oracle: A5
+  // passes {mu: 0, sigma: 1, phi: cell.phi, alpha, windows: 'disjoint'} directly (Erratum v1.3's
+  // "Scope — what stays valid" item 1). MUTATION KILL: make calibratesFromHeldout a kind test
+  // (`ADAPTERS[detId].kind === 'process' || ...`) and this fails.
+  const rows = summary.cells.filter((c) => c.detector === 'family_D_spectral_e_detector');
+  assert.ok(rows.length > 0, 'family_D emits rows at smoke');
+  for (const c of rows) assert.equal(c.params, 'oracle', `cell ${c.cell_index}: family_D is genuinely oracle (A5)`);
+  assert.ok(!rows.some((c) => 'heldout_seed' in c), 'family_D takes no held-out draw, so no row of it carries the seed');
 });

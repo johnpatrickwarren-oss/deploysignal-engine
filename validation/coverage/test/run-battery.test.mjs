@@ -1920,3 +1920,28 @@ test('K6A.3.1: the screen runs BEFORE the first cell is measured, asserted on th
     `K6A.3.1: the screen must report before the first cell (screen at ${screenAt}, first cell at ${firstCellAt})`);
   fs.rmSync(outRoot, { recursive: true, force: true });
 });
+
+// The registered path's own counts, asserted STRUCTURALLY — and why that is the choice here.
+// Observing them behaviourally means running the registered screen (250 x 8,000 = 2M scored
+// windows, ~50 s) plus a 2,000-trajectory K6-slow battery (~21 s) inside a 3.5 s suite. The
+// mutation this kills is real and survived every behavioural test: making the REGISTERED path
+// resolve to the smoke count (`SCREEN_DRAWS_ARG ?? SCREEN_DRAWS_SMOKE`) is invisible to any run a
+// suite can afford, because only a run at n = 2000 with no hook takes that branch. Same trade-off,
+// and same precedent, as the arm-47 dispatch test above (v2.K6A.3 K6A.3.3 consequence 2).
+test('K6A.3.1: the registered run screens at 250 x 8,000 — the branch, pinned at the source', () => {
+  const src = fs.readFileSync(HARNESS, 'utf8');
+  assert.match(src, /const registered = MODE === 'live';/,
+    'the registered path is the live-mode run: n = REGISTERED_N with no hook engaged');
+  assert.match(src, /const draws = Number\(SCREEN_DRAWS_ARG \?\? \(registered \? SCREEN_DRAWS : SCREEN_DRAWS_SMOKE\)\);/,
+    'a registered run must resolve to SCREEN_DRAWS (250), never to the smoke count');
+  assert.match(src, /const mc = Number\(SCREEN_MC_ARG \?\? \(registered \? SCREEN_MC_WINDOWS : SCREEN_MC_WINDOWS_SMOKE\)\);/,
+    'a registered run must resolve to SCREEN_MC_WINDOWS (8,000), never to the smoke count');
+  assert.match(src, /const SCREEN_DRAWS = 250;/, 'K6A.1.10\'s own draw count');
+  assert.match(src, /const SCREEN_MC_WINDOWS = 8000;/, 'K6A.3.1\'s derived MC count');
+  // And the override refusal, which is what keeps the registered counts unavoidable there.
+  assert.match(src, /if \(registered && \(SCREEN_DRAWS_ARG !== null \|\| SCREEN_MC_ARG !== null\)\) \{/,
+    'the registered run must refuse --screen-draws/--screen-mc');
+  // The screen must be called with the class scope, before the cells, and only for K6-slow.
+  assert.match(src, /const NULL_GROWTH_SCREEN = CLASSES_RUN\.includes\('K6-slow'\) \? runNullGrowthScreen\(CLASSES_RUN\) : null;/,
+    'the driver call site is registered: iff K6-slow is in scope');
+});

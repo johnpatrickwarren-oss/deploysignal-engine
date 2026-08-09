@@ -105,14 +105,41 @@ if (K6SLOW_T2_SCENARIO_SEED !== 20260807 + 48) throw new Error('run-clustersynth
 //   A = reference ticks {0, 4, 8, ..., 8996}                      -> 2250
 //   B = reference ticks [2250, 9000), 45 blocks of 150 CONSECUTIVE ticks -> 6750
 //
-// A OVERLAPS B by construction, and K6A.7.2 registers that this is arithmetic rather than a
-// choice: n_A + m*W = 2250 + 6750 = 9000 saturates the span, so a disjoint B would have to be
-// the 3-of-every-4 complement, whose 150-value blocks each span 200 ticks with every fourth
-// removed — a decimated block, which the ruling forbids. K6A.7.3 measures what the overlap
-// costs on an i.i.d. substrate (E[e] +0.012070 +- 0.000771, 15.66 SE paired, R = 10,000) and
-// files it as a CONTRADICTION with the ruling's own "validity is untouched"; the crossing
-// endpoint is unmoved (0/10,000 in every arm). Do not "fix" the overlap here: the geometry is
-// frozen by K6A.7.11 rule 5 and the bias is registered, not repaired.
+// A OVERLAPS B here, and READ THE CORRECTION APPEND BEFORE CHANGING THIS.
+// ../PREREGISTRATION.md, v2.K6A.7's correction append, item F2 — an independent review REFUTED
+// the argument this comment used to make. K6A.7.2 claimed the overlap was "forced, not selected"
+// because n_A + m*W = 2250 + 6750 = 9000 saturates the span, so a disjoint B would have to be the
+// decimated 3-of-every-4 complement. The saturation arithmetic is right; the conclusion does NOT
+// follow. Striding at BLOCK granularity gives a disjoint full-span A at this same frozen geometry:
+// A = every 4th BLOCK (15 blocks of 150 = 2250 ticks, spread over the whole span), B = the other
+// 45 blocks in order (6750 ticks), every B block still 150 consecutive ticks — the complement of a
+// block-stride is 45 whole contiguous blocks. So the overlap below was a TICK-GRANULARITY CHOICE
+// that v2.K6A.7 never registered as a choice.
+//
+// Measured, R = 120,000 i.i.d. draws, paired (validation/coverage/tools/overlap-screen.mjs):
+//   block-strided A (disjoint, full-span)   E[e] = 0.960131    -0.30 SE from the exact null
+//   tick-strided A (what this file does)    E[e] = 0.972328   +24.91 SE
+//   paired tick - block    delta E[e] = +0.012198 +- 0.000237   (51.52 SE)
+// The registered bias figure is +0.012142 +- 0.000223 (K6A.7.3 at R = 120,000, superseding the
+// R = 10,000 reading +0.012070 +- 0.000771), independently reproduced by the review at
+// +0.012202 +- 0.000454.
+//
+// It is ENDPOINT-SAFE, which is why this file was not rewritten under it: E[e] = 0.972328 <= 1, so
+// the e-value property and Ville's bound HOLD — the overlap spends 30.6% of the exact null's margin
+// below one (1 - 0.960274 = 0.039726), not the guarantee. K6A.7.3's original "measured violation of
+// the exact rank law" was too strong and is corrected to degraded conservatism. The exact per-pair
+// null crossing probability at this geometry is 1.1167e-6 (5 of 46^4 vectors, correction append F4,
+// superseding the ~4.9e-5 that item withdrew), and 0 of 120,000 i.i.d. pairs crossed in ANY layout.
+//
+// REGISTERED: block-strided A is the layout for any FUTURE T2 run of this arm — A = ticks of blocks
+// {0, 4, ..., 56}, B = the other 45 blocks in order, block-stride 4, block-phase 0, at the same
+// n_A = 2250 / m = 45 / W = 150. The run this file produced (run-t2-20260809T075607Z) is NOT
+// superseded and NOT rerun: across 12 fresh clustersynth seeds the switch leaves gpu_temp_c
+// crossings identical (7/1440) with every increment mean within 0.01, so it would not have changed
+// that run's contiguity answer either.
+//
+// So: do not "fix" the overlap as a drive-by. Block-strided A is a registered FUTURE-RUN change,
+// not a defect repair, and the geometry constants stay frozen by K6A.7.11 rule 5.
 const REFERENCE_A_STRIDE = 4;
 const REFERENCE_A_PHASE = 0;
 

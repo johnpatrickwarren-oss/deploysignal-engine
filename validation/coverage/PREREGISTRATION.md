@@ -9361,3 +9361,27 @@ strengthens rather than weakens — all fifteen card tuples, every `COVERAGE.md`
 The four wiki write-back obligations of K6A.7.11 stand, and **F2 adds a fifth: the ratified page's
 "strided sample" is granularity-ambiguous, and the block-granularity reading is the one that keeps
 the exact null.**
+
+### F5 addendum, 2026-08-09 — two field labels in F5 above, one of them wrong
+
+F5 lists the two per-card movements as `source_files[].sha` and `source_files[]`. **Checked against
+the committed JSON: the first label is wrong.** The sha that moved is
+**`card.engine_pin.sha`**, not a `source_files` entry:
+
+```
+card.engine_pin.sha        0522faf1586dbb544473067dcd92185b8b5d1228 -> 4a48450ce3d489c4354fd5b61455241a1203a092
+card.source_files[]        gained index [4] = validation/certification/lib/collect.mjs
+                           (sha256 62389a1377c4f3e742c87c17069a4d839ae868e17f152ccef3cb567585e66e37)
+```
+
+**Two fields, and `source_files[]` entries carry `sha256` rather than `sha`** — so `source_files[].sha`
+names nothing that exists on these cards. F5's substance is untouched: two per-card movements, both
+inherited, neither C50's, and no tuple moves.
+
+**And the provenance sentence is corrected.** F5 says the prior re-score was *"emitted at
+`563bfee`"*, which conflates two shas. `563bfee` is the commit that **committed** that run
+directory; the run's own `manifest.json` records `git_sha:
+e62af91be3af27c952216dc1181e6082cc0d0cf9`, so `e62af91` is the engine sha it was **produced at**.
+**The ancestry argument holds under either, and both are checked:** `git merge-base --is-ancestor`
+confirms `e62af91` and `563bfee` are each ancestors of `4a48450`, so the card definitions the prior
+re-score read predate the `collect.mjs` pin however the sha is named.

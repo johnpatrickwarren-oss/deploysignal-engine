@@ -112,3 +112,26 @@ Scoped correctly, **C50's own effect on the fifteen cards is exactly one field �
 `shape_ecdf_accumulator.card.json`'s `generated_from.runs` — plus `COVERAGE.md`'s header engine
 sha.** The inherited pin movements change no tuple either, and `cert:expiry` reads all cards
 current.
+
+### Append, 2026-08-09 (second) — field labels, and the two shas the previous append conflated
+
+The append above lists the two per-card movements as `source_files[].sha` and `source_files[]`.
+**The first label is wrong**, checked against the committed JSON in this directory:
+
+```
+card.engine_pin.sha        0522faf1586dbb544473067dcd92185b8b5d1228 -> 4a48450ce3d489c4354fd5b61455241a1203a092
+card.source_files[]        gained index [4] = validation/certification/lib/collect.mjs
+                           (sha256 62389a1377c4f3e742c87c17069a4d839ae868e17f152ccef3cb567585e66e37)
+```
+
+**Two fields. `source_files[]` entries carry `sha256`, not `sha`**, so `source_files[].sha` names
+nothing on these cards. Nothing else in that append changes: both movements are inherited from
+ancestor commits, neither is C50's, and the golden delta is still NONE, 0 of 15.
+
+**The provenance sentence is corrected too.** That append says the prior re-score
+`run-20260809T040659Z` was *"emitted at `563bfee`"*, conflating two shas. `563bfee` **committed**
+the directory; the run's own `manifest.json` records `git_sha:
+e62af91be3af27c952216dc1181e6082cc0d0cf9`, so it was **produced at** `e62af91`. **The ancestry
+argument holds under either and both are checked:** `e62af91` and `563bfee` are each ancestors of
+`4a48450` (`git merge-base --is-ancestor`), so the card definitions that re-score read predate the
+`collect.mjs` pin regardless of which sha names it.

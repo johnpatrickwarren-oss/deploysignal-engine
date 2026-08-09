@@ -345,7 +345,11 @@ test('an unregistered --detector is refused', () => {
 // phase-0 sample of the whole 9,000-tick reference span instead of its contiguous prefix, so the
 // front/back placement DOF no longer exists to be chosen. B's 45 blocks are the SAME contiguous
 // slices of the SAME 6,750 ticks — only A moves (K6A.7.1).
-const accumulatorSmoke = () => runHarness(['--detector', 'shape_ecdf_accumulator', '--shards', '2', '--steps', '9600']);
+// Cached like `smoke()` above: four tests read this run, and it is also how the flip-collapse
+// regression gets clustersynth's root without resolving anything itself (C50 review F1).
+let accumulatorSmokeCache = null;
+const accumulatorSmoke = () => (accumulatorSmokeCache
+  ??= runHarness(['--detector', 'shape_ecdf_accumulator', '--shards', '2', '--steps', '9600']));
 
 // MUTATION KILL: change REFERENCE_A_STRIDE to 3 (or REFERENCE_A_PHASE to 1) in the harness and the
 // re-derived A below stops matching the calibration the harness actually built, failing this test.
@@ -474,9 +478,15 @@ test('K6A.7.1 positive control: the harness consumed the STRIDE (A differs from 
 test('K6A.7.8 flip-collapse regression: strided A tracks front-A, not the front/back midpoint (non-registered seed)', async () => {
   const distRequire = createRequire(import.meta.url);
   const acc = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/shape-ecdf-accumulator.js'));
-  const csRoot = process.env.CLUSTERSYNTH_ROOT
-    ? path.resolve(process.env.CLUSTERSYNTH_ROOT)
-    : path.resolve(HERE, '..', '..', '..', '..', 'clustersynth');
+  // clustersynth is resolved through the HARNESS's own resolveClustersynthRoot(), read back off the
+  // manifest it records — never re-derived here (C50 review F1). This line used to hand-roll
+  // `path.resolve(HERE, '..', '..', '..', '..', 'clustersynth')`, which is wrong under a git
+  // worktree for exactly the reason the harness header documents: the worktree's own parent is the
+  // worktree container (~/.sdd-worktrees), not the sibling-repos directory. That form passed only
+  // because CLUSTERSYNTH_ROOT happened to be exported, and failed the moment it was not. The
+  // manifest carries whatever the harness resolved, worktree or not.
+  const csRoot = accumulatorSmoke().manifest.clustersynth_root;
+  assert.ok(csRoot, 'the manifest must record clustersynth_root — this test resolves nothing itself');
   const cs = await import(`file://${path.join(csRoot, 'dist', 'index.js')}`);
 
   const PROBE_SEED = 700000002;   // NOT a registered seed (v2.K6A.7 K6A.7.8, probe base 7.0e8)

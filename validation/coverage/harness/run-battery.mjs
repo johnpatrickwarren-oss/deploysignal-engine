@@ -846,11 +846,17 @@ const SHAPE_DETECTORS = Object.freeze({
 const shapeSpecOf = (detId) => SHAPE_DETECTORS[detId] ?? null;
 
 // Amendment v2.C47.2, C47.2.3: THE ONE PREDICATE the `params` literal is derived from — does this
-// detector calibrate from a held-out empirical draw? It is the same condition that already decides
-// whether a row is stamped with `heldout_seed`/`heldout_rows` (the arm path's own test, and
-// `needsHeldout` on the fault-cell path), which is what makes the registered invariant "no row
-// carries `heldout_seed` beside params: 'oracle'" true by construction rather than by three
-// separate sites happening to agree.
+// detector calibrate from a held-out empirical draw? It replaces three ternaries that each
+// enumerated the calibrated candidates by name, so the `params` literal now has ONE site instead of
+// three.
+//
+// WHAT IT DOES NOT DO, corrected at review: it does not make the registered invariant "no row
+// carries `heldout_seed` beside params: 'oracle'" true by construction. `heldout_seed` is stamped by
+// SEPARATE conditions (`needsHeldout` on the fault-cell path; `detId === 'family_E_conformal_heldout'
+// || pointKind || shapeKind` on the arm path), and this predicate is a third expression that agrees
+// with them today. **The invariant holds because a TEST checks every emitted row for it** — which is
+// how C47.2.3 registers it ("registered as a test over EVERY emitted row") and what an earlier
+// version of this comment overstated.
 //
 // WHY IT EXISTS. The defect Erratum v1.4 recorded was not a typo: three separate ternaries each
 // enumerated the calibrated candidates BY NAME and each forgot the same one
@@ -1129,16 +1135,28 @@ const median = (xs) => {
   return n % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
 
-// Amendment v2.C38.1, C38.1.2: the one-sided 95% lower bound on a MEAN, transcribed from the
-// addendum that owns the field name `mean_e_lower_95`
-// (validation/terminal-evalue/POWER-PER-CELL-ADDENDUM-2026-08-07.md change (a), emitted at
-// validation/terminal-evalue/harness/run.mjs:70-71) so one field name cannot mean two statistics
-// across two studies. `z = 1.645` is the same quantile `lower95` above uses for the exceedance
-// bound on the same row. The CLAMP AT 0 is the one difference from summarise()'s
-// `lower95_one_sided` and it is deliberate: e >= 0, and clamping can only lower the bound, so it
-// can never make a falsifier fire. NaN at n < 2, which is the field's registered absence.
-const meanLower95 = (mu, sd, n) => (
-  n < 2 || !Number.isFinite(sd) || !Number.isFinite(mu) ? NaN : Math.max(0, mu - 1.645 * sd / Math.sqrt(n))
+// Amendment v2.C38.1, C38.1.2: the one-sided 95% lower bound on a MEAN, whose field name
+// `mean_e_lower_95` is owned by
+// validation/terminal-evalue/POWER-PER-CELL-ADDENDUM-2026-08-07.md change (a) (emitted at
+// validation/terminal-evalue/harness/run.mjs:70-71) — so one field name cannot mean two statistics
+// across two studies.
+//
+// CORRECTED at the v2.C45/v2.C38.1 review round: this used to RECOMPUTE the bound as
+// `max(0, mu - 1.645 * sd / sqrt(n))`, which is the addendum's expression but NOT the expression
+// `summarise()` uses. `summarise` computes `se = sqrt(varr / n)` where this computed
+// `sqrt(varr) / sqrt(n)`; the two differ in the last bit, so the identity C39.5 registers
+// (`mean_e_lower_95 === max(0, increment_estimator.lower95_one_sided)`) held only because the
+// re-rounding and the 0 clamp happened to hide the 1-ULP gap. A reseed can break it with no defect
+// present. **The identity is now STRUCTURAL: the bound is the increment estimator's own
+// `lower95_one_sided`, clamped.** The convention is unchanged — the `z` and the `n-1` variance come
+// from `summarise` (K3.1.1), and the CLAMP AT 0 is the addendum's, kept because e >= 0 and clamping
+// can only lower a bound, so it can never make a falsifier fire.
+//
+// `n < 2` and a non-finite spread both give NaN, which is the field's registered absence (the
+// addendum's `meanSd` convention, terminal-evalue/harness/run.mjs:67) — not the 0 the clamp would
+// otherwise produce from a -Infinity bound.
+const clampedMeanLower95 = (inc, mu, n) => (
+  n < 2 || !Number.isFinite(inc.sd) || !Number.isFinite(mu) ? NaN : Math.max(0, inc.lower95_one_sided)
 );
 
 // K3.1.1, copied verbatim from validation/detector-audit/harness/run-sequential.mjs:37-44
@@ -1637,11 +1655,13 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   const s2IncrementEstimator = pointKind
     ? summariseFromMoments(s2PointN, s2MeanE, s2PointN > 1 ? healthy.pointM2 / (s2PointN - 1) : 0)
     : summarise(healthy.es ?? []);
-  // C38.1's sd is read off that same object on the two-pass paths, so the two fields cannot drift
-  // apart. C39.5: at n < 2 they part by construction — `summarise` gives sd 0 (K3.1.1's own
-  // convention) and the addendum's rule for `mean_e_sd` is NaN — and that boundary is registered.
+  // C38.1's sd AND its bound are both read off that same object, so neither can drift from the
+  // estimator by a recomputation: `mean_e_sd` IS `increment_estimator.sd` and `mean_e_lower_95` IS
+  // its `lower95_one_sided` clamped at 0. C39.5: at n < 2 they part — `summarise` gives sd 0
+  // (K3.1.1's own convention) and the addendum's rule for `mean_e_sd`/`mean_e_lower_95` is NaN —
+  // and that boundary is registered rather than smoothed over.
   const s2MeanSd = s2MeanN > 1 ? s2IncrementEstimator.sd : NaN;
-  const s2MeanLower95 = meanLower95(s2MeanE, s2MeanSd, s2MeanN);
+  const s2MeanLower95 = clampedMeanLower95(s2IncrementEstimator, s2MeanE, s2MeanN);
   const s2 = {
     detector: detId,
     arm: 'healthy',

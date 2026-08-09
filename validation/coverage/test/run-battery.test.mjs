@@ -2001,14 +2001,25 @@ test('C38.1.2 provenance: mean_e_lower_95 recomputes from the row\'s own mean_e,
     const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === det);
     const n = c38SampleN(s2);
     const raw = s2.mean_e - 1.645 * s2.mean_e_sd / Math.sqrt(n);
-    assert.equal(s2.mean_e_lower_95, Math.max(0, raw),
-      `${det}: max(0, ${s2.mean_e} - 1.645*${s2.mean_e_sd}/sqrt(${n})) != ${s2.mean_e_lower_95}`);
+    // TOLERANCE, and why it is not laziness. The emitted bound is now STRUCTURALLY the increment
+    // estimator's own `lower95_one_sided` clamped (v2.C45 review round), and `summarise` builds that
+    // from `se = sqrt(varr / n)` where the recompute here goes through `sqrt(varr) / sqrt(n)`. The
+    // two routes differ in the last bit, so an EXACT assertion here would pass or fail on the seed —
+    // which is precisely the fragility this round removed from the harness, and it must not be
+    // reintroduced in the test that checks it. The exact identity is asserted against its structural
+    // source in the C39.5 test below; what this assertion is for is the CONVENTION (the clamp and
+    // z = 1.645), whose mutations move the value by ~1e-2, ten orders of magnitude above this bound.
+    const rel = Math.abs(s2.mean_e_lower_95 - Math.max(0, raw)) / Math.max(1e-300, Math.abs(s2.mean_e));
+    assert.ok(rel < 1e-12,
+      `${det}: max(0, ${s2.mean_e} - 1.645*${s2.mean_e_sd}/sqrt(${n})) != ${s2.mean_e_lower_95} `
+      + `(relative gap ${rel}, tolerance 1e-12)`);
     if (raw < 0) clamped += 1; else unclamped += 1;
     // z: the 1.96 quantile gives a strictly lower bound wherever the clamp is not active, so a
     // z mutation is observable exactly on the unclamped rows.
     if (raw > 0) {
-      assert.notEqual(s2.mean_e_lower_95, Math.max(0, s2.mean_e - 1.96 * s2.mean_e_sd / Math.sqrt(n)),
-        `${det}: the emitted bound must be the 1.645 quantile, not 1.96`);
+      const at196 = Math.max(0, s2.mean_e - 1.96 * s2.mean_e_sd / Math.sqrt(n));
+      assert.ok(Math.abs(s2.mean_e_lower_95 - at196) / Math.abs(s2.mean_e) > 1e-6,
+        `${det}: the emitted bound must be the 1.645 quantile, not 1.96 (${s2.mean_e_lower_95} vs ${at196})`);
     }
   }
   // MUTATION KILL, both directions, and both are exercised at the smoke seeds: dropping the clamp
@@ -2076,12 +2087,29 @@ test('C39.5: the terminal S2 row\'s increment_estimator is the SAME sample mean_
     assert.equal(inc.n, n, `${det}: increment_estimator.n must be the row's own sample size`);
     assert.equal(inc.mean, s2.mean_e, `${det}: increment_estimator.mean must BE mean_e`);
     assert.equal(inc.sd, s2.mean_e_sd, `${det}: increment_estimator.sd must BE mean_e_sd`);
+    // EXACT, and it is exact by construction rather than by luck (v2.C45 review round): the harness
+    // reads this very field and clamps it, so no recomputation sits between the two numbers.
+    //
+    // WHAT THIS ASSERTION DOES AND DOES NOT KILL, measured rather than assumed. Reverting the
+    // harness to recompute the bound (`max(0, mu - 1.645*sd/sqrt(n))`) does NOT fail this test at
+    // the smoke seeds — the 1-ULP gap between `sqrt(varr)/sqrt(n)` and `sqrt(varr/n)` simply does not
+    // materialise on them. THAT IS THE FINDING, not a gap in the test: the old code was correct by
+    // luck and a reseed could break it with no defect present. What the exact form buys is that the
+    // identity can never drift SILENTLY — it fails the first time a seed exposes the gap instead of
+    // being hidden by re-rounding. The recompute mutation is killed deterministically by the source
+    // pin in the next test, which is why that test exists.
     assert.equal(Math.max(0, inc.lower95_one_sided), s2.mean_e_lower_95,
-      `${det}: mean_e_lower_95 is the clamped form of the same bound (C39.5)`);
+      `${det}: mean_e_lower_95 must BE max(0, increment_estimator.lower95_one_sided), exactly (C39.5)`);
     // se is the bound's own denominator, so it is pinned too: a bound built on a different se
-    // would satisfy nothing above and still be wrong.
+    // would satisfy nothing above and still be wrong. This one is exact — it is summarise's own
+    // expression, character for character.
     assert.equal(inc.lower95_one_sided, inc.mean - 1.645 * inc.se, `${det}: the bound is mean - 1.645*se`);
-    assert.equal(inc.se, Math.sqrt((inc.sd * inc.sd) / n), `${det}: se = sd/sqrt(n) at the row's own n`);
+    // se against sd: TOLERANCE, because summarise computes se = sqrt(varr/n) and sd = sqrt(varr),
+    // so sqrt(sd*sd/n) is a different rounding of the same quantity. An exact assertion here passed
+    // on this seed and would fail on another with no defect present — the same 1-ULP trap the
+    // harness was corrected for.
+    assert.ok(Math.abs(inc.se - Math.sqrt((inc.sd * inc.sd) / n)) <= 4 * Number.EPSILON * inc.se,
+      `${det}: se ${inc.se} is not sd/sqrt(n) = ${Math.sqrt((inc.sd * inc.sd) / n)} at n = ${n}`);
   }
   // The per-point row is where the two bookkeeping paths could silently diverge: its estimator must
   // be over the 400,000 per-POINT reads (n_points), NOT the 20 per-trajectory injected-tick reads.
@@ -2161,4 +2189,23 @@ test('C47.2.2: family_D_spectral_e_detector still stamps oracle — the genuinel
   assert.ok(rows.length > 0, 'family_D emits rows at smoke');
   for (const c of rows) assert.equal(c.params, 'oracle', `cell ${c.cell_index}: family_D is genuinely oracle (A5)`);
   assert.ok(!rows.some((c) => 'heldout_seed' in c), 'family_D takes no held-out draw, so no row of it carries the seed');
+});
+
+test('C38.1/C39.5 (v2.C45 review round): mean_e_lower_95 is READ from the increment estimator, not recomputed — the branch pinned at the source', () => {
+  // A behavioural assertion cannot kill this mutation: the 1-ULP gap between the two algebraic
+  // routes does not appear at every seed, which is exactly why the old code passed while being
+  // correct only by luck. So the structural property is pinned at the source instead — the same
+  // trade-off, and the same precedent, as the K6A.3.1 registered-count test below.
+  const src = fs.readFileSync(HARNESS, 'utf8');
+  assert.match(src, /\? NaN : Math\.max\(0, inc\.lower95_one_sided\)/,
+    'the bound must be the increment estimator\'s own lower95_one_sided, clamped — never recomputed');
+  assert.match(src, /const s2MeanLower95 = clampedMeanLower95\(s2IncrementEstimator, s2MeanE, s2MeanN\);/,
+    'the emission site must pass the estimator object, so there is nothing to recompute from');
+  assert.match(src, /const s2MeanSd = s2MeanN > 1 \? s2IncrementEstimator\.sd : NaN;/,
+    'mean_e_sd must likewise be READ off the estimator, not recomputed');
+  // And the two conventions the addendum owns, which the clamp helper must keep.
+  assert.match(src, /n < 2 \|\| !Number\.isFinite\(inc\.sd\) \|\| !Number\.isFinite\(mu\) \? NaN/,
+    'n < 2 and a non-finite spread must both give NaN, not the 0 a clamped -Infinity would produce');
+  assert.doesNotMatch(src, /Math\.max\(0, mu - 1\.645 \* inc\.sd/,
+    'the recomputed form is the one this round removed; it must not come back');
 });

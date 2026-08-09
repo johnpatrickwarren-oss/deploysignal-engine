@@ -40,6 +40,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -66,6 +67,8 @@ const conformal = require(path.join(ENGINE_ROOT, 'dist/detectors/conformal.js'))
 const tailBet = require(path.join(ENGINE_ROOT, 'dist/detectors/point-tail-bet-e-value.js'));
 const spectralBet = require(path.join(ENGINE_ROOT, 'dist/detectors/spectral-bet-e-process.js'));
 const shapeBlockBet = require(path.join(ENGINE_ROOT, 'dist/detectors/shape-block-conformal-bet.js'));
+// Amendment v2.K6A.1: K6-slow's single candidate, shape_ecdf_accumulator (C49 task 3's module).
+const shapeEcdfAcc = require(path.join(ENGINE_ROOT, 'dist/detectors/shape-ecdf-accumulator.js'));
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 
@@ -86,6 +89,36 @@ const HELDOUT_ROWS = 10000;                   // §6, and the stamper's own floo
 const CAL = { start: 0, len: ONSET };
 const TEST = { start: ONSET, len: T - ONSET };
 
+// ── the per-class scenario span and per-class substrate size (Amendment v2.K6A.1 K6A.1.9,
+// items 7 and 8 of K6A.1.13; the nine further HELDOUT_ROWS sites and the arm mechanism are
+// v2.K6A.2 K6A.2.5) ───────────────────────────────────────────────────────────────────────
+//
+// T/ONSET/TEST above were module scalars for every class. K6-slow is read over an HOURS-SCALE
+// horizon and cannot share them, so the span is now looked up per class. EVERY EXISTING CLASS
+// KEEPS T = 300 / ONSET = 100 BIT-FOR-BIT: the scalars above are still the only place those
+// numbers exist, `DEFAULT_SPAN` is a view onto them, and `spanFor` returns that same frozen
+// object for every class but `K6-slow`. CAL is deliberately NOT per class: it is safe_t's and
+// universal_inference's calibration window (§5), and neither detector is registered on K6-slow
+// (K6A.1.9's single-detector assignment), so a K6-slow CAL would be an invented constant.
+const T_K6SLOW = 6300;                        // K6A.1.9: baseline 300 + 6,000 post-onset
+const ONSET_K6SLOW = 300;                     // K6A.1.9
+const TEST_K6SLOW = { start: ONSET_K6SLOW, len: T_K6SLOW - ONSET_K6SLOW };   // {300, 6000}
+const DEFAULT_SPAN = Object.freeze({ T, ONSET, TEST });
+const K6SLOW_SPAN = Object.freeze({ T: T_K6SLOW, ONSET: ONSET_K6SLOW, TEST: TEST_K6SLOW });
+const spanFor = (classId) => (classId === 'K6-slow' ? K6SLOW_SPAN : DEFAULT_SPAN);
+// Arms carry `hint` (the class whose geometry the arm borrows) and no `fault_class`; fault cells
+// carry `fault_class` and no `hint`. K6A.2.5: arms are keyed by `hint` at the arm loop, so
+// arm 47's long span comes through this lookup and not from the fault-cell path.
+const classOf = (cellOrArm) => cellOrArm.fault_class ?? cellOrArm.hint;
+
+// The calibration substrate size, per class. K6A.1.9 registers n = 100,000 for K6-slow
+// (A = 25,000, B = 75,000 -> m = 500 blocks of 150 exactly); every existing consumer keeps
+// §6's HELDOUT_ROWS = 10,000. Read off the module's own frozen export rather than retyped, the
+// same cross-check discipline K3_WINDOW_LEN/K6_WINDOW_LEN use below, and pinned against the
+// registered literal in assertRegistryAgreement.
+const HELDOUT_ROWS_K6SLOW = shapeEcdfAcc.N_ROWS_K6SLOW;
+const heldoutRowsFor = (classId) => (classId === 'K6-slow' ? HELDOUT_ROWS_K6SLOW : HELDOUT_ROWS);
+
 // Amendment v2.K3, K3.9: six disjoint 30-tick windows of the post-onset slice [100,280);
 // t=280..299 (20 ticks) is unused. window_len is cross-checked against the module's own
 // W_K3 export so a value drift crashes at startup rather than silently mismatching the
@@ -104,6 +137,50 @@ const K6_WINDOW_LEN = shapeBlockBet.W_K6;
 const K6_WINDOW_SPAN = `[${ONSET},${ONSET + K6_WINDOWS * K6_WINDOW_LEN})`;
 if (K6_WINDOW_LEN !== 30) throw new Error(`run-battery: shapeBlockBet.W_K6 is ${K6_WINDOW_LEN}, PREREGISTRATION.md K6.1 registers 30`);
 if (K6_WINDOW_SPAN !== '[100,280)') throw new Error(`run-battery: K6 window span computed as ${K6_WINDOW_SPAN}, PREREGISTRATION.md K6.10 registers [100,280)`);
+
+// Amendment v2.K6A.1, K6A.1.9: K6-slow's own partition — 40 disjoint 150-tick windows of
+// [300, 6300), i.e. TEST_K6SLOW exactly, no remainder. This is a SEPARATE set of constants and
+// not a widening of K6's: v2.K6A.2 K6A.2.1 item 12 records that K6_WINDOW_LEN is hardwired to
+// `shapeBlockBet.W_K6` and asserted `!== 30 -> throw` immediately above, so a W = 150 detector
+// cannot reuse it, and the two shape detectors must carry PER-DETECTOR W. W is cross-checked
+// against the accumulator module's own W_K6SLOW export the same way K3's and K6's are.
+const K6SLOW_WINDOW_LEN = shapeEcdfAcc.W_K6SLOW;
+const K6SLOW_WINDOWS = TEST_K6SLOW.len / K6SLOW_WINDOW_LEN;
+const K6SLOW_WINDOW_SPAN = `[${ONSET_K6SLOW},${ONSET_K6SLOW + K6SLOW_WINDOWS * K6SLOW_WINDOW_LEN})`;
+if (K6SLOW_WINDOW_LEN !== 150) throw new Error(`run-battery: shapeEcdfAcc.W_K6SLOW is ${K6SLOW_WINDOW_LEN}, PREREGISTRATION.md K6A.1.2 registers 150`);
+if (K6SLOW_WINDOWS !== 40) throw new Error(`run-battery: K6-slow window count computed as ${K6SLOW_WINDOWS}, PREREGISTRATION.md K6A.1.9 registers 40 (6,000/150, no remainder)`);
+if (K6SLOW_WINDOW_SPAN !== '[300,6300)') throw new Error(`run-battery: K6-slow window span computed as ${K6SLOW_WINDOW_SPAN}, PREREGISTRATION.md K6A.1.9 registers [300,6300)`);
+
+// The T1 geometry the accumulator's calibration MUST have, held here as the harness's own
+// registered literals (K6A.1.2/K6A.1.9) rather than read off the module — a check against the
+// module's own constants could only ever agree with itself. `assertRegisteredGeometryK6slow`
+// below asserts every calibration the T1 path builds against this object before any cell is
+// scored, and the startup check pins it against the module's frozen export as well, so a drift
+// on either side is a crash rather than a differently-calibrated run under this class's name.
+// T2 (the clustersynth arm) runs at the registered m = 45 (K6A.1.11) and is NOT this object.
+const REGISTERED_GEOMETRY_K6SLOW = Object.freeze({ W: 150, nA: 25000, m: 500 });
+{
+  const g = REGISTERED_GEOMETRY_K6SLOW;
+  const mod = shapeEcdfAcc.REGISTERED_GEOMETRY_K6SLOW;
+  if (g.W !== mod.W || g.nA !== mod.nA || g.m !== mod.m) {
+    throw new Error(`run-battery: registered K6-slow geometry ${JSON.stringify(g)} != the module's own `
+      + `${JSON.stringify({ W: mod.W, nA: mod.nA, m: mod.m })} (PREREGISTRATION.md K6A.1.2)`);
+  }
+  if (g.nA + g.m * g.W !== HELDOUT_ROWS_K6SLOW) {
+    throw new Error(`run-battery: K6-slow geometry ${g.nA} + ${g.m}*${g.W} != the ${HELDOUT_ROWS_K6SLOW}-row `
+      + 'substrate K6A.1.9 registers (A = 25,000, B = 75,000)');
+  }
+}
+/** Enforcement, not observability (module review): every K6-slow calibration the T1 path builds
+ *  is asserted against the registered geometry BEFORE any cell is scored, so a wrong-W or
+ *  wrong-split draw cannot reach a verdict and be discovered afterwards in `cal_fingerprint`. */
+function assertRegisteredGeometryK6slow(cal, where) {
+  assert.deepStrictEqual(
+    { W: cal.W, nA: cal.nA, m: cal.m },
+    { W: REGISTERED_GEOMETRY_K6SLOW.W, nA: REGISTERED_GEOMETRY_K6SLOW.nA, m: REGISTERED_GEOMETRY_K6SLOW.m },
+    `run-battery: ${where} K6-slow calibration geometry != PREREGISTRATION.md K6A.1.2's registered W/nA/m`,
+  );
+}
 
 // Test-only hook, named: forces every adapter call for one detector id to throw, so §9's
 // NOT-EXECUTABLE fallback path is exercised by test/run-battery.test.mjs. It cannot fire by
@@ -194,6 +271,13 @@ const REGISTERED_CELLS = [
   // therefore its CELL_SEED and its trajectory stream, bit-for-bit.
   F(38, 'K5', 'slope2.5e-3', 0), F(39, 'K5', 'slope5e-3', 0), F(40, 'K5', 'slope1e-2', 0),
   F(41, 'K5', 'slope2e-2', 0), F(42, 'K5', 'slope1e-2-ar1', 0.6),
+  // Amendment v2.K6A.1, K6A.1.9: the K6-slow cells, continuing the index sequence past 42.
+  // Same severities and same canonical as K6 (the same injectShapeMix construction); what
+  // differs is the horizon they are read over -- T = 6,300 / ONSET = 300, 40 disjoint windows
+  // of 150 -- and their 100,000-row calibration substrate. Appended, so every earlier cell
+  // keeps its index and therefore its CELL_SEED and its trajectory stream, bit-for-bit.
+  F(43, 'K6-slow', 'mix-d1.0', 0), F(44, 'K6-slow', 'mix-d1.5', 0), F(45, 'K6-slow', 'mix-d2.0', 0),
+  F(46, 'K6-slow', 'mix-d1.5-ar1', 0.6),
 ];
 // A1: the two new candidates' own healthy/power arms. `hint` is the fault class whose
 // geometry the arm borrows (K=10 for the group arm, the 1-D stream for the conformal arm);
@@ -213,11 +297,18 @@ const ARM_CELLS = [
   // 20260841, continuing directly from arm 33's index. HELDOUT_SEED = CELL_SEED + 500000 =
   // 20760841 (K6.6's table) — this arm's calibration is EMPIRICAL, unlike arm 33's oracle sigma.
   { idx: 34, arm_detector: 'shape_block_conformal_bet', hint: 'K6', phi: 0, seed: BASE_SEED + 34 },
+  // Amendment v2.K6A.1, K6A.1.9: shape_ecdf_accumulator's own arm, CELL_SEED = BASE_SEED + 47 =
+  // 20260854, HELDOUT_SEED = 20760854 (K6A.1.9's table). `hint: 'K6-slow'` is what selects it
+  // under --classes K6-slow (K6A.2.5: arms are keyed by hint, not by class) AND what gives it
+  // the long span through spanFor — the arm loop reads the span itself, so item 7's per-class
+  // span is necessary but not sufficient here.
+  { idx: 47, arm_detector: 'shape_ecdf_accumulator', hint: 'K6-slow', phi: 0, seed: BASE_SEED + 47 },
 ];
 
 // Amendment v2.K5R, K5R.5 clause 3: the registered per-class count of φ=0.6 replicates. K5 is the
 // one class with two, because a preserved cell is not deleted when the canonical moves.
-const REGISTERED_AR1_ROWS = Object.freeze({ K1: 1, K2: 1, K3: 1, K4: 1, K5: 2, K6: 1 });
+// Amendment v2.K6A.1 (K6A.1.13 item 3): K6-slow carries one, cell 46 (`mix-d1.5-ar1`).
+const REGISTERED_AR1_ROWS = Object.freeze({ K1: 1, K2: 1, K3: 1, K4: 1, K5: 2, K6: 1, 'K6-slow': 1 });
 
 // The constants module is normative (§1); this table mirrors it. Disagreement is a defect,
 // so it is a crash at startup rather than a run nobody can interpret.
@@ -252,7 +343,7 @@ function assertRegistryAgreement() {
   for (const c of REGISTERED_CELLS) {
     if (c.seed !== BASE_SEED + c.idx) throw new Error(`run-battery: cell ${c.idx} seed ${c.seed} != CELL_SEED formula`);
   }
-  if (REGISTERED_CELLS.length !== 35) throw new Error(`run-battery: ${REGISTERED_CELLS.length} fault cells, §4 + Amendment v2.K5R register 35`);
+  if (REGISTERED_CELLS.length !== 39) throw new Error(`run-battery: ${REGISTERED_CELLS.length} fault cells, §4 + Amendment v2.K5R + v2.K6A.1 K6A.1.9 register 39`);
   // Amendment v2.K5R, K5R.5's index table, pinned by value: the cell indices ARE the seed scheme,
   // so a moved index is a different data set under the same severity label. Indices 35-37 are
   // reserved by K6.12/K6E.9/K6E.10 and must stay absent from the fault-cell table.
@@ -281,6 +372,23 @@ function assertRegistryAgreement() {
       throw new Error(`run-battery: fault cell at index ${idx}, which K6.12/K6E.9/K6E.10 already registered as a seed`);
     }
   }
+  // Amendment v2.K6A.1, K6A.1.9's index table, pinned by value for the same reason K5R.5's is:
+  // the index IS the seed scheme, so a moved index is a different data set under the same
+  // severity label. HELDOUT_SEED is pinned by the same table's third column.
+  for (const [idx, severity, phi, seed, heldoutSeed] of [
+    [43, 'mix-d1.0', 0, 20260850, 20760850], [44, 'mix-d1.5', 0, 20260851, 20760851],
+    [45, 'mix-d2.0', 0, 20260852, 20760852], [46, 'mix-d1.5-ar1', 0.6, 20260853, 20760853],
+  ]) {
+    const cell = REGISTERED_CELLS.find((c) => c.idx === idx);
+    if (!cell) throw new Error(`run-battery: no fault cell at index ${idx}, K6A.1.9 registers ${severity}`);
+    if (cell.fault_class !== 'K6-slow' || cell.severity !== severity || cell.phi !== phi || cell.seed !== seed) {
+      throw new Error(`run-battery: cell ${idx} is ${cell.fault_class} ${cell.severity} φ=${cell.phi} seed=${cell.seed}, `
+        + `K6A.1.9 registers K6-slow ${severity} φ=${phi} seed=${seed}`);
+    }
+    if (cell.seed + HELDOUT_OFFSET !== heldoutSeed) {
+      throw new Error(`run-battery: cell ${idx} HELDOUT_SEED ${cell.seed + HELDOUT_OFFSET} != registered ${heldoutSeed}`);
+    }
+  }
   if (REGISTERED_CELLS[29].seed !== 20260836) throw new Error('run-battery: cell 29 seed != registered 20260836');
   // Every seed constant against its registered literal (§6, A5). These are the numbers the
   // seed formulas are made of; a formula that still parses with a changed constant produces a
@@ -291,6 +399,13 @@ function assertRegistryAgreement() {
     ['SERIES_SALT', SERIES_SALT, 104729, 'A5'],
     ['HELDOUT_OFFSET', HELDOUT_OFFSET, 500000, '§6'],
     ['HELDOUT_ROWS', HELDOUT_ROWS, 10000, '§6'],
+    // Amendment v2.K6A.1, K6A.1.9 (item 8 of K6A.1.13): the substrate size is per class from
+    // here on, so the literal check splits accordingly — §6's 10,000 for every existing
+    // consumer, K6A.1.9's 100,000 for K6-slow. A single literal would have crashed the
+    // 100,000-row draw at startup; a single UNCHECKED constant would have let it drift.
+    ['HELDOUT_ROWS_K6SLOW', HELDOUT_ROWS_K6SLOW, 100000, 'K6A.1.9'],
+    ['T_K6SLOW', T_K6SLOW, 6300, 'K6A.1.9'],
+    ['ONSET_K6SLOW', ONSET_K6SLOW, 300, 'K6A.1.9'],
   ];
   for (const [name, actual, registered, where] of literals) {
     if (actual !== registered) {
@@ -314,6 +429,17 @@ function assertRegistryAgreement() {
   if (arm34Cell.seed !== 20260841) throw new Error(`run-battery: arm-34 CELL_SEED ${arm34Cell.seed} != registered 20260841`);
   const arm34Heldout = arm34Cell.seed + HELDOUT_OFFSET;
   if (arm34Heldout !== 20760841) throw new Error(`run-battery: arm-34 HELDOUT_SEED ${arm34Heldout} != registered 20760841`);
+  // Amendment v2.K6A.1, K6A.1.9's table: arm 47's own CELL_SEED and HELDOUT_SEED, and its
+  // `hint` — the hint is not cosmetic, it is what selects the arm under --classes and what
+  // hands it the long span (K6A.2.5), so a wrong hint is a silently unrun or wrongly-spanned arm.
+  const arm47Cell = ARM_CELLS.find((a) => a.idx === 47);
+  if (arm47Cell.seed !== 20260854) throw new Error(`run-battery: arm-47 CELL_SEED ${arm47Cell.seed} != registered 20260854`);
+  const arm47Heldout = arm47Cell.seed + HELDOUT_OFFSET;
+  if (arm47Heldout !== 20760854) throw new Error(`run-battery: arm-47 HELDOUT_SEED ${arm47Heldout} != registered 20760854`);
+  if (arm47Cell.hint !== 'K6-slow') throw new Error(`run-battery: arm-47 hint is "${arm47Cell.hint}", K6A.1.9/K6A.2.5 register K6-slow`);
+  if (arm47Cell.arm_detector !== 'shape_ecdf_accumulator') {
+    throw new Error(`run-battery: arm-47 detector is "${arm47Cell.arm_detector}", K6A.1.9 registers shape_ecdf_accumulator`);
+  }
   // Amendment v2.K6, K6.6's table: shape_block_conformal_bet's four fault cells' own
   // HELDOUT_SEEDs, cross-checked against the table's own literals.
   const K6_HELDOUT_SEEDS = { 26: 20760833, 27: 20760834, 28: 20760835, 29: 20760836 };
@@ -348,7 +474,11 @@ function parseSeverity(fault_class, severity) {
     case 'K3': if ((m = /^A(\d*\.?\d+)sigma-f(\d*\.?\d+)$/.exec(s))) return { amp: num(m[1]), freq: num(m[2]) }; break;
     case 'K4': if ((m = /^(\d*\.?\d+)sigma-point$/.exec(s))) return { mult: num(m[1]) }; break;
     case 'K5': if ((m = /^slope(\d+(?:\.\d+)?e-\d+)$/.exec(s))) return { slope: num(m[1]) }; break;
-    case 'K6': if ((m = /^mix-d(\d*\.?\d+)$/.exec(s))) return { d: num(m[1]) }; break;
+    // Amendment v2.K6A.1 (K6A.1.13 item 4): K6-slow SHARES K6's grammar rather than getting its
+    // own — the severities are the same injectShapeMix distances, and a second regex would be a
+    // second place for the grid labels to drift. Without this case every K6-slow severity throws
+    // at the default below.
+    case 'K6': case 'K6-slow': if ((m = /^mix-d(\d*\.?\d+)$/.exec(s))) return { d: num(m[1]) }; break;
     default: break;
   }
   throw new Error(`run-battery: severity "${severity}" does not parse for ${fault_class} (§2's grammar)`);
@@ -372,27 +502,34 @@ const seriesSeed = (cell, i, k) => cellSeed(cell, i) + SERIES_SALT * k; // A5
  *  every detector scored on the cell (§6's paired comparison). */
 function generate(cell, i) {
   const p = parseSeverity(cell.fault_class, cell.severity);
+  // Amendment v2.K6A.1 (K6A.1.13 item 7): the span is per class. For every class but K6-slow
+  // `spanFor` returns DEFAULT_SPAN, whose T and ONSET ARE the module scalars — same numbers,
+  // same arithmetic, same bits.
+  const { T: spanT, ONSET: spanOnset } = spanFor(cell.fault_class);
   if (cell.fault_class === 'K2') {
     const matrix = [];
     for (let k = 0; k < p.K; k++) {
       const r = rng(seriesSeed(cell, i, k));
       const draw = drawFor(r, cell.phi);
-      matrix.push(Array.from({ length: T }, draw));
+      matrix.push(Array.from({ length: spanT }, draw));
     }
-    return { matrix: injectUnison(matrix, { sigma: SIGMA, at: ONSET, eps: p.eps }) };
+    return { matrix: injectUnison(matrix, { sigma: SIGMA, at: spanOnset, eps: p.eps }) };
   }
   const r = rng(cellSeed(cell, i));
   const draw = drawFor(r, cell.phi);
   // A5's K6 pinning: the baseline is generated in full FIRST, then injectShapeMix is called
   // with the same, now-advanced `r` (it discards the baseline's post-onset values and draws
   // 3 fresh raw values per tick from that stream).
-  const base = Array.from({ length: T }, draw);
+  const base = Array.from({ length: spanT }, draw);
   switch (cell.fault_class) {
-    case 'K1': return { series: injectStep(base, { sigma: SIGMA, at: ONSET, delta: p.delta }) };
-    case 'K3': return { series: injectOscillation(base, { sigma: SIGMA, at: ONSET, amp: p.amp, freq: p.freq }) };
-    case 'K4': return { series: injectPoint(base, { sigma: SIGMA, at: ONSET, mult: p.mult }) };
-    case 'K5': return { series: injectDrift(base, { sigma: SIGMA, at: ONSET, slope: p.slope }) };
-    case 'K6': return { series: injectShapeMix(base, { sigma: SIGMA, at: ONSET, d: p.d, rng: r }) };
+    case 'K1': return { series: injectStep(base, { sigma: SIGMA, at: spanOnset, delta: p.delta }) };
+    case 'K3': return { series: injectOscillation(base, { sigma: SIGMA, at: spanOnset, amp: p.amp, freq: p.freq }) };
+    case 'K4': return { series: injectPoint(base, { sigma: SIGMA, at: spanOnset, mult: p.mult }) };
+    case 'K5': return { series: injectDrift(base, { sigma: SIGMA, at: spanOnset, slope: p.slope }) };
+    // Amendment v2.K6A.1 (K6A.1.13 item 5): K6-slow's generator is K6's, at the long span. The
+    // 6,000-tick post-onset slice is the whole of the class's difference from K6 — same
+    // injectShapeMix, same A5 pinning convention, same `r`.
+    case 'K6': case 'K6-slow': return { series: injectShapeMix(base, { sigma: SIGMA, at: spanOnset, d: p.d, rng: r }) };
     default: throw new Error(`run-battery: no generator for ${cell.fault_class}`);
   }
 }
@@ -559,7 +696,79 @@ const ADAPTERS = {
       return { crossed, wealth, eAvgs, ps, degenerateWindows };
     },
   },
+  // Amendment v2.K6A.1, K6A.1.9/K6A.1.10: shape_ecdf_accumulator, K6-slow's single candidate.
+  // Same `kind: 'shapeblock'` contract as the detector above — one per-window statistic list,
+  // one pooled p list, one wealth path — so `record()` and every emission site treat the two
+  // uniformly, which is what makes the dispatch a KIND test rather than a detector-id literal
+  // (v2.K6A.2 K6A.2.1 item 12). What is NOT shared is the geometry: 40 windows of 150 over
+  // [300, 6300) against K6's 6 of 30 over [100, 280).
+  //
+  // Two deliberate departures from the sibling adapter, both forced by the module's interface:
+  //   - `eAvgs` holds the per-window e DIRECTLY. K6 averages two features per window; this
+  //     construction has ONE feature, so there is no averaging step and `mean(out.eAvgs)` in
+  //     record() is the mean of the 40 per-window e values — exactly the increment_estimator
+  //     K6A.1.12 predicts at 0.9914.
+  //   - `degenerateWindows` is a STRUCTURAL zero, not a counter with an unreached branch. The
+  //     module has no non-throwing degenerate path (its docstring: a non-finite T can only come
+  //     from a non-finite input, which is a defect, so it throws). K6A.1.12 registers
+  //     degenerate_windows and non_finite_wealth as structural zeros for this class; the field
+  //     is emitted at 0 so a reader sees the claim, and a throw would surface as
+  //     adapter_failures instead. Do not wire a countable degenerate branch here.
+  shape_ecdf_accumulator: {
+    kind: 'shapeblock',
+    read: (data, cell, ctx) => {
+      const windows = [];
+      for (let w = 0; w < K6SLOW_WINDOWS; w++) {
+        const start = ONSET_K6SLOW + w * K6SLOW_WINDOW_LEN;
+        windows.push(data.series.slice(start, start + K6SLOW_WINDOW_LEN));
+      }
+      const degenerateWindows = 0;
+      const eAvgs = new Array(K6SLOW_WINDOWS);
+      const ps = [];
+      // Per-window reads first, for the raw e and p the S2 arm's increment_estimator and
+      // p_uniformity need BEFORE advanceLogWealth absorbs anything — identical reasoning to
+      // K3.9's and K6.10's comments above, and the same deliberate double evaluation.
+      for (let w = 0; w < K6SLOW_WINDOWS; w++) {
+        const { p, e } = shapeEcdfAcc.ecdfAccumulatorWindow(windows[w], ctx.shapeCal);
+        eAvgs[w] = e;
+        ps.push(p);
+      }
+      const { wealth, log } = shapeEcdfAcc.ecdfAccumulatorWealth(windows, ctx.shapeCal);
+      const crossed = log.some((l) => l >= Math.log(THRESHOLD));
+      return { crossed, wealth, eAvgs, ps, degenerateWindows };
+    },
+  },
 };
+
+// Amendment v2.K6A.2, K6A.2.1 item 12: the two shape detectors, keyed by id, with everything
+// that DIFFERS between them in one place — per-detector W and window count, per-detector
+// calibration call, per-detector arm null_id literal, per-detector fingerprint source. The
+// dispatch sites below test `ADAPTERS[detId].kind === 'shapeblock'` and read this table; the
+// literal `detId === 'shape_block_conformal_bet'` the amendment names as a silent wrong-probe
+// hazard appears nowhere any more.
+const SHAPE_DETECTORS = Object.freeze({
+  shape_block_conformal_bet: Object.freeze({
+    windows: K6_WINDOWS,
+    windowLen: K6_WINDOW_LEN,
+    windowSpan: K6_WINDOW_SPAN,
+    armNullId: 'K6-arm-heldout',                                   // K6.7's out-of-grammar literal
+    calibrate: (rows) => shapeBlockBet.calibrateShapeBlocks(rows, K6_WINDOW_LEN),
+    fingerprint: (cal) => shapeCalFingerprint(cal),                // C1.8, derived by this harness
+  }),
+  shape_ecdf_accumulator: Object.freeze({
+    windows: K6SLOW_WINDOWS,
+    windowLen: K6SLOW_WINDOW_LEN,
+    windowSpan: K6SLOW_WINDOW_SPAN,
+    armNullId: 'K6slow-arm-heldout',                               // K6A.1.10's registered literal
+    calibrate: (rows, where) => {
+      const cal = shapeEcdfAcc.calibrateEcdfAccumulator(rows, REGISTERED_GEOMETRY_K6SLOW);
+      assertRegisteredGeometryK6slow(cal, where);
+      return cal;
+    },
+    fingerprint: (cal) => cal.cal_fingerprint,                     // C1.8, exported by the module
+  }),
+});
+const shapeSpecOf = (detId) => SHAPE_DETECTORS[detId] ?? null;
 
 // §7 + A6: which detectors are scored on which class, and (family_D) on which cells.
 function detectorsFor(cell) {
@@ -568,6 +777,13 @@ function detectorsFor(cell) {
     // Amendment v2.K6, K6.6: shape_block_conformal_bet joins K6 as a new row, scored on
     // the class's four registered fault cells (K6 only, not the other five classes).
     case 'K6': return ['safe_t', 'universal_inference', 'shape_block_conformal_bet'];
+    // Amendment v2.K6A.1, K6A.1.9 (item 6 of K6A.1.13): K6-slow is scored by
+    // shape_ecdf_accumulator ALONE, deliberately. safe_t and universal_inference are NOT
+    // registered on this class: scoring them over 6,300 ticks would be a new measurement of two
+    // existing detectors under a geometry nothing registers for them. The registered and
+    // disclosed cost is that this class row has no paired-comparison partner, so `pairingGaps`
+    // will name it.
+    case 'K6-slow': return ['shape_ecdf_accumulator'];
     // Amendment v2.K3, K3.5: spectral_bet_e_process is scored on ALL SIX K3 cells,
     // unlike family_D_spectral_e_detector, which stays canonical + -ar1 only (§7).
     case 'K3': {
@@ -641,18 +857,23 @@ function assertHeldoutSerialStructure(rows, phi, heldoutSeed) {
  *  advanced at all (C1.3). Here the single `draw` closure holds the AR(1) state across rows. */
 function heldoutRows(cell) {
   const heldoutSeed = cell.seed + HELDOUT_OFFSET;
-  const rows = new Array(HELDOUT_ROWS);
+  // Amendment v2.K6A.1, K6A.1.9 (item 8 of K6A.1.13, scoped by v2.K6A.2 K6A.2.5): the row count
+  // is per class — 100,000 for K6-slow, §6's 10,000 for every existing consumer. The DRAW is
+  // otherwise untouched: same HELDOUT_SEED, same single continuously-advanced stream (C1.2), so
+  // a 10,000-row class's rows are the same 10,000 numbers as before, bit for bit.
+  const nRows = heldoutRowsFor(classOf(cell));
+  const rows = new Array(nRows);
   if (FORCE_HELDOUT_LATTICE) {
     // Test-only positive control for the guard above (see the flag's own comment): the exact
     // pre-C1 draw, so a test can prove the guard actually rejects it.
-    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = drawFor(rng(heldoutSeed + TRAJ_STEP * j), cell.phi)();
+    for (let j = 0; j < nRows; j++) rows[j] = drawFor(rng(heldoutSeed + TRAJ_STEP * j), cell.phi)();
   } else {
     const r = rng(heldoutSeed);
     const draw = drawFor(r, cell.phi);
-    for (let j = 0; j < HELDOUT_ROWS; j++) rows[j] = draw();
+    for (let j = 0; j < nRows; j++) rows[j] = draw();
   }
   assertHeldoutSerialStructure(rows, cell.phi, heldoutSeed);
-  return { rows, heldoutSeed };
+  return { rows, heldoutSeed, heldoutRowCount: nRows };
 }
 
 /** Amendment v2.C1, C1.8 (review Important 3): the calibration's own fingerprint, read straight
@@ -853,14 +1074,21 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
   // Amendment v2.K6, K6.3/K6.6: shape_block_conformal_bet's own held-out calibration
   // reuses the SAME n=10,000/HELDOUT_SEED mechanism, drawn once here per cell like the
   // other two calibrated candidates above.
+  // Amendment v2.K6A.1: shape_ecdf_accumulator calibrates from the same HELDOUT_SEED mechanism
+  // as the other three calibrated candidates, at K6A.1.9's own 100,000-row draw. Which shape
+  // detector is on the cell decides the calibration call, through SHAPE_DETECTORS.
+  const shapeDet = dets.find((d) => shapeSpecOf(d) !== null) ?? null;
   const needsHeldout = dets.includes('family_E_conformal_heldout') || dets.includes('point_tail_bet_e_value')
-    || dets.includes('shape_block_conformal_bet');
+    || shapeDet !== null;
   const heldout = needsHeldout ? heldoutRows(cell) : null;
   const ctx = {};
   if (heldout) ctx.heldoutSeed = heldout.heldoutSeed;
+  if (heldout) ctx.heldoutRowCount = heldout.heldoutRowCount;
   if (dets.includes('family_E_conformal_heldout')) ctx.params = heldoutParams(heldout.rows);
   if (dets.includes('point_tail_bet_e_value')) ctx.tailBetCal = tailBet.calibrateTailBet(heldout.rows);
-  if (dets.includes('shape_block_conformal_bet')) ctx.shapeCal = shapeBlockBet.calibrateShapeBlocks(heldout.rows, K6_WINDOW_LEN);
+  // The geometry assertion lives inside the accumulator's own `calibrate` (SHAPE_DETECTORS), so
+  // it fires HERE — before the trajectory loop below scores a single cell.
+  if (shapeDet) ctx.shapeCal = shapeSpecOf(shapeDet).calibrate(heldout.rows, `cell ${cell.idx} (${cell.fault_class} ${cell.severity})`);
   const ctxForRead = { heldout: ctx.params, tailBetCal: ctx.tailBetCal, shapeCal: ctx.shapeCal };
 
   for (let i = 0; i < N; i++) {
@@ -893,11 +1121,14 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       // Amendment v2.K6, K6.9: shape_block_conformal_bet stamps the same accurate literal
       // as point_tail_bet_e_value — its calibration is an empirical statistic of an
       // independent held-out sample (K6.3), not an oracle constant like K3's sigma.
-      params: (detId === 'point_tail_bet_e_value' || detId === 'shape_block_conformal_bet') ? 'heldout-empirical' : 'oracle',
+      // Amendment v2.K6A.1, K6A.1.10: shape_ecdf_accumulator stamps the same accurate literal
+      // for the same reason — its calibration is an empirical statistic of an independent
+      // held-out draw (K6A.1.9's 100,000 rows), not an oracle constant.
+      params: (detId === 'point_tail_bet_e_value' || shapeSpecOf(detId) !== null) ? 'heldout-empirical' : 'oracle',
       alpha: ALPHA,
       n: N,
-      ticks: T,
-      onset: ONSET,
+      ticks: spanFor(cell.fault_class).T,
+      onset: spanFor(cell.fault_class).ONSET,
       fires: a.fires,
       detection_rate: rate,
       adapter_failures: a.throws,
@@ -910,7 +1141,7 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
     if (detId === 'family_E_conformal_heldout') {
       c.indicator_rate_at_injected_tick = a.indicatorAtOnset / N;
       c.heldout_seed = ctx.heldoutSeed;
-      c.heldout_rows = HELDOUT_ROWS;
+      c.heldout_rows = ctx.heldoutRowCount;
     }
     // family_D's own descriptive secondary, no verdict attached: how many trajectories the
     // adapter already fired on before onset, which is the size of §5's gate overlap.
@@ -922,7 +1153,7 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
     if (detId === 'point_tail_bet_e_value') {
       c.window_crossing_rate = a.windowCrossed / N;
       c.heldout_seed = ctx.heldoutSeed;
-      c.heldout_rows = HELDOUT_ROWS;
+      c.heldout_rows = ctx.heldoutRowCount;
       // Re-derivable provenance (review finding): the calibration this cell actually used,
       // read straight off ctx.tailBetCal rather than re-derived — pins the row against a
       // wrong-stream mutation (e.g. a heldoutSeed off by one or a shared-with-the-wrong-cell
@@ -950,20 +1181,26 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
     // and the pre-absorption degenerate-window counter (structurally 0, K6.7). Deliberately
     // NONE of the five instrument-named fields (K6.7's binding adapter constraint) — a fault
     // cell has no S2/S3 role.
-    if (detId === 'shape_block_conformal_bet') {
-      c.windows = K6_WINDOWS;
-      c.window_len = K6_WINDOW_LEN;
-      c.window_span = K6_WINDOW_SPAN;
+    // Amendment v2.K6A.1, K6A.1.10: the same field set for shape_ecdf_accumulator, "K6.7's field
+    // set carried by reference" — same names, same order, per-detector VALUES out of
+    // SHAPE_DETECTORS (40/150/[300,6300) here against 6/30/[100,280) for the sibling).
+    if (shapeSpecOf(detId)) {
+      const spec = shapeSpecOf(detId);
+      c.windows = spec.windows;
+      c.window_len = spec.windowLen;
+      c.window_span = spec.windowSpan;
       c.final_wealth_mean = a.es && a.es.length ? mean(a.es) : NaN;
       c.final_wealth_median = a.es && a.es.length ? median(a.es) : NaN;
       c.degenerate_windows = a.degenerateWindows;
       // Amendment v2.C1, C1.8: the calibration fingerprint + the same held-out provenance pair
       // point_tail_bet_e_value already carries (K4.4). A K6 row previously named no calibration
       // at all, so the artefact that moved this class's S3 verdict was invisible in the run
-      // directory — a reader had to re-derive the reference to see anything about it.
-      c.cal_fingerprint = shapeCalFingerprint(ctx.shapeCal);
+      // directory — a reader had to re-derive the reference to see anything about it. The
+      // accumulator's fingerprint is the module's own export (it carries the C1.8 quantile
+      // convention internally, and its W/m/n_A make the geometry readable off the row too).
+      c.cal_fingerprint = spec.fingerprint(ctx.shapeCal);
       c.heldout_seed = ctx.heldoutSeed;
-      c.heldout_rows = HELDOUT_ROWS;
+      c.heldout_rows = ctx.heldoutRowCount;
     }
     cells.push(c);
     process.stderr.write(
@@ -983,14 +1220,31 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   const spectralKind = detId === 'spectral_bet_e_process';
   // Amendment v2.K6, K6.6/K6.7: shape_block_conformal_bet's own arm. Held-out calibration
   // (K6.3), unlike spectral_bet_e_process's genuinely-oracle sigma.
-  const shapeKind = detId === 'shape_block_conformal_bet';
+  //
+  // Amendment v2.K6A.2, K6A.2.1 item 12: a KIND test, not the detector-id literal this line
+  // used to hold. With the literal, `shape_ecdf_accumulator` made both `shapeKind` and
+  // `pointKind` false and arm 47 fell through every branch below: no held-out stream fetched at
+  // all, the S3 injection defaulting to `injectStep` delta=3 — a K1-type mean step, not the
+  // registered injectShapeMix at d = 2.0 — and `null_id: 'N1'` / `params: 'oracle'` against
+  // K6A.1.10's registered pair. The arm would have read POWERED on the wrong fault class
+  // entirely. Every site the amendment enumerates is threaded through `spec` below.
+  const shapeKind = ADAPTERS[detId].kind === 'shapeblock';
+  const spec = shapeSpecOf(detId);
+  if (shapeKind !== (spec !== null)) {
+    throw new Error(`run-battery: ${detId} has kind 'shapeblock' but no SHAPE_DETECTORS entry (or the reverse) `
+      + '— the kind test and the per-detector spec table must name the same detectors (v2.K6A.2 K6A.2.1 item 12)');
+  }
+  // Amendment v2.K6A.1 K6A.1.9 + v2.K6A.2 K6A.2.5: the arm's span comes from its own `hint`,
+  // because this loop reads the scalars directly and never touches the fault-cell path.
+  const span = spanFor(arm.hint);
   const ctx = {};
   if (detId === 'family_E_conformal_heldout' || pointKind || shapeKind) {
     const h = heldoutRows(arm);
     ctx.heldoutSeed = h.heldoutSeed;
+    ctx.heldoutRowCount = h.heldoutRowCount;
     if (detId === 'family_E_conformal_heldout') ctx.params = heldoutParams(h.rows);
     if (pointKind) ctx.tailBetCal = tailBet.calibrateTailBet(h.rows);
-    if (shapeKind) ctx.shapeCal = shapeBlockBet.calibrateShapeBlocks(h.rows, K6_WINDOW_LEN);
+    if (shapeKind) ctx.shapeCal = spec.calibrate(h.rows, `arm ${arm.idx}`);
   }
   const ctxForRead = { heldout: ctx.params, tailBetCal: ctx.tailBetCal, shapeCal: ctx.shapeCal };
   const healthy = freshAcc();
@@ -1006,12 +1260,12 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       const matrix = [];
       for (let k = 0; k < arm.K; k++) {
         const rk = rng(seriesSeed(arm, i, k));
-        matrix.push(Array.from({ length: T }, drawFor(rk, arm.phi)));
+        matrix.push(Array.from({ length: span.T }, drawFor(rk, arm.phi)));
       }
       base = { matrix };
     } else {
       r = rng(cellSeed(arm, i));
-      base = { series: Array.from({ length: T }, drawFor(r, arm.phi)) };
+      base = { series: Array.from({ length: span.T }, drawFor(r, arm.phi)) };
     }
     // A1's S3 construction: injectUnison at eps=3 across all K components for the group
     // arm; injectStep at delta=3 for the conformal/tail-bet arms (run.mjs:89-90's registered
@@ -1023,14 +1277,18 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     // injectShapeMix at the class's own maximal registered severity (d=2.0), sustained
     // across the full test span — reusing the SAME now-advanced `r` stream `base.series`
     // was drawn from (A5's K6 pinning convention, generate()'s own comment, applied here
-    // to the arm identically).
+    // to the arm identically). Amendment v2.K6A.1, K6A.1.12: arm 47's S3 construction is the
+    // SAME injectShapeMix at d = 2.0, now reached through the kind test — the registered
+    // `shift_sigma: 3` on the S3 row below IS this d = 2.0 injection (K6A.1.12's own row), and
+    // K6A.2.2 registers that this cell's 1.0000 rests on the d = 2.0 boundary artifact. If this
+    // branch is ever taken away from a shape detector the arm silently becomes a K1 step probe.
     const shifted = detId === 'group_average_e_value'
-      ? { matrix: injectUnison(base.matrix, { sigma: SIGMA, at: ONSET, eps: 3 }) }
+      ? { matrix: injectUnison(base.matrix, { sigma: SIGMA, at: span.ONSET, eps: 3 }) }
       : spectralKind
-        ? { series: injectOscillation(base.series, { sigma: SIGMA, at: ONSET, amp: 3, freq: 3 / K3_WINDOW_LEN }) }
+        ? { series: injectOscillation(base.series, { sigma: SIGMA, at: span.ONSET, amp: 3, freq: 3 / K3_WINDOW_LEN }) }
         : shapeKind
-          ? { series: injectShapeMix(base.series, { sigma: SIGMA, at: ONSET, d: 2.0, rng: r }) }
-          : { series: injectStep(base.series, { sigma: SIGMA, at: ONSET, delta: 3 }) };
+          ? { series: injectShapeMix(base.series, { sigma: SIGMA, at: span.ONSET, d: 2.0, rng: r }) }
+          : { series: injectStep(base.series, { sigma: SIGMA, at: span.ONSET, delta: 3 }) };
 
     const rh = attempt(healthy, detId, base, arm, ctxForRead);
     if (rh.ok) record(healthy, detId, rh.out);
@@ -1038,7 +1296,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     if (rp.ok) record(power, detId, rp.out);
 
     if (spectralKind) {
-      const stepShifted = { series: injectStep(base.series, { sigma: SIGMA, at: ONSET, delta: 3 }) };
+      const stepShifted = { series: injectStep(base.series, { sigma: SIGMA, at: span.ONSET, delta: 3 }) };
       const rsp = attempt(stepProbe, detId, stepShifted, arm, ctxForRead);
       if (rsp.ok) record(stepProbe, detId, rsp.out);
     }
@@ -1070,16 +1328,18 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     // outside the run.mjs:497-style N1/N3-p06 convention every other arm keeps. Amendment
     // v2.K6, K6.7: cell 34 gets its own out-of-grammar literal, 'K6-arm-heldout' — adapted
     // from K3's 'K3-arm-oracle' because this arm's calibration is EMPIRICAL, not oracle.
-    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? 'K6-arm-heldout' : (arm.phi === 0 ? 'N1' : 'N3-p06'),
+    // Amendment v2.K6A.1, K6A.1.10: arm 47's own literal is 'K6slow-arm-heldout', taken from
+    // SHAPE_DETECTORS so the two shape arms cannot share one string by accident.
+    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : (arm.phi === 0 ? 'N1' : 'N3-p06'),
     phi: arm.phi,
     params: (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle',
     alpha: ALPHA,
     n: s2n,
-    ticks: T,
-    onset: ONSET,
+    ticks: span.T,
+    onset: span.ONSET,
     ...(pointKind ? { n_points: s2PointN, k: s2PointK } : {}),
     ...(spectralKind ? { windows: K3_WINDOWS, window_len: K3_WINDOW_LEN, window_span: K3_WINDOW_SPAN } : {}),
-    ...(shapeKind ? { windows: K6_WINDOWS, window_len: K6_WINDOW_LEN, window_span: K6_WINDOW_SPAN } : {}),
+    ...(shapeKind ? { windows: spec.windows, window_len: spec.windowLen, window_span: spec.windowSpan } : {}),
     // Amendment v2.K3.1, K3.1.1/K3.1.2: spectral_bet_e_process's S2 row carries its own
     // class instrument (increment_estimator) plus crossing_rate/k — NOT exceedance/mean_e
     // (K3.15's gap; the terminal_e_value instrument pair belongs to a different class).
@@ -1129,14 +1389,16 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     detector: detId,
     arm: 'power',
     cell_index: arm.idx,
-    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? 'K6-arm-heldout' : (arm.phi === 0 ? 'N1' : 'N3-p06'),
+    null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : (arm.phi === 0 ? 'N1' : 'N3-p06'),
     phi: arm.phi,
     params: (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle',
+    // K6A.1.12's cell-47 S3 row: `shift_sigma: 3` IS the d = 2.0 injectShapeMix above for a
+    // shape arm (the same equivalence K6.1.1/K6.8 registered for arm 34), not a mean step.
     shift_sigma: 3,
     alpha: ALPHA,
     n: N,
-    ticks: T,
-    onset: ONSET,
+    ticks: span.T,
+    onset: span.ONSET,
     ...(spectralKind ? { windows: K3_WINDOWS, window_len: K3_WINDOW_LEN, window_span: K3_WINDOW_SPAN } : {}),
     // Amendment v2.K6, K6.7: no windows/window_len/window_span on the S3 row — the
     // registration's own field list for this row does not name them (unlike S2's), so they
@@ -1161,15 +1423,15 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   if (detId === 'family_E_conformal_heldout' || pointKind || shapeKind) {
     s2.heldout_seed = ctx.heldoutSeed;
     s3.heldout_seed = ctx.heldoutSeed;
-    s2.heldout_rows = HELDOUT_ROWS;
-    s3.heldout_rows = HELDOUT_ROWS;
+    s2.heldout_rows = ctx.heldoutRowCount;
+    s3.heldout_rows = ctx.heldoutRowCount;
   }
   // Amendment v2.C1, C1.8: the K6 arm's own calibration fingerprint, on both rows. This arm is
   // where the defect reached a verdict (S3 POWERED on a lattice reference), so it is the row
   // where the reference's shape most needs to be on the record.
   if (shapeKind) {
-    s2.cal_fingerprint = shapeCalFingerprint(ctx.shapeCal);
-    s3.cal_fingerprint = shapeCalFingerprint(ctx.shapeCal);
+    s2.cal_fingerprint = spec.fingerprint(ctx.shapeCal);
+    s3.cal_fingerprint = spec.fingerprint(ctx.shapeCal);
   }
   // Amendment v2.K3.3, K3.3.3/K3.3.5: the retained step construction, as a THIRD, verdict-
   // free descriptive row on cell 33 — the exact registered field set, nothing more: no
@@ -1269,13 +1531,22 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
     // ONE continuous stream, so this string is not a cosmetic edit — it is the difference
     // between a lattice and a sample, and a manifest that still said `seed(j)` would misdescribe
     // the run it manifests.
+    // Amendment v2.K6A.2, K6A.2.5: the row count is per class, so this string states BOTH — a
+    // single ${HELDOUT_ROWS} would have put a false constant in the record of any run that
+    // includes a K6-slow cell (K6A.2.5 names this exact site as the ninth under-scoped one).
     heldout: `HELDOUT_SEED = CELL_SEED + ${HELDOUT_OFFSET}; rows are ${HELDOUT_ROWS} CONSECUTIVE `
       + 'draws from one continuously-advanced rng(HELDOUT_SEED) stream (Amendment v2.C1 C1.2, '
-      + 'superseding the pre-C1 seed(j) = HELDOUT_SEED + 7919*j scheme)',
+      + 'superseding the pre-C1 seed(j) = HELDOUT_SEED + 7919*j scheme)'
+      + `; K6-slow (shape_ecdf_accumulator) draws ${HELDOUT_ROWS_K6SLOW} rows from that same `
+      + `stream instead (Amendment v2.K6A.1 K6A.1.9: A = ${REGISTERED_GEOMETRY_K6SLOW.nA} + `
+      + `B = ${REGISTERED_GEOMETRY_K6SLOW.m * REGISTERED_GEOMETRY_K6SLOW.W} -> `
+      + `m = ${REGISTERED_GEOMETRY_K6SLOW.m} blocks of ${REGISTERED_GEOMETRY_K6SLOW.W})`,
     heldout_acf_bound: HELDOUT_ACF_BOUND,
+    heldout_rows_by_class: { default: HELDOUT_ROWS, 'K6-slow': HELDOUT_ROWS_K6SLOW },
     heldout_seed_arm_31: ARM_CELLS.find((a) => a.idx === 31).seed + HELDOUT_OFFSET,
     heldout_seed_arm_32: ARM_CELLS.find((a) => a.idx === 32).seed + HELDOUT_OFFSET,
     heldout_seed_arm_34: ARM_CELLS.find((a) => a.idx === 34).seed + HELDOUT_OFFSET,
+    heldout_seed_arm_47: ARM_CELLS.find((a) => a.idx === 47).seed + HELDOUT_OFFSET,
     constants: {
       base_seed: BASE_SEED,
       trajectory_step: TRAJ_STEP,
@@ -1289,6 +1560,14 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   smoke: N !== REGISTERED_N,
   ticks: T,
   onset: ONSET,
+  // Amendment v2.K6A.1, K6A.1.9: `ticks`/`onset` above stay the deploy-gate span A8 registered
+  // and every existing class still runs at. The span is per class from this build on, so the
+  // whole map is recorded — a run containing K6-slow cells would otherwise be manifested as a
+  // 300-tick run. Each emitted cell also carries its own ticks/onset.
+  class_spans: {
+    default: { ticks: DEFAULT_SPAN.T, onset: DEFAULT_SPAN.ONSET },
+    'K6-slow': { ticks: K6SLOW_SPAN.T, onset: K6SLOW_SPAN.ONSET, windows: K6SLOW_WINDOWS, window_len: K6SLOW_WINDOW_LEN, window_span: K6SLOW_WINDOW_SPAN },
+  },
   alpha: ALPHA,
   sigma: SIGMA,
   detectors: [...new Set(cells.map((c) => c.detector))],

@@ -416,6 +416,35 @@ test('the registered geometry splits 100,000 rows into A = 25,000 and m = 500 bl
   assert.notEqual(dev[449], dev[450], 'the two quantile conventions must be distinguishable here');
 });
 
+// C49 task-4 module review: the prefix-sum identity is pinned above only at W = 4, where the
+// literal double sum is 16 + 16 terms and no summation-order difference can accumulate. At the
+// REGISTERED geometry the same window is 150 * 25,000 = 3.75M cross terms and 150^2 within terms,
+// which is the whole reason `crossSum`/`pairSum` exist — so the identity is pinned here too,
+// against the literal form, at the geometry the endpoint is actually read at. Relative tolerance
+// 1e-12: the two forms are the same real number and differ only in floating-point summation
+// order, so anything larger would be a different statistic (CvM or AD, the two K6A.2 variants
+// this construction is not).
+test('the prefix-sum T equals the literal double-sum form AT THE REGISTERED GEOMETRY (W = 150, n_A = 25,000)', () => {
+  const cal = registeredGeometryCal();
+  const r = lcg(20260854);
+  const windows: number[][] = [
+    // a null-like window (the case every healthy read is)
+    Array.from({ length: 150 }, () => gauss(r)),
+    // the d = 2.0 two-point degeneracy K6A.1.8 rules a boundary artifact: constant-magnitude
+    // +-1 values, the extreme this construction saturates on
+    Array.from({ length: 150 }, (_, i) => (i % 3 === 0 ? -1 : 1)),
+    // a shifted window (a mean step, which the energy feature also sees) and a compressed one
+    Array.from({ length: 150 }, () => gauss(r) + 3),
+    Array.from({ length: 150 }, () => 0.25 * gauss(r)),
+  ];
+  for (const w of windows) {
+    const fast = ecdfAccumulatorWindow(w, cal).T;
+    const slow = naiveEnergyT(w, cal.sortedA);
+    assert.ok(Math.abs(fast - slow) <= 1e-12 * Math.abs(slow),
+      `W = 150 identity: prefix-sum ${fast} vs literal double sum ${slow} (relative ${Math.abs(fast / slow - 1)})`);
+  }
+});
+
 test('K6A.1.12s structural zeros: p in [1/501, 1] and e in [0.6820, 4.924167], always finite', () => {
   const cal = registeredGeometryCal();
   const r = lcg(20260851 + 500000);

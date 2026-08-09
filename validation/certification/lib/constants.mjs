@@ -72,4 +72,14 @@ export const FAULT_CLASSES = Object.freeze({
   // order run-battery.mjs's assertRegistryAgreement compares against string-for-string.
   K5: { name: 'slow drift',                 canonical: 'slope1e-2',       grid: ['slope5e-5', 'slope1e-4', 'slope5e-4', 'slope2.5e-3', 'slope5e-3', 'slope1e-2', 'slope2e-2'] },
   K6: { name: 'distributional shape change', canonical: 'mix-d1.5',       grid: ['mix-d1.0', 'mix-d1.5', 'mix-d2.0'] },
+  // Amendment v2.K6A.1 (K6A.1.13 item 1), 2026-08-08. A class row does not exist until this
+  // object has a key: `coverageFor` (lib/score.mjs:358) and `classRow` (verdict.mjs:270)
+  // iterate `Object.keys(FAULT_CLASSES)`, and nothing anywhere iterates the cells' own
+  // `fault_class` values -- so cells carrying `fault_class: 'K6-slow'` could not create a row
+  // by themselves. Same K6 severity grammar and same canonical severity as K6, because it is
+  // the same injection: what differs is the HORIZON the class is read over (T = 6,300 ticks,
+  // 40 disjoint windows of 150, against K6's 300/6x30 deploy-gate span, K6A.1.9) and the
+  // detector assigned to it -- `shape_ecdf_accumulator` ALONE (K6A.1.9, with the disclosed
+  // cost that the row has no paired-comparison partner).
+  'K6-slow': { name: 'distributional shape change, hours-scale accumulator', canonical: 'mix-d1.5', grid: ['mix-d1.0', 'mix-d1.5', 'mix-d2.0'] },
 });

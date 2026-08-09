@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { FAULT_CLASSES } from '../../certification/lib/constants.mjs';
@@ -1754,4 +1754,169 @@ test('K6A.1.9: --classes K6-slow selects the arm by hint and runs the whole clas
     assert.equal(c.onset, 300);
     assert.equal(c.heldout_rows, K6SLOW_HELDOUT_ROWS);
   }
+});
+
+// ── Amendment v2.K6A.3 (K6A.3.1) + v2.K6A.4 (K6A.4.1) — the null-growth screen DRIVER ────────
+// K6A.1.10 registers the screen as run-time stop condition (2) and says that running it at run
+// time is what makes it a stop condition rather than a citation. The module exported
+// nullGrowthScreen and nothing called it until the rider registered a driver. These tests pin the
+// driver's registered behaviour on both branches, plus the positive control without which a screen
+// that CANNOT fire is indistinguishable from one that never fires.
+const SCREEN_SMOKE = { draws: 5, mc_windows_per_draw: 2000 };   // K6A.3.1 / K6A.4.1
+
+test('K6A.3.1: a K6-slow run screens before it measures, and the passed reading lands in the manifest', () => {
+  const { manifest } = smoke();
+  const scr = manifest.null_growth_screen;
+  assert.ok(scr, 'K6A.3.1: a run whose scope includes K6-slow must carry the screen reading');
+  assert.equal(scr.draws, SCREEN_SMOKE.draws, 'K6A.3.1: SCREEN_DRAWS_SMOKE');
+  // K6A.4.1 SUPERSEDES K6A.3.1's 200: that count fired on the driver's first run and the reading
+  // was MC noise (draw 41000003: +0.008760 at M=200, -0.041339 at M=2000, -0.047401 at M=8000).
+  assert.equal(scr.mc_windows_per_draw, SCREEN_SMOKE.mc_windows_per_draw, 'K6A.4.1: SCREEN_MC_WINDOWS_SMOKE');
+  assert.equal(scr.positive, 0, 'the registered null draws must not have positive null growth');
+  assert.equal(scr.kappa, 0.682, 'the screen runs at the FROZEN kappa, never a re-derived one');
+  assert.equal(scr.screen_mode, 'smoke', 'a smoke run must say so — its count is not the registered one');
+  assert.equal(scr.forced_positive_hook, false, 'the positive-control hook must be off on an ordinary run');
+  // g_null = log kappa + (1-kappa)*E[-log p|null,S]: every draw strictly negative, and the whole
+  // sample well inside K6A.1.5's registered per-draw distribution (mean -6.754e-2, sd 1.571e-2).
+  assert.ok(scr.g_null.max < 0, `every screened draw must read g_null < 0; max was ${scr.g_null.max}`);
+  assert.ok(scr.g_null.mean < 0 && scr.g_null.mean > -0.2, `g_null mean ${scr.g_null.mean}`);
+  assert.match(scr.seed_bands.calibration, /^41000000 \+ d, d = 0\.\.4$/, scr.seed_bands.calibration);
+  assert.match(scr.seed_bands.mc, /^42000000 \+ 10000\*d \+ j, j = 0\.\.1999$/, scr.seed_bands.mc);
+});
+
+test('K6A.3.1: the screen reading is ON cell 47\'s S2 row, beside the paging bound it must be reported with', () => {
+  const { summary, manifest } = smoke();
+  const s2 = summary.cells.find((c) => c.cell_index === 47 && c.arm === 'healthy');
+  assert.ok(s2);
+  // K6A.1.10: a fired paging bound must be reported with the screen's reading beside it —
+  // screen-clean + paging-fired is the calibration lottery's signature, screen-dirty +
+  // paging-fired is a construction defect. Both readings on one row is what makes that mechanical.
+  assert.ok(s2.null_growth_screen, 'the S2 arm row must carry the screen reading');
+  assert.equal(s2.null_growth_screen.draws, manifest.null_growth_screen.draws);
+  assert.equal(s2.null_growth_screen.positive, 0);
+  assert.equal(s2.null_growth_screen.g_null_max, manifest.null_growth_screen.g_null.max,
+    'the row and the manifest must report the same screen, not two screens');
+  assert.ok(Number.isFinite(s2.lower_95), 'and the paging bound the screen is reported beside');
+  // The S3 row does not carry it: K6.7's field list for that row names no such field, and the
+  // reporting obligation is attached to the S2 paging bound.
+  const s3 = summary.cells.find((c) => c.cell_index === 47 && c.arm === 'power');
+  assert.equal('null_growth_screen' in s3, false, 'the S3 row carries no screen field');
+});
+
+test('K6A.3.1: a run with no K6-slow cell in scope does not screen, and says so with null', () => {
+  const { manifest, summary } = runHarness(['--n', '5', '--classes', 'K6']);
+  assert.equal(manifest.null_growth_screen, null,
+    'K6A.3.1: null distinguishes "not applicable" from "screened and passed" without reading classes_run');
+  assert.deepEqual(manifest.classes_run, ['K6']);
+  assert.ok(summary.cells.length > 0);
+  for (const c of summary.cells) assert.equal('null_growth_screen' in c, false);
+});
+
+// THE POSITIVE CONTROL (K6A.3.1's own mutation obligation). The synthetic draw's reference blocks
+// are a quantile-regular sample of A — the extreme form of the compressed-reference defect C1.1
+// found in the wild — so every genuine null window ranks above every reference block, E[-log p]
+// hits its ceiling log(m+1) = 6.2166 and g_null = log kappa + (1-kappa)*6.2166 = +1.594.
+test('K6A.3.1 positive control: a draw with positive null growth ABORTS the run before any endpoint is read', () => {
+  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-screen-'));
+  let threw = false;
+  let stderr = '';
+  try {
+    execFileSync(process.execPath, [HARNESS, '--n', '5', '--classes', 'K6-slow'], {
+      env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot, COVERAGE_FORCE_SCREEN_POSITIVE: '1' },
+      encoding: 'utf8', stdio: 'pipe',
+    });
+  } catch (err) {
+    threw = true;
+    stderr = String(err.stderr ?? '');
+  }
+  assert.ok(threw, 'a positive screen draw must refuse the run, not warn');
+  assert.match(stderr, /NULL-GROWTH SCREEN FAILED/);
+  assert.match(stderr, /K6A\.1\.10 stop condition \(2\): STOP, investigate, do not run/);
+  assert.match(stderr, /REFUTED on the record/);
+
+  // NO endpoint was read: no run directory of either mode, so no summary.json anywhere.
+  assert.equal(fs.existsSync(path.join(outRoot, 'live')), false, 'no live run directory');
+  assert.equal(fs.existsSync(path.join(outRoot, 'sim')), false, 'no sim run directory — the abort precedes the run');
+  assert.deepEqual(fs.readdirSync(outRoot), ['screen-failed'],
+    'K6A.3.1: the record lands OUTSIDE live/ and sim/ — loadEvidence enumerates every directory under results/live');
+
+  const failDir = path.join(outRoot, 'screen-failed');
+  const files = fs.readdirSync(failDir);
+  assert.equal(files.length, 1, `one record per failed screen, got ${files.join(',')}`);
+  const rec = JSON.parse(fs.readFileSync(path.join(failDir, files[0]), 'utf8'));
+  assert.equal(rec.study, 'coverage');
+  assert.match(rec.stop_condition, /K6A\.1\.10 \(2\), driver v2\.K6A\.3 K6A\.3\.1/);
+  assert.match(rec.verdict, /^STOP — shape_ecdf_accumulator REFUTED/);
+  assert.equal(rec.positive, rec.draws, 'the forced control makes every draw positive');
+  assert.equal(rec.positive_draws.length, rec.positive);
+  assert.equal(rec.per_draw.length, rec.draws);
+  assert.equal(rec.forced_positive_hook, true, 'a forced record must say it was forced');
+  assert.deepEqual(rec.classes_run, ['K6-slow']);
+  assert.deepEqual({ W: rec.geometry.W, nA: rec.geometry.nA, m: rec.geometry.m, n_rows: rec.geometry.n_rows },
+    { W: 150, nA: 25000, m: 500, n_rows: 100000 });
+  for (const d of rec.per_draw) {
+    assert.equal(d.positive, true);
+    assert.ok(d.g_null > 0, `draw ${d.draw}: g_null ${d.g_null} must be positive`);
+    // The ceiling: every window at the rank floor p = 1/501 gives E[-log p] = log 501 = 6.2166.
+    assert.ok(Math.abs(d.mean_neg_log_p - Math.log(501)) < 1e-9,
+      `draw ${d.draw}: the control must drive E[-log p] to its ceiling, got ${d.mean_neg_log_p}`);
+    assert.ok(Math.abs(d.g_null - (Math.log(0.682) + 0.318 * Math.log(501))) < 1e-9, `draw ${d.draw}: g_null`);
+    assert.equal(d.cal_seed, 41000000 + d.draw, 'the registered calibration seed band');
+    assert.equal(d.mc_seed_first, 42000000 + 10000 * d.draw, 'the registered MC seed band');
+  }
+  fs.rmSync(outRoot, { recursive: true, force: true });
+});
+
+test('K6A.3.1: --screen-draws/--screen-mc are refused on a registered run, and bounded on a smoke run', () => {
+  const cases = [
+    // The registered path allows NO override: 250 x 8,000 or nothing.
+    { args: ['--n', '2000', '--classes', 'K6-slow', '--screen-draws', '1'], match: /refused on a registered run/ },
+    { args: ['--n', '2000', '--classes', 'K6-slow', '--screen-mc', '10'], match: /refused on a registered run/ },
+    // The MC seed stride bounds M, so two draws' bands can never overlap.
+    { args: ['--n', '5', '--classes', 'K6-slow', '--screen-mc', '10001'], match: /must be a positive integer <= 10000/ },
+    { args: ['--n', '5', '--classes', 'K6-slow', '--screen-draws', '0'], match: /must be a positive integer/ },
+  ];
+  for (const { args, match } of cases) {
+    const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-screen-refuse-'));
+    let threw = false;
+    let stderr = '';
+    try {
+      execFileSync(process.execPath, [HARNESS, ...args], {
+        env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot }, encoding: 'utf8', stdio: 'pipe',
+      });
+    } catch (err) { threw = true; stderr = String(err.stderr ?? ''); }
+    assert.ok(threw, `${args.join(' ')}: must be refused`);
+    assert.match(stderr, match);
+    assert.equal(fs.existsSync(path.join(outRoot, 'live')), false, 'refused before any run directory exists');
+    assert.equal(fs.existsSync(path.join(outRoot, 'sim')), false);
+    fs.rmSync(outRoot, { recursive: true, force: true });
+  }
+});
+
+test('K6A.3.1: a reduced smoke screen is accepted and recorded as such (the wiring path tests use)', () => {
+  const { manifest } = runHarness(['--n', '5', '--classes', 'K6-slow', '--screen-draws', '2', '--screen-mc', '50']);
+  assert.equal(manifest.null_growth_screen.draws, 2);
+  assert.equal(manifest.null_growth_screen.mc_windows_per_draw, 50);
+  assert.equal(manifest.null_growth_screen.screen_mode, 'smoke');
+  assert.equal(manifest.smoke, true, 'and such a run can never be read as the registered measurement');
+  assert.equal(manifest.mode, 'sim');
+});
+
+test('K6A.3.1: the screen runs BEFORE the first cell is measured, asserted on the run\'s own progress order', () => {
+  // Placement is registered ("before the first trajectory of any cell of any class"), and a screen
+  // that ran afterwards would be a screen that read endpoints first. The harness's progress lines
+  // go to stderr in emission order, so their ORDER is the observable that pins it.
+  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-screen-order-'));
+  const res = spawnSync(process.execPath,
+    [HARNESS, '--n', '5', '--classes', 'K6-slow', '--screen-draws', '2', '--screen-mc', '50'],
+    { env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot }, encoding: 'utf8' });
+  assert.equal(res.status, 0, res.stderr);
+  const lines = res.stderr.split('\n');
+  const screenAt = lines.findIndex((l) => l.startsWith('null-growth screen:'));
+  const firstCellAt = lines.findIndex((l) => l.startsWith('shape_ecdf_accumulator'));
+  assert.ok(screenAt >= 0, `no screen progress line in:\n${res.stderr}`);
+  assert.ok(firstCellAt >= 0, 'no cell progress line');
+  assert.ok(screenAt < firstCellAt,
+    `K6A.3.1: the screen must report before the first cell (screen at ${screenAt}, first cell at ${firstCellAt})`);
+  fs.rmSync(outRoot, { recursive: true, force: true });
 });

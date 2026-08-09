@@ -171,6 +171,37 @@ const REGISTERED_GEOMETRY_K6SLOW = Object.freeze({ W: 150, nA: 25000, m: 500 });
       + 'substrate K6A.1.9 registers (A = 25,000, B = 75,000)');
   }
 }
+// ── the null-growth screen (Amendment v2.K6A.3 K6A.3.1, corrected by v2.K6A.4 K6A.4.1) ───────
+// K6A.1.10 registers the screen as stop condition (2) and states that running it AT RUN TIME on
+// FRESH draws is what makes it a stop condition rather than a citation. Nothing called it until
+// the rider registered a driver; the numbers below are the rider's, transcribed.
+//
+// SCREEN_MC_WINDOWS is DERIVED, not chosen: g_null carries MC noise
+// (1-kappa)*sd(-log p)/sqrt(M), and at the exact m = 500 law sd(-log p) = 0.975005, so M = 8000
+// gives an MC SE of 0.003466. Composed with K6A.1.5's across-draw sd (1.571e-2 about a mean of
+// -6.754e-2) that puts the registered path's own false-STOP rate at ~0.34% over 250 draws
+// (K6A.4.1's correction of K6A.3.1's ~0.2%, which composed MC noise alone).
+const SCREEN_DRAWS = 250;                     // K6A.1.10's own number
+const SCREEN_MC_WINDOWS = 8000;               // K6A.3.1's derived count
+const SCREEN_DRAWS_SMOKE = 5;                 // K6A.3.1
+// Amendment v2.K6A.4 (K6A.4.1) SUPERSEDES K6A.3.1's 200. That count fired on the driver's FIRST
+// run — screen draw 41000003 read g_null = +0.008760 at M = 200 and reads -0.041339 at M = 2,000,
+// -0.047401 at M = 8,000, so the abort was mechanically correct and the reading was MC noise. The
+// screen ENFORCES on every run it runs on (one rule for both paths; a screen that reports without
+// stopping is the citation K6A.1.10 forbade), so the count is what makes enforcement honest: at
+// M = 2,000 the smoke path's false-STOP probability is 2.1e-4 per run against M = 200's 3.0%.
+const SCREEN_MC_WINDOWS_SMOKE = 2000;         // K6A.4.1
+// K6A.3.1's registered fresh bands: seed(d) = 41,000,000 + d and
+// seed(d,j) = 42,000,000 + 10,000*d + j. Every member exceeds 37,033,479, the maximum seed any
+// registered stream of this study starts at (arm 30's K2 matrix, asserted below), so exact-seed
+// disjointness holds by the bound rather than by trust. K6A.2.3's withdrawn band-ordering
+// argument is NOT re-used, and its one-orbit limitation is inherited. K6A.4.2 measured the
+// spaced-seed scheme against one continuous stream and found no detectable bias, so it stands.
+const SCREEN_CAL_SEED_BASE = 41000000;
+const SCREEN_MC_SEED_BASE = 42000000;
+const SCREEN_MC_SEED_STRIDE = 10000;          // bounds M, so no two draws' MC bands can overlap
+const SCREEN_MAX_REGISTERED_SEED = 37033479;  // BASE_SEED + 30 + TRAJ_STEP*1999 + SERIES_SALT*9
+
 /** Enforcement, not observability (module review): every K6-slow calibration the T1 path builds
  *  is asserted against the registered geometry BEFORE any cell is scored, so a wrong-W or
  *  wrong-split draw cannot reach a verdict and be discovered afterwards in `cal_fingerprint`. */
@@ -216,6 +247,19 @@ const FORCE_SHAPE_DEGENERATE = process.env.COVERAGE_FORCE_SHAPE_DEGENERATE === '
 // var leaves it false), forces MODE=sim, and is recorded in the manifest, same convention as
 // COVERAGE_FORCE_THROW / COVERAGE_FORCE_SPECTRAL_DEGENERATE / COVERAGE_FORCE_SHAPE_DEGENERATE.
 const FORCE_HELDOUT_LATTICE = process.env.COVERAGE_FORCE_HELDOUT_LATTICE === '1';
+
+// Test-only hook, named: replaces the null-growth screen's calibration substrate with a
+// SYNTHETIC draw engineered to have POSITIVE null growth — the reference blocks are a
+// quantile-regular sample of A (the extreme form of the compressed-reference defect C1.1 found in
+// the wild, Amendment v2.C1), so every genuine null window ranks as more extreme than every
+// reference block, E[-log p] is driven to its ceiling log(m+1) = 6.2166 and
+// g_null = log kappa + (1-kappa)*6.2166 = +1.594 > 0. This is the positive control Amendment
+// v2.K6A.3 (K6A.3.1) requires: without it, a screen that CANNOT fire is indistinguishable from a
+// screen that never fires. Cannot fire by accident (unset env var leaves it false), forces
+// MODE=sim, and is recorded in the manifest, same convention as COVERAGE_FORCE_THROW /
+// COVERAGE_FORCE_SPECTRAL_DEGENERATE / COVERAGE_FORCE_SHAPE_DEGENERATE /
+// COVERAGE_FORCE_HELDOUT_LATTICE.
+const FORCE_SCREEN_POSITIVE = process.env.COVERAGE_FORCE_SCREEN_POSITIVE === '1';
 
 // Amendment v2.C1, C1.6: a rerun declares, in its own manifest, which already-registered
 // (study, run, detector) rows it supersedes — the only way a preserved prior run stops being
@@ -406,6 +450,16 @@ function assertRegistryAgreement() {
     ['HELDOUT_ROWS_K6SLOW', HELDOUT_ROWS_K6SLOW, 100000, 'K6A.1.9'],
     ['T_K6SLOW', T_K6SLOW, 6300, 'K6A.1.9'],
     ['ONSET_K6SLOW', ONSET_K6SLOW, 300, 'K6A.1.9'],
+    // Amendment v2.K6A.3/v2.K6A.4: the screen's own registered numbers and seed bands. A screen
+    // whose draw or MC count drifted would be a differently-powered falsifier under the same
+    // name, and a screen whose seed band drifted would not be fresh.
+    ['SCREEN_DRAWS', SCREEN_DRAWS, 250, 'K6A.1.10/K6A.3.1'],
+    ['SCREEN_MC_WINDOWS', SCREEN_MC_WINDOWS, 8000, 'K6A.3.1'],
+    ['SCREEN_DRAWS_SMOKE', SCREEN_DRAWS_SMOKE, 5, 'K6A.3.1'],
+    ['SCREEN_MC_WINDOWS_SMOKE', SCREEN_MC_WINDOWS_SMOKE, 2000, 'K6A.4.1'],
+    ['SCREEN_CAL_SEED_BASE', SCREEN_CAL_SEED_BASE, 41000000, 'K6A.3.1'],
+    ['SCREEN_MC_SEED_BASE', SCREEN_MC_SEED_BASE, 42000000, 'K6A.3.1'],
+    ['SCREEN_MC_SEED_STRIDE', SCREEN_MC_SEED_STRIDE, 10000, 'K6A.3.1'],
   ];
   for (const [name, actual, registered, where] of literals) {
     if (actual !== registered) {
@@ -439,6 +493,27 @@ function assertRegistryAgreement() {
   if (arm47Cell.hint !== 'K6-slow') throw new Error(`run-battery: arm-47 hint is "${arm47Cell.hint}", K6A.1.9/K6A.2.5 register K6-slow`);
   if (arm47Cell.arm_detector !== 'shape_ecdf_accumulator') {
     throw new Error(`run-battery: arm-47 detector is "${arm47Cell.arm_detector}", K6A.1.9 registers shape_ecdf_accumulator`);
+  }
+  // Amendment v2.K6A.3, K6A.3.1: the screen's freshness ground, checked by arithmetic rather than
+  // asserted in prose. The study's maximum registered seed is re-derived from the constants here
+  // (never retyped), and every seed either band can produce must exceed it.
+  const maxRegisteredSeed = Math.max(
+    ...ARM_CELLS.map((a) => a.seed + TRAJ_STEP * 1999 + (a.K ? SERIES_SALT * (a.K - 1) : 0)),
+    ...REGISTERED_CELLS.map((c) => c.seed + TRAJ_STEP * 1999),
+    ...REGISTERED_CELLS.map((c) => c.seed + HELDOUT_OFFSET),
+    ...ARM_CELLS.map((a) => a.seed + HELDOUT_OFFSET),
+  );
+  if (maxRegisteredSeed !== SCREEN_MAX_REGISTERED_SEED) {
+    throw new Error(`run-battery: the study's maximum registered seed is ${maxRegisteredSeed}, `
+      + `K6A.3.1 records ${SCREEN_MAX_REGISTERED_SEED} — the screen's disjointness bound rests on it`);
+  }
+  if (!(SCREEN_CAL_SEED_BASE > maxRegisteredSeed && SCREEN_MC_SEED_BASE > maxRegisteredSeed)) {
+    throw new Error('run-battery: a null-growth screen seed band overlaps the registered seeds '
+      + `(max ${maxRegisteredSeed}); K6A.3.1 registers exact-seed disjointness by enumeration`);
+  }
+  if (SCREEN_MC_WINDOWS > SCREEN_MC_SEED_STRIDE) {
+    throw new Error(`run-battery: SCREEN_MC_WINDOWS ${SCREEN_MC_WINDOWS} exceeds the ${SCREEN_MC_SEED_STRIDE} `
+      + 'stride, so two draws\' MC seed bands would overlap (K6A.3.1)');
   }
   // Amendment v2.K6, K6.6's table: shape_block_conformal_bet's four fault cells' own
   // HELDOUT_SEEDs, cross-checked against the table's own literals.
@@ -1047,6 +1122,156 @@ function computePUniformity(rawPs) {
   return { n, decile_counts, ks_statistic: n > 0 ? d : NaN, ks_critical_at_alpha: n > 0 ? 1.36 / Math.sqrt(n) : NaN };
 }
 
+// ── run identity ─────────────────────────────────────────────────────────────
+// Hoisted above the run (Amendment v2.K6A.3, K6A.3.1): the null-growth screen may have to write a
+// failure record and refuse the run before a single trajectory exists, so it needs the results
+// root, the mode decision and the provenance stamps. The VALUES are unchanged — each is the same
+// pure function of the flags and the environment it always was, and the clock still only names a
+// directory, never the measurement path.
+let gitSha = null;
+try { gitSha = execSync('git rev-parse HEAD', { cwd: ENGINE_ROOT }).toString().trim(); } catch { gitSha = null; }
+const enginePin = JSON.parse(fs.readFileSync(path.join(ENGINE_ROOT, 'package.json'), 'utf8')).version;
+
+const outRoot = process.env.COVERAGE_RESULTS_DIR
+  ? path.resolve(process.env.COVERAGE_RESULTS_DIR)
+  : path.join(STUDY, 'results');
+// results/live is the certification evidence path: loadEvidence (collect.mjs:138) reads
+// validation/*/results/live/* and scores whatever it finds there. Only a run at the registered
+// n = 2000 with no test hook engaged may write to it; everything else lands in results/sim, the
+// run.mjs:76 convention. This is a property of the run, not a flag the caller passes, so a
+// smoke run cannot opt itself into the evidence path. --classes does NOT force sim: Task 9 may
+// run the registered n class by class (plan step 2), and `classes_run` below records the scope.
+const MODE = (N === REGISTERED_N && FORCE_THROW === null && !FORCE_SPECTRAL_DEGENERATE
+  && !FORCE_SHAPE_DEGENERATE && !FORCE_HELDOUT_LATTICE && !FORCE_SCREEN_POSITIVE) ? 'live' : 'sim';
+const stamp = `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}Z`;
+
+// ── the null-growth screen driver (Amendment v2.K6A.3, K6A.3.1) ──────────────
+// The registered STOP CONDITION of K6A.1.10 (2), executed rather than cited. It is called below,
+// after the registry agreement and the --classes resolution and BEFORE the first trajectory of any
+// cell of any class, and ONLY when K6-slow is in scope.
+
+/** One fresh screen calibration draw: 100,000 CONSECUTIVE values from ONE continuously-advanced
+ *  stream at seed(d) (C1.2's form, the same shape heldoutRows uses), at phi = 0 — the law
+ *  K6A.1.5 measured and the only one K6A.1.10 registers a screen for. K6A.3.1 discloses that the
+ *  phi = 0.6 calibrator (cell 46) is therefore NOT screened. */
+function screenDrawRows(calSeed) {
+  const draw = drawFor(rng(calSeed), 0);
+  const rows = new Array(HELDOUT_ROWS_K6SLOW);
+  for (let j = 0; j < HELDOUT_ROWS_K6SLOW; j++) rows[j] = draw();
+  if (!FORCE_SCREEN_POSITIVE) return rows;
+  // Test-only positive control (see COVERAGE_FORCE_SCREEN_POSITIVE's own comment): keep A, and
+  // replace every reference block with a quantile-regular sample of A plus a per-block jitter
+  // (the jitter only supplies the across-block spread calibrateEcdfAccumulator requires). Such a
+  // reference is maximally close to Fhat_A, so a genuine null window ranks above every block and
+  // p hits the floor at every window.
+  const { W, nA, m } = REGISTERED_GEOMETRY_K6SLOW;
+  const sortedA = rows.slice(0, nA).sort((a, b) => a - b);
+  const forced = rows.slice(0, nA);
+  for (let j = 0; j < m; j++) {
+    for (let i = 0; i < W; i++) forced.push(sortedA[Math.floor((i + 0.5) * nA / W)] + (j + 1) * 1e-9);
+  }
+  return forced;
+}
+
+/** One fresh null window for the MC term: W consecutive draws at seed(d,j), phi = 0. */
+function screenNullWindow(seed) {
+  const draw = drawFor(rng(seed), 0);
+  return Array.from({ length: K6SLOW_WINDOW_LEN }, draw);
+}
+
+const SCREEN_DRAWS_ARG = arg('--screen-draws', null);
+const SCREEN_MC_ARG = arg('--screen-mc', null);
+
+/** K6A.3.1's driver. Returns the screen's reading on a pass; writes the registered
+ *  screen-failure record and THROWS on a fail, having read no endpoint. */
+function runNullGrowthScreen(classesRun) {
+  const registered = MODE === 'live';
+  if (registered && (SCREEN_DRAWS_ARG !== null || SCREEN_MC_ARG !== null)) {
+    throw new Error('run-battery: --screen-draws/--screen-mc are refused on a registered run '
+      + `(n === ${REGISTERED_N}, no hook engaged) — K6A.3.1 registers ${SCREEN_DRAWS} draws x `
+      + `${SCREEN_MC_WINDOWS} MC windows there and allows no override`);
+  }
+  const draws = Number(SCREEN_DRAWS_ARG ?? (registered ? SCREEN_DRAWS : SCREEN_DRAWS_SMOKE));
+  const mc = Number(SCREEN_MC_ARG ?? (registered ? SCREEN_MC_WINDOWS : SCREEN_MC_WINDOWS_SMOKE));
+  if (!Number.isInteger(draws) || draws < 1) throw new Error(`run-battery: --screen-draws must be a positive integer, got ${draws}`);
+  if (!Number.isInteger(mc) || mc < 1 || mc > SCREEN_MC_SEED_STRIDE) {
+    throw new Error(`run-battery: --screen-mc must be a positive integer <= ${SCREEN_MC_SEED_STRIDE} `
+      + `(the MC seed stride, K6A.3.1), got ${mc}`);
+  }
+  const spec = shapeSpecOf('shape_ecdf_accumulator');
+  const perDraw = [];
+  for (let d = 0; d < draws; d++) {
+    const calSeed = SCREEN_CAL_SEED_BASE + d;
+    const cal = spec.calibrate(screenDrawRows(calSeed), `null-growth screen draw ${d} (seed ${calSeed})`);
+    const seeds = new Array(mc);
+    for (let j = 0; j < mc; j++) seeds[j] = SCREEN_MC_SEED_BASE + SCREEN_MC_SEED_STRIDE * d + j;
+    // K6A.1.5's estimator verbatim, at the frozen kappa (the module's own default — a per-call
+    // kappa here would screen a differently-calibrated accumulator under this class's name).
+    const r = shapeEcdfAcc.nullGrowthScreen(cal, { seeds, drawNullWindow: screenNullWindow });
+    perDraw.push({
+      draw: d,
+      cal_seed: calSeed,
+      mc_seed_first: seeds[0],
+      mc_seed_last: seeds[mc - 1],
+      mean_neg_log_p: r.meanNegLogP,
+      g_null: r.gNull,
+      positive: r.positive,
+    });
+  }
+  const gs = perDraw.map((x) => x.g_null);
+  const gMean = mean(gs);
+  const positives = perDraw.filter((x) => x.positive);
+  const sorted = [...gs].sort((a, b) => a - b);
+  const reading = {
+    draws,
+    mc_windows_per_draw: mc,
+    positive: positives.length,
+    kappa: shapeEcdfAcc.KAPPA_K6SLOW,
+    screen_mode: registered ? 'registered' : 'smoke',
+    seed_bands: {
+      calibration: `${SCREEN_CAL_SEED_BASE} + d, d = 0..${draws - 1}`,
+      mc: `${SCREEN_MC_SEED_BASE} + ${SCREEN_MC_SEED_STRIDE}*d + j, j = 0..${mc - 1}`,
+    },
+    g_null: {
+      mean: gMean,
+      sd: draws > 1 ? Math.sqrt(gs.reduce((a, b) => a + (b - gMean) ** 2, 0) / (draws - 1)) : 0,
+      max: sorted[sorted.length - 1],
+      p99: sorted[Math.min(sorted.length - 1, Math.round(0.99 * (sorted.length - 1)))],
+    },
+    forced_positive_hook: FORCE_SCREEN_POSITIVE,
+  };
+  if (positives.length === 0) return reading;
+  // FAILED. K6A.3.1: abort before any registered endpoint is read, and write the record OUTSIDE
+  // live/ and sim/ — loadEvidence enumerates every directory under validation/*/results/live/
+  // (collect.mjs:320-324), so a failure record inside it would be reported as a skipped run
+  // forever. No summary.json, no manifest, no run directory, no trajectory of any class.
+  const failDir = path.join(outRoot, 'screen-failed');
+  fs.mkdirSync(failDir, { recursive: true });
+  const failPath = path.join(failDir, `screen-${stamp}.json`);
+  fs.writeFileSync(failPath, `${JSON.stringify({
+    study: 'coverage',
+    prereg: 'PREREGISTRATION.md',
+    stop_condition: 'null-growth screen (PREREGISTRATION.md Amendment v2.K6A.1 K6A.1.10 (2), driver v2.K6A.3 K6A.3.1)',
+    verdict: 'STOP — shape_ecdf_accumulator REFUTED on the record (K6A.1.10)',
+    ...reading,
+    geometry: { ...REGISTERED_GEOMETRY_K6SLOW, n_rows: HELDOUT_ROWS_K6SLOW },
+    positive_draws: positives,
+    per_draw: perDraw,
+    classes_run: classesRun,
+    n: N,
+    registered_n: REGISTERED_N,
+    mode: MODE,
+    git_sha: gitSha,
+    engine_pin: enginePin,
+    node: process.version,
+    generated_at: stamp,
+  }, null, 1)}\n`);
+  throw new Error(`run-battery: NULL-GROWTH SCREEN FAILED — ${positives.length}/${draws} calibration draws `
+    + `have positive null growth (max g_null ${reading.g_null.max}); PREREGISTRATION.md Amendment v2.K6A.1 `
+    + 'K6A.1.10 stop condition (2): STOP, investigate, do not run. shape_ecdf_accumulator is REFUTED on '
+    + `the record. No endpoint was read and no run directory exists. Record: ${failPath}`);
+}
+
 // ── run ──────────────────────────────────────────────────────────────────────
 assertRegistryAgreement();
 // Parsed here rather than at flag-read time so a malformed declaration crashes before any
@@ -1057,6 +1282,18 @@ const classFilter = arg('--classes', null);
 const CLASSES_RUN = classFilter ? classFilter.split(',').map((s) => s.trim()) : Object.keys(FAULT_CLASSES);
 for (const c of CLASSES_RUN) {
   if (!(c in FAULT_CLASSES)) throw new Error(`run-battery: --classes names "${c}", which is not a registered class`);
+}
+
+// Amendment v2.K6A.3, K6A.3.1: the registered stop condition, EXECUTED. Placement is registered —
+// after assertRegistryAgreement() and the --classes resolution, before the first trajectory of any
+// cell of any class — and it runs iff K6-slow is in scope, because the screen is a property of
+// this construction's calibrator. A failed screen throws from inside, having written its record
+// and read no endpoint.
+const NULL_GROWTH_SCREEN = CLASSES_RUN.includes('K6-slow') ? runNullGrowthScreen(CLASSES_RUN) : null;
+if (NULL_GROWTH_SCREEN) {
+  process.stderr.write(`null-growth screen: ${NULL_GROWTH_SCREEN.positive}/${NULL_GROWTH_SCREEN.draws} positive `
+    + `(${NULL_GROWTH_SCREEN.screen_mode}, ${NULL_GROWTH_SCREEN.mc_windows_per_draw} MC windows/draw, `
+    + `max g_null ${NULL_GROWTH_SCREEN.g_null.max.toFixed(6)})\n`);
 }
 
 const cells = [];
@@ -1433,6 +1670,18 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     s2.cal_fingerprint = spec.fingerprint(ctx.shapeCal);
     s3.cal_fingerprint = spec.fingerprint(ctx.shapeCal);
   }
+  // Amendment v2.K6A.3, K6A.3.1: the screen's reading lands ON the S2 row, not only in the
+  // manifest. K6A.1.10 requires a fired paging bound to be reported with the screen's reading
+  // beside it (screen-clean + paging-fired is the calibration lottery's signature; screen-dirty +
+  // paging-fired is a construction defect), and this is what makes that mechanical rather than a
+  // reader's duty — the two readings are then on the same row.
+  if (NULL_GROWTH_SCREEN && arm.hint === 'K6-slow') {
+    s2.null_growth_screen = {
+      draws: NULL_GROWTH_SCREEN.draws,
+      positive: NULL_GROWTH_SCREEN.positive,
+      g_null_max: NULL_GROWTH_SCREEN.g_null.max,
+    };
+  }
   // Amendment v2.K3.3, K3.3.3/K3.3.5: the retained step construction, as a THIRD, verdict-
   // free descriptive row on cell 33 — the exact registered field set, nothing more: no
   // shift_sigma (so isPowerCell/scoreS3 never admits it as an S3 candidate), no verdict, and
@@ -1484,22 +1733,6 @@ const familyDAdapterSha = crypto.createHash('sha256')
   .update(fs.readFileSync(path.resolve(STUDY, '..', 'h0-battery', 'harness', 'detectors.mjs')))
   .digest('hex');
 
-let gitSha = null;
-try { gitSha = execSync('git rev-parse HEAD', { cwd: ENGINE_ROOT }).toString().trim(); } catch { gitSha = null; }
-const enginePin = JSON.parse(fs.readFileSync(path.join(ENGINE_ROOT, 'package.json'), 'utf8')).version;
-
-const outRoot = process.env.COVERAGE_RESULTS_DIR
-  ? path.resolve(process.env.COVERAGE_RESULTS_DIR)
-  : path.join(STUDY, 'results');
-// results/live is the certification evidence path: loadEvidence (collect.mjs:138) reads
-// validation/*/results/live/* and scores whatever it finds there. Only a run at the registered
-// n = 2000 with no test hook engaged may write to it; everything else lands in results/sim, the
-// run.mjs:76 convention. This is a property of the run, not a flag the caller passes, so a
-// smoke run cannot opt itself into the evidence path. --classes does NOT force sim: Task 9 may
-// run the registered n class by class (plan step 2), and `classes_run` below records the scope.
-const MODE = (N === REGISTERED_N && FORCE_THROW === null && !FORCE_SPECTRAL_DEGENERATE
-  && !FORCE_SHAPE_DEGENERATE && !FORCE_HELDOUT_LATTICE) ? 'live' : 'sim';
-const stamp = `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}Z`;
 const outDir = path.join(outRoot, MODE, `run-${stamp}`);
 if (fs.existsSync(outDir)) {
   throw new Error(`run-battery: ${outDir} exists; results are append-only and this run refuses to overwrite`);
@@ -1578,10 +1811,14 @@ fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify({
   substrate_sha256: substrateSha,
   family_d_adapter_sha256: familyDAdapterSha,
   tier: 'T1',
+  // Amendment v2.K6A.3, K6A.3.1: `null` when the run's scope contains no K6-slow cell, so a
+  // consumer can tell "screened and passed" from "not applicable" without reading classes_run.
+  null_growth_screen: NULL_GROWTH_SCREEN,
   force_throw_hook: FORCE_THROW,
   spectral_force_degenerate_hook: FORCE_SPECTRAL_DEGENERATE,
   shape_force_degenerate_hook: FORCE_SHAPE_DEGENERATE,
   heldout_lattice_hook: FORCE_HELDOUT_LATTICE,
+  screen_positive_hook: FORCE_SCREEN_POSITIVE,
   // Amendment v2.C1, C1.6: null on every run that supersedes nothing, which is every run
   // committed before this amendment.
   supersedes: SUPERSEDES,

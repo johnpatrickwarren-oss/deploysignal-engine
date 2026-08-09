@@ -10772,3 +10772,28 @@ has **zero** coverage-battery cells in its S2. Priced: `USE`/`T1`, S2 `PASS`, S3
 K1/K2/K5 `COVERED` all hold identically under both readings. **What is genuinely wrong is smaller
 and sharper than the row: the `N1` stamp on a cell whose φ was never threaded**, mechanically inert,
 named here and left for its own amendment.
+
+
+### Correction append to Erratum v1.5, dated 2026-08-09 (appended not edited): the probe is committed, and C43.5's S3 count of survivors was two short
+
+**LEAD WITH THE CORRECTION, against this erratum's own text.** C43.5 says the probe script "lives
+outside the repo (scratchpad `c43/strict-phi-counterfactual.mjs`)". **That was the wrong standard.**
+`tools/README.md` — written for the C50 review's F6 finding — binds any script whose figures are
+quoted in this document to be committed: "They exist so that figures quoted in
+`../PREREGISTRATION.md` rest on committed code rather than on a scratch directory that no longer
+exists." The probe is therefore committed at
+**`validation/coverage/tools/strict-phi-counterfactual.mjs`**, with its row in that README, in the
+same commit as this append. It writes nothing, emits no cell and draws no seed, so the README's seed
+discipline is vacuous for it. C43.5's scratchpad sentence is superseded; every figure in its two
+tables is unchanged and is now this script's committed output.
+
+**Second correction, to C43.5's S3 row.** It reads "3 named + 2 pooled controls" surviving. The
+committed probe prints **3**, because its threading predicate is defined on `null_id` and the two
+pooled `CONTROL_power` rows carry none. Both statements describe the same scoring outcome and
+neither changes the S3 verdict: the pooled controls survive **any** reading of `phi_known`, because
+`scoreS3` keeps a phi-unmeasured power cell by its own registered branch
+(`validation/certification/lib/score.mjs:275-276`, recorded as a gap and scored anyway) rather than
+by being in regime. Precisely: **3 per-null cells survive the strict reading, 2 pooled controls
+survive independently of it, 6 per-null cells drop, all 6 at rate `1.0000`.** The row's decisive
+figure is untouched — min surviving per-null rate `0.897` against `INERTNESS_FLOOR = 0.10`, S3
+`PASS` either way.

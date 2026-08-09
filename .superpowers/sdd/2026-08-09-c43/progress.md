@@ -24,3 +24,24 @@
 Premise FALSE at HEAD on its operative claim (the cells are in regime; the class-answer layer reads
 no regime), TRUE on its factual half (φ is estimated at every φ=0 cell). No run registered — see
 task-1-report.md.
+Task 1: COMPLETE (91e5532 Erratum v1.5 / a180acd disclosure pins / 5d07ef3 probe+self-corrections / 7b9668a ledger). PREMISE FALSE on operative claims: phi estimated TRUE, but regime tags derive from data-generating conditions not API shapes (nulls.mjs:28-49, ruled in code before the row existed); N1 -> phi_source oracle; coverage layer not regime-gated BY DESIGN (score.mjs:332 'power is not a validity claim'); safe_t S2 = 47 cells, 0 from this battery. K1/K2/K5 YES + tiers + rates UNCHANGED. Strict-reading price sheet registered (K2/K5 would flip NO if coverage were regime-gated) — OPERATOR PROTOCOL QUESTION, file as new row. Residual N1-stamp mislabel: RULED option 1, dispatched. grep-treats-score.mjs-as-binary tooling nuisance noted (NUL byte at 14217, known).
+
+## Task 2 — the residual: per-detector `null_id` (operator ruling, option 1)
+
+| # | item | registration | code | commit |
+|---|---|---|---|---|
+| 4 | C43.1 per-detector `null_id` | Amendment v2.C43.1 | none yet | `e5d8053` |
+| 5 | the harness change + 3 tests | v2.C43.1 C43.1.5 | `nullIdFor`, 3 tests, 4 mutations killed | `431894a` |
+| 6 | card identity re-freeze | C43.1.6 item 1 | pins only, dedicated commit | `c6a1a6b` |
+
+Mapping: `safe_t`/`group_average_e_value` φ=0 `N1`→`N2-m100` (φ=0.6 unchanged);
+`universal_inference` φ=0 `N1`→`N2-m100`, φ=0.6 `N3-p06`→`N4-p06`. Everything else unchanged,
+per-detector reasons registered. New guard: throws outside φ ∈ {0, 0.6}.
+
+Paired smoke `--n 20`, identical seeds: **103 rows both sides, 60 differ in `null_id` only, 0 differ
+in any other field, 43 bit-identical.** Scoring priced against the real scorer over the committed
+run: no stage status, class answer or pairing list moves on any of the four affected cards.
+
+Suite deltas: `test:coverage-battery` 141 → **144**; `test:cert` 181 (task-1 delta held); `npm test`
+351; `validate-cards` 15 OK; `cert:expiry` EXPIRED shape_ecdf_accumulator → **current** after the
+pins-only freeze.

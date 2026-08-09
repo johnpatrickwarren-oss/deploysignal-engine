@@ -299,3 +299,51 @@ the mechanical verdict.
 **Named-not-done.** The harness stamp is **not** changed by this erratum: the forward fix changes
 a registered field's value and needs its own amendment, so future runs will still emit `'oracle'`
 until one exists.
+
+
+## Append, dated 2026-08-09 — Erratum v1.5: I1's flagged φ question is CLOSED, and its framing is corrected
+
+WORKLIST `C43`. Filed as an append, not an edit: the section above stays as committed. Full text at
+`validation/coverage/PREREGISTRATION.md`, Erratum v1.5.
+
+**I1's last paragraph asks the wrong question.** It flags "K1's and K2's YES were measured with φ
+estimated, under a card whose regime is narrowed to known φ" and leaves open "whether a `phi_known`
+card may be credited with coverage measured at estimated φ". Checked against the code that does the
+crediting:
+
+1. **No coverage-battery cell is out of regime, and none ever was.** `annotatePhi`
+   (`validation/certification/lib/collect.mjs:16-27`) derives `phi_source: 'oracle'` from the
+   `null_id: 'N1'` these cells carry (`lib/nulls.mjs:67-70`), so `regimeCheck`'s narrowing branch
+   (`lib/score.mjs:66`) does not fire. In the scored run
+   `validation/certification/results/run-20260809T080049Z`, `safe_t_e_value` carries
+   `out_of_regime: true` on 14 of 47 S2 cells and **every one is an `N4-p*` cell from
+   `terminal-evalue` / `phi-identifiability`** — none from this battery.
+2. **The regime would not exclude them under the accurate tag either.** `lib/nulls.mjs:28-49`
+   records the ruling, in code, before I1 was written: a regime bounds data-generating conditions,
+   not API call shapes, so an iid null's φ is 0 and known "whatever the detector does internally"
+   (tag `'iid-by-construction'`, which is not `'estimated'`).
+3. **The class answers never pass through the regime check.** `coverageFor`
+   (`lib/score.mjs:358-404`) contains no `regimeCheck`, `inRegime` or `effectivePhi` call — the
+   registered reason is the sibling stage's own, "power is not a validity claim" (`:332`). And
+   `safe_t` has **zero** cells from this battery in its S2: its 43 coverage rows carry no
+   `shift_sigma`, so S3 files them as not-scored-for-INERT, and `safe_t` has no healthy arm here.
+   The φ-estimated cells supply **power evidence only**.
+4. **Priced, from committed JSON.** Under the stricter reading `lib/nulls.mjs:43-49` rejected (φ
+   known iff `opts.ar1Phi` was passed), `safe_t_e_value` keeps S2 `PASS` (12 surviving cells, all
+   `CLEARED`; the 21 dropped were all `CLEARED` too), S3 `PASS` (min surviving rate `0.897` against
+   `INERTNESS_FLOOR = 0.10`), `USE` and `T1`. K1/K2/K5 would move only if the class-answer layer
+   were **also** gated on the regime, which nothing registers: K1 would still read YES via
+   `universal_inference_e_value` (`0.9875`, no `phi_known`), K2 and K5 would read NO.
+
+**What is genuinely wrong is narrower than I1 says.** This battery stamps `null_id: 'N1'`
+(`run-battery.mjs:1426`) on φ=0 cells, and in the two studies that own that id `N1` **threads φ to
+the detector** (`validation/terminal-evalue/harness/run.mjs:28,43`;
+`validation/h0-battery/harness/nulls.mjs:53`). This harness does not (`run-battery.mjs:616`). The
+accurate id for a φ=0 `safe_t` / `universal_inference` / `group_average_e_value` row is `N2-m100`,
+which derives `'iid-by-construction'` / `'estimated-moments'`. **Mechanically inert** — both tags
+are non-`'estimated'`, `phi: 0` is recorded on the row, and this card's `m_min` is `null` — so no
+verdict moves, and the rows stay exactly as committed. The forward fix changes a registered field's
+value on every future emission and needs its own amendment; it is named-not-done in Erratum v1.5.
+
+**I1's scope line should read K1, K2 and K5.** K5's canonical is `slope1e-2` after Amendment v2.K5R,
+also φ=0, also carried by `safe_t`.

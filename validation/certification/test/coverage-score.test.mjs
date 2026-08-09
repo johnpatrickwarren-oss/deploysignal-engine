@@ -117,3 +117,24 @@ test('a guard-passing canonical cell with no finite power rate is excluded, name
   assert.match(cov.K1.excluded[0].reason, /^no finite power rate recorded/);
   assert.equal(cov.K1.excluded[0].suppressed_verdict, 'POWERED');
 });
+
+// C43 disclosure pin (coverage PREREGISTRATION.md, Erratum v1.5 C43.9 item 2). `coverageFor` is a
+// POWER layer: guards, the `canonical === true` filter and COVERAGE_FLOOR, and it never reads the
+// card's regime. The registered reason is the sibling stage's own -- "power is not a validity
+// claim" (lib/score.mjs:332), where an unmeasured phi is recorded as a gap and the cell is scored
+// anyway. WORKLIST C43 read the class answers as regime-gated evidence; they are not, and adding a
+// regime check here would strike safe_t's three phi=0 canonical cells and drop K2 and K5 to NO.
+// Pinned so that change cannot arrive silently.
+test('the class-answer layer reads no regime: an estimated-phi canonical cell still COVERS', () => {
+  const knownCard = { ...card, guarantee: { regime: { phi_max: 0.95, m_min: null, phi_known: true } } };
+  const cov = coverageFor(knownCard, [pcell({
+    null_id: 'N4-p06', phi: 0.6, phi_source: 'estimated', params: 'estimated-phi', detection_rate: 0.86,
+  })]);
+  assert.equal(cov.K1.status, 'COVERED');
+  assert.equal(cov.K1.cells.length, 1);
+  assert.equal(cov.K1.excluded.length, 0,
+    'a regime narrowing must not reach this layer as an exclusion either');
+  // The phi bound itself is not read here: phi 0.6 against a phi_max of 0 still covers.
+  const zeroPhiCard = { ...card, guarantee: { regime: { phi_max: 0, m_min: null, phi_known: true } } };
+  assert.equal(coverageFor(zeroPhiCard, [pcell({ phi: 0.6 })]).K1.status, 'COVERED');
+});

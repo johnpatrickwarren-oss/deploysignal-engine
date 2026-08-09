@@ -265,3 +265,37 @@ is what routed it to the mean rule, which is gated `cls === 'terminal_e_value'`
 `NOT_EXECUTABLE` — no `e_process` instrument was measured for it — rather than `REFUSE`. The
 verdict follows from the class label, so the label is the finding. Label and verdict both stay as
 committed; the class question goes to the wiki write-back.
+
+## Append, dated 2026-08-09 — Erratum v1.4: the `params: 'oracle'` stamp on `family_E_conformal_heldout`, and its true scope on this run
+
+Appended, not edited (§11 rule 6). Registered at `../../../PREREGISTRATION.md` **Erratum v1.4**
+(WORKLIST `C47` item 2). **No cell, endpoint, threshold, seed or verdict on this run moves.**
+
+**The field, quoted.** Every `family_E_conformal_heldout` row of this run carries `params:
+'oracle'`, from the `else` branch of `harness/run-battery.mjs:1364` (fault cells) and `:1572` /
+`:1631` (the arm's S2 / S3 rows).
+
+**The true provenance.** This candidate takes neither §4's passed oracle constants nor the
+100-tick calibration-window estimation Erratum v1.3 found in `safe_t` / `universal_inference` /
+`group_average_e_value`. It uses a fixed `Σ = [[1]]` (A2) with an **empirical held-out calibration
+set** — `HELDOUT_ROWS = 10,000` rows at `HELDOUT_SEED = CELL_SEED + HELDOUT_OFFSET` (§6's K4
+block, A7's T1 substrate), stamped by `tools/stamp-heldout-family-e.mjs` — which this row records
+correctly in its own `heldout_seed` and `heldout_rows` fields. The accurate literal is
+`'heldout-empirical'`, registered for the three sibling calibrated candidates at K4.1.5, K6.9 and
+K6A.1.10 and never for this one.
+
+**Scope on this run: six rows, not one.** Cells **18, 19, 20, 21** (the K4 fault rows) *and* arm
+**31**'s `healthy` and `power` rows. Where an earlier section of this report noted the stamp on
+"arm 31" alone, that note understated the scope by the four fault rows; this append is the
+correction.
+
+**Why nothing is re-scored.** `params` reaches the certification scorer only through
+`phiIsEstimated` (`validation/certification/lib/nulls.mjs`), which reads `phi_source` first and
+then the single literal `'estimated-phi'`. All six rows carry `null_id` `N1` or `N3-p06`, so
+`lib/collect.mjs`'s `annotatePhi` sets `phi_source: 'oracle'` and the `params` value is never
+consulted; the literal appears zero times in `lib/score.mjs`. The mis-stamp misleads a reader, not
+the mechanical verdict.
+
+**Named-not-done.** The harness stamp is **not** changed by this erratum: the forward fix changes
+a registered field's value and needs its own amendment, so future runs will still emit `'oracle'`
+until one exists.

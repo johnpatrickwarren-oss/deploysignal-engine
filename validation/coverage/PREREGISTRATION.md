@@ -9385,3 +9385,121 @@ e62af91be3af27c952216dc1181e6082cc0d0cf9`, so `e62af91` is the engine sha it was
 **The ancestry argument holds under either, and both are checked:** `git merge-base --is-ancestor`
 confirms `e62af91` and `563bfee` are each ancestors of `4a48450`, so the card definitions the prior
 re-score read predate the `collect.mjs` pin however the sha is named.
+
+---
+
+## Erratum v1.4 — 2026-08-09 (post-run, discloses, changes nothing): `family_E_conformal_heldout` stamps `params: 'oracle'`, and Erratum v1.3 named the class without naming these rows
+
+WORKLIST `C47` item (2). This is an **erratum, not an amendment**: it postdates every run it
+describes, so it cannot register anything. It **changes no endpoint, no floor, no threshold, no
+seed, no grid, no falsifier, and no verdict.** Nothing in §1–14, any Amendment, or Erratum v1.3 is
+superseded. No cell is edited and no run is re-run — the disclosure is the correction (§11 rule 6).
+
+### The mis-stamped field, quoted
+
+Every row this battery emits for `family_E_conformal_heldout` carries
+
+```
+params: 'oracle'
+```
+
+reached through the `else` branch of two ternaries, both of which enumerate the calibrated
+candidates by name and omit this one:
+
+| site | expression | rows it stamps |
+|---|---|---|
+| `harness/run-battery.mjs:1364` | `params: (detId === 'point_tail_bet_e_value' \|\| shapeSpecOf(detId) !== null) ? 'heldout-empirical' : 'oracle'` | the K4 fault cells 18, 19, 20, 21 |
+| `harness/run-battery.mjs:1572` | `params: (pointKind \|\| shapeKind) ? 'heldout-empirical' : 'oracle'` | arm 31's healthy (S2) row |
+| `harness/run-battery.mjs:1631` | same expression | arm 31's power (S3) row |
+
+### The true provenance, at the lines
+
+`family_E_conformal_heldout` takes **neither** §4's passed oracle constants **nor** the
+calibration-window estimation Erratum v1.3 found in the other three detectors. Its nuisance route
+is a fixed `Σ = [[1]]` (A2) plus an **empirical held-out calibration set**: `HELDOUT_ROWS = 10,000`
+rows drawn at `HELDOUT_SEED = CELL_SEED + HELDOUT_OFFSET` (§6's K4 block, A7's T1 substrate),
+turned into the detector's parameters by `stampHeldoutFamilyE`
+(`tools/stamp-heldout-family-e.mjs`, wrapped at `run-battery.mjs:974`) and threaded into the read
+at `run-battery.mjs:1324` (fault cells) and `:1482` (the arm). **The same rows that mis-name the
+provenance record it correctly two fields later:** `heldout_seed` and `heldout_rows`
+(`:1380-1381`, `:1660-1664`).
+
+**The accurate literal already exists and is already registered — for three sibling candidates and
+not for this one.** `'heldout-empirical'` is registered at **K4.1.5** for
+`point_tail_bet_e_value` ("stamps its own accurate literal rather than reusing `'oracle'`
+(Erratum v1.3's defect class)"), at **K6.9** for `shape_block_conformal_bet`, and at **K6A.1.10**
+for `shape_ecdf_accumulator`. Each of those three registrations cites Erratum v1.3's defect class
+as its reason. `family_E_conformal_heldout` — the candidate v1.3 actually singled out — never got
+one.
+
+### Where the correct calibration route is registered
+
+1. **A2** — the fixed `Σ = [[1]]` construction and its per-tick wealth reading.
+2. **§6's K4 block** and **A7** — the held-out stream: `HELDOUT_ROWS`, `HELDOUT_OFFSET`, and the
+   T1 substrate the rows are drawn from.
+3. **Amendment v2.K4, K4.4** — the identical held-out stream reused by `point_tail_bet_e_value`,
+   "drawn once here, so both candidates calibrate from the same rows".
+4. **Erratum v1.3's own "Scope — what stays valid", item 2**, quoted verbatim:
+
+   > `family_E_conformal_heldout` is neither: it uses a fixed `Σ = [[1]]` (A2) with an empirical
+   > held-out calibration set (§6's K4 block, A7's T1 substrate).
+
+### Quote-and-correct against Erratum v1.3, which had the provenance right and the scope short
+
+v1.3, "Scope — which cells", quoted:
+
+> Every cell scored by `safe_t`, `universal_inference`, or `group_average_e_value`: all of K1, K2,
+> K3, K5, K6, `safe_t`'s A6 rows on K4, and A1's arm 30. The `params: 'oracle'` stamp on those rows
+> is wrong and is **left as committed** (results are append-only, §11 rule 6); this erratum is the
+> correction.
+
+**That list is correct for the defect v1.3 was describing** — parameters estimated from the
+100-tick calibration window while stamped oracle. **What it does not say is that
+`family_E_conformal_heldout`'s own rows carry the same wrong literal for a third reason.** v1.3
+classified this candidate as "neither" in a *stays-valid* section and stopped there, so the reader
+is left with the stamp unchallenged on those rows. **Correct: the stamp is wrong on
+`family_E_conformal_heldout`'s rows too, and the accurate literal for them is
+`'heldout-empirical'`** — the same literal the three siblings were given, for the same reason.
+
+### Scope — which rows, enumerated
+
+**Six rows per affected run, not one.** Cells 18, 19, 20, 21 (the K4 fault rows) plus arm 31's
+`healthy` and `power` rows. Three live runs carry them:
+
+| run | rows | manifest `git_sha` |
+|---|---|---|
+| `results/live/run-20260808T010208Z` | 18, 19, 20, 21, arm 31 healthy, arm 31 power | `5ae5076` |
+| `results/live/run-20260808T064039Z` | the same six | `43f3386` |
+| `results/live/run-20260808T133859Z` | the same six | `ef58647` |
+
+**18 rows total.** Two of those three REPORTs already carried a one-line note that *"Arm 31 stamps
+`params: 'oracle'`"* (`run-20260808T064039Z` §5, `run-20260808T133859Z` §7). **Those notes
+understate the scope by four rows each**, and the dated appends this erratum files into all three
+REPORTs correct that.
+
+### What stays valid, and why "changes nothing" is checkable rather than asserted
+
+1. **The endpoint numbers are unaffected as measured quantities.** Each row's rate is what the
+   named detector did to the named data at the registered seeds; how it obtained its nuisance
+   parameters does not change what it did.
+2. **No verdict reads this field on these rows.** `params` reaches the certification scorer only
+   through `phiIsEstimated` (`validation/certification/lib/nulls.mjs`), which tests
+   `cell.phi_source` first and then the single literal `params === 'estimated-phi'`. All six rows
+   carry `null_id` `N1` or `N3-p06`, so `annotatePhi` (`lib/collect.mjs:16-27`) annotates
+   `phi_source: 'oracle'` and the `params` value is never consulted; `annotatePhi` also only fills
+   `params` when it is absent, so it never overwrites the wrong literal with a right one.
+   `params` appears **zero** times in `validation/certification/lib/score.mjs`. So the mis-stamp
+   is inert to the mechanical verdict — it misleads a **reader**, which is why the correction is a
+   disclosure and not a re-score.
+3. **The `phi_known` question of v1.3 item 4 is untouched** and stays open as WORKLIST `C43`.
+
+### Named-not-done
+
+- **The harness is NOT changed.** Emitting `'heldout-empirical'` for this candidate on future runs
+  would change a registered field's value, and on the three sibling candidates that took a
+  registration each (K4.1.5, K6.9, K6A.1.10). This erratum cannot register it — an erratum
+  registers nothing. **The forward fix requires its own amendment**, and until one exists the stamp
+  on future runs will still read `'oracle'`. Named here so the gap is a stated boundary rather
+  than a silence.
+- **C47 item (1)** — the O(1/n)-approximate, mildly anti-conservative conformal exchangeability
+  identity (K4.1.10) — is untouched by this erratum and remains open.

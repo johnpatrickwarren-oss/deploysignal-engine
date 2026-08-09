@@ -1,6 +1,6 @@
 // validation/certification/test/golden-verdicts.test.mjs
 //
-// I5 -- the fourteen verdicts are frozen here. Any change to the scorer, the guards, the
+// I5 -- the fifteen verdicts are frozen here. Any change to the scorer, the guards, the
 // cards, or the evidence corpus that moves a verdict fails this test by name.
 //
 // WHY A GOLDEN TABLE AND NOT A REPORT DIFF. The protocol's own rule is that endpoints and
@@ -242,6 +242,65 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // (30 cells), universal_inference (18) and group_average_e_value (10) -- without which that run's
 // `canonical: true` row at the RETIRED severity would still be pooled and K5 would carry two
 // canonical cells at two severities (Amendment v2.K5R, K5R.6).
+// Extended 2026-08-08, C49 task 5 (card frozen at c5c0688; coverage PREREGISTRATION.md Amendments
+// v2.K6A.1 K6A.1.13, v2.K6A.2, v2.K6A.3, v2.K6A.4): a SIXTH new candidate lands,
+// shape_ecdf_accumulator -- the same block-conformal machinery as shape_block_conformal_bet read
+// over an hours-scale horizon (W = 150, 40 disjoint windows of the post-onset span [300,6300),
+// m = 500 reference blocks from a 100,000-row held-out draw). Its prior_evidence cites the coverage
+// study (S2) and the ratified design page at stage 'design', the same MISSING-honest precedent the
+// other new candidates carry. No K6-slow battery or T2 run exists yet -- that is Task 6's job, and
+// this task's own brief forbids one -- so S1/S2/S3 read MISSING, S4 PASS (nothing priced against
+// budget yet), overall NOT_EXECUTABLE. That is exactly the pre-run state Amendment v2.K6A.1
+// K6A.1.13 registers as this card's golden expectation, quoted: "NOT_EXECUTABLE, tier null, S1
+// MISSING, S2 MISSING, S3 MISSING, S4 PASS".
+//
+// WHAT IS REGISTERED TO MOVE, and what a reader must not mistake for a defect when it does. Once
+// Task 6's registered run lands, S2 is expected to move to PASS (arm 47's S2 row carries
+// increment_estimator and crossing_rate, K6A.1.10) and S3 to PASS -- and S3 PASS will rest on a
+// row that CANNOT EVIDENCE ITS OWN FAULT CLASS. Amendment v2.K6A.3 K6A.3.3 registers the
+// mechanism: at d = 2.0 the mixture's component sd is exactly 0, so every one of the 40 windows
+// returns the rank floor p = 1/501 and the wealth saturates at a data-independent
+// 4.9352693425143e+27 -- which a 3-sigma MEAN STEP reproduces bit-identically. The class answer is
+// a separate question decided by the canonical d = 1.5 cell alone (registered prediction 0.62,
+// per-calibration-draw band [0.333, 0.848]), and by the registered lottery rule a single-draw
+// reading is reported as "at this calibration draw" in BOTH directions (v2.K6A.2 K6A.2.4b). A USE
+// card whose class row reads NO, or a YES that is a draw rather than a settled answer, are both
+// registered readings here, not defects in this test.
+//
+// The other fourteen rows do not move: coverageFor is a grouping layer over the same S3 evidence
+// the four stage scores already read, and this commit adds a card plus a seventh FAULT_CLASSES key
+// with no cells behind it, so every existing card gains a K6-slow coverage entry at NO_EVIDENCE
+// and nothing else changes. COVERAGE.md gains a seventh row, | K6-slow | NO |, under
+// report_format 6 (v2.K6A.2 K6A.2.1's registered gate).
+// Updated 2026-08-08, C49 task 6 — THE REGISTERED K6-SLOW RUNS (coverage T1
+// run-20260809T035934Z, T2 run-t2-20260809T040552Z; cert run-20260809T040659Z, the FIRST
+// format-6 certification run). The ONE-ROW delta the previous entry predicted:
+// shape_ecdf_accumulator NOT_EXECUTABLE -> USE, tier null -> T1, s2 MISSING -> PASS, s3 MISSING
+// -> PASS (s1 MISSING and s4 PASS unchanged). No other row moves.
+//
+// BOTH REGISTERED STOP CONDITIONS CLEARED BEFORE ANY POWER ENDPOINT WAS READ. The null-growth
+// screen ran at its registered 250 x 8,000 and read 0/250 positive (max g_null -0.025749), which
+// is K6A.1.12's prediction exactly. Arm 47's S2 healthy paging bound read k = 108/2000,
+// crossing_rate 0.0540, Wilson one-sided 95% lower bound 0.046273 <= alpha -- not fired, and
+// recorded with the screen's reading beside it as K6A.1.10 requires. T2's pooled bound read
+// 0.007528 <= alpha.
+//
+// WHAT S2 PASS AND S3 PASS REST ON, because neither is what a reader would assume. S2 PASS is
+// arm 47's crossing_rate row clearing its Wilson bound; the same row's increment_estimator.mean
+// reads 1.0250, OUTSIDE K6A.1.12's registered [0.97, 1.01] falsifier range, and K6A.1.10 gives
+// that field no verdict authority -- so a fired field-level falsifier sits beside a cleared S2.
+// S3 PASS is arm 47's power row at detection_rate 1.0000, and v2.K6A.3 K6A.3.3 registers that
+// this row CANNOT EVIDENCE ITS OWN FAULT CLASS: at d = 2.0 every one of the 40 windows returns
+// the rank floor and the wealth is the data-independent 4.935269342514437e+27, which a 3-sigma
+// mean step reproduces bit-identically. Both are registered readings, not defects in this test.
+//
+// THE CLASS ANSWER, in the registered wording and not otherwise. COVERAGE.md's K6-slow row goes
+// NO -> YES, carried by shape_ecdf_accumulator at T1 with canonical rate 0.8515. Per Amendment
+// v2.K6A.2 K6A.2.4(b)'s mirror rule, quoted, that is reported as "class K6-slow YES at this
+// calibration draw; gate P(YES) approx 0.79" and NEVER as a settled class answer. The canonical
+// reading 0.8515 sits above K6A.2.4(a)'s prediction band p95 of 0.848 and inside its consistency
+// interval [0.333, 0.958], which that section dispositions explicitly: CONSISTENT with the gate,
+// an upper-tail calibration draw, NOT a falsification. K6 stays NO; K1/K2/K3/K4/K5 unchanged.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -257,6 +316,8 @@ const GOLDEN = {
   point_tail_bet_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
   spectral_bet_e_process: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
   shape_block_conformal_bet: { verdict: 'ADVISORY', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'INERT', s4: 'PASS' },
+  // Amendment v2.K6A.1 K6A.1.13's registered golden expectation, pre-run.
+  shape_ecdf_accumulator: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
 };
 
 function runHarness(t) {
@@ -276,7 +337,7 @@ function runHarness(t) {
   return { dir, cards };
 }
 
-test('the fourteen verdicts are exactly the frozen table', (t) => {
+test('the fifteen verdicts are exactly the frozen table', (t) => {
   const { cards } = runHarness(t);
   assert.deepEqual(Object.keys(cards).sort(), Object.keys(GOLDEN).sort(), 'the set of certified detectors changed');
   for (const [id, want] of Object.entries(GOLDEN)) {
@@ -328,7 +389,7 @@ test('universal-inference keeps its N4 cells in regime: its claim quantifies ove
   assert.ok(n4.every((c) => c.out_of_regime === false && c.mapped === 'CLEARED'));
 });
 
-test('the report the harness writes carries the same fourteen verdicts as its card JSONs', (t) => {
+test('the report the harness writes carries the same fifteen verdicts as its card JSONs', (t) => {
   const { dir, cards } = runHarness(t);
   const report = readFileSync(join(dir, 'REPORT.md'), 'utf8');
   assert.ok(existsSync(join(dir, 'MISSING-CELLS.md')));

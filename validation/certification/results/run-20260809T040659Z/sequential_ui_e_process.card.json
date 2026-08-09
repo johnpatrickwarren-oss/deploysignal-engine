@@ -1,0 +1,889 @@
+{
+  "card": {
+    "protocol_version": 1,
+    "detector_id": "sequential_ui_e_process",
+    "aliases": [
+      "sequential_ui",
+      "seq_ui"
+    ],
+    "family": null,
+    "class": "e_process",
+    "engine_pin": {
+      "version": "0.6.6-pre",
+      "sha": "0522faf1586dbb544473067dcd92185b8b5d1228"
+    },
+    "source_files": [
+      {
+        "path": "detectors/sequential-ui.ts",
+        "sha256": "892d6c46ca8a6ad0135f25abf0ccec66ffe6bcb065d13962b311089206bcf40d"
+      },
+      {
+        "path": "detectors/validity-envelope.ts",
+        "sha256": "750808f33eaf15614c42149b869145d46da36ab490c6a7a28fdaefc9bb61cb33"
+      },
+      {
+        "path": "validation/certification/lib/score.mjs",
+        "sha256": "f9d2d57c3f6aa2aa9ffd43bf994995631800297bdb9655230de8fc7d6a1fb386"
+      },
+      {
+        "path": "validation/certification/verdict.mjs",
+        "sha256": "2ae5761d8f9cc22cd75da8153c9fe13d142a9ede4f3abb09c7dcdb74e0cb8e62"
+      }
+    ],
+    "guarantee": {
+      "sentence": "E[E_tau] <= 1 at every stopping time for any phi including near unit root (numerator fit on strictly-past data, denominator a profiled sup)",
+      "quantifiers": [
+        {
+          "text": "every stopping time, any phi",
+          "tag": "empirical",
+          "proof_artifact": null
+        }
+      ],
+      "regime": {
+        "phi_max": 0.99,
+        "m_min": null,
+        "baseline": "estimated",
+        "nulls": "any tested"
+      }
+    },
+    "shipped_path": {
+      "kind": "e-process; numerator fit on strictly-past data, denominator a profiled sup re-maximised over the null at every tick",
+      "estimator": null,
+      "notes": "valid but inert under strong autocorrelation: crossing 0.0000 on every clustersynth-ui counter, zero power against a +3sd shift"
+    },
+    "budget": {
+      "participating": true,
+      "alpha_booked": null,
+      "resolution_claim": null
+    },
+    "falsifier": "crossing rate > alpha at a stopping rule inside the regime",
+    "prior_evidence": [
+      {
+        "stage": "S2",
+        "study": "detector-audit-arm3",
+        "runs": "detector-audit/results/live/sui-*",
+        "wiki": "stats/detector-audit-arm3-2026-08-05"
+      },
+      {
+        "stage": "S2+S3",
+        "study": "clustersynth-ui",
+        "runs": "shape-battery/results/live/csui-*",
+        "wiki": "stats/clustersynth-ui-2026-08-05"
+      }
+    ]
+  },
+  "s1": {
+    "status": "MISSING"
+  },
+  "s2": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N1",
+        "null_label": "iid Gaussian, oracle params, disjoint windows",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 110887505.92626455,
+          "sd": 231276473.09668013,
+          "se": 7313604.241961648,
+          "lower95_one_sided": 98856626.94823764,
+          "upper95_one_sided": 122918384.90429147
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.000027193545574633165,
+          "sd": 0.00004261219456229146,
+          "se": 0.0000013475159091508278,
+          "lower95_one_sided": 0.000024976881904080053,
+          "upper95_one_sided": 0.000029410209245186277
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 110887505.92626455,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "oracle",
+        "params": "oracle",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N2-m30",
+        "null_label": "iid Gaussian, estimated params m=30",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 105053348.26946336,
+          "sd": 232825792.13863716,
+          "se": 7362598.01191019,
+          "lower95_one_sided": 92941874.5398711,
+          "upper95_one_sided": 117164821.99905562
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.00002634270313482878,
+          "sd": 0.00003974613033394736,
+          "se": 0.0000012568830003318249,
+          "lower95_one_sided": 0.000024275130599282928,
+          "upper95_one_sided": 0.00002841027567037463
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 105053348.26946336,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "iid-by-construction",
+        "params": "estimated-moments",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N2-m100",
+        "null_label": "iid Gaussian, estimated params m=100",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 106404240.88441502,
+          "sd": 389727261.5002425,
+          "se": 12324258.12600817,
+          "lower95_one_sided": 86130836.26713157,
+          "upper95_one_sided": 126677645.50169846
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.00002491841933458177,
+          "sd": 0.000040846756148518076,
+          "se": 0.0000012916878445880412,
+          "lower95_one_sided": 0.00002279359283023444,
+          "upper95_one_sided": 0.000027043245838929097
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 106404240.88441502,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "iid-by-construction",
+        "params": "estimated-moments",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N2-m500",
+        "null_label": "iid Gaussian, estimated params m=500",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 106404240.88441502,
+          "sd": 389727261.5002425,
+          "se": 12324258.12600817,
+          "lower95_one_sided": 86130836.26713157,
+          "upper95_one_sided": 126677645.50169846
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.00002491841933458177,
+          "sd": 0.000040846756148518076,
+          "se": 0.0000012916878445880412,
+          "lower95_one_sided": 0.00002279359283023444,
+          "upper95_one_sided": 0.000027043245838929097
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 106404240.88441502,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "iid-by-construction",
+        "params": "estimated-moments",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N3-p03",
+        "null_label": "AR(1) phi=0.3, oracle",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 98912803.51114717,
+          "sd": 232021215.3685384,
+          "se": 7337155.060450452,
+          "lower95_one_sided": 86843183.43670619,
+          "upper95_one_sided": 110982423.58558816
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.000035598288104784326,
+          "sd": 0.00004725571287706289,
+          "se": 0.0000014943568514646718,
+          "lower95_one_sided": 0.00003314007108412494,
+          "upper95_one_sided": 0.000038056505125443714
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 98912803.51114717,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0.3,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "oracle",
+        "params": "oracle-phi",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N3-p06",
+        "null_label": "AR(1) phi=0.6, oracle",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 80970178.05953479,
+          "sd": 185397363.4436849,
+          "se": 5862779.4067208255,
+          "lower95_one_sided": 71325905.93547903,
+          "upper95_one_sided": 90614450.18359055
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.00006267871688088339,
+          "sd": 0.00006663843447021472,
+          "se": 0.0000021072923263375448,
+          "lower95_one_sided": 0.00005921222100405813,
+          "upper95_one_sided": 0.00006614521275770865
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 80970178.05953479,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0.6,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "oracle",
+        "params": "oracle-phi",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N3-p09",
+        "null_label": "AR(1) phi=0.9, oracle",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 34292927.012766965,
+          "sd": 78494707.07433191,
+          "se": 2482220.5862262067,
+          "lower95_one_sided": 30209674.148424856,
+          "upper95_one_sided": 38376179.87710907
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.000028072523785263295,
+          "sd": 0.00005250293449885357,
+          "se": 0.0000016602885685900834,
+          "lower95_one_sided": 0.000025341349089932607,
+          "upper95_one_sided": 0.000030803698480593984
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 34292927.012766965,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0.9,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "oracle",
+        "params": "oracle-phi",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N4-p06-m100",
+        "null_label": "AR(1) phi=0.6, estimated m=100",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 90497541.38411854,
+          "sd": 199467590.83493888,
+          "se": 6307719.064249342,
+          "lower95_one_sided": 80121343.52342838,
+          "upper95_one_sided": 100873739.2448087
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.00006192936555823472,
+          "sd": 0.00006780376750684046,
+          "se": 0.0000021441433926213226,
+          "lower95_one_sided": 0.00005840224967737264,
+          "upper95_one_sided": 0.00006545648143909679
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 90497541.38411854,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0.6,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "estimated",
+        "params": "estimated-phi",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N4-p09-m100",
+        "null_label": "AR(1) phi=0.9, estimated m=100",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 34978786.54429797,
+          "sd": 76527296.92089918,
+          "se": 2420005.614460319,
+          "lower95_one_sided": 30997877.308510747,
+          "upper95_one_sided": 38959695.7800852
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.000027620287303018103,
+          "sd": 0.00004629019981722922,
+          "se": 0.0000014638246476675437,
+          "lower95_one_sided": 0.000025212295757604993,
+          "upper95_one_sided": 0.000030028278848431214
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 34978786.54429797,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0.9,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "estimated",
+        "params": "estimated-phi",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N5",
+        "null_label": "right-skewed lognormal, moment-matched, oracle",
+        "n": 0,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 0,
+          "mean": null,
+          "sd": 0,
+          "se": null,
+          "lower95_one_sided": null,
+          "upper95_one_sided": null
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 1,
+          "sd": 0,
+          "se": 0,
+          "lower95_one_sided": 1,
+          "upper95_one_sided": 1
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": null,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "iid-by-construction",
+        "params": "moment-matched",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N6",
+        "null_label": "heavy-tailed t3, moment-matched, oracle",
+        "n": 1000,
+        "ticks": 200,
+        "alpha": 0.05,
+        "increment_estimator": {
+          "n": 1000,
+          "mean": 96066045.54620005,
+          "sd": 311186854.17419213,
+          "se": 9840592.37093123,
+          "lower95_one_sided": 79878271.09601818,
+          "upper95_one_sided": 112253819.99638192
+        },
+        "terminal_mean": {
+          "n": 1000,
+          "mean": 0.0000061069890041081005,
+          "sd": 0.000020364982144222826,
+          "se": 6.439972808440379e-7,
+          "lower95_one_sided": 0.000005047613477119658,
+          "upper95_one_sided": 0.000007166364531096543
+        },
+        "crossing_rate": 0,
+        "increment_recorded_not_scored": 96066045.54620005,
+        "verdict": "not-refuted",
+        "terminal_flag": "below 1 (uninformative)",
+        "mode": "live",
+        "__study": "detector-audit-sequential-ui",
+        "__run": "sui-20260805T170410Z",
+        "__git_sha": "7e4856db001d7d9764f306aec2867560d2b111ac",
+        "__tier": "T1",
+        "phi": 0,
+        "phi_derived_from": "null_id grammar (h0-battery/harness/nulls.mjs)",
+        "phi_source": "iid-by-construction",
+        "params": "moment-matched",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      }
+    ],
+    "excluded": [],
+    "missing": [
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N1",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N2-m30",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N2-m100",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N2-m500",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N3-p03",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N3-p06",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N3-p09",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N4-p06-m100",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N4-p09-m100",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N5",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=inconclusive ignored)",
+        "foreign_verdict_ignored": "increment_verdict=inconclusive (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "null_id": "N6",
+        "reason": "no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)",
+        "foreign_verdict_ignored": "increment_verdict=REFUTED (invalid instrument for class)"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted",
+        "suppressed_verdict": "not-refuted"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      },
+      {
+        "detector": "sequential_ui_e_process",
+        "reason": "phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT",
+        "suppressed_verdict": "not-refuted BUT INERT"
+      }
+    ],
+    "mean_rule_overrides": [],
+    "suppressed_verdicts": {
+      "not-refuted": 15,
+      "not-refuted BUT INERT": 15
+    }
+  },
+  "s3": {
+    "status": "MISSING",
+    "perCell": [],
+    "excluded": [],
+    "missing": [],
+    "suppressed_verdicts": {}
+  },
+  "s4": {
+    "status": "PASS",
+    "reasons": []
+  },
+  "pairing": [
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N1",
+      "line": "unpaired: sequential_ui_e_process N1 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N2-m30",
+      "line": "unpaired: sequential_ui_e_process N2-m30 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N2-m100",
+      "line": "unpaired: sequential_ui_e_process N2-m100 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N2-m500",
+      "line": "unpaired: sequential_ui_e_process N2-m500 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N3-p03",
+      "line": "unpaired: sequential_ui_e_process N3-p03 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N3-p06",
+      "line": "unpaired: sequential_ui_e_process N3-p06 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N3-p09",
+      "line": "unpaired: sequential_ui_e_process N3-p09 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N4-p06-m100",
+      "line": "unpaired: sequential_ui_e_process N4-p06-m100 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N4-p09-m100",
+      "line": "unpaired: sequential_ui_e_process N4-p09-m100 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N5",
+      "line": "unpaired: sequential_ui_e_process N5 validity cell has no power arm"
+    },
+    {
+      "detector": "sequential_ui_e_process",
+      "null_id": "N6",
+      "line": "unpaired: sequential_ui_e_process N6 validity cell has no power arm"
+    }
+  ],
+  "overall": {
+    "verdict": "NOT_EXECUTABLE",
+    "tier": null,
+    "regime": {
+      "phi_max": 0.99,
+      "m_min": null,
+      "baseline": "estimated",
+      "nulls": "any tested",
+      "excluded_cells": []
+    },
+    "reasons": [
+      "S1 reachability not run-backed (v1 floor)",
+      "S2 or S3 has no scoreable evidence"
+    ]
+  },
+  "coverage": {
+    "K1": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K2": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K3": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K4": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K5": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6-slow": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    }
+  },
+  "generated_from": {
+    "runs": [
+      "detector-audit-sequential-ui/sui-20260805T170319Z",
+      "detector-audit-sequential-ui/sui-20260805T170410Z",
+      "clustersynth-ui/csui-20260805T225032Z",
+      "clustersynth-ui/csui-20260805T225135Z"
+    ]
+  }
+}

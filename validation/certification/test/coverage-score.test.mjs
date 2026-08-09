@@ -12,8 +12,14 @@ const card = {
 const pcell = (over = {}) => ({ detector: 'safe_t', fault_class: 'K1', severity: '1.5sigma',
   canonical: true, detection_rate: 0.86, shift_sigma: null, phi: 0, __tier: 'T1', verdict: 'POWERED', ...over });
 
-test('registry: six classes, frozen shape', () => {
-  assert.deepEqual(Object.keys(FAULT_CLASSES), ['K1', 'K2', 'K3', 'K4', 'K5', 'K6']);
+// Amendment v2.K6A.2, K6A.2.1 item 10: the name said "six classes" as a frozen PROPERTY, and the
+// deepEqual is exact, so K6A.1.13's item 1 breaks this assertion the moment it lands. Registered
+// update: seven keys, and a name that no longer claims a count the registry does not have. What
+// the test is for is unchanged — the registry's shape is frozen by assertion, not by convention,
+// and `K6-slow` is appended so every existing class keeps its position (COVERAGE.md row order is
+// this key order, verdict.mjs:286).
+test('registry: seven classes, frozen shape', () => {
+  assert.deepEqual(Object.keys(FAULT_CLASSES), ['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K6-slow']);
   assert.equal(FAULT_CLASSES.K1.canonical, '1.5sigma');
   assert.equal(FAULT_CLASSES.K2.canonical, 'K10-e0.5sigma');
   assert.equal(FAULT_CLASSES.K3.canonical, 'A0.75sigma-f0.05');
@@ -27,6 +33,17 @@ test('registry: six classes, frozen shape', () => {
     ['slope5e-5', 'slope1e-4', 'slope5e-4', 'slope2.5e-3', 'slope5e-3', 'slope1e-2', 'slope2e-2'],
     'K5R.5 registers the old three grid entries followed by the four new ones, in cell-table order');
   assert.equal(FAULT_CLASSES.K6.canonical, 'mix-d1.5');
+  // Amendment v2.K6A.1 (K6A.1.13 item 1): K6-slow shares K6's severities and its canonical --
+  // it is the SAME injectShapeMix construction read over an hours-scale horizon (T = 6,300,
+  // K6A.1.9), not a new severity grammar. The two rows are distinguished by their names and by
+  // the detector each carries, never by their grids.
+  assert.equal(FAULT_CLASSES['K6-slow'].canonical, 'mix-d1.5');
+  assert.deepEqual(FAULT_CLASSES['K6-slow'].grid, ['mix-d1.0', 'mix-d1.5', 'mix-d2.0']);
+  assert.deepEqual(FAULT_CLASSES['K6-slow'].grid, FAULT_CLASSES.K6.grid,
+    'K6A.1.9: the same three severities, at a different horizon');
+  assert.equal(FAULT_CLASSES['K6-slow'].name, 'distributional shape change, hours-scale accumulator');
+  assert.notEqual(FAULT_CLASSES['K6-slow'].name, FAULT_CLASSES.K6.name,
+    'two rows that share a grid must not share a name in the report');
   assert.equal(COVERAGE_FLOOR, 0.50);
   // Every class's canonical must be a member of its own grid — the invariant `canonicalOf`
   // (run-battery.mjs) and `coverageFor`'s `canonical === true` filter both rest on. A canonical

@@ -48,6 +48,17 @@ function coveringCellFor(covClass) {
 // checkRunDir already applies to REPORT.md. A class answers YES iff at least one card
 // with overall.verdict === 'USE' has that class COVERED; a YES row's tier must equal the
 // min tier of the supporting cards' covering canonical cells.
+// The six class rows every committed COVERAGE.md was written with, frozen as a literal. A
+// seventh class (`K6-slow`, coverage Amendment v2.K6A.1 K6A.1.13 item 1) makes
+// `Object.keys(FAULT_CLASSES)` seven long, and the eight committed run directories' COVERAGE.md
+// files have six rows each and are never rewritten (verdict.mjs:322 "FUTURE RUNS ONLY --
+// committed COVERAGE.md files are not rewritten"). The controller's registered ruling
+// (v2.K6A.2 K6A.2.1) is the report_format gate below: format >= 6 is checked against today's
+// class list, format < 6 against this frozen list. Reading the frozen list off FAULT_CLASSES
+// minus the new keys would defeat the point -- an older run is checked against the shape it was
+// WRITTEN under, which is a literal, not a derivation.
+const FROZEN_SIX_CLASS_ROWS = ['K1', 'K2', 'K3', 'K4', 'K5', 'K6'];
+
 function checkCoverageDir(dir) {
   const coveragePath = join(dir, 'COVERAGE.md');
   if (!existsSync(coveragePath)) return;
@@ -55,7 +66,7 @@ function checkCoverageDir(dir) {
   const cards = readdirSync(dir).filter((n) => n.endsWith('.card.json'))
     .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')));
 
-  const classIds = Object.keys(FAULT_CLASSES);
+  const classIds = reportFormat(dir) >= 6 ? Object.keys(FAULT_CLASSES) : FROZEN_SIX_CLASS_ROWS;
   const rows = coverage.split('\n').filter((l) => classIds.some((k) => l.startsWith(`| ${k} |`)));
   assert.equal(rows.length, classIds.length, `${dir}: expected ${classIds.length} class rows in COVERAGE.md, got ${rows.length}`);
 
@@ -204,6 +215,55 @@ test('verdict.mjs run against a temp CERT_RESULTS_DIR produces a self-consistent
   const missing = readFileSync(join(dir, 'MISSING-CELLS.md'), 'utf8');
   assert.match(missing, /clustersynth-ui \/ 13 wide-format studies: 426 cells carry no detector field/, 'standing gap 1 not carried verbatim into MISSING-CELLS.md');
   assert.match(missing, /power-per-cell \+ phi-sweep \(2026-08-05\): runs exist only under terminal-evalue\/results\/sim\//, 'standing gap 2 not carried verbatim into MISSING-CELLS.md');
+});
+
+// ── coverage Amendment v2.K6A.2 (K6A.2.1) — the row-count gate, pinned from both ends ──────
+// The controller's ruling has two halves and this test asserts each one against the artifacts
+// rather than against the prose: (1) this CLI now writes report_format 6, so a run emitted today
+// is checked against today's class list; (2) every COMMITTED run directory is format < 6 and its
+// COVERAGE.md carries exactly the frozen six rows, which is the premise that makes gating on the
+// format safe. Reverting the format bump in verdict.mjs fails (1); rewriting a committed
+// COVERAGE.md to a seventh class, or bumping a committed manifest's format, fails (2).
+test('K6A.2.1: this CLI writes report_format 6, and every committed run stays at the frozen six-row shape', (t) => {
+  const tmpRoot = mkdtempSync(join(tmpdir(), 'cert-format6-'));
+  t.after(() => rmSync(tmpRoot, { recursive: true, force: true }));
+  execFileSync(process.execPath, [verdictScript], { cwd: certDir, env: { ...process.env, CERT_RESULTS_DIR: tmpRoot }, stdio: 'pipe' });
+  const fresh = readdirSync(tmpRoot).filter((d) => d.startsWith('run-')).map((d) => join(tmpRoot, d));
+  assert.equal(fresh.length, 1, 'expected exactly one fresh run directory');
+  assert.equal(reportFormat(fresh[0]), 6,
+    'v2.K6A.2 K6A.2.1: the K6-slow build bumps report_format to 6 — the row-count gate reads this field');
+
+  // LEAD WITH THE CORRECTION. As first written (C49 task 4) this loop asserted `reportFormat(dir)
+  // < 6` on EVERY committed run — encoding "no format-6 run exists yet" as an invariant. That was
+  // true at the time and became false the moment C49 task 6 committed the first format-6
+  // certification run, which is the very thing the gate was built to allow. What K6A.2.1
+  // registers is a PER-FORMAT shape, so that is what is asserted: a run at format < 6 carries the
+  // frozen six rows, a run at format >= 6 carries today's class list. Both halves are enforced,
+  // and the eight pre-existing six-row directories are still counted.
+  const committed = runDirs().map((r) => join(resultsRoot, r));
+  assert.ok(committed.length > 0, 'no committed certification run to check');
+  let sixRowDirs = 0;
+  let sevenRowDirs = 0;
+  for (const dir of committed) {
+    const coveragePath = join(dir, 'COVERAGE.md');
+    if (!existsSync(coveragePath)) continue;
+    const expected = reportFormat(dir) >= 6 ? Object.keys(FAULT_CLASSES) : FROZEN_SIX_CLASS_ROWS;
+    if (reportFormat(dir) >= 6) sevenRowDirs += 1; else sixRowDirs += 1;
+    const rows = readFileSync(coveragePath, 'utf8').split('\n')
+      .filter((l) => /^\| [A-Za-z0-9-]+ \| (YES|NO) \|/.test(l));
+    assert.deepEqual(
+      rows.map((l) => l.split('|')[1].trim()), expected,
+      `${dir}: a committed COVERAGE.md must carry exactly the class rows its own report_format registers`,
+    );
+  }
+  assert.ok(sixRowDirs >= 8, `expected at least the eight committed six-row COVERAGE.md files K6A.2.1 counts, found ${sixRowDirs}`);
+  // And the gate is not vacuous in the other direction either. As first written this read
+  // `sevenRowDirs + 1 >= 1`, which is true of every integer >= 0 and therefore asserted nothing --
+  // the review caught it. A format-6 run IS committed (the first K6-slow re-score), so the
+  // seven-class branch is now exercised against a real committed artifact and not only against the
+  // temp run above.
+  assert.ok(sevenRowDirs >= 1,
+    `expected at least one committed format-6 COVERAGE.md to exercise the seven-class branch, found ${sevenRowDirs}`);
 });
 
 // ── Amendment v2.C1 C1.9: the NO-row tie is rendered, not silently resolved ────────────────

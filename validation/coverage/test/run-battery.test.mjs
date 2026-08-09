@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { FAULT_CLASSES } from '../../certification/lib/constants.mjs';
@@ -38,7 +38,22 @@ const REGISTERED_PAIRS = {
   K5: ['safe_t', 'universal_inference'],
   // Amendment v2.K6, K6.6: shape_block_conformal_bet joins K6 as a new row, K6 only.
   K6: ['safe_t', 'universal_inference', 'shape_block_conformal_bet'],
+  // Amendment v2.K6A.1, K6A.1.9: K6-slow is scored by shape_ecdf_accumulator ALONE — safe_t and
+  // universal_inference are deliberately NOT registered on it (scoring them over 6,300 ticks
+  // would be a new measurement under a geometry nothing registers for them).
+  'K6-slow': ['shape_ecdf_accumulator'],
 };
+
+// Amendment v2.K6A.1, K6A.1.9 (item 7 of K6A.1.13): the scenario span is PER CLASS. Every
+// existing class keeps the deploy-gate 300/100; K6-slow alone runs 6,300/300. A global span
+// change fails here on the other six classes, and a leaked K6-slow span fails here too.
+const REGISTERED_SPAN = { default: { ticks: 300, onset: 100 }, 'K6-slow': { ticks: 6300, onset: 300 } };
+const spanOf = (classId) => REGISTERED_SPAN[classId] ?? REGISTERED_SPAN.default;
+// K6A.1.9's own arithmetic: 40 disjoint windows of 150 over [300, 6300), no remainder.
+const K6SLOW_GEOMETRY = { windows: 40, window_len: 150, window_span: '[300,6300)' };
+// K6A.1.2/K6A.1.9's calibration geometry and substrate size.
+const K6SLOW_CAL_GEOMETRY = { W: 150, m: 500, n_A: 25000 };
+const K6SLOW_HELDOUT_ROWS = 100000;
 
 // Registered seed literals (PREREGISTRATION.md §6, A5). The harness interpolates its own
 // constants into the manifest and asserts them against these same literals at startup, so a
@@ -65,6 +80,7 @@ const REGISTERED_CENSUS = {
   point_tail_bet_e_value: 4,         // K4's four fault cells (Amendment v2.K4 K4.3)
   spectral_bet_e_process: 6,         // every K3 cell (Amendment v2.K3, K3.5) — 6 fault + 2 arm rows
   shape_block_conformal_bet: 4,      // K6's four fault cells (Amendment v2.K6, K6.6) — 4 fault + 2 arm rows
+  shape_ecdf_accumulator: 4,         // K6-slow's four fault cells (Amendment v2.K6A.1, K6A.1.9) — 4 fault + 2 arm rows
 };
 
 function runHarness(args = ['--n', '20'], env = {}) {
@@ -108,8 +124,8 @@ test('every registered (class, detector) pair emits cells with complete fields',
         assert.ok(VERDICTS.has(c.verdict), `${classId} ${det}: verdict ${c.verdict}`);
         assert.equal(c.n, 20, `${classId} ${det}: n`);
         assert.equal(c.alpha, 0.05);
-        assert.equal(c.ticks, 300);
-        assert.equal(c.onset, 100);
+        assert.equal(c.ticks, spanOf(classId).ticks, `${classId} ${det}: ticks`);
+        assert.equal(c.onset, spanOf(classId).onset, `${classId} ${det}: onset`);
         assert.ok(Number.isInteger(c.non_finite_wealth), `${classId} ${det}: non_finite_wealth`);
         assert.ok('not_executable_reason' in c, `${classId} ${det}: not_executable_reason`);
         if (c.verdict === 'NOT-EXECUTABLE') {
@@ -132,22 +148,25 @@ test('the cell census is exactly the registered (class, detector) assignment', (
   // + 6 arm). Amendment v2.K6, K6.6/K6.7: +4 fault rows (all four K6 cells) + 2 arm rows
   // (cell 34 S2/S3) on top of that. Amendment v2.K5R, K5R.5: +10 fault rows (five new K5 cells
   // x safe_t and universal_inference), no new arm — every cell K5R registers is a power cell.
-  assert.equal(summary.cells.length, 97, 'registered census: 86 fault-class rows + 11 arm rows');
+  // Amendment v2.K6A.1, K6A.1.9: +4 fault rows (the four K6-slow cells, one detector each) + 2
+  // arm rows (cell 47 S2/S3).
+  assert.equal(summary.cells.length, 103, 'registered census: 90 fault-class rows + 13 arm rows');
 
   const faultCells = summary.cells.filter((c) => c.fault_class != null);
-  assert.equal(faultCells.length, 86);
+  assert.equal(faultCells.length, 90);
   const byDetector = {};
   for (const c of faultCells) byDetector[c.detector] = (byDetector[c.detector] ?? 0) + 1;
   assert.deepEqual(byDetector, REGISTERED_CENSUS);
 
   const armCells = summary.cells.filter((c) => c.arm != null);
-  assert.equal(armCells.length, 11);
+  assert.equal(armCells.length, 13);
   assert.deepEqual(
     armCells.map((c) => `${c.detector}:${c.arm}`).sort(),
     ['family_E_conformal_heldout:healthy', 'family_E_conformal_heldout:power',
       'group_average_e_value:healthy', 'group_average_e_value:power',
       'point_tail_bet_e_value:healthy', 'point_tail_bet_e_value:power',
       'shape_block_conformal_bet:healthy', 'shape_block_conformal_bet:power',
+      'shape_ecdf_accumulator:healthy', 'shape_ecdf_accumulator:power',
       'spectral_bet_e_process:healthy', 'spectral_bet_e_process:power',
       'spectral_bet_e_process:step_blindness_probe'],
   );
@@ -194,7 +213,7 @@ test('every emitted severity is a registered grid entry (or the -ar1 replicate o
 // Amendment v2.K5R, K5R.5's third clause: the registered per-class count of φ=0.6 replicates.
 // Without this, relaxing the harness's "exactly one -ar1 row" assertion to "the canonical's
 // -ar1 row is present" would let a stray replicate into any class unnoticed.
-const REGISTERED_AR1_ROWS = { K1: 1, K2: 1, K3: 1, K4: 1, K5: 2, K6: 1 };
+const REGISTERED_AR1_ROWS = { K1: 1, K2: 1, K3: 1, K4: 1, K5: 2, K6: 1, 'K6-slow': 1 };
 
 test('the -ar1 replicate count per class is the registered one, and every replicate is φ=0.6', () => {
   const { summary } = smoke();
@@ -423,10 +442,9 @@ test('params negative scope: every row outside the two heldout-empirical candida
   const { summary } = smoke();
   // Amendment v2.K6, K6.9: shape_block_conformal_bet joins point_tail_bet_e_value as the
   // second heldout-empirical candidate — both excluded here, everything else must still
-  // read 'oracle'.
-  const nonHeldoutRows = summary.cells.filter(
-    (c) => c.detector !== 'point_tail_bet_e_value' && c.detector !== 'shape_block_conformal_bet',
-  );
+  // read 'oracle'. Amendment v2.K6A.1, K6A.1.10: shape_ecdf_accumulator is the third.
+  const HELDOUT_EMPIRICAL_DETECTORS = ['point_tail_bet_e_value', 'shape_block_conformal_bet', 'shape_ecdf_accumulator'];
+  const nonHeldoutRows = summary.cells.filter((c) => !HELDOUT_EMPIRICAL_DETECTORS.includes(c.detector));
   assert.ok(nonHeldoutRows.length > 0);
   for (const c of nonHeldoutRows) {
     // Kills a collapsed-ternary mutation (e.g. always 'heldout-empirical', or the branches
@@ -1244,7 +1262,14 @@ test('manifest records the registered seed scheme, substrate hash and smoke flag
   assert.equal(manifest.seed_scheme.heldout_seed_arm_31, 20760838);
   assert.equal(manifest.seed_scheme.heldout_seed_arm_32, 20760839, 'K4.4: cell 32 HELDOUT_SEED');
   assert.equal(manifest.seed_scheme.heldout_seed_arm_34, 20760841, 'K6.6: cell 34 HELDOUT_SEED');
-  assert.deepEqual(Object.keys(manifest.classes), ['K1', 'K2', 'K3', 'K4', 'K5', 'K6']);
+  assert.deepEqual(Object.keys(manifest.classes), ['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K6-slow']);
+  assert.deepEqual(manifest.classes['K6-slow'], [43, 44, 45, 46], 'K6A.1.9: the four K6-slow cells');
+  // Amendment v2.K6A.1, K6A.1.9: `ticks`/`onset` stay the deploy-gate span A8 registered, and the
+  // per-class map is what keeps a run containing 6,300-tick cells from being manifested as a
+  // 300-tick run.
+  assert.deepEqual(manifest.class_spans.default, { ticks: 300, onset: 100 });
+  assert.deepEqual(manifest.class_spans['K6-slow'],
+    { ticks: 6300, onset: 300, windows: 40, window_len: 150, window_span: '[300,6300)' });
   assert.equal('elapsed_s' in manifest, false, 'A8 registers the manifest field list; timing is not in it');
 });
 
@@ -1281,6 +1306,17 @@ test('manifest seed_scheme quotes the harness constants, and the constants are t
   assert.equal(c.base_seed + 32 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_32);
   // Same discipline for arm 34's own HELDOUT_SEED (Amendment v2.K6, K6.6).
   assert.equal(c.base_seed + 34 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_34);
+  // Amendment v2.K6A.1, K6A.1.9: arm 47's own HELDOUT_SEED, by the same arithmetic.
+  assert.equal(manifest.seed_scheme.heldout_seed_arm_47, 20760854, 'K6A.1.9: arm 47 HELDOUT_SEED');
+  assert.equal(c.base_seed + 47 + c.heldout_offset, manifest.seed_scheme.heldout_seed_arm_47);
+  // Amendment v2.K6A.2, K6A.2.5: the manifest's own provenance string must state the right n per
+  // detector. A single 10,000 here would be a false constant in the record of any run that
+  // includes a K6-slow cell, which is the defect that amendment names at this exact site.
+  assert.deepEqual(manifest.seed_scheme.heldout_rows_by_class, { default: 10000, 'K6-slow': 100000 });
+  assert.match(manifest.seed_scheme.heldout, /K6-slow \(shape_ecdf_accumulator\) draws 100000 rows/,
+    manifest.seed_scheme.heldout);
+  assert.match(manifest.seed_scheme.heldout, /A = 25000 \+ B = 75000 -> m = 500 blocks of 150/,
+    manifest.seed_scheme.heldout);
 });
 
 test('a smoke run lands under results/sim and never creates results/live', () => {
@@ -1369,4 +1405,543 @@ test('C1.6: a supersession with no reason, no target, or a nonexistent run is re
     assert.equal(fs.existsSync(path.join(outRoot, 'live')), false);
     assert.equal(fs.existsSync(path.join(outRoot, 'sim')), false, 'refused before any run directory is created');
   }
+});
+
+// ── Amendment v2.K6A.1 / v2.K6A.2 — K6-slow and its single candidate, shape_ecdf_accumulator ──
+// The twelve registered items of K6A.1.13 + K6A.2.1. Two things these tests are built around:
+// the class shares K6's severities and its canonical, so nothing but the HORIZON and the
+// SUBSTRATE distinguishes it, and both of those are exactly what item 7 and item 8 changed
+// under every existing cell — so each test below pins the K6-slow side and the unchanged side
+// together, in the same run.
+const K6SLOW_CELL_TABLE = [
+  // idx, severity, phi, CELL_SEED, HELDOUT_SEED — K6A.1.9's table, by value.
+  [43, 'mix-d1.0', 0, 20260850, 20760850],
+  [44, 'mix-d1.5', 0, 20260851, 20760851],
+  [45, 'mix-d2.0', 0, 20260852, 20760852],
+  [46, 'mix-d1.5-ar1', 0.6, 20260853, 20760853],
+];
+const K6SLOW_ARM = { idx: 47, cellSeed: 20260854, heldoutSeed: 20760854 };
+
+const ecdfDist = () => createRequire(import.meta.url)(
+  path.join(HERE, '..', '..', '..', 'dist/detectors/shape-ecdf-accumulator.js'));
+
+// The registered held-out draw for a K6-slow cell: 100,000 CONSECUTIVE values from ONE
+// continuously-advanced stream at HELDOUT_SEED (C1.2's corrected form, K6A.1.9's n).
+function regenK6slowHeldout(heldoutSeed, phi = 0) {
+  const r = rng(heldoutSeed);
+  const g = gaussFrom(r);
+  let prev = null;
+  const draw = phi > 0
+    ? (() => { const sd = Math.sqrt(1 - phi * phi); prev = g(); return () => (prev = phi * prev + sd * g()); })()
+    : g;
+  const rows = new Array(K6SLOW_HELDOUT_ROWS);
+  for (let j = 0; j < K6SLOW_HELDOUT_ROWS; j++) rows[j] = draw();
+  return rows;
+}
+
+// One K6-slow trajectory, regenerated independently of the harness: 6,300 baseline draws from
+// rng(CELL_SEED + 7919*i), then injectShapeMix at ONSET=300 with the SAME advanced stream (A5's
+// K6 pinning convention, which generate() applies to this class unchanged).
+function regenK6slowTrajectory(cellSeed, i, d) {
+  const r = rng(cellSeed + 7919 * i);
+  const base = Array.from({ length: 6300 }, gaussFrom(r));
+  return injectShapeMix(base, { sigma: 1, at: 300, d, rng: r });
+}
+const k6slowWindows = (series) => Array.from({ length: 40 }, (_, w) => series.slice(300 + w * 150, 300 + (w + 1) * 150));
+
+test('K6A.1.9: the four K6-slow cells sit at 43-46 with their registered CELL_SEEDs and HELDOUT_SEEDs, canonical at 44', () => {
+  const { summary, manifest } = smoke();
+  const byIndex = new Map(summary.cells
+    .filter((c) => c.fault_class === 'K6-slow').map((c) => [c.cell_index, c]));
+  assert.equal(byIndex.size, 4, 'four K6-slow fault cells, one detector each');
+  for (const [idx, severity, phi, cellSeed, heldoutSeed] of K6SLOW_CELL_TABLE) {
+    const c = byIndex.get(idx);
+    assert.ok(c, `no K6-slow cell at index ${idx}`);
+    assert.equal(c.severity, severity, `cell ${idx} severity`);
+    assert.equal(c.phi, phi, `cell ${idx} phi`);
+    assert.equal(c.detector, 'shape_ecdf_accumulator');
+    // The index IS the seed scheme, so a moved index is a different data set under the same label.
+    assert.equal(manifest.seed_scheme.constants.base_seed + idx, cellSeed, `cell ${idx} CELL_SEED`);
+    assert.equal(c.heldout_seed, heldoutSeed, `cell ${idx} HELDOUT_SEED`);
+    assert.equal(c.canonical, severity === 'mix-d1.5', `cell ${idx} canonical`);
+  }
+  // Indices 35-37 stay reserved (K6.12/K6E.9/K6E.10) and a cancelled run does not release one.
+  for (const idx of [35, 36, 37]) {
+    assert.equal(summary.cells.some((c) => c.cell_index === idx && c.fault_class != null), false,
+      `index ${idx} is a reserved seed and must carry no fault cell`);
+  }
+});
+
+test('K6A.1.9: K6-slow is scored by shape_ecdf_accumulator ALONE, and that detector is scored on no other class', () => {
+  const { summary } = smoke();
+  const k6slowDetectors = [...new Set(summary.cells.filter((c) => c.fault_class === 'K6-slow').map((c) => c.detector))];
+  assert.deepEqual(k6slowDetectors, ['shape_ecdf_accumulator'],
+    'K6A.1.9: safe_t and universal_inference are deliberately NOT registered on this class');
+  const accClasses = [...new Set(summary.cells
+    .filter((c) => c.detector === 'shape_ecdf_accumulator' && c.fault_class != null).map((c) => c.fault_class))];
+  assert.deepEqual(accClasses, ['K6-slow'], 'the accumulator must not leak onto another class');
+  // And the sibling shape detector stays on K6 only — the two are separate rows, not one widened one.
+  const blockClasses = [...new Set(summary.cells
+    .filter((c) => c.detector === 'shape_block_conformal_bet' && c.fault_class != null).map((c) => c.fault_class))];
+  assert.deepEqual(blockClasses, ['K6']);
+});
+
+test('K6A.1.9 item 7: K6-slow runs the 6,300-tick span with 40 windows of 150, and EVERY other row still reads 300/100', () => {
+  const { summary } = smoke();
+  const k6slow = summary.cells.filter((c) => c.fault_class === 'K6-slow' || c.cell_index === K6SLOW_ARM.idx);
+  assert.equal(k6slow.length, 6, '4 fault cells + healthy(S2) + power(S3) arm rows');
+  for (const c of k6slow) {
+    assert.equal(c.ticks, 6300, `${c.cell_index}: K6A.1.9 registers T = 300 + 6,000`);
+    assert.equal(c.onset, 300, `${c.cell_index}: K6A.1.9 registers ONSET = 300`);
+  }
+  // The S3 row carries no window fields (K6.7's field list, inherited by reference), so the
+  // geometry is asserted where it is emitted: the four fault cells and the S2 arm.
+  for (const c of k6slow.filter((x) => x.arm !== 'power')) {
+    assert.equal(c.windows, K6SLOW_GEOMETRY.windows, `${c.cell_index}: windows`);
+    assert.equal(c.window_len, K6SLOW_GEOMETRY.window_len, `${c.cell_index}: window_len (PER-DETECTOR W, K6A.2.1 item 12)`);
+    assert.equal(c.window_span, K6SLOW_GEOMETRY.window_span, `${c.cell_index}: window_span`);
+    assert.equal(c.windows * c.window_len, 6000, 'K6A.1.9: 40 disjoint windows of 150, NO remainder');
+  }
+  // The invariance half: item 7 changed constants every existing cell reads.
+  for (const c of summary.cells.filter((x) => x.fault_class !== 'K6-slow' && x.cell_index !== K6SLOW_ARM.idx)) {
+    assert.equal(c.ticks, 300, `${c.detector} ${c.fault_class ?? c.arm}: the deploy-gate span must not move`);
+    assert.equal(c.onset, 100, `${c.detector} ${c.fault_class ?? c.arm}: the deploy-gate onset must not move`);
+  }
+  // And the sibling shape detector keeps W = 30 in the same run (K6_WINDOW_LEN is asserted
+  // !== 30 -> throw at harness startup, which is why a W = 150 detector cannot reuse it).
+  for (const c of summary.cells.filter((x) => x.detector === 'shape_block_conformal_bet' && 'window_len' in x)) {
+    assert.equal(c.window_len, 30, 'K6.1: the sibling shape detector stays at W = 30');
+    assert.equal(c.window_span, '[100,280)');
+  }
+});
+
+test('K6A.1.9 item 8: every K6-slow row draws 100,000 substrate rows, and every other held-out row still draws 10,000', () => {
+  const { summary } = smoke();
+  const rowsWithSubstrate = summary.cells.filter((c) => 'heldout_rows' in c);
+  assert.ok(rowsWithSubstrate.length > 0);
+  for (const c of rowsWithSubstrate) {
+    const expected = (c.fault_class === 'K6-slow' || c.cell_index === K6SLOW_ARM.idx) ? K6SLOW_HELDOUT_ROWS : 10000;
+    assert.equal(c.heldout_rows, expected,
+      `${c.detector} ${c.fault_class ?? c.arm} ${c.cell_index}: heldout_rows`);
+  }
+});
+
+test('K6A.1.9/K6A.1.2: the calibration geometry is ENFORCED, not merely reported — W/m/n_A on every K6-slow row', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'shape_ecdf_accumulator');
+  assert.equal(rows.length, 6);
+  for (const c of rows) {
+    assert.ok(c.cal_fingerprint, `${c.cell_index}: cal_fingerprint (C1.8, exported by the module)`);
+    assert.deepEqual(
+      { W: c.cal_fingerprint.W, m: c.cal_fingerprint.m, n_A: c.cal_fingerprint.n_A }, K6SLOW_CAL_GEOMETRY,
+      `${c.cell_index}: the registered geometry — the harness asserts this before scoring any cell`,
+    );
+    assert.equal(c.cal_fingerprint.n_A + c.cal_fingerprint.m * c.cal_fingerprint.W, K6SLOW_HELDOUT_ROWS,
+      'A + m*W must exhaust the 100,000-row draw exactly (K6A.1.2: no remainder)');
+    for (const k of ['median', 'absdev_p50', 'absdev_p90', 'absdev_max']) {
+      assert.ok(Number.isFinite(c.cal_fingerprint.blockT[k]), `${c.cell_index}: blockT.${k}`);
+    }
+    assert.ok(c.cal_fingerprint.blockT.absdev_p50 <= c.cal_fingerprint.blockT.absdev_p90);
+    assert.ok(c.cal_fingerprint.blockT.absdev_p90 <= c.cal_fingerprint.blockT.absdev_max);
+  }
+});
+
+test('K6A.1.10: arm 47 stamps the registered null_id/params pair, and the sibling arm keeps its own', () => {
+  const { summary } = smoke();
+  const arm47 = summary.cells.filter((c) => c.cell_index === K6SLOW_ARM.idx);
+  assert.equal(arm47.length, 2, 'cell 47 emits exactly the S2 and S3 rows');
+  for (const c of arm47) {
+    // The dispatch mutation K6A.2.1 item 12 names would give 'N1' and 'oracle' here.
+    assert.equal(c.null_id, 'K6slow-arm-heldout', `${c.arm}: K6A.1.10's registered null_id`);
+    assert.equal(c.params, 'heldout-empirical', `${c.arm}: K6A.1.10's registered params`);
+    assert.equal(c.heldout_seed, K6SLOW_ARM.heldoutSeed, `${c.arm}: HELDOUT_SEED`);
+    assert.equal(c.detector, 'shape_ecdf_accumulator');
+    assert.equal('fault_class' in c, false, 'the arms carry no fault_class (K6.12/K6.1.3 convention)');
+  }
+  // Not one literal for both shape arms: cell 34 keeps K6.7's.
+  for (const c of summary.cells.filter((x) => x.detector === 'shape_block_conformal_bet' && x.arm != null)) {
+    assert.equal(c.null_id, 'K6-arm-heldout', 'the two shape arms must not share one null_id literal');
+  }
+});
+
+test('K6A.1.10: cell 47 S2 carries increment_estimator + p_uniformity over n*40 values, crossing_rate/k, and no foreign fields', () => {
+  const { summary } = smoke();
+  const s2 = summary.cells.find((c) => c.cell_index === K6SLOW_ARM.idx && c.arm === 'healthy');
+  assert.ok(s2);
+  assert.ok(Number.isFinite(s2.increment_estimator.mean), 'K6A.1.12 predicts 0.9914 at the registered n');
+  assert.equal(s2.increment_estimator.n, s2.n, 'one increment mean per trajectory');
+  // K6A.1.10: one feature, 40 windows -> n*40 pooled p values (K6's arm pools n*6*2).
+  assert.equal(s2.p_uniformity.n, s2.n * 40, 'K6A.1.10: p_uniformity pools ONE feature over 40 windows');
+  assert.equal(s2.p_uniformity.decile_counts.reduce((a, b) => a + b, 0), s2.p_uniformity.n);
+  assert.ok(Math.abs(s2.p_uniformity.ks_critical_at_alpha - 1.36 / Math.sqrt(s2.p_uniformity.n)) < 1e-12,
+    'the KS critical value is 1.36/sqrt(actual pooled n), not a registered-N literal');
+  assert.ok(Number.isFinite(s2.crossing_rate), 'K6A.1.10: the verdict stays crossing_rate-derived');
+  assert.ok(Number.isInteger(s2.k));
+  assert.ok(['FAIL', 'not-refuted', 'NOT-EXECUTABLE'].includes(s2.verdict));
+  // K3.15's lesson, applied: the terminal_e_value instrument pair belongs to another class.
+  for (const f of ['exceedance', 'mean_e', 'stopped_mean', 'detection_rate']) {
+    assert.equal(f in s2, false, `S2 must not carry ${f}`);
+  }
+});
+
+test('K6.7 binding exclusion, inherited by K6A.1.10: cell 47 S3 and all four K6-slow fault cells carry NONE of the five instrument-named fields', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'shape_ecdf_accumulator'
+    && (c.fault_class === 'K6-slow' || c.arm === 'power'));
+  assert.equal(rows.length, 5, 'four fault cells + the S3 arm');
+  for (const c of rows) {
+    for (const f of FIVE_INSTRUMENT_FIELDS) {
+      assert.equal(f in c, false, `${c.fault_class ?? c.arm} ${c.severity ?? ''}: ${f} must not appear`);
+    }
+  }
+  // And the S3 row carries no windows/window_len/window_span, exactly as K6.7's list omits them.
+  const s3 = summary.cells.find((c) => c.cell_index === K6SLOW_ARM.idx && c.arm === 'power');
+  for (const f of ['windows', 'window_len', 'window_span']) assert.equal(f in s3, false, `S3 must not carry ${f}`);
+  assert.equal(s3.shift_sigma, 3, 'K6A.1.12: the S3 row\'s shift_sigma: 3 IS the d = 2.0 shape injection');
+});
+
+test('K6A.1.12: degenerate_windows and non_finite_wealth are structural zeros on every K6-slow row', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'shape_ecdf_accumulator');
+  assert.equal(rows.length, 6);
+  for (const c of rows) {
+    // Structural, not merely unobserved: the module has no non-throwing degenerate path, so a
+    // nonzero count here is its own falsifier (K6A.1.12) and a throw would land in
+    // adapter_failures instead.
+    assert.equal(c.degenerate_windows, 0, `${c.fault_class ?? c.arm}: degenerate_windows`);
+    assert.equal(c.non_finite_wealth, 0, `${c.fault_class ?? c.arm}: non_finite_wealth`);
+    assert.equal(c.adapter_failures, 0, `${c.fault_class ?? c.arm}: adapter_failures`);
+  }
+});
+
+// PROVENANCE + the injection-kind kill on the FAULT cells, where the endpoint is not saturated.
+// An independent re-derivation from lib/inject.mjs and the dist module: the 100,000-row draw, the
+// calibration fingerprint, and the canonical cell's own wealth readings across every trajectory.
+// This is the test that kills a substituted injection on the K6-slow generator: the same
+// reconstruction under injectStep (a K1-type 3-sigma mean step) is computed here too and must
+// NOT match what the harness emitted.
+test('K6A.1.9 provenance: cell 44 (canonical) recomputes exactly from an independent re-derivation, and a step injection does not', () => {
+  const { summary } = smoke();
+  const mod = ecdfDist();
+  const c = summary.cells.find((x) => x.fault_class === 'K6-slow' && x.cell_index === 44);
+  assert.ok(c, 'no K6-slow canonical cell');
+
+  const rows = regenK6slowHeldout(20760851);
+  const cal = mod.calibrateEcdfAccumulator(rows, { W: 150, nA: 25000, m: 500 });
+  // Wrong-stream / wrong-geometry kill: a HELDOUT_SEED off by one, a 10,000-row draw, or a
+  // different A/B split all move this fingerprint.
+  assert.deepEqual(c.cal_fingerprint, cal.cal_fingerprint, 'cell 44 cal_fingerprint');
+
+  const shapeWealths = [];
+  const stepWealths = [];
+  for (let i = 0; i < c.n; i++) {
+    shapeWealths.push(mod.ecdfAccumulatorWealth(k6slowWindows(regenK6slowTrajectory(20260851, i, 1.5)), cal).wealth);
+    // The substitution K6A.2.1 item 12 names, reconstructed on the same baseline stream.
+    const r = rng(20260851 + 7919 * i);
+    const base = Array.from({ length: 6300 }, gaussFrom(r));
+    const stepped = base.map((v, t) => (t >= 300 ? v + 3 : v));
+    stepWealths.push(mod.ecdfAccumulatorWealth(k6slowWindows(stepped), cal).wealth);
+  }
+  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  assert.equal(c.final_wealth_mean, mean(shapeWealths), 'cell 44 final_wealth_mean recomputes exactly');
+  assert.notEqual(mean(stepWealths), mean(shapeWealths),
+    'a substituted 3-sigma mean step must not reproduce the registered injectShapeMix reading');
+  const fires = shapeWealths.filter((w, i) => mod.ecdfAccumulatorWealth(
+    k6slowWindows(regenK6slowTrajectory(20260851, i, 1.5)), cal).crossingIndex >= 0).length;
+  assert.equal(c.fires, fires, 'cell 44 fires recomputes from the any-window (Ville) crossing rule');
+});
+
+test('K6A.1.10 provenance: arm 47 recomputes exactly from an independent re-derivation of its own held-out draw', () => {
+  const { summary } = smoke();
+  const mod = ecdfDist();
+  const s2 = summary.cells.find((x) => x.cell_index === K6SLOW_ARM.idx && x.arm === 'healthy');
+  const s3 = summary.cells.find((x) => x.cell_index === K6SLOW_ARM.idx && x.arm === 'power');
+
+  const cal = mod.calibrateEcdfAccumulator(regenK6slowHeldout(K6SLOW_ARM.heldoutSeed), { W: 150, nA: 25000, m: 500 });
+  assert.deepEqual(s2.cal_fingerprint, cal.cal_fingerprint, 'arm 47 S2 cal_fingerprint');
+  assert.deepEqual(s3.cal_fingerprint, cal.cal_fingerprint, 'both arm rows share the one reference (C1.7/C1.8)');
+
+  // The healthy arm: no injection at all, so this reading IS non-saturated and pins the arm's
+  // own stream, its calibration and its increment estimator together.
+  const incMeans = [];
+  const ps = [];
+  for (let i = 0; i < s2.n; i++) {
+    const series = Array.from({ length: 6300 }, gaussFrom(rng(K6SLOW_ARM.cellSeed + 7919 * i)));
+    const perWindow = k6slowWindows(series).map((w) => mod.ecdfAccumulatorWindow(w, cal));
+    incMeans.push(perWindow.reduce((a, x) => a + x.e, 0) / perWindow.length);
+    for (const x of perWindow) ps.push(x.p);
+  }
+  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  assert.ok(Math.abs(s2.increment_estimator.mean - mean(incMeans)) < 1e-12,
+    `S2 increment_estimator.mean ${s2.increment_estimator.mean} != re-derived ${mean(incMeans)}`);
+  assert.equal(s2.p_uniformity.n, ps.length);
+
+  // The S3 arm, and the disclosure that goes with it. At d = 2.0 the injection is the
+  // s = sqrt(1-d^2/4) = 0 two-point degeneracy K6A.1.8 rules a boundary artifact, so EVERY
+  // window scores the extreme p = 1/(m+1) and the wealth saturates at (kappa*p^(kappa-1))^40 —
+  // the same value a 3-sigma mean step would produce. The S3 endpoint therefore cannot, by
+  // itself, evidence WHICH injection ran; that is asserted structurally below, and here the
+  // saturation itself is pinned so a geometry change cannot pass unnoticed.
+  const saturated = Math.pow(mod.KAPPA_K6SLOW * Math.pow(1 / 501, mod.KAPPA_K6SLOW - 1), 40);
+  assert.ok(Math.abs(s3.final_wealth_mean / saturated - 1) < 1e-12,
+    `S3 final_wealth_mean ${s3.final_wealth_mean} is not the saturated ${saturated}`);
+  // Every trajectory saturates to the same value, so the mean and the median agree to within the
+  // sequential-summation rounding of `mean` itself (the mean of n identical doubles is not
+  // bit-identical to one of them) — which is what makes the S3 reading uninformative about WHICH
+  // injection produced it.
+  assert.ok(Math.abs(s3.final_wealth_median / saturated - 1) < 1e-12,
+    `S3 final_wealth_median ${s3.final_wealth_median} is not the saturated ${saturated}`);
+  assert.ok(Math.abs(s3.final_wealth_mean / s3.final_wealth_median - 1) < 1e-12,
+    'every trajectory saturates identically, which is what makes the S3 reading uninformative about the injection');
+  assert.equal(s3.detection_rate, 1);
+});
+
+// The named silent killer, asserted DIRECTLY on the dispatch rather than through an endpoint that
+// cannot see it (see the saturation disclosure above). v2.K6A.2 K6A.2.1 item 12: with the old
+// `detId === 'shape_block_conformal_bet'` literal, arm 47's `shapeKind` was false and its S3
+// injection fell through to `injectStep(..., delta: 3)` — a K1-type mean step — while the row
+// still read POWERED. Three properties of the source are pinned: the dispatch is a KIND test,
+// the shape branch is injectShapeMix at d = 2.0, and no per-detector constant is hardwired to
+// one detector's window length.
+test('K6A.2.1 item 12: the arm dispatch is a kind test and the shape arms\' S3 injection is injectShapeMix d=2.0, not injectStep', () => {
+  const src = fs.readFileSync(HARNESS, 'utf8');
+  assert.match(src, /const shapeKind = ADAPTERS\[detId\]\.kind === 'shapeblock';/,
+    'the arm dispatch must be a KIND test — a detector-id literal here is the registered silent wrong-probe hazard');
+  assert.equal(/const shapeKind = detId === /.test(src), false,
+    'no detector-id-literal shapeKind may exist anywhere in the harness');
+  // The S3 ternary's shape branch, with its severity and its onset.
+  assert.match(src, /shapeKind\s*\n?\s*\?\s*\{ series: injectShapeMix\(base\.series, \{ sigma: SIGMA, at: span\.ONSET, d: 2\.0, rng: r \}\) \}/,
+    'the shape arms\' S3 construction must be injectShapeMix at d = 2.0 on the arm\'s own onset');
+  // Every downstream arm site reads the per-detector spec, never a K6 constant.
+  assert.match(src, /\.\.\.\(shapeKind \? \{ windows: spec\.windows, window_len: spec\.windowLen, window_span: spec\.windowSpan \} : \{\}\)/,
+    'the arm\'s window fields must come from the per-detector spec (PER-DETECTOR W)');
+  assert.match(src, /null_id: spectralKind \? 'K3-arm-oracle' : shapeKind \? spec\.armNullId :/,
+    'the arm null_id must come from the per-detector spec');
+  assert.match(src, /if \(shapeKind\) ctx\.shapeCal = spec\.calibrate\(/,
+    'the held-out calibration must be fetched for every shapeblock-kind arm');
+});
+
+test('K6A.2.1 item 12: both shape detectors are dispatched by kind, with per-detector W, in one run', () => {
+  const { summary } = smoke();
+  const byDet = {};
+  for (const c of summary.cells.filter((x) => 'window_len' in x)) {
+    (byDet[c.detector] ??= new Set()).add(c.window_len);
+  }
+  assert.deepEqual([...byDet.shape_block_conformal_bet], [30], 'K6_WINDOW_LEN stays 30 for the sibling');
+  assert.deepEqual([...byDet.shape_ecdf_accumulator], [150], 'the accumulator uses its own W = 150');
+  // Both arms fetched a calibration and stamped it — the fall-through the amendment describes
+  // would have left arm 47 with no held-out substrate at all.
+  for (const det of ['shape_block_conformal_bet', 'shape_ecdf_accumulator']) {
+    const arms = summary.cells.filter((c) => c.detector === det && c.arm != null);
+    assert.equal(arms.length, 2, `${det}: one S2 and one S3 arm`);
+    for (const a of arms) {
+      assert.ok(a.cal_fingerprint, `${det} ${a.arm}: no calibration fingerprint — the arm ran uncalibrated`);
+      assert.ok(Number.isInteger(a.heldout_seed), `${det} ${a.arm}: no held-out seed`);
+      assert.equal(a.params, 'heldout-empirical', `${det} ${a.arm}: params`);
+    }
+  }
+});
+
+test('K6A.1.9: --classes K6-slow selects the arm by hint and runs the whole class alone', () => {
+  const { summary, manifest } = runHarness(['--n', '5', '--classes', 'K6-slow']);
+  assert.deepEqual(manifest.classes_run, ['K6-slow']);
+  // K6A.2.5: arms are keyed by `hint`, so a wrong hint on arm 47 would silently drop it here.
+  assert.deepEqual(manifest.arms, [{ cell_index: 47, detector: 'shape_ecdf_accumulator' }]);
+  assert.equal(summary.cells.length, 6, '4 fault cells + 2 arm rows, nothing from any other class');
+  for (const c of summary.cells) {
+    assert.equal(c.detector, 'shape_ecdf_accumulator');
+    assert.equal(c.ticks, 6300);
+    assert.equal(c.onset, 300);
+    assert.equal(c.heldout_rows, K6SLOW_HELDOUT_ROWS);
+  }
+});
+
+// ── Amendment v2.K6A.3 (K6A.3.1) + v2.K6A.4 (K6A.4.1) — the null-growth screen DRIVER ────────
+// K6A.1.10 registers the screen as run-time stop condition (2) and says that running it at run
+// time is what makes it a stop condition rather than a citation. The module exported
+// nullGrowthScreen and nothing called it until the rider registered a driver. These tests pin the
+// driver's registered behaviour on both branches, plus the positive control without which a screen
+// that CANNOT fire is indistinguishable from one that never fires.
+const SCREEN_SMOKE = { draws: 5, mc_windows_per_draw: 2000 };   // K6A.3.1 / K6A.4.1
+
+test('K6A.3.1: a K6-slow run screens before it measures, and the passed reading lands in the manifest', () => {
+  const { manifest } = smoke();
+  const scr = manifest.null_growth_screen;
+  assert.ok(scr, 'K6A.3.1: a run whose scope includes K6-slow must carry the screen reading');
+  assert.equal(scr.draws, SCREEN_SMOKE.draws, 'K6A.3.1: SCREEN_DRAWS_SMOKE');
+  // K6A.4.1 SUPERSEDES K6A.3.1's 200: that count fired on the driver's first run and the reading
+  // was MC noise (draw 41000003: +0.008760 at M=200, -0.041339 at M=2000, -0.047401 at M=8000).
+  assert.equal(scr.mc_windows_per_draw, SCREEN_SMOKE.mc_windows_per_draw, 'K6A.4.1: SCREEN_MC_WINDOWS_SMOKE');
+  assert.equal(scr.positive, 0, 'the registered null draws must not have positive null growth');
+  assert.equal(scr.kappa, 0.682, 'the screen runs at the FROZEN kappa, never a re-derived one');
+  assert.equal(scr.screen_mode, 'smoke', 'a smoke run must say so — its count is not the registered one');
+  assert.equal(scr.forced_positive_hook, false, 'the positive-control hook must be off on an ordinary run');
+  // g_null = log kappa + (1-kappa)*E[-log p|null,S]: every draw strictly negative, and the whole
+  // sample well inside K6A.1.5's registered per-draw distribution (mean -6.754e-2, sd 1.571e-2).
+  assert.ok(scr.g_null.max < 0, `every screened draw must read g_null < 0; max was ${scr.g_null.max}`);
+  assert.ok(scr.g_null.mean < 0 && scr.g_null.mean > -0.2, `g_null mean ${scr.g_null.mean}`);
+  assert.match(scr.seed_bands.calibration, /^41000000 \+ d, d = 0\.\.4$/, scr.seed_bands.calibration);
+  assert.match(scr.seed_bands.mc, /^42000000 \+ 10000\*d \+ j, j = 0\.\.1999$/, scr.seed_bands.mc);
+});
+
+test('K6A.3.1: the screen reading is ON cell 47\'s S2 row, beside the paging bound it must be reported with', () => {
+  const { summary, manifest } = smoke();
+  const s2 = summary.cells.find((c) => c.cell_index === 47 && c.arm === 'healthy');
+  assert.ok(s2);
+  // K6A.1.10: a fired paging bound must be reported with the screen's reading beside it —
+  // screen-clean + paging-fired is the calibration lottery's signature, screen-dirty +
+  // paging-fired is a construction defect. Both readings on one row is what makes that mechanical.
+  assert.ok(s2.null_growth_screen, 'the S2 arm row must carry the screen reading');
+  assert.equal(s2.null_growth_screen.draws, manifest.null_growth_screen.draws);
+  assert.equal(s2.null_growth_screen.positive, 0);
+  assert.equal(s2.null_growth_screen.g_null_max, manifest.null_growth_screen.g_null.max,
+    'the row and the manifest must report the same screen, not two screens');
+  assert.ok(Number.isFinite(s2.lower_95), 'and the paging bound the screen is reported beside');
+  // The S3 row does not carry it: K6.7's field list for that row names no such field, and the
+  // reporting obligation is attached to the S2 paging bound.
+  const s3 = summary.cells.find((c) => c.cell_index === 47 && c.arm === 'power');
+  assert.equal('null_growth_screen' in s3, false, 'the S3 row carries no screen field');
+});
+
+test('K6A.3.1: a run with no K6-slow cell in scope does not screen, and says so with null', () => {
+  const { manifest, summary } = runHarness(['--n', '5', '--classes', 'K6']);
+  assert.equal(manifest.null_growth_screen, null,
+    'K6A.3.1: null distinguishes "not applicable" from "screened and passed" without reading classes_run');
+  assert.deepEqual(manifest.classes_run, ['K6']);
+  assert.ok(summary.cells.length > 0);
+  for (const c of summary.cells) assert.equal('null_growth_screen' in c, false);
+});
+
+// THE POSITIVE CONTROL (K6A.3.1's own mutation obligation). The synthetic draw's reference blocks
+// are a quantile-regular sample of A — the extreme form of the compressed-reference defect C1.1
+// found in the wild — so every genuine null window ranks above every reference block, E[-log p]
+// hits its ceiling log(m+1) = 6.2166 and g_null = log kappa + (1-kappa)*6.2166 = +1.594.
+test('K6A.3.1 positive control: a draw with positive null growth ABORTS the run before any endpoint is read', () => {
+  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-screen-'));
+  let threw = false;
+  let stderr = '';
+  try {
+    execFileSync(process.execPath, [HARNESS, '--n', '5', '--classes', 'K6-slow'], {
+      env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot, COVERAGE_FORCE_SCREEN_POSITIVE: '1' },
+      encoding: 'utf8', stdio: 'pipe',
+    });
+  } catch (err) {
+    threw = true;
+    stderr = String(err.stderr ?? '');
+  }
+  assert.ok(threw, 'a positive screen draw must refuse the run, not warn');
+  assert.match(stderr, /NULL-GROWTH SCREEN FAILED/);
+  assert.match(stderr, /K6A\.1\.10 stop condition \(2\): STOP, investigate, do not run/);
+  assert.match(stderr, /REFUTED on the record/);
+
+  // NO endpoint was read: no run directory of either mode, so no summary.json anywhere.
+  assert.equal(fs.existsSync(path.join(outRoot, 'live')), false, 'no live run directory');
+  assert.equal(fs.existsSync(path.join(outRoot, 'sim')), false, 'no sim run directory — the abort precedes the run');
+  assert.deepEqual(fs.readdirSync(outRoot), ['screen-failed'],
+    'K6A.3.1: the record lands OUTSIDE live/ and sim/ — loadEvidence enumerates every directory under results/live');
+
+  const failDir = path.join(outRoot, 'screen-failed');
+  const files = fs.readdirSync(failDir);
+  assert.equal(files.length, 1, `one record per failed screen, got ${files.join(',')}`);
+  const rec = JSON.parse(fs.readFileSync(path.join(failDir, files[0]), 'utf8'));
+  assert.equal(rec.study, 'coverage');
+  assert.match(rec.stop_condition, /K6A\.1\.10 \(2\), driver v2\.K6A\.3 K6A\.3\.1/);
+  assert.match(rec.verdict, /^STOP — shape_ecdf_accumulator REFUTED/);
+  assert.equal(rec.positive, rec.draws, 'the forced control makes every draw positive');
+  assert.equal(rec.positive_draws.length, rec.positive);
+  assert.equal(rec.per_draw.length, rec.draws);
+  assert.equal(rec.forced_positive_hook, true, 'a forced record must say it was forced');
+  assert.deepEqual(rec.classes_run, ['K6-slow']);
+  assert.deepEqual({ W: rec.geometry.W, nA: rec.geometry.nA, m: rec.geometry.m, n_rows: rec.geometry.n_rows },
+    { W: 150, nA: 25000, m: 500, n_rows: 100000 });
+  for (const d of rec.per_draw) {
+    assert.equal(d.positive, true);
+    assert.ok(d.g_null > 0, `draw ${d.draw}: g_null ${d.g_null} must be positive`);
+    // The ceiling: every window at the rank floor p = 1/501 gives E[-log p] = log 501 = 6.2166.
+    assert.ok(Math.abs(d.mean_neg_log_p - Math.log(501)) < 1e-9,
+      `draw ${d.draw}: the control must drive E[-log p] to its ceiling, got ${d.mean_neg_log_p}`);
+    assert.ok(Math.abs(d.g_null - (Math.log(0.682) + 0.318 * Math.log(501))) < 1e-9, `draw ${d.draw}: g_null`);
+    assert.equal(d.cal_seed, 41000000 + d.draw, 'the registered calibration seed band');
+    assert.equal(d.mc_seed_first, 42000000 + 10000 * d.draw, 'the registered MC seed band');
+  }
+  fs.rmSync(outRoot, { recursive: true, force: true });
+});
+
+test('K6A.3.1: --screen-draws/--screen-mc are refused on a registered run, and bounded on a smoke run', () => {
+  const cases = [
+    // The registered path allows NO override: 250 x 8,000 or nothing.
+    { args: ['--n', '2000', '--classes', 'K6-slow', '--screen-draws', '1'], match: /refused on a registered run/ },
+    { args: ['--n', '2000', '--classes', 'K6-slow', '--screen-mc', '10'], match: /refused on a registered run/ },
+    // The MC seed stride bounds M, so two draws' bands can never overlap.
+    { args: ['--n', '5', '--classes', 'K6-slow', '--screen-mc', '10001'], match: /must be a positive integer <= 10000/ },
+    { args: ['--n', '5', '--classes', 'K6-slow', '--screen-draws', '0'], match: /must be a positive integer/ },
+  ];
+  for (const { args, match } of cases) {
+    const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-screen-refuse-'));
+    let threw = false;
+    let stderr = '';
+    try {
+      execFileSync(process.execPath, [HARNESS, ...args], {
+        env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot }, encoding: 'utf8', stdio: 'pipe',
+      });
+    } catch (err) { threw = true; stderr = String(err.stderr ?? ''); }
+    assert.ok(threw, `${args.join(' ')}: must be refused`);
+    assert.match(stderr, match);
+    assert.equal(fs.existsSync(path.join(outRoot, 'live')), false, 'refused before any run directory exists');
+    assert.equal(fs.existsSync(path.join(outRoot, 'sim')), false);
+    fs.rmSync(outRoot, { recursive: true, force: true });
+  }
+});
+
+test('K6A.3.1: a reduced smoke screen is accepted and recorded as such (the wiring path tests use)', () => {
+  const { manifest } = runHarness(['--n', '5', '--classes', 'K6-slow', '--screen-draws', '2', '--screen-mc', '50']);
+  assert.equal(manifest.null_growth_screen.draws, 2);
+  assert.equal(manifest.null_growth_screen.mc_windows_per_draw, 50);
+  assert.equal(manifest.null_growth_screen.screen_mode, 'smoke');
+  assert.equal(manifest.smoke, true, 'and such a run can never be read as the registered measurement');
+  assert.equal(manifest.mode, 'sim');
+});
+
+test('K6A.3.1: the screen runs BEFORE the first cell is measured, asserted on the run\'s own progress order', () => {
+  // Placement is registered ("before the first trajectory of any cell of any class"), and a screen
+  // that ran afterwards would be a screen that read endpoints first. The harness's progress lines
+  // go to stderr in emission order, so their ORDER is the observable that pins it.
+  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-screen-order-'));
+  const res = spawnSync(process.execPath,
+    [HARNESS, '--n', '5', '--classes', 'K6-slow', '--screen-draws', '2', '--screen-mc', '50'],
+    { env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot }, encoding: 'utf8' });
+  assert.equal(res.status, 0, res.stderr);
+  const lines = res.stderr.split('\n');
+  const screenAt = lines.findIndex((l) => l.startsWith('null-growth screen:'));
+  const firstCellAt = lines.findIndex((l) => l.startsWith('shape_ecdf_accumulator'));
+  assert.ok(screenAt >= 0, `no screen progress line in:\n${res.stderr}`);
+  assert.ok(firstCellAt >= 0, 'no cell progress line');
+  assert.ok(screenAt < firstCellAt,
+    `K6A.3.1: the screen must report before the first cell (screen at ${screenAt}, first cell at ${firstCellAt})`);
+  fs.rmSync(outRoot, { recursive: true, force: true });
+});
+
+// The registered path's own counts, asserted STRUCTURALLY — and why that is the choice here.
+// Observing them behaviourally means running the registered screen (250 x 8,000 = 2M scored
+// windows, ~50 s) plus a 2,000-trajectory K6-slow battery (~21 s) inside a 3.5 s suite. The
+// mutation this kills is real and survived every behavioural test: making the REGISTERED path
+// resolve to the smoke count (`SCREEN_DRAWS_ARG ?? SCREEN_DRAWS_SMOKE`) is invisible to any run a
+// suite can afford, because only a run at n = 2000 with no hook takes that branch. Same trade-off,
+// and same precedent, as the arm-47 dispatch test above (v2.K6A.3 K6A.3.3 consequence 2).
+test('K6A.3.1: the registered run screens at 250 x 8,000 — the branch, pinned at the source', () => {
+  const src = fs.readFileSync(HARNESS, 'utf8');
+  assert.match(src, /const registered = MODE === 'live';/,
+    'the registered path is the live-mode run: n = REGISTERED_N with no hook engaged');
+  assert.match(src, /const draws = Number\(SCREEN_DRAWS_ARG \?\? \(registered \? SCREEN_DRAWS : SCREEN_DRAWS_SMOKE\)\);/,
+    'a registered run must resolve to SCREEN_DRAWS (250), never to the smoke count');
+  assert.match(src, /const mc = Number\(SCREEN_MC_ARG \?\? \(registered \? SCREEN_MC_WINDOWS : SCREEN_MC_WINDOWS_SMOKE\)\);/,
+    'a registered run must resolve to SCREEN_MC_WINDOWS (8,000), never to the smoke count');
+  assert.match(src, /const SCREEN_DRAWS = 250;/, 'K6A.1.10\'s own draw count');
+  assert.match(src, /const SCREEN_MC_WINDOWS = 8000;/, 'K6A.3.1\'s derived MC count');
+  // And the override refusal, which is what keeps the registered counts unavoidable there.
+  assert.match(src, /if \(registered && \(SCREEN_DRAWS_ARG !== null \|\| SCREEN_MC_ARG !== null\)\) \{/,
+    'the registered run must refuse --screen-draws/--screen-mc');
+  // The screen must be called with the class scope, before the cells, and only for K6-slow.
+  assert.match(src, /const NULL_GROWTH_SCREEN = CLASSES_RUN\.includes\('K6-slow'\) \? runNullGrowthScreen\(CLASSES_RUN\) : null;/,
+    'the driver call site is registered: iff K6-slow is in scope');
 });

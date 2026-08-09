@@ -1,0 +1,153 @@
+# Missing cells (protocol v1 re-score)
+
+- family_A_betting_e_process: S1 reachability has no run-backed evidence
+- family_A_betting_e_process: S4 c-bound unmeasured behind a bootstrap-substituted threshold
+- family_A_betting_e_process: S4 shipped path substitutes a bootstrap threshold and no measured c-bound artifact (prior_evidence[stage=S4] with runs != null) is cited
+- family_A_betting_e_process S2 family_A_betting_e_process/N5: vacuous: wealth never moved; suppressed verdict: CLEARED
+- family_A_betting_e_process S3 family_A_betting_e_process: power cell at shift_sigma=0.75 x48: registered effect size, but not the inertness-floor shift (3) — not scored for INERT
+- family_A_betting_e_process S3 family_A_betting_e_process: phi unmeasured on a power cell x1: scored anyway (power is not a validity claim); the per-null pairing gap is recorded separately
+- family_A_betting_e_process: S2 suppressed verdicts — CLEARED x1
+- family_A_mixture_supermartingale: S1 reachability has no run-backed evidence
+- family_A_mixture_supermartingale S2 family_A_mixture_supermartingale/N4-p09-m100: unmapped verdict token inconclusive
+- family_A_mixture_supermartingale S2 family_A_mixture_supermartingale/N6: unmapped verdict token inconclusive
+- family_A_mixture_supermartingale S3 family_A_mixture_supermartingale: power cell at shift_sigma=0.75 x48: registered effect size, but not the inertness-floor shift (3) — not scored for INERT
+- family_A_mixture_supermartingale S3 family_A_mixture_supermartingale: phi unmeasured on a power cell x1: scored anyway (power is not a validity claim); the per-null pairing gap is recorded separately
+- family_A_mixture_supermartingale: S2 suppressed verdicts — inconclusive x3
+- family_A_mixture_supermartingale: S3 suppressed verdicts — NOT-EXECUTABLE x4
+- family_C_safe_hotelling: S1 reachability has no run-backed evidence
+- family_C_safe_hotelling: S2 has no scoreable in-regime validity cell
+- family_C_safe_hotelling: S4 c-bound unmeasured behind a bootstrap-substituted threshold
+- family_C_safe_hotelling: S4 no envelope wiring
+- family_C_safe_hotelling: S4 shipped path substitutes a bootstrap threshold and no measured c-bound artifact (prior_evidence[stage=S4] with runs != null) is cited
+- family_D_spectral_e_detector: S1 reachability has no run-backed evidence
+- family_D_spectral_e_detector: S4 no envelope wiring
+- family_D_spectral_e_detector S3 family_D_spectral_e_detector: power cell with no shift_sigma recorded x4: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- family_D_spectral_e_detector S3 family_D_spectral_e_detector: power cell at shift_sigma=0.75 x48: registered effect size, but not the inertness-floor shift (3) — not scored for INERT
+- family_E_conformal: S3 has no in-regime power cell at the registered shift
+- family_E_conformal: S4 no envelope wiring
+- family_E_conformal: S4 alpha resolution unverifiable
+- family_E_conformal: S4 shipped path is a p-value combination and the budget is participating: unanswered combination question is a refusal, not a pass (C25)
+- family_E_conformal S3 family_E_conformal_weighted_e_value: power cell with no shift_sigma recorded x1: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- family_E_conformal: S2 excluded without token: family_E_conformal_weighted_e_value x18 (run voided: instrument-class mismatch)
+- family_E_conformal: S2 suppressed verdicts — ANTI-CONSERVATIVE x25, conservative x23
+- family_E_conformal_heldout: S1 reachability has no run-backed evidence
+- family_E_conformal_heldout: S4 no envelope wiring
+- family_E_conformal_heldout S3 family_E_conformal_heldout: power cell with no shift_sigma recorded x4: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- family_E_conformal_heldout: S2 suppressed verdicts — not-refuted x1
+- group_average_e_value: S1 reachability has no run-backed evidence
+- group_average_e_value: S4 no envelope wiring
+- group_average_e_value S3 group_average_e_value: power cell with no shift_sigma recorded x8: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- group_average_e_value: S2 suppressed verdicts — not-refuted x1
+- point_tail_bet_e_value: S1 reachability has no run-backed evidence
+- point_tail_bet_e_value: S4 no envelope wiring
+- point_tail_bet_e_value S3 point_tail_bet_e_value: power cell with no shift_sigma recorded x4: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- safe_t_e_value: S1 reachability has no run-backed evidence
+- safe_t_e_value S3 safe_t: power cell with no shift_sigma recorded x43: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- safe_t_e_value S3 safe_t: phi unmeasured on a power cell x2: scored anyway (power is not a validity claim); the per-null pairing gap is recorded separately
+- safe_t_e_value: S2 suppressed verdicts — not-refuted x7
+- sequential_mmd_betting_e_process: S3 has no in-regime power cell at the registered shift
+- sequential_mmd_betting_e_process: S4 no envelope wiring
+- sequential_mmd_betting_e_process S3 family_C_mmd_betting_e_process: power cell with no shift_sigma recorded x1: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- sequential_ui_e_process: S1 reachability has no run-backed evidence
+- sequential_ui_e_process: S3 has no in-regime power cell at the registered shift
+- sequential_ui_e_process S2 sequential_ui_e_process/N1: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N2-m30: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N2-m100: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N2-m500: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N3-p03: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N3-p06: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N3-p09: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N4-p06-m100: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N4-p09-m100: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N5: no class-instrument verdict recorded (foreign increment_verdict=inconclusive ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process/N6: no class-instrument verdict recorded (foreign increment_verdict=REFUTED ignored)
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process S2 sequential_ui_e_process: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N1 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N2-m30 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N2-m100 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N2-m500 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N3-p03 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N3-p06 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N3-p09 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N4-p06-m100 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N4-p09-m100 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N5 validity cell has no power arm
+- sequential_ui_e_process: unpaired: sequential_ui_e_process N6 validity cell has no power arm
+- sequential_ui_e_process: S2 suppressed verdicts — not-refuted x15, not-refuted BUT INERT x15
+- shape_block_conformal_bet: S1 reachability has no run-backed evidence
+- shape_block_conformal_bet: S4 no envelope wiring
+- shape_block_conformal_bet S3 shape_block_conformal_bet: power cell with no shift_sigma recorded x4: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- shape_ecdf_accumulator: S1 reachability has no run-backed evidence
+- shape_ecdf_accumulator: S4 no envelope wiring
+- shape_ecdf_accumulator S3 shape_ecdf_accumulator: power cell with no shift_sigma recorded x4: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- spectral_bet_e_process: S1 reachability has no run-backed evidence
+- spectral_bet_e_process: S4 no envelope wiring
+- spectral_bet_e_process S3 spectral_bet_e_process: power cell with no shift_sigma recorded x6: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- universal_inference_e_value: S1 reachability has no run-backed evidence
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted BUT INERT
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S2 universal_inference_e_value: phi unmeasured, refused (fail-closed); suppressed verdict: not-refuted
+- universal_inference_e_value S3 universal_inference: power cell with no shift_sigma recorded x27: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT
+- universal_inference_e_value S3 universal_inference: phi unmeasured on a power cell x2: scored anyway (power is not a validity claim); the per-null pairing gap is recorded separately
+- universal_inference_e_value: S2 suppressed verdicts — not-refuted x27, not-refuted BUT INERT x3
+
+## Standing gaps (protocol-wide, not per-card)
+
+- clustersynth-ui / 13 wide-format studies: 426 cells carry no detector field (arm/counter keyed); sequential_ui T2 evidence and UI T2 tier unreadable until a per-study adapter exists
+- power-per-cell + phi-sweep (2026-08-05): runs exist only under terminal-evalue/results/sim/; no live run backs the wiki page numbers; live re-run required

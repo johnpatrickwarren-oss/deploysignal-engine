@@ -1,0 +1,186 @@
+{
+  "card": {
+    "protocol_version": 1,
+    "detector_id": "family_C_safe_hotelling",
+    "aliases": [
+      "safe_hotelling",
+      "hotelling_safe_test"
+    ],
+    "family": "C",
+    "class": "test_martingale",
+    "engine_pin": {
+      "version": "0.6.6-pre",
+      "sha": "0522faf1586dbb544473067dcd92185b8b5d1228"
+    },
+    "source_files": [
+      {
+        "path": "detectors/_hotelling-safe.ts",
+        "sha256": "c5cc555982e09fce449f06cc96e5cda57bf017ea6c7f48f2cc4f450ff964185e"
+      },
+      {
+        "path": "detectors/validity-envelope.ts",
+        "sha256": "750808f33eaf15614c42149b869145d46da36ab490c6a7a28fdaefc9bb61cb33"
+      },
+      {
+        "path": "validation/certification/lib/score.mjs",
+        "sha256": "f9d2d57c3f6aa2aa9ffd43bf994995631800297bdb9655230de8fc7d6a1fb386"
+      },
+      {
+        "path": "validation/certification/verdict.mjs",
+        "sha256": "2ae5761d8f9cc22cd75da8153c9fe13d142a9ede4f3abb09c7dcdb74e0cb8e62"
+      }
+    ],
+    "guarantee": {
+      "sentence": "Gruenwald GROW safe test on Hotelling T^2: E[e_t|F_{t-1}] <= 1 under H0 given the compiled (mu, Sigma) as truth",
+      "quantifiers": [
+        {
+          "text": "per tick",
+          "tag": "empirical",
+          "proof_artifact": null
+        }
+      ],
+      "regime": {
+        "phi_max": null,
+        "m_min": null,
+        "baseline": "oracle-compiled",
+        "nulls": "multivariate gaussian"
+      }
+    },
+    "shipped_path": {
+      "kind": "wealth process, bootstrap threshold substitution ~3.6e76x over 1/alpha",
+      "estimator": null,
+      "notes": ""
+    },
+    "budget": {
+      "participating": true,
+      "alpha_booked": null,
+      "resolution_claim": null
+    },
+    "falsifier": "increment lower95 > 1.0005 on the compiled-oracle null",
+    "prior_evidence": [
+      {
+        "stage": "S2",
+        "study": "h0-battery",
+        "runs": "h0-battery/results/live/run-*",
+        "wiki": "stats/h0-battery-2026-08-01"
+      },
+      {
+        "stage": "S4",
+        "study": "bootstrap-overshoot",
+        "runs": null,
+        "wiki": "stats/ville-guarantee-is-empirical"
+      }
+    ]
+  },
+  "s1": {
+    "status": "MISSING"
+  },
+  "s2": {
+    "status": "MISSING",
+    "perCell": [],
+    "excluded": [],
+    "missing": [],
+    "mean_rule_overrides": [],
+    "suppressed_verdicts": {}
+  },
+  "s3": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "family_C_safe_hotelling",
+        "shift_sigma": 3,
+        "detection_rate": 0.9725,
+        "verdict": "pass",
+        "mode": "live",
+        "engine_version": "0.6.6-pre",
+        "git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+        "__study": "2026-07-h0-battery",
+        "__run": "run-20260801T064627Z",
+        "__git_sha": "ff65feb7b5938a20b7404fe152c7eb4b29b2ab7f",
+        "__tier": "T1"
+      }
+    ],
+    "excluded": [],
+    "missing": [],
+    "suppressed_verdicts": {}
+  },
+  "s4": {
+    "status": "UNPRICED",
+    "reasons": [
+      "no envelope wiring",
+      "shipped path substitutes a bootstrap threshold and no measured c-bound artifact (prior_evidence[stage=S4] with runs != null) is cited"
+    ]
+  },
+  "pairing": [],
+  "overall": {
+    "verdict": "NOT_EXECUTABLE",
+    "tier": null,
+    "regime": {
+      "phi_max": null,
+      "m_min": null,
+      "baseline": "oracle-compiled",
+      "nulls": "multivariate gaussian",
+      "excluded_cells": []
+    },
+    "reasons": [
+      "S1 reachability not run-backed (v1 floor)",
+      "S2 or S3 has no scoreable evidence"
+    ]
+  },
+  "coverage": {
+    "K1": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K2": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K3": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K4": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K5": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6-slow": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    }
+  },
+  "generated_from": {
+    "runs": [
+      "2026-07-h0-battery/run-20260801T064627Z"
+    ]
+  }
+}

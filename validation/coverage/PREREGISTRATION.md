@@ -6367,3 +6367,1737 @@ clearing routes, the T2-only validity reading, and the unrun severity grid (K6A.
 floor, seed, prediction or verdict in §1–14 or in any earlier amendment moves; no artifact was
 created; the whole content of this amendment is a gate, a refutation, the two measured changes that
 would clear it, and one family-level validity finding — reached without spending a run.**
+
+## Amendment v2.K6A.1 — 2026-08-08, the FRESH H = 6,000 re-gate: the K6-slow accumulator PASSES, and the build is registered
+
+Registered before any artifact of the K6-slow candidate exists: no detector module, no card, no
+adapter, no harness change, no constants-table entry, no run. Authority chain, stated because this
+amendment rests on a relaxed bar: **operator decision 2026-08-08, option 1 of the decision package
+v2.K6A filed**, recorded in the binding design page
+`~/concord/knowledge/methodology/pages/k6-accumulator.md` §"Re-ratification — 2026-08-08: H = 6,000,
+by operator decision, disclosed as post-measurement" — then this document. Sections 1–14 and every
+earlier amendment stay intact, **including Amendment v2.K6A in full: its H = 3,000 refutation is not
+withdrawn, not superseded, and not re-read.**
+
+### K6A.1.1 The operator decision, quoted, with its provenance chain
+
+**Quoted, design page §Re-ratification:**
+
+> The operator chose option 1 of the filed decision package: **the bar is re-ratified at
+> H = 6,000 post-onset ticks** (margin above the measured ≈4,675 crossing point; ~1.7–17 hours
+> at 1–10 s cadence, inside the stated "hours" envelope). On the record in full: this is a
+> relaxation of a registered bar *after* a measurement missed it — the original H = 3,000 was
+> the controller's drafting proxy, the operator's stated envelope was "hours," and the
+> relaxation is legitimate only because it is disclosed here, decided by the operator, and paid
+> for with a **fresh registered gate**: new probe draws on new seeds, prediction bands for
+> detection-within-6,000 and median time-to-cross at the frozen configuration
+> (W=150, n=100,000, A/B 25,000/75,000, m=500, energy distance, κ = 0.6820), the
+> reference-conditional null-growth check as a registered stop condition, and the healthy
+> 6,000-tick paging bound. Re-reading the failed gate's tables at the new bar does not count.
+> The H = 3,000 refutation stands as the answer to the question as first registered.
+
+**The provenance chain, in three links, each named rather than implied.** (1) `H = 3,000` was the
+**controller's drafting proxy** for the operator's stated "hours scale" envelope — it was never an
+operator-stated number, which is why relaxing it is a bar correction and not a moved goalpost;
+the operator's own words, quoted in the design page's RATIFIED header, are *"hours scale is fine."*
+(2) v2.K6A measured the miss and **filed a decision package rather than acting on it**
+(v2.K6A K6A.8: `H ≈ 4,675` and `W ≈ 500` recorded, "adopted nowhere"). (3) The **operator** took
+option 1. **This amendment does not decide the bar and could not: a prereg amendment cannot
+overrule a ratified page, and it cannot ratify one either.**
+
+**What this amendment therefore is, and is not.** It is the fresh gate the re-ratification requires,
+plus the registrations a passing gate obliges. **It is not a re-reading of v2.K6A's tables**: every
+number in K6A.1.4–K6A.1.8 comes from calibration draws and live streams that have never been used by
+any probe in this document, and the frozen configuration was frozen *before* the operator's decision
+existed, which is the property that makes this measurement a test rather than a selection.
+
+**Registered, so the record cannot be read as a clean pass:** the bar this amendment clears is a
+**post-measurement relaxation**, disclosed as such here and on the page. A reader comparing K6-slow
+to any other class row must know that this class's `H` was set after a first bar was missed, and
+that the H = 3,000 answer for the same construction is **NO** (v2.K6A). Both answers stand, at their
+own bars, and neither is the other's correction.
+
+### K6A.1.2 The frozen configuration, and the freeze discipline
+
+Frozen by v2.K6A K6A.6 and quoted by the design page. **Nothing here was re-optimized, re-chosen or
+re-tuned for the new bar — that is the entire point of having frozen it before the bar moved:**
+
+```
+W        = 150                     window length, disjoint W-blocks of the post-onset stream
+n        = 100,000                 calibration substrate rows per cell (ONE continuously advanced stream)
+A / B    = 25,000 / 75,000         A -> the fixed reference ECDF Fhat_A; B -> m contiguous disjoint blocks
+m        = 500                     = 75,000/150 exactly, no remainder; SATURATED (v2.K6A Table 3)
+feature  = energy distance vs Fhat_A, the form frozen at v2.K6A K6A.2, verbatim
+kappa    = 0.6820                  FROZEN LITERAL. Not re-derived on this amendment's data.
+H        = 6,000  ->  N = 40       disjoint windows of 150
+endpoint = wealth >= 20  (log >= log 20 = 2.995732) at any window checkpoint
+```
+
+The construction, the rank rule `p = (1 + #{j : T(B_j) >= T(live)})/(m+1)`, the calibrator
+`e = kappa*p^(kappa-1)`, the wealth recursion, and the exact discrete null law are **cited from
+v2.K6A K6A.2, not re-derived here.**
+
+**The freeze cost, disclosed.** This amendment's own fresh data reads `x = -E[log p|alt] =
+1.46876 ± 0.00465`, whose closed-form optimum would be `1/x = 0.680848`. The frozen literal is
+`0.6820`, **`0.00115` above it**. On the measured `κ`-grid slope near the optimum (about `-0.85` per
+unit `κ`, v2.K6A K6A.6) that difference is worth under `0.001` in detection. **The frozen value is
+kept. Re-deriving `κ` on the data that then reports the endpoint is exactly the circularity v2.K6A
+K6A.6 removed, and moving it now — after a bar relaxation — would be indefensible.**
+
+### K6A.1.3 The fresh probe: seeds, replicates, and the C1 guard
+
+**FRESH seed bands, disjoint from every band used anywhere in this document, stated so the
+disjointness is checkable rather than asserted:**
+
+```
+calibration substrate   1.30e9 + 300007*rep + 7919*offset      spans [1.300e9, 1.321e9]
+canonical alt live      1.42e9 + 300007*rep + 7919*offset      spans [1.420e9, 1.441e9]
+healthy live            1.54e9 + 300007*rep + 7919*offset      spans [1.540e9, 1.561e9]
+```
+
+`rep <= 69`, `offset ∈ {1,2,3,4}` for the gate and `{11,12,13,14}` for the grid cells (K6A.1.8).
+**Every registered seed of this study is `<= 1e8`** (`CELL_SEED` max `20260855` after K6A.1.9,
+trajectory seed max `36,090,935`, `HELDOUT_SEED` max `20760855`); earlier K6 probes used
+`1.7e9`/`2.5e9`/`2.6e9`/`3.0e9`/`3.5e9`/`3.7e9`/`3.8e9`/`4.1e9`; **v2.K6A's own probe used
+`1.1e9` (anchor) and `6.0e8`/`7.5e8`/`9.0e8` (sweep)**. The three bands above are mutually disjoint,
+disjoint from all of those, below `1.7e9`, and all `< 2^32`, so the LCG's `seed >>> 0` performs no
+wrap and the stated band is the band actually used.
+
+**Replicates.** `4` offsets × `R = 70` calibration draws × `TJ = 72` trajectories =
+**280 calibration draws and 20,160 trajectories per arm** (canonical alt and healthy), above the
+`20,000` the task sets and the `250` draws the null-growth screen needs.
+
+**Generators** copied verbatim from `inject.mjs:14-24,60-70` and `run-battery.mjs:302-308,365,
+650-653`, as v2.K6A K6A.3 states; **trajectories are consecutive disjoint blocks of ONE continuously
+advanced stream per (calibration draw, arm)**, never spaced per-trajectory seeds.
+
+**The C1.2 serial-structure guard was RUN on every one of the 280 fresh calibration draws and on
+every grid-cell draw, and threw on none.** `φ = 0` draws: mean `acf(1) = 0.00010`,
+`acf(2) = 0.00008` (bound `0.10`). `φ = 0.6` draws (the `-ar1` cells, K6A.1.8): mean
+`acf(1) = 0.5999`, `acf(2) = 0.3594`/`0.3600` against the `(0.6, 0.36)` their own `φ` implies.
+**The `n = 100,000` draw's lattice-freedom is checked at every draw, not inherited from v2.K6A.**
+
+### K6A.1.4 THE FRESH GATE at H = 6,000
+
+| quantity | measured | bar |
+|---|---|---|
+| **detection-within-`H` (canonical `mix-d1.5`)** | **`0.6207`**, cluster-robust SE `0.0091`, between-offset SE `0.0089` | **`>= 0.50`** |
+| **median time-to-cross** | **`4,950` ticks** | **`<= H = 6,000`** |
+| quartiles of time-to-cross, over ALL trajectories | `q25 = 3,000`, `q50 = 4,950`, `q75 > 6,000` (censored) | — |
+| quartiles among the `12,513/20,160` that crossed | `2,400 / 3,450 / 4,650` | — |
+| **healthy `6,000`-tick paging** | **`0.0181 ± 0.0014`** | `<= α = 0.05` |
+| **null-growth screen** | **`0/280` calibration draws with positive null growth** | `0` required |
+
+**Per-offset readings, so the four are visible rather than pooled away:** detection
+`0.6268`, `0.6165`, `0.6409`, `0.5986` (between-offset sd `0.0178`); healthy `0.0188`, `0.0185`,
+`0.0181`, `0.0169`. **The cluster-robust SE (`0.0091`) and the between-offset SE (`0.0089`) agree**,
+so unlike v2.K6A's first pass there is no over-dispersion to carry: the `κ`-re-estimation coupling
+that caused it is gone, because `κ` is a frozen literal here.
+
+**The full time-to-detection curve** (ticks : detection, 20,160 trajectories, every window):
+
+```
+ 150:0.000   300:0.000   450:0.000   600:0.002   750:0.004   900:0.009  1050:0.016  1200:0.024
+1350:0.035  1500:0.048  1650:0.063  1800:0.080  1950:0.095  2100:0.117  2250:0.139  2400:0.161
+2550:0.182  2700:0.204  2850:0.226  3000:0.250  3150:0.274  3300:0.296  3450:0.319  3600:0.342
+3750:0.363  3900:0.384  4050:0.404  4200:0.424  4350:0.442  4500:0.462  4650:0.480  4800:0.498
+4950:0.513  5100:0.531  5250:0.548  5400:0.564  5550:0.579  5700:0.594  5850:0.607  6000:0.621
+```
+
+**Two checks on this curve that were not free, registered because they are what makes the fresh
+measurement trustworthy rather than merely new.**
+
+1. **The fresh draw reproduces v2.K6A's H = 3,000 headline exactly.** This curve reads `0.250` at
+   `3,000` ticks; v2.K6A K6A.6 registered `0.2493 ± 0.0052` at the same configuration on
+   **disjoint** seed bands. **The H = 3,000 refutation is independently reproduced, on new draws, by
+   the same probe that now clears H = 6,000.** The relaxed bar did not repair a bad measurement;
+   it moved the horizon past a correctly measured crossing point.
+2. **The crossing point agrees with v2.K6A's interpolation to within two windows.** v2.K6A K6A.8
+   interpolated detection `= 0.50` at `H ≈ 4,675`; this fresh measurement puts the median at
+   `4,950` — `1.8` windows later, and `4,800` reads `0.498`, a whisker under the floor. Registered
+   as agreement, not as a correction: the two differ by less than the `150`-tick granularity plus
+   sampling.
+
+### K6A.1.5 The null side, and the null-growth screen
+
+**The exact discrete null law, checked at the frozen `m = 500`** (11.2M healthy windows):
+
+| quantity | measured | exact |
+|---|---|---|
+| `E[log p \| null]` | `-0.99114` | `-0.991961` |
+| mean `p` | `0.501023` | `0.500998` |
+| `E[e \| null]` at `κ = 0.6820` | `0.990924` | `0.991433` |
+
+**`E[e|null] <= 1` holds by closed form and is matched by MC on the conservative side**, as in
+v2.K6A K6A.4b. Per-window ceiling at the frozen constants: `log κ + (1-κ)·log(m+1) = -0.382726 +
+0.318 × 6.216606 = 1.594155` nats, so `N = 40` windows give `63.77` against `log 20`; the earliest
+arithmetically possible crossing is **window 2 (`300` ticks)**, which needs `S_2 >= 11.8276` of a
+maximum `12.4332`. The curve's first nonzero reading at `600` ticks and the `mix-d2.0` cell's
+measured median of **exactly `300`** (K6A.1.8) both confirm that arithmetic.
+
+**The null-growth screen — the design page's mandatory pre-run check, measured on the fresh band.**
+Per calibration draw `S`, the screen reads `g_null(S) = log κ + (1-κ)·E[-log p | null, S]`:
+
+```
+draws screened                 280      (>= 250 required)
+draws with g_null(S) > 0         0
+per-draw g_null: mean       -6.754e-2   sd 1.571e-2   max -1.501e-2   p99 -2.428e-2
+margin                        4.30 sd below zero
+```
+
+**`0/280`, with the worst draw still `1.5e-2` below zero.** For contrast, and cited not re-measured:
+at the prior K6E geometry (`W = 30`, `m = 200`, `κ* = 0.9126`) v2.K6A K6A.9 read `48/250` positive.
+**The frozen `κ = 0.6820` at `m = 500` is in the safe regime by a wide margin, and this is the
+measurement the design page requires before any accumulator card is built.**
+
+### K6A.1.6 THE GATE VERDICT — PASS at the re-ratified bar
+
+Mapped against the design page's outcome rule, at `H = 6,000`:
+
+1. *"best-achievable median time-to-cross ≤ H → freeze and build"* — **THIS IS THE MEASURED
+   RESULT.** Median time-to-cross `4,950 <= 6,000`; equivalently detection-within-`H`
+   `0.6207 ± 0.0091 >= 0.50`, clearing the floor by `13.3` cluster-robust SE.
+2. *"> H at every swept configuration → refuted at design time"* — not the measured result.
+
+**REGISTERED GATE VERDICT: PASS.** The healthy side holds (`0.0181 <= α = 0.05`), the null-growth
+screen is clean (`0/280`), the exact null law is matched, and the configuration was frozen before the
+bar moved. **The K6-slow accumulator proceeds to build, under the registrations of K6A.1.9–K6A.1.14
+and subject to the two-sided reading of K6A.1.7, which is part of the verdict and not a footnote to
+it.**
+
+**What this verdict does not do.** It does not disturb `K6 = NO` at the deploy-gate geometry (two
+attempts, `k6-ecdf-successor`). It does not disturb v2.K6A's `H = 3,000` refutation, which this
+amendment's own fresh draw reproduces at `0.250` (K6A.1.4). It is not a coverage answer: the class
+row's YES/NO is decided by the run against `COVERAGE_FLOOR`, on one calibration draw, per K6A.1.13.
+
+### K6A.1.7 The single-calibration-draw lottery — registered as a two-sided prediction, not a caveat
+
+**The gate's `0.6207` is a mean over 280 calibration draws. The registered run draws ONE**
+(`HELDOUT_SEED = CELL_SEED + 500000`, §6), so the realized endpoint is a single draw from a
+distribution, not an estimate of its mean with a shrinking SE. This is C1.7's calibration-draw
+lottery and K6E.7c's quantification, and at this bar it is **the dominant uncertainty in the whole
+registration** — the per-draw sd is `0.1527` against a within-draw binomial noise of
+`sqrt(0.62·0.38/2000) = 0.0109`, a factor of `14`.
+
+**Measured distribution over the 280 fresh draws:**
+
+| endpoint | p05 | p25 | p50 | p75 | p95 | min | max |
+|---|---|---|---|---|---|---|---|
+| canonical detection-within-`H` | `0.333` | `0.528` | `0.625` | `0.726` | `0.848` | `0.181` | `0.958` |
+| median time-to-cross (ticks) | `3,300` | `4,050` | `4,650` | `5,250` | `5,700` | — | `6,000` |
+| healthy `6,000`-tick paging | — | — | `0.0139` | — | `0.0556` | — | `0.1389` |
+
+**Three consequences registered in advance, each a prediction this amendment is willing to be
+judged on:**
+
+1. **`60/280 = 21.4%` of calibration draws read canonical detection BELOW `0.50`.** So the
+   registered run has roughly a **one-in-five** chance of reading `K6-slow = NO` **while the gate is
+   correct**. **Registered: a canonical reading in `[0.333, 0.848]` CONFIRMS this gate; a NO from a
+   reading inside that band is the lottery, not a falsification, and must be reported as
+   "class NO at this calibration draw" rather than "the gate was wrong."** The gate is falsified by a
+   reading **outside** the band — below `0.333` or above `0.958` — or by a systematic disagreement
+   across several cells.
+2. **`65/280 = 23.2%` of draws have a median time-to-cross `> H`**, the same event seen through the
+   equivalent endpoint.
+3. **The class answer for K6-slow is therefore genuinely uncertain before the run, and that is
+   registered rather than smoothed.** The honest one-line prediction is: **`P(K6-slow = YES) ≈ 0.79`
+   conditional on the card reaching USE**, not "YES."
+
+**Registered mitigation, and the reason none is adopted here.** Averaging over several calibration
+draws per cell would collapse this variance, and it is the obvious design improvement — but the
+substrate draw is `HELDOUT_SEED`-derived and one-per-cell by §6/C1.2's registered construction, and
+changing that is a protocol change affecting every candidate scored on a held-out stream, not this
+amendment's call. **Filed as named-not-done (K6A.1.15), with the consequence registered above so no
+reader mistakes a single-draw NO for a refutation.**
+
+### K6A.1.8 The rest of the grid at the frozen configuration and H = 6,000
+
+Fresh offsets `{11,12,13,14}`, `140` calibration draws × `24` trajectories = `3,360` per cell.
+`κ` frozen at `0.6820` for every cell — **no per-cell re-optimization**, which is why the cells whose
+own optimum is elsewhere read low.
+
+| cell | `φ` | `x = −E[log p\|alt]` | own `1/x` | growth at frozen `κ` | detection-within-`H` | median t-t-c |
+|---|---|---|---|---|---|---|
+| `mix-d1.0` | 0 | `1.00208 ± 0.00410` | `0.9979` | `≈ 0.0000` | **`0.0220 ± 0.0028`** | `> H` |
+| **`mix-d1.5` (canonical)** | 0 | **`1.46876 ± 0.00465`** | `0.6808` | `+0.084340` | **`0.6207 ± 0.0091`** | **`4,950`** |
+| `mix-d2.0` | 0 | `6.21661 ± 0.00000` | `0.1609` | `+3.38938` | **`1.0000 ± 0.0000`** | **`300`** |
+| `mix-d1.5-ar1` | 0.6 | `0.53275 ± 0.00324` | none in (0,1) | `≤ 0` | **`0.0000 ± 0.0000`** | `> H` |
+| healthy analogue, `φ=0.6` | 0.6 | `0.99393 ± 0.00442` | none in (0,1) | `≤ 0` | paging `0.0170 ± 0.0023` | `> H` |
+
+**Mechanisms registered with the numbers, so no row is over-read:**
+
+- **`mix-d1.0` is uninformative at this `W`, not merely under-powered.** `x = 1.00208 ± 0.00410` is
+  `0.5` SE above `1`, i.e. indistinguishable from the boundary where growth changes sign; the
+  measured detection `0.0220` is barely above the healthy paging rate. At `W = 30` v2.K6E measured
+  this cell **anti**-informative (`x = 0.9867`); longer windows move it to the boundary and no
+  further. **Registered prediction `0.0220`, NOT_POWERED, and the class's own grid floor is
+  therefore `d = 1.5`.**
+- **`mix-d2.0` reads `x = 6.216606` with SE exactly `0.00000` because `log(m+1) = log 501 =
+  6.216606` — EVERY window returned the minimum attainable `p = 1/501`.** This is the `s = 0`
+  degeneracy K6.2.1/K6.2.3 and K6E.8 already registered, confirmed for a third feature:
+  `s = sqrt(1 - d²/4) = 0` exactly at `d = 2.0`, so the injection is a pure two-point `±1σ`
+  distribution, not an overlapping mixture. **Its `1.0000` is a boundary artifact and is NOT evidence
+  of shape sensitivity.** Its median of exactly `300` ticks is the earliest arithmetically possible
+  crossing (window 2, K6A.1.5) — a check on the ceiling arithmetic, not a performance claim.
+- **`mix-d1.5-ar1` is strongly anti-informative (`x = 0.5328`), predicted `0.0000`, for a reason the
+  class's own injection creates and the detector cannot fix.** `injectShapeMix`
+  (`inject.mjs:60-70`) **REPLACES** post-onset values with i.i.d. mixture draws, so on this cell the
+  live windows are i.i.d. while the calibration blocks are AR(1) `φ = 0.6`, whose `150`-tick ECDFs
+  wobble far more; the live `T` is therefore *smaller* than a typical reference block's and the
+  one-sided upper-tail rank sends `p` toward `1`. K6E.8's registered mechanism, reproduced at
+  `W = 150`. **Validity is intact at matched `φ`:** the `φ = 0.6` healthy analogue pages at
+  `0.0170 <= α` with `0/140` positive null growth. **The `-ar1` POWER cell is out of reach and is
+  registered as such, at `0.0000`, not excused.**
+
+### K6A.1.9 T1 long-span scenario and cell registration (extends §6/§7)
+
+**The long-span scenario, registered for this class only.** The `T = 300 / ONSET = 100` scenario is
+the deploy-gate registration and is **untouched for every existing cell**:
+
+```
+T_K6SLOW      = 6,300 ticks      baseline 300 + 6,000 post-onset
+ONSET_K6SLOW  = 300
+TEST_K6SLOW   = { start: 300, len: 6000 }      -> 40 disjoint windows of W=150, NO remainder
+N (trajectories) = 2,000         REGISTERED_N, §6, unchanged
+substrate      = 100,000 rows per cell, drawn under HELDOUT_SEED as ONE continuously advanced
+                 stream (the post-C1 form, run-battery.mjs:650-653); A = rows 1..25,000,
+                 B = rows 25,001..100,000 -> m = 500 blocks of 150 exactly
+```
+
+**New cells, continuing the index sequence past the highest registered index `42`** (v2.K5R K5R.5;
+indices `35`–`37` remain reserved by K6.12/K6E.9/K6E.10 and **a cancelled run does not release a
+registered index**, so `36`/`37` are not reused):
+
+| idx | class | severity | `φ` | `CELL_SEED = BASE_SEED + idx` | `HELDOUT_SEED = CELL_SEED + 500000` | arithmetic |
+|---|---|---|---|---|---|---|
+| 43 | `K6-slow` | `mix-d1.0` | 0 | **20260850** | **20760850** | `20260807+43`; `+500000` |
+| **44** | `K6-slow` | **`mix-d1.5` (canonical)** | 0 | **20260851** | **20760851** | `20260807+44` |
+| 45 | `K6-slow` | `mix-d2.0` | 0 | **20260852** | **20760852** | `20260807+45` |
+| 46 | `K6-slow` | `mix-d1.5-ar1` | 0.6 | **20260853** | **20760853** | `20260807+46` |
+| 47 | arm | `shape_ecdf_accumulator` S2/S3 | 0 | **20260854** | **20760854** | `20260807+47` |
+
+`K6SLOW_T2_SCENARIO_SEED = BASE_SEED + 48 = 20260855` (K6A.1.11). Trajectory seeds
+`seed(i) = CELL_SEED + 7919*i`, `i = 0..1999`, §6's formula shape unchanged. **Seed-ceiling check:
+`CELL_SEED` max `20260855`, trajectory-seed max `20260854 + 7919*1999 = 36,090,935`, `HELDOUT_SEED`
+max `20760855` — every registered seed stays `<= 1e8`, so no registered seed can collide with any
+probe band this document has used** (all `>= 6e8`).
+
+**Detector assignment: `K6-slow` cells are scored by `shape_ecdf_accumulator` ALONE.** `safe_t` and
+`universal_inference` are **not** registered on this class, deliberately: scoring them on a
+`6,300`-tick scenario would be a new measurement of two existing detectors under a geometry nothing
+registers for them, and it would put a second detector's name on this class's row for free.
+**Registered consequence, disclosed: the K6-slow row rests on ONE detector, so it has no
+paired-comparison partner and `pairingGaps` will name it.** That is the honest cost of a
+single-candidate class row.
+
+### K6A.1.10 Healthy arm and stop conditions, both tiers, checked first
+
+**The healthy arm (cell 47)** carries K6.7's field set by reference — the same substitution pattern
+v2.K6E K6E.9 registers (`null_id: 'K6slow-arm-heldout'`, `params: 'heldout-empirical'`), with
+`p_uniformity` pooling one feature over `2,000 × 40 = 80,000` values and
+`ks_critical_at_alpha = 1.36/sqrt(80000) = 0.0048083`. Reported, **no verdict authority** (K6.7/K3.1.7's
+caveat: `p` is discrete on 501 values). The verdict stays `crossing_rate`-derived. **At `κ = 0.6820`
+the calibrator's tail index is `1/(1-κ) = 3.14 > 2`, so `Var[e]` is finite here** — recorded, and the
+field is still non-authoritative, because changing which field carries an S2 verdict is a protocol
+change and not an amendment's call (K6E.9's ruling, reused).
+
+**Registered stop conditions, checked BEFORE any power reading, on both tiers:**
+
+1. **T1 healthy paging bound.** Cell 47's S2 `crossing_rate` over `n = 2000`; the condition fires if
+   the **Wilson one-sided 95% lower bound `> α = 0.05`**. Predicted point value `0.0181`.
+2. **The null-growth screen, as a registered stop condition** (the design page's mandatory check):
+   **if `>= 1` of `250` fresh calibration draws at the frozen `κ = 0.6820` has positive null growth
+   `log κ + (1-κ)·E[-log p|null,S] > 0`, STOP, investigate, do not run.** Measured `0/280` here
+   (K6A.1.5), margin `4.30` sd. **This screen is run on fresh draws at run time, not inherited from
+   this amendment** — that is what makes it a stop condition rather than a citation.
+3. **T2 pooled healthy crossing**, K6.12's pooled `t2_crossing_rate` Wilson 95% lower bound across
+   scored `(shard, coordinate)` pairs — pooled, not any single coordinate's rate (K6A.1.11).
+
+A fired stop condition on either tier **REFUTES** `shape_ecdf_accumulator` on the record.
+
+**The T1 stop condition's own false-fire rate, measured and registered, because an unfalsifiable or
+over-firing falsifier is not evidence either way.** The healthy paging rate is a **marginal**
+`0.0181 <= α`, which is what `α` bounds (Ville applies to the marginal supermartingale, v2.K6A
+K6A.9). Conditional on the single calibration draw it is a distribution: **`22/280 = 7.9%` of draws
+page above `α` within `6,000` ticks (max `0.1389`), and the Wilson-LB stop condition above would fire
+on `11/280 = 3.9%` of draws** (the LB crosses `0.05` at a point rate of `0.0585`). **Registered: the
+T1 healthy stop condition has an approximately `4%` false-fire rate from the calibration lottery
+alone, and the null-growth screen does NOT catch those draws — all `280` passed the screen.** The two
+checks are complementary, not redundant: the screen tests the asymptotic drift sign, the paging bound
+tests a finite-horizon rate that has variance around it. **A fired T1 stop condition must therefore
+be reported with the null-growth screen's reading beside it**; screen-clean plus paging-fired is the
+lottery's signature, screen-dirty plus paging-fired is a construction defect.
+
+### K6A.1.11 T2 clustersynth validity arm — K6.12's construction, unchanged, with its arithmetic consequence at W = 150 disclosed
+
+**Cited, not re-registered:** the scenario
+(`cs.buildScenario({family:'gb200', pods:1, seed: <K6SLOW_T2_SCENARIO_SEED>, window:{steps:9600,
+dt_s:30}, faults:false})`), `sc.gpuIds.slice(0,120)`, the five `COUNTERS` coordinates, the
+skip-with-reason accounting for degenerate references, and the binding field names
+(`t2_crossing_rate` not `crossing_rate`, `t2_verdict` not `verdict`, **no `fault_class` field at
+all**) are **K6.12 + K6.1.3's registered set, applied unchanged** with
+`detector: 'shape_ecdf_accumulator'`. The design page requires this arm unchanged, and a successor
+that fails it is REFUTED.
+
+**What W = 150 does to that arm, stated as arithmetic rather than discovered at run time.** The
+scenario supplies `9,000` reference ticks and a `600`-tick live span per `(shard, coordinate)`.
+The frozen `m = 500` needs `500 × 150 = 75,000` reference ticks. **It cannot be had: `75,000 >>
+9,000`.** Preserving the frozen `1:3` A/B ratio instead gives
+
+```
+A = 2,250 ticks (reference ECDF)    B = 6,750 ticks -> m = floor(6750/150) = 45 blocks exactly
+   check: 2,250 + 45*150 = 9,000                    live: 600/150 = 4 windows
+```
+
+**Registered, with both consequences named:**
+
+- **T2's `m` is `45`, NOT T1's `500`.** This breaks K6E.10's "one `m` for both tiers makes the two
+  arms one construction" property, deliberately and for a stated reason: `W` is frozen and the
+  telemetry length is fixed. The A-segment shrinking to `2,250` costs nothing measurable — v2.K6A
+  Table 4 measured `x` **flat** across `n_A ∈ [2,000, 100,000]` — so the ratio, not the absolute
+  A-size, is what is preserved.
+- **The T2 healthy falsifier is very nearly VACUOUS at this `W`, and this is disclosed rather than
+  routed around.** With `m = 45` and `4` live windows, the per-window ceiling is `0.834782` nats, so
+  a crossing is possible **only at window 4** and requires `S_4 >= 14.2347` against a maximum
+  attainable `4·log 46 = 15.3146` — **`93%` of the theoretical maximum, i.e. all four windows within
+  a whisker of the `p`-floor** — against `E[S_4|null] = 3.7535`. Predicted T2 pooled healthy crossing:
+  **`0.0000`**. **Registered reading: a T2 PASS on validity carries little information at `W = 150`,
+  exactly as v2.K6E K6E.11 disclosed for T1 at `κ*`.** The arm still runs, because K6.12's contiguity
+  question — does the construction's validity survive independent telemetry, the question that killed
+  `shape-kurtosis-e-value.ts` (C22) — is answered by its skip/degeneracy accounting and its `p`
+  marginals whether or not the crossing endpoint can move. **Whether this class needs a longer
+  clustersynth window to restore a live T2 falsifier is a design-page decision and is named
+  not-done (K6A.1.15); this amendment does not change K6.12.**
+
+### K6A.1.12 Predictions with bands, for every endpoint the runs will read
+
+All at the frozen `κ = 0.6820`, `H = 6,000`, `N = 40`. **Bands are per-calibration-draw (K6A.1.7),
+which is the quantity a one-draw run realizes — not SEs of this probe's mean.**
+
+| endpoint | prediction | registered band | falsifier |
+|---|---|---|---|
+| **cell 44 `mix-d1.5` canonical detection** | **`0.62`** | `[0.333, 0.848]` (p05–p95 per draw); `21.4%` of draws `< 0.50` | outside the band, or `< 0.333`/`> 0.958` |
+| cell 44 median time-to-cross | `4,950` ticks | `[3,300, 5,700]`; `23.2%` of draws censored at `> H` | a median `< 3,000` or a censored median with detection `> 0.50` |
+| cell 43 `mix-d1.0` detection | `0.0220` | `[0.010, 0.040]` | `> 0.10` |
+| cell 45 `mix-d2.0` detection | **`1.0000`** | `[0.999, 1.000]` | `< 0.99`; **a boundary artifact, not shape sensitivity** (K6A.1.8) |
+| cell 46 `mix-d1.5-ar1` detection | **`0.0000`** | `[0.000, 0.002]` | any material crossing |
+| cell 47 S2 healthy `crossing_rate` | `0.0181` | `[0.000, 0.056]` p05–p95 per draw; `7.9%` of draws `> α` | the Wilson-LB stop condition (fires on `≈3.9%` of draws by lottery alone) |
+| cell 47 S2 `increment_estimator.mean` | `0.9914` | `[0.985, 0.998]` (exact `E[e\|null] = 0.991433`) | outside `[0.97, 1.01]` |
+| cell 47 S2 `degenerate_windows`, `non_finite_wealth` | **structurally 0** | — | any nonzero count |
+| cell 47 S3 arm (`shift_sigma: 3` = `d = 2.0`) | `1.0000` → **POWERED** | `[0.999, 1.000]` | `< INERTNESS_FLOOR = 0.10` |
+| null-growth screen, 250 fresh draws | **`0/250` positive** | `0` | `>= 1` → STOP (K6A.1.10) |
+| T2 pooled healthy crossing | **`0.0000`** | `<= α` | the T2 stop condition |
+| T2 degenerate-reference skips | **not predicted** — a finding to make (K6.12), disclosed per coordinate, never folded into a denominator | — | — |
+| **K6-slow class answer** | **YES** iff card USE and cell-44 detection `>= 0.50`; `P(YES) ≈ 0.79` | — | see K6A.1.13 |
+
+`degenerate_windows`/`non_finite_wealth` are structurally `0` for the reason K6E.12 registers:
+`p ∈ [1/501, 1]` so `e ∈ [κ, κ·501^(1-κ)] = [0.6820, 4.9242]`, always finite, no `p = 0` pathway, and
+`T` is a finite sum of bounded quantities.
+
+**A failed endpoint is a publishable result (§0 rule 2). Nothing above moves afterward** — including
+the `0.0000` predictions, the `1.0000` artifact, and the `P(YES) ≈ 0.79`.
+
+### K6A.1.13 Golden expectation — a NEW COVERAGE.md row, and how a class row actually enters
+
+**Checked against the code rather than assumed.** `coverageFor`
+(`validation/certification/lib/score.mjs:358`) iterates **`Object.keys(FAULT_CLASSES)`**, and
+`FAULT_CLASSES` is a **hardcoded `Object.freeze({...})` of `K1`–`K6`**
+(`validation/certification/lib/constants.mjs:57-74`). **A `K6-slow` row therefore does not exist —
+at all — until that object gains an entry: no cell carrying `fault_class: 'K6-slow'` can create a
+row by itself, because nothing iterates the cells' own class values.** Per the task's instruction,
+the code change is registered here and **assigned to the build tasks, NOT to this commit**:
+
+| # | file:line | change | why it is required |
+|---|---|---|---|
+| 1 | `certification/lib/constants.mjs:57-74` | add `'K6-slow': { name: 'distributional shape change, hours-scale accumulator', canonical: 'mix-d1.5', grid: ['mix-d1.0','mix-d1.5','mix-d2.0'] }` | `coverageFor` iterates these keys; without it there is no row |
+| 2 | `coverage/harness/run-battery.mjs:176-196` | four `F(43..46, 'K6-slow', …)` rows per K6A.1.9 | the cells themselves |
+| 3 | `run-battery.mjs:220` `REGISTERED_AR1_ROWS` | add `'K6-slow': 1` | `assertRegistryAgreement` throws at startup otherwise (`:248-250`) |
+| 4 | `run-battery.mjs:343-359` `parseSeverity` | `case 'K6-slow':` sharing K6's `/^mix-d(\d*\.?\d+)$/` grammar | every K6-slow severity throws otherwise (`:358`) |
+| 5 | `run-battery.mjs:370-400` `generate` | `case 'K6-slow':` → `injectShapeMix` | `no generator for K6-slow` otherwise |
+| 6 | `run-battery.mjs:565` `detectorsFor` | `case 'K6-slow': return ['shape_ecdf_accumulator']` | K6A.1.9's single-detector assignment |
+| 7 | `run-battery.mjs:75-87` `T`/`ONSET`/`TEST` | make the scenario span **per class**, `T_K6SLOW = 6,300`, `ONSET_K6SLOW = 300` | they are module scalars today; the long-span scenario needs its own, and **every existing cell must keep `T = 300`/`ONSET = 100` bit-for-bit** |
+| 8 | `run-battery.mjs:84` + `:293` `HELDOUT_ROWS` | make the substrate size **per class** (`100,000` for K6-slow) and split the `assertRegisteredConstants` literal check accordingly | `HELDOUT_ROWS = 10000` is asserted against §6 today, so a `100,000`-row draw crashes at startup |
+| 9 | `run-battery.mjs:202-218` `ARM_CELLS` | arm `idx 47` per K6A.1.9 | the healthy/S3 arm |
+
+**Items 7 and 8 are the load-bearing ones and are named as the build's real risk:** they change
+constants every existing cell reads, so the build task that makes them must prove **bit-for-bit
+invariance of every current cell's trajectories** (the existing suites' 90 coverage-battery and 171
+certification assertions are the instrument), not merely that the new cells run.
+
+**The golden expectation, registered.** Pre-run (the state at the commit that freezes the card,
+K6.2.4/K6E.13's precedent): `shape_ecdf_accumulator` enters
+`validation/certification/test/golden-verdicts.test.mjs` at **`NOT_EXECUTABLE`, tier `null`, S1
+`MISSING`, S2 `MISSING`, S3 `MISSING`, S4 `PASS`**.
+
+**Post-run expected delta, registered against the code path rather than asserted:**
+`NOT_EXECUTABLE → USE`, tier `null → T1`, S2 `MISSING → PASS`, S3 `MISSING → PASS`.
+**Unlike v2.K6E, this card is NOT capped at ADVISORY by the valid-but-inert rule:** the S3 arm at
+`d = 2.0` reads `1.0000 >= INERTNESS_FLOOR = 0.10`, so `s3Powered.length !== 0` and
+`score.mjs:568`'s `ADVISORY` return is not taken. **The remaining gate to USE is S4**
+(`score.mjs:578-585`: `REFUSE` → ADVISORY, `UNPRICED` → ADVISORY, else USE) and **S1 blocks nothing**
+by design (`score.mjs:514`, the v1 floor, named in `reasons[]` only).
+
+**The new COVERAGE.md row, with its condition stated in full:** `K6-slow` reads **YES** iff at least
+one card with overall verdict **USE** has the class **COVERED** (`verdict.mjs:249`), and COVERED
+requires the **canonical cell 44** to read `powerRate >= COVERAGE_FLOOR = 0.50`
+(`score.mjs:397-402`). **Predicted: YES, tier T1 — conditional on two things this amendment names
+rather than assumes: (a) the card's own S4 landing `PASS`, which depends on card text that does not
+yet exist, and (b) the single calibration draw clearing `0.50`, which K6A.1.7 puts at `≈ 79%`.**
+**If either fails the row reads NO and that is a registered outcome, not a surprise.** The other
+fifteen cards' tuples and every existing class row **do not move**.
+
+### K6A.1.14 House rules, mapped
+
+(1) **Committed before any artifact it authorizes** — at this commit there is no K6-slow module,
+card, adapter, cell, harness change or run; this amendment is prereg text alone, in its own commit,
+and the code changes of K6A.1.13 are registered *for* the build tasks and deliberately not made here.
+(2) A failed endpoint is a publishable result; nothing above moves afterward, **including the
+`P(YES) ≈ 0.79`, the `1.0000` artifact and the `0.0000` predictions.** (3) No post-hoc analysis: the
+gate of K6A.1.4 is a pre-registration-time measurement on fresh draws, disclosed with its seeds,
+replicate counts and guard results; there is no run. (4) Fallback rules: A3 for T1 (K6.15's
+inheritance, applied to cells 43–47), K6.12's skip-with-reason for T2. (5) Freeze: T1's seeds are
+frozen by K6A.1.9's arithmetic, T2's by `K6SLOW_T2_SCENARIO_SEED = 20260855`. (6) Results
+append-only, binding on both arms. (7) Reruns only for a named code defect, prior run preserved; **no
+rider and no quote-and-correct is filed** — the design page's own §gate and
+§what-this-page-does-not-claim corrections were already made by the operator on the page itself
+(§Outcome's two quote-and-corrects), so there is nothing left for this document to correct.
+(8) The report states every endpoint's number and verdict — discharged by K6A.1.12.
+
+**Write-back obligations, named and NOT done here** (the wiki is not this document's to edit):
+the design page needs the fresh gate's result (PASS, `0.6207`, median `4,950`, healthy `0.0181`,
+screen `0/280`); **the single-draw lottery of K6A.1.7 as a property of its own coverage rule** — a
+`>= 0.50` threshold read on one calibration draw makes this class's YES/NO a `79/21` coin at a true
+detection of `0.62`, which the page's "YES iff canonical detection ≥ 0.50 within H" does not
+anticipate; the T2 near-vacuity at `W = 150` (K6A.1.11); and the `mix-d1.0` boundary reading, which
+makes `d = 1.5` this class's effective grid floor.
+
+### K6A.1.15 Named-not-done
+
+- **Averaging the calibration draw.** The one-draw-per-cell construction (§6/C1.2) is what makes the
+  class answer a `79/21` coin; averaging or re-drawing would collapse it. **A protocol change across
+  every held-out-stream candidate, not this amendment's call.** Named with its measured consequence.
+- **A longer T2 clustersynth window for this class**, to restore a live T2 falsifier at `W = 150`
+  (K6A.1.11). Its own decision; K6.12 is unchanged here.
+- **`safe_t` and `universal_inference` on the long-span scenario** — not registered (K6A.1.9), so
+  this class row has no paired-comparison partner.
+- **The T3 real-data claim, contamination robustness, and any wall-clock guarantee** — all out of
+  claim, per the design page's §what-this-page-does-not-claim, unchanged.
+
+### Amendment summary
+
+Registers **the fresh `H = 6,000` gate the design page's re-ratification section requires, and its
+PASS**, plus every registration a passing gate obliges — prereg text only, in its own commit, with no
+module, card, adapter, cell, harness or constants-table change made here. Authority: **operator
+decision 2026-08-08 taking option 1 of the decision package v2.K6A filed**, recorded in the ratified
+design page and quoted here verbatim with its three-link provenance chain named (`H = 3,000` was the
+**controller's drafting proxy**, not an operator number; v2.K6A filed the miss without acting on it;
+the operator moved the bar). **Registered on the record, twice, that this is a post-measurement
+relaxation of a bar that a first measurement missed, and that v2.K6A's `H = 3,000` refutation stands
+un-withdrawn** — indeed this amendment's fresh draw **independently reproduces it** at `0.250`
+against v2.K6A's registered `0.2493 ± 0.0052` on disjoint seed bands, which is what makes the new
+horizon a moved goalpost that was honestly measured rather than a repaired measurement (K6A.1.1,
+K6A.1.4). The configuration is the one **frozen before the bar moved** and is not re-optimized:
+`W = 150`, `n = 100,000`, `A/B = 25,000/75,000`, `m = 500` (saturated), energy distance,
+`κ = 0.6820` — a frozen literal now `0.00115` above the freshly-implied `1/x = 0.680848`, worth
+`< 0.001` in detection, and **kept, because re-deriving `κ` on the data that reports the endpoint is
+the circularity v2.K6A removed and moving it after a bar relaxation would be indefensible**
+(K6A.1.2). Fresh probe: **new seed bands `1.30e9`/`1.42e9`/`1.54e9`**, disjoint from the registered
+`<= 1e8` family, from the earlier `1.7e9`–`4.1e9` probes and from v2.K6A's own `1.1e9`/`6.0e8`/
+`7.5e8`/`9.0e8`, all `< 2^32`; **280 calibration draws × 72 trajectories = 20,160 per arm**; the
+**C1.2 serial-structure guard RUN on all 280 `φ=0` draws (mean `acf` `0.00010`/`0.00008`) and on the
+`φ=0.6` grid draws (`0.5999`/`0.3594` against `(0.6, 0.36)`), rejected none** (K6A.1.3).
+**GATE VERDICT: PASS. Detection-within-6,000 `0.6207`** (cluster-robust SE `0.0091`, between-offset
+SE `0.0089`, in agreement — the `κ`-re-estimation over-dispersion of v2.K6A's first pass is gone
+because `κ` is frozen), **median time-to-cross `4,950 <= 6,000`**, quartiles over all trajectories
+`3,000 / 4,950 / >6,000`, **healthy 6,000-tick paging `0.0181 ± 0.0014 <= α = 0.05`**, **null-growth
+screen `0/280` with a `4.30` sd margin**, exact discrete null law matched (`E[e|null]` MC `0.990924`
+vs exact `0.991433`, `<= 1`), full 40-point time-to-detection curve reported, and the earliest
+arithmetically possible crossing (window 2, `300` ticks) confirmed by the `mix-d2.0` cell's measured
+median of exactly `300` (K6A.1.4–K6A.1.6). **Registered as part of the verdict, not as a footnote:
+the gate's `0.6207` is a mean over 280 calibration draws and the run draws ONE, with per-draw sd
+`0.1527` against within-draw binomial noise of `0.0109` — a factor of 14 — so `60/280 = 21.4%` of
+draws read canonical detection BELOW `0.50` and `23.2%` have a censored median. The registered
+canonical band is `[0.333, 0.848]` p05–p95, a reading inside it CONFIRMS this gate, and
+`P(K6-slow = YES) ≈ 0.79` conditional on the card reaching USE — a single-draw NO is the lottery and
+must be reported as "class NO at this calibration draw", not as a falsification** (K6A.1.7). Grid at
+the frozen `κ`, `140` draws × `24` per cell: `mix-d1.0` **uninformative at this `W`, not merely
+under-powered** (`x = 1.00208 ± 0.00410`, `0.5` SE above the sign-change boundary; `0.0220`
+predicted, making `d = 1.5` the class's effective grid floor); `mix-d2.0` `1.0000` with
+`x = 6.216606 = log 501` and SE exactly `0.00000` because **every window returned the minimum
+attainable `p = 1/501`** — the `s = sqrt(1-d²/4) = 0` two-point degeneracy K6.2.1/K6E.8 registered,
+**a boundary artifact and not shape sensitivity**; `mix-d1.5-ar1` **`0.0000`** (`x = 0.5328`,
+strongly anti-informative because `injectShapeMix` REPLACES post-onset values with i.i.d. draws while
+the calibration blocks stay AR(1) — K6E.8's mechanism at `W = 150`), with **validity intact at
+matched `φ = 0.6`** (`0.0170 <= α`, `0/140` positive null growth) (K6A.1.8). Registers the long-span
+T1 scenario for this class only (`T = 6,300`, `ONSET = 300`, `TEST = {300, 6000}` → 40 windows of 150
+with no remainder, `100,000`-row substrate, `A/B = 25,000/75,000`, `N = 2,000`), **cells 43–46 plus
+arm 47 and `K6SLOW_T2_SCENARIO_SEED = 20260855`, continuing past the highest registered index 42 and
+NOT reusing the reserved 36/37**, with the seed-ceiling check shown (`<= 1e8`, so no registered seed
+can collide with any probe band), and the deliberate single-detector assignment whose cost —
+**no paired-comparison partner, `pairingGaps` will name it** — is registered rather than hidden
+(K6A.1.9). Stop conditions on both tiers, checked first, **including the null-growth screen as a
+registered stop condition run on FRESH draws at run time (`>= 1` of `250` positive → STOP,
+investigate, do not run)** — and, measured rather than assumed, **the T1 healthy paging bound's own
+false-fire rate: `22/280 = 7.9%` of draws page above `α` and the Wilson-LB condition fires on
+`11/280 = 3.9%` by calibration lottery alone, which the null-growth screen does NOT catch (all 280
+passed it), so the two checks are complementary and a fired paging bound must be reported with the
+screen's reading beside it** (K6A.1.10). T2: **K6.12/K6.1.3's construction, scenario, spans and field
+names cited UNCHANGED**, with the arithmetic consequence of the frozen `W = 150` disclosed rather
+than discovered at run time — the `9,000` reference ticks cannot supply `m = 500` (`75,000` needed),
+so preserving the frozen `1:3` ratio gives `A = 2,250 / B = 6,750 / m = 45` and `4` live windows;
+**T2's `m` therefore differs from T1's, breaking K6E.10's one-`m` property for a stated reason, and
+the T2 healthy falsifier is very nearly VACUOUS** (a crossing needs `S_4 >= 14.2347` of a maximum
+`15.3146`, `93%` of the theoretical ceiling, against `E[S_4|null] = 3.7535`), disclosed exactly as
+K6E.11 disclosed T1's vacuity, with the arm still running for its contiguity/skip-accounting evidence
+and a longer T2 window named not-done (K6A.1.11). Predictions with **per-calibration-draw bands** for
+every endpoint the runs will read, including the structural zeros and the `1.0000` artifact
+(K6A.1.12). **Golden expectation, checked against the code and not assumed: `coverageFor`
+(`score.mjs:358`) iterates `Object.keys(FAULT_CLASSES)` and that object is a hardcoded frozen
+`K1`–`K6` (`constants.mjs:57-74`), so a `K6-slow` row CANNOT exist until the class list gains an
+entry — no cell's own `fault_class` creates a row.** The nine-item code change is registered with
+file:line and **assigned to the build tasks, not to this commit**, with items 7–8 (per-class scenario
+span and per-class substrate size, both currently module scalars asserted against §6) named as the
+build's real risk requiring proof of **bit-for-bit invariance of every existing cell**. Pre-run golden
+tuple `NOT_EXECUTABLE`/`null`/S1 `MISSING`/S2 `MISSING`/S3 `MISSING`/S4 `PASS`; post-run expected
+`USE`/T1 — **not capped at ADVISORY, unlike v2.K6E, because the S3 arm at `d = 2.0` reads `1.0000 >=
+INERTNESS_FLOOR`** so `score.mjs:568`'s valid-but-inert return is not taken, leaving S4 as the only
+gate to USE and S1 blocking nothing by design; **the new COVERAGE.md row is predicted YES at tier T1
+conditional on (a) the card's own S4 landing PASS and (b) the `≈79%` single-draw event, with a NO
+registered in advance as a possible and non-surprising outcome** (K6A.1.13). House rules mapped, with
+**no rider and no quote-and-correct filed** — the page's own two corrections were already made by the
+operator on the page — and four write-back obligations named, the sharpest being that **this class's
+own coverage rule (a `0.50` threshold read on one calibration draw) turns a true `0.62` into a
+`79/21` coin**, which the page does not anticipate (K6A.1.14). Named-not-done: averaging the
+calibration draw, a longer T2 window, the two moment detectors on the long span, and the unchanged
+out-of-claim items (K6A.1.15). **No endpoint, floor, seed, prediction or verdict in §1–14 or in any
+earlier amendment moves; v2.K6A's `H = 3,000` refutation and `K6 = NO` at the deploy-gate geometry
+both stand; and no artifact was created by this commit.**
+
+## Amendment v2.K6A.2 — 2026-08-08, the build-readiness repair: three missing code items, the lottery rule closed, and a false freshness argument withdrawn
+
+Registered after an independent review of Amendment v2.K6A.1 verdicted **NOT-SOUND for
+build-readiness**, and before any artifact of the K6-slow candidate exists — still no module, card,
+adapter, cell, harness change or run, and none is created here. **Prereg text only, own commit.**
+This amendment corrects v2.K6A.1 by quote-and-correct with the original left intact; **no endpoint,
+floor, seed, prediction or verdict belonging to any candidate moves**, and the gate verdict does not
+move either.
+
+**The review's own finding on the measurement, recorded first because it bounds what this amendment
+is.** The reviewer re-measured the gate independently and **CONFIRMED it**: detection
+`0.6208` (cluster-SE `0.0092`) against v2.K6A.1's `0.6207 ± 0.0091`; median time-to-cross `4,950`
+identical; crosser quartiles `2,400 / 3,450 / 4,650` identical; null-growth screen `0/280`; the
+`H = 3,000` reproduction `0.2435` against v2.K6A.1's `0.250` and v2.K6A's registered
+`0.2493 ± 0.0052`; **every closed form exact.** **Nothing in K6A.1.4–K6A.1.8 re-measures and nothing
+is withdrawn. The NOT-SOUND verdict is about the REGISTRATION's build-readiness, not the gate**, and
+this amendment repairs exactly that.
+
+**Status after this amendment: the build tasks STOP pending the controller's go.** Nothing in
+K6A.2.1's code table is executed here.
+
+### K6A.2.1 Three code items v2.K6A.1's nine-item table MISSED (items 10–12), each verified at HEAD
+
+v2.K6A.1 K6A.1.13 registered nine code changes and asserted they were what a `K6-slow` row requires.
+**Three more are required, and without them the build either fails its own suites or — item 12 —
+runs the WRONG PROBE and still passes.** All line numbers verified against HEAD in this worktree.
+
+| # | file:line | change | what breaks without it |
+|---|---|---|---|
+| **10** | `validation/certification/test/coverage-score.test.mjs:15-16` | the test `'registry: six classes, frozen shape'` asserts `deepEqual(Object.keys(FAULT_CLASSES), ['K1','K2','K3','K4','K5','K6'])`; register its update to the seven-key shape **and its name**, which states "six classes" as a frozen property | **item 1 breaks it immediately** — the deepEqual is exact, so adding `'K6-slow'` fails this assertion |
+| **11** | `validation/certification/test/report-consistency.test.mjs:58-60` | `classIds = Object.keys(FAULT_CLASSES)`; `rows` = COVERAGE.md lines starting `\| <classId> \|`; `assert.equal(rows.length, classIds.length, …)` **for every committed run directory** | **item 1 alone takes `test:cert` from `171/0` to `169/2`** (reviewer-measured), and one of those failures is this assertion **enforcing append-only across eight committed run dirs**: their COVERAGE.md files have six class rows and a seventh class would demand seven. See the RULING below. |
+| **12** | `run-battery.mjs:986` | `const shapeKind = detId === 'shape_block_conformal_bet';` — a **literal detector-id equality**, not a kind test. Register its extension to cover both shape detectors, **with per-detector `W`** | **a silent wrong-probe failure that still reads POWERED** — derived below |
+
+**Item 12's failure mode, named in full, because it is the one that would not announce itself.**
+With `detId = 'shape_ecdf_accumulator'` and the dispatch unextended, `shapeKind` is `false` and
+`pointKind` is `false`, so:
+
+- **No held-out stream is fetched at all** (`:988-993`): the `if (detId === 'family_E_conformal_heldout' || pointKind || shapeKind)` block is skipped, so `ctx.heldoutSeed` and `ctx.shapeCal` are `undefined` — arm 47 would run with **no calibration substrate**, contradicting K6A.1.9's registered `HELDOUT_SEED 20760854` and 100,000-row draw.
+- **The S3 injection falls through to the final ternary branch** (`:1028-1033`):
+  `{ series: injectStep(base.series, { sigma: SIGMA, at: ONSET, delta: 3 }) }` — **a K1-type 3σ mean
+  step, NOT the registered `injectShapeMix` at `d = 2.0`.** A mean shift of `3σ` moves the whole ECDF
+  away from `F̂_A`, so **the arm would read POWERED on the wrong fault class entirely** and S3 would
+  pass on evidence about K1, not about distributional shape.
+- **The emitted provenance would contradict K6A.1.10 verbatim**: `:1073` gives
+  `null_id: arm.phi === 0 ? 'N1' : 'N3-p06'` → **`'N1'`**, and `:1075` gives
+  `params: (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle'` → **`'oracle'`**, against
+  K6A.1.10's registered `null_id: 'K6slow-arm-heldout'`, `params: 'heldout-empirical'`. The S3 twins
+  of both ternaries are `:1132` and `:1134`.
+
+**Registered as the fix, not merely the diagnosis:** the dispatch becomes a **kind test covering both
+shape detectors with a per-detector window length**, because `K6_WINDOW_LEN` is **hardwired to
+`shapeBlockBet.W_K6` at `:103` and asserted `!== 30 → throw` at `:105`**, so a `W = 150` detector
+cannot reuse it. **Downstream sites the extension must carry, as enumerated by the review:**
+`:988-993` (the ctx block), `:1028-1033` (the injection ternary), `:1073`, `:1075`, `:1082`, `:1088`,
+`:1102`, `:1132`, `:1134`, `:1149`, `:1161-1170`, `:1204`.
+
+**THE CONTROLLER'S RULING on item 11, registered as the controller's and not as this document's
+finding.** Quoted:
+
+> repair via the `report_format` gate precedent (the C1.9 pattern, and today's format 4→5) — the
+> K6-slow build bumps `report_format` to 6; the row-count assertion checks the seven-class shape for
+> runs at format `>= 6` and the frozen six-class shape for older formats; committed results are never
+> rewritten.
+
+**The constraint this honors, cited:** `validation/certification/verdict.mjs:322` —
+*"FUTURE RUNS ONLY -- committed COVERAGE.md files are not rewritten."* `report_format` is already the
+registered instrument for exactly this: it is *"the shape of this run's emitted markdown, NOT the
+protocol version"* (`verdict.mjs:64`) and currently reads `5` (`verdict.mjs:76`), having gone `4 → 5`
+at h0-battery Amendment A1 for a comparable shape change. **Registered: `report_format 5 → 6` at the
+K6-slow build, the row-count assertion gated on it, and the eight committed run directories left
+byte-for-byte alone.** The ruling is the controller's; the citations are this document's.
+
+### K6A.2.2 The mix-d2.0 conjunction, stated plainly — and my own report's claim corrected
+
+**Registered, in one sentence, the conjunction v2.K6A.1 left implicit across two sections:**
+**the card's route to `USE` rests on the `mix-d2.0` cell that K6A.1.8 itself rules a boundary artifact
+and NOT evidence of shape sensitivity.** K6A.1.8 registers `mix-d2.0`'s `1.0000` as the `s =
+sqrt(1-d²/4) = 0` two-point degeneracy — *"a boundary artifact and is NOT evidence of shape
+sensitivity"* — and K6A.1.13 registers that this same cell is what makes `s3Powered.length !== 0`, so
+`score.mjs:567`'s valid-but-inert `ADVISORY` return is not taken and S4 becomes the only remaining
+gate to `USE`. **Both statements were registered; their conjunction was not, and it is the
+consequence that matters: without the degenerate cell this card caps at ADVISORY, and with it the
+card's USE — and therefore the class row's YES — is carried by an injection the amendment itself
+declines to call evidence.** Nothing is withdrawn: K6.8's construction is reused verbatim, including
+its honesty clause that no stronger or invented probe is substituted. **What is registered is the
+dependency, so no reader can find it only by intersecting two sections.** K6A.1.12's cell-47 S3 row
+is corrected to carry the note: `1.0000 → POWERED`, **on the `d = 2.0` boundary artifact of K6A.1.8 —
+this cell alone lifts the card off the ADVISORY cap.**
+
+**Quote-and-correct, my own, owned rather than absorbed.** The C49 task-2 report
+(`.superpowers/sdd/2026-08-08-c49-k6-accumulator/task-2-report.md` §6 concern 5) states:
+
+> That is K6.8's registered construction reused verbatim (no stronger probe substituted), but the
+> card's USE consequently rests on a boundary artifact, **which I registered plainly.**
+
+**Correct: it was NOT registered plainly.** The two halves were registered in K6A.1.8 and K6A.1.13
+separately; the conjunction appeared only in the report, which is not a registered artifact. The
+claim that the prereg carried it was wrong, and the sentence above (K6A.2.2, first paragraph) is
+where it becomes registered.
+
+### K6A.2.3 The freshness argument, replaced: exact-seed disjointness holds, "below 1.7e9" is FALSE
+
+**Quoted, v2.K6A.1 K6A.1.3:**
+
+> The three bands above are mutually disjoint,
+> disjoint from all of those, below `1.7e9`, and all `< 2^32`, so the LCG's `seed >>> 0` performs no
+> wrap and the stated band is the band actually used.
+
+**Correct: the band-ordering half of that argument is FALSE and is withdrawn.** Band ordering proves
+nothing about disjointness of the seeds actually drawn, for two reasons the review makes concrete:
+
+- **v2.K6A's own `1.1e9` anchor family climbs straight through all three fresh bands.** Its form is
+  `1.1e9 + {1000003, 7000019, 13000027}·rep` with `rep` to 400, so its raw values reach
+  `≈ 6.3e9` — passing through `[1.30e9, 1.321e9]`, `[1.42e9, 1.441e9]` and `[1.54e9, 1.561e9]` on the
+  way. "Below `1.7e9`" excludes nothing.
+- **Families at or above `1.7e9` wrap `mod 2^32` and re-enter the fresh bands from below.** The
+  `>>> 0` that v2.K6A.1 cited as a *reason* the bands are clean is in fact the mechanism by which a
+  higher family lands inside them.
+
+**What freshness actually rests on, registered as the sole ground:** **exact-seed disjointness,
+established by enumeration.** The reviewer enumerated every seed this probe draws against every prior
+registered and probe family and found **no exact collision** — reported as 1,680 seeds; this
+document's own count is 1,960 (gate `4 offsets × 70 reps × 3 bands = 840`; grid
+`4 cells × 140 reps × 2 bands = 1,120`), the difference being a counting convention over the fourth
+grid cell, which shares the healthy band. **The conclusion is identical either way and it is the
+enumeration, not the band arithmetic, that carries it.**
+
+**And v2.K6A's one-orbit disclosure, restated because K6A.1.3 dropped it.** Quoted, v2.K6A K6A.10:
+
+> **Cluster-robust SEs treat reference draws as independent**, which the single-orbit LCG makes
+> approximately rather than exactly true (K6A.3).
+
+**This still applies to every number in v2.K6A.1.** The registered `rng` is a 32-bit LCG with a
+single full-period orbit, so distinct seeds are **offsets into one sequence**, not independent
+streams; exact-seed disjointness guarantees no two streams *start* at the same point, **not** that
+their consumed segments never overlap. At this probe's consumption a small number of segment overlaps
+among its streams is expected, and the cluster-robust SEs do not model them. **Registered as a
+limitation, not corrected — it is the harness's own generator, and the gate's margin is a factor of
+`1.24` on the floor with an independent replication agreeing to `0.0001`, not a standard error.**
+
+### K6A.2.4 The lottery rule, closed: the gap dispositioned, a mirror rule for YES, and the sd corrected
+
+**(a) The self-contradiction, quoted and resolved.** v2.K6A.1 K6A.1.7 says:
+
+> **Registered: a canonical reading in `[0.333, 0.848]` CONFIRMS this gate** […] The gate is falsified
+> by a reading **outside** the band — below `0.333` or above `0.958` […]
+
+A reading in `(0.848, 0.958]` is simultaneously "outside the band" (falsifies) and not "above
+`0.958`" (does not falsify). **Corrected by separating two objects v2.K6A.1 conflated, and the rule
+below is registered IDENTICALLY here and in the correction to K6A.1.12:**
+
+```
+PREDICTION BAND (what to expect, 90% central):        [0.333, 0.848]
+CONSISTENCY INTERVAL (what confirms the gate):        [0.333, 0.958]
+FALSIFIED:                                            < 0.333  or  > 0.958
+DISPOSITION OF (0.848, 0.958]:  CONSISTENT with the gate — an upper-tail calibration draw,
+   inside the 280-draw observed support (whose maximum was 0.958). NOT a falsification, and
+   NOT to be reported as one.
+```
+
+`0.958` is the **observed maximum over the 280 draws**, so a reading above it is the surprise that
+warrants investigation; `0.848` is merely p95. **Registered rationale: the band answers "what will
+the run read?", the interval answers "what would refute the gate?", and they are not the same
+question.**
+
+**(b) The MIRROR rule for YES, which v2.K6A.1 registered only in the NO direction.** K6A.1.7 required
+a single-draw NO to be reported as *"class NO at this calibration draw"* rather than as a
+falsification. **The symmetric obligation is registered here: a single-draw YES is reported as
+"class K6-slow YES at this calibration draw; gate `P(YES) ≈ 0.79`" and NEVER as a settled class
+answer.** A YES at `p50 ≈ 0.625` is the same coin landing the other way; the asymmetry in
+v2.K6A.1 — caveating only the outcome that would disappoint — is exactly the direction a reader
+should distrust, and it is corrected.
+
+**(c) The per-draw sd, corrected by deconvolution; the "factor of 14" mixed two different `n`.**
+Quoted, K6A.1.7:
+
+> the per-draw sd is `0.1527` against a within-draw binomial noise of
+> `sqrt(0.62·0.38/2000) = 0.0109`, a factor of `14`
+
+**Correct: those two numbers come from different trajectory counts and are not comparable as
+written.** `0.1527` is the sd of 280 draw-means each computed from `TJ = 72` trajectories, so it
+**already contains** within-draw binomial noise at `n = 72` (`sqrt(0.6207·0.3793/72) = 0.0572`);
+`0.0109` is binomial noise at `n = 2000`. Deconvolving:
+
+```
+observed sd of draw means (TJ=72)      0.1527
+within-draw binomial at n=72           0.0572
+TRUE calibration-draw sd               sqrt(0.1527^2 - 0.0572^2) = 0.1416
+run's binomial noise at n=2000         0.0108
+correct ratio                          0.1416 / 0.0108 = 13.0
+```
+
+**Registered: the calibration-draw sd is `0.1416`** (the review's `≈ 0.143` agrees to rounding),
+**and the correct statement of dominance is a factor of `13.0`, not `14`.** The qualitative
+conclusion is unchanged and the direction of the correction is against this document's own
+convenience.
+
+**Consequent band correction, stated with which interval is operative.** Scaling the observed central
+interval by `0.1416/0.1527 = 0.9272` about the mean gives a run-predictive band of
+**`[0.354, 0.831]`**; `P(detection < 0.50)` falls from the empirical `21.4%` (at `TJ = 72`) to
+**`≈ 19.6%`** on the deconvolved sd, so `P(YES) ≈ 0.79`–`0.80`. **Registered: the operative band
+stays the empirical `[0.333, 0.848]` and the consistency interval `[0.333, 0.958]`, both of which are
+CONSERVATIVE (wider than the run's predictive band by the `TJ = 72` measurement noise), and the
+operative `P(YES)` stays `≈ 0.79`, the lower of the two** — a wider band cannot manufacture a
+confirmation and the lower `P(YES)` cannot oversell the class. The deconvolved figures are registered
+as the correct measures of calibration spread; the conservative ones remain the test.
+
+### K6A.2.5 Citation corrections, and two under-scoped code items
+
+**Five citations in v2.K6A.1 are wrong or imprecise; corrected against HEAD, originals intact. No
+claim they support moves.**
+
+| v2.K6A.1 said | correct at HEAD | what is actually there |
+|---|---|---|
+| `parseSeverity` at `:343-359` (item 4) | **`:342-355`, the throw at `:354`** | `function parseSeverity` opens `:342`; `case 'K6'` `:351`; `throw new Error(… §2's grammar)` `:354` |
+| `score.mjs:568` (valid-but-inert `ADVISORY`) | **`score.mjs:567`** | `return done('ADVISORY', minTier(s2Supporting.map((c) => c.__tier)));` |
+| `score.mjs:578-585` (S4 gate) | **REFUSE at `:576`, the `USE` return at `:587`** | `if (s4.status === 'REFUSE')` `:576`; `return done('USE', tier)` `:587` |
+| `verdict.mjs:249` (the class-YES rule) | **`validation/certification/verdict.mjs:272`** — **not** `lib/` | inside `classRow(classId)` (`:270`): `.filter((o) => o.overall.verdict === 'USE' && o.coverage[classId].status === 'COVERED')` |
+
+**Items 7 and 8 were under-scoped.** v2.K6A.1 cited `HELDOUT_ROWS` at `:84` and `:293` only.
+**`HELDOUT_ROWS` is read at nine further sites, every one of which a per-class substrate size must
+carry:** `:644`, `:648`, `:652` (the draw itself, including the `FORCE_HELDOUT_LATTICE` control
+path), `:913`, `:925`, `:966` (per-cell `c.heldout_rows` emission), `:1164`, `:1165` (the arm's S2/S3
+`heldout_rows`), and **`:1272`, the run manifest's own provenance string**, which would otherwise
+state `10000` for a 100,000-row draw and put a false constant in the emitted record.
+
+**And one mechanism v2.K6A.1 did not register at all: arms are keyed by `hint`, not by class.**
+`:979` reads `for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint)))`, so arm 47
+must carry `hint: 'K6-slow'` to be selected under `--classes K6-slow`, **and its scenario span comes
+from the module-level `T`/`ONSET` at `:1013-1018`, not from the fault-cell path.** **Registered: arm
+47's long span (`T = 6,300`, `ONSET = 300`) must be wired through the ARM path explicitly** — item 7's
+per-class span is necessary but not sufficient, because the arm loop reads the scalars directly.
+
+### K6A.2.6 T2 addendum: the null law shifts at m = 45, so T1's number must not be carried across
+
+v2.K6A.1 K6A.1.11 registered T2's `m = 45` and K6A.1.12 registered the T1 arm's
+`increment_estimator.mean` prediction of `0.9914` (exact `E[e|null] = 0.991433` at `m = 500`).
+**The T2 arm's `m` is 45, where the discrete null law is materially different, and v2.K6A.1
+registered no T2 counterpart — so the T1 figure could be carried across by default. Closed here:**
+
+| quantity, at `κ = 0.6820` | T1, `m = 500` | **T2, `m = 45`** |
+|---|---|---|
+| `E[log p \| null]` | `-0.991961` | **`-0.938368`** |
+| `E[e \| null]` — the `increment_estimator.mean` prediction | `0.991433` | **`0.960274`** |
+| mean `p` | `0.500998` | `0.510870` |
+
+**Registered T2 prediction: `t2` increment mean `0.960274`, band `[0.94, 0.98]`; the T1 value
+`0.9914` is NOT the T2 expectation and a T2 reading near `0.99` would indicate the wrong `m` was
+used.** Reported with no verdict authority, as K6.7/K6.12's caveat requires; the T2 verdict stays
+`t2_crossing_rate`-derived, predicted `0.0000` (K6A.1.11).
+
+**One correction in the review's own direction, because this document pins numbers.** The review
+gives `E[log p|null] = -0.938375` at `m = 45`. **The exact value is `-0.938368`**
+(`(log((m+1)!) − (m+1)·log(m+1))/(m+1)`, computed two independent ways — `lgamma(47)` and a
+Kahan-summed `Σ log k` — agreeing to nine decimals at `-0.938368026`). The review's figure differs in
+the sixth significant figure. **No endpoint moves; the `E[e|null]` prediction above is unaffected**,
+and the correction is registered only because a pinned number should be right.
+
+**The review's two higher readings, recorded as replications rather than as disagreements.** The
+reviewer measured healthy `6,000`-tick paging at **`0.0206`** against v2.K6A.1's `0.0181 ± 0.0014`
+(both `<= α = 0.05`, `1.8` SE apart), and characterized the T1 conditional false-fire rate as
+**"a few percent, quantization-dominated"** against v2.K6A.1's `3.9%`. **Registered: both replicate.**
+The quantization point is adopted and is worth stating, since v2.K6A.1 quoted `3.9%` to two
+significant figures: the Wilson lower bound at `n = 2000` moves in steps of one crossing
+(`1/2000 = 5e-4`), so the count of draws on either side of the threshold is granular and **`3.9%`
+should be read as "a few percent", not as a two-figure rate.** The registered stop condition and its
+reporting rule (K6A.1.10 — a fired paging bound must be reported with the null-growth screen's
+reading beside it) are unchanged.
+
+### K6A.2.7 House rules, mapped
+
+(1) **Committed before any artifact it authorizes** — nothing of K6-slow exists at this commit, and
+**the build tasks of K6A.1.13 + K6A.2.1 items 10–12 STOP here pending the controller's go.** (2) A
+failed endpoint is a publishable result; nothing above moves afterward. (3) No post-hoc analysis: no
+run exists, and **this amendment re-measures nothing** — every number in it is either quoted from
+v2.K6A.1, quoted from the review, or arithmetic on v2.K6A.1's already-registered sample (the
+deconvolution of K6A.2.4c and the `m = 45` null law of K6A.2.6, both closed-form). (4)–(6) Moot: no
+new cell, seed, fallback or result is registered. (7) **Quote-and-correct for text, which is what
+K6A.2.2, K6A.2.3, K6A.2.4 and K6A.2.5 do**, each with the original quoted and left intact —
+including a correction to **this author's own task report** (K6A.2.2) and one to **the review's own
+arithmetic** (K6A.2.6). (8) Every endpoint's number and verdict stand as K6A.1.12 registers them,
+with the two corrections named above.
+
+**Write-back obligations, unchanged from v2.K6A.1 K6A.1.14 and still NOT done here**, plus one added:
+that the `report_format` gate is now the registered mechanism by which a new fault class enters
+COVERAGE.md without rewriting committed results.
+
+### Amendment summary
+
+Registers the **build-readiness repair** of Amendment v2.K6A.1 after an independent review verdicted
+it **NOT-SOUND for build-readiness while CONFIRMING the gate measurement itself** (reviewer's own MC:
+detection `0.6208` cluster-SE `0.0092`, median `4,950`, crosser quartiles identical, screen `0/280`,
+`H = 3,000` reproduction `0.2435`, every closed form exact). **Nothing re-measures; no endpoint,
+floor, seed, prediction or verdict moves; the gate verdict PASS stands; and the build tasks STOP here
+pending the controller's go.** Adds **three code items v2.K6A.1's nine-item table missed**, verified
+at HEAD (K6A.2.1): **item 10**, `coverage-score.test.mjs:15-16`'s `deepEqual` on the six-key
+`FAULT_CLASSES` shape, which item 1 breaks immediately, name included; **item 11**,
+`report-consistency.test.mjs:58-60`'s per-run-directory assertion that every committed COVERAGE.md
+has exactly `Object.keys(FAULT_CLASSES).length` class rows — reviewer-measured to take `test:cert`
+from `171/0` to **`169/2`** on item 1 alone, one failure **enforcing append-only across eight
+committed run dirs** — carrying **the CONTROLLER'S RULING**, quoted as the controller's: repair by the
+`report_format` gate precedent (the C1.9 pattern and today's `4 → 5`), **`report_format 5 → 6` at the
+K6-slow build, the row-count assertion checking the seven-class shape at format `>= 6` and the frozen
+six-class shape below it, committed results never rewritten** — honoring
+`verdict.mjs:322`'s *"FUTURE RUNS ONLY -- committed COVERAGE.md files are not rewritten"* and using
+the field `verdict.mjs:64` already defines as emitted-markdown shape rather than protocol version;
+and **item 12**, `run-battery.mjs:986`'s literal `detId === 'shape_block_conformal_bet'`, whose
+**silent wrong-probe failure mode is named in full**: unextended, arm 47 fetches **no held-out
+stream** (`:988-993`), its S3 injection **falls through to `injectStep` at `delta = 3`**
+(`:1028-1033`) — a K1-type mean step, not the registered `d = 2.0` shape mix — which an ECDF feature
+**still reads POWERED**, while `:1073`/`:1075` emit `null_id 'N1'` and `params 'oracle'`
+contradicting K6A.1.10's registered `'K6slow-arm-heldout'`/`'heldout-empirical'`; the fix is
+registered as a **kind test over both shape detectors with per-detector `W`**, since `K6_WINDOW_LEN`
+is hardwired to `W_K6` at `:103` and asserted `!== 30 → throw` at `:105`, with the downstream sites
+enumerated (`:988-993, :1028-1033, :1073, :1075, :1082, :1088, :1102, :1132, :1134, :1149,
+:1161-1170, :1204`). States **in one plain sentence the conjunction v2.K6A.1 left implicit across two
+sections — the card's route to `USE` rests on the `mix-d2.0` cell that K6A.1.8 itself rules a boundary
+artifact and not evidence of shape sensitivity** — cross-referencing both, adding the artifact note to
+K6A.1.12's cell-47 S3 row, and **correcting this author's own task report by quote-and-correct for
+claiming the conjunction was already registered plainly, which it was not** (K6A.2.2). **Withdraws a
+FALSE freshness argument**: v2.K6A.1's "below `1.7e9`" band-ordering claim is quoted and withdrawn,
+because v2.K6A's own `1.1e9` anchor family climbs through all three fresh bands (raw values to
+`≈ 6.3e9`) and families `>= 1.7e9` wrap `mod 2^32` back into them — **the `>>> 0` cited as a reason
+the bands were clean is the mechanism by which they are not**; freshness rests **solely on exact-seed
+disjointness by enumeration** (no collision; 1,680 seeds by the review's count, 1,960 by this
+document's, a counting convention over the fourth grid cell, same conclusion), and **v2.K6A's
+one-orbit disclosure — dropped in K6A.1.3 — is restated: distinct seeds are offsets into ONE
+full-period orbit, so exact disjointness bounds start points, not segment overlap** (K6A.2.3). Closes
+**three gaps in the lottery rule** (K6A.2.4): the self-contradiction between "outside the band" and
+the glossed bounds is resolved by separating **prediction band `[0.333, 0.848]`** from **consistency
+interval `[0.333, 0.958]`**, with `(0.848, 0.958]` **explicitly dispositioned as CONSISTENT** — an
+upper-tail draw inside the 280-draw observed support whose maximum was `0.958` — and the rule stated
+identically in both sections; a **MIRROR rule for YES** is added, since v2.K6A.1 caveated only the
+disappointing outcome (**a single-draw YES reads "class YES at this calibration draw; gate
+`P(YES) ≈ 0.79`", never as settled**); and the **per-draw sd is corrected by deconvolution** — the
+quoted "factor of `14`" compared an sd of `TJ = 72` draw-means against binomial noise at `n = 2000`,
+two different `n`; the **true calibration-draw sd is `0.1416`** (`sqrt(0.1527² − 0.0572²)`, the
+review's `≈ 0.143` to rounding) and the correct dominance ratio is **`13.0`**, implying a
+run-predictive band `[0.354, 0.831]` and `P(detection < 0.50) ≈ 19.6%`, **with the conservative
+empirical band `[0.333, 0.848]` and `P(YES) ≈ 0.79` kept operative** because a wider band cannot
+manufacture a confirmation. Corrects **five citations** against HEAD — `parseSeverity`
+`:343-359 → :342-355` with the throw at `:354`; `score.mjs:568 → :567`; `score.mjs:578-585 →` REFUSE
+`:576` and the `USE` return `:587`; `verdict.mjs:249 → validation/certification/verdict.mjs:272`,
+**not** `lib/` — and **re-scopes items 7 and 8**, which cited `HELDOUT_ROWS` at `:84`/`:293` only,
+against its nine further sites (`:644, :648, :652, :913, :925, :966, :1164, :1165`, and **`:1272`,
+the run manifest's provenance string**, which would otherwise record `10000` for a `100,000`-row
+draw), plus one mechanism v2.K6A.1 never registered: **arms are keyed by `hint` (`:979`) and the arm
+loop reads the module-level `T`/`ONSET` directly (`:1013-1018`), so arm 47 needs `hint: 'K6-slow'`
+AND its long span wired through the ARM path — item 7 is necessary but not sufficient** (K6A.2.5).
+Adds the **T2 addendum**: at `m = 45` the discrete null law shifts, so T1's `0.9914` must not be
+carried across — **registered T2 `increment_estimator.mean` prediction `0.960274`, band
+`[0.94, 0.98]`, with a reading near `0.99` indicating the wrong `m`** — and, **correcting the review
+in its own direction because this document pins numbers, `E[log p|null]` at `m = 45` is
+`-0.938368` and not the review's `-0.938375`** (two independent computations agreeing to nine
+decimals at `-0.938368026`; no endpoint moves). Records the review's **two higher readings as
+replications**: healthy paging `0.0206` vs `0.0181 ± 0.0014` (both `<= α`, `1.8` SE apart) and the T1
+conditional false-fire rate as **"a few percent, quantization-dominated"**, whose quantization point
+is **adopted** — the Wilson bound at `n = 2000` moves in `5e-4` steps, so v2.K6A.1's `3.9%` is to be
+read as "a few percent" and not as a two-figure rate (K6A.2.6). **The gate verdict, the frozen
+configuration, the H = 6,000 PASS, v2.K6A's H = 3,000 refutation and `K6 = NO` at the deploy-gate
+geometry all stand unchanged; no artifact was created; and the build does not start until the
+controller says so.**
+
+---
+
+## Amendment v2.K6A.3 — 2026-08-08, the micro-amendment rider: the null-growth screen gets a registered DRIVER, `class_spans` is named as an A8 extension, arm 47's S3 saturation is registered as mechanism, and four cosmetic defects in v2.K6A.2 are corrected
+
+Registered after an independent review of the C49 build (task-4 spec PASS, quality APPROVED; the
+invariance proof independently reproduced to identical digests) found **three things the build
+depends on that no amendment registers**, and after a re-review of v2.K6A.2 itself found **four
+cosmetic defects**. **Prereg text only, own commit, before the code it authorizes.** Nothing here
+re-measures anything. **No endpoint, band, floor, seed, prediction or verdict of any candidate
+moves**, the H = 6,000 gate verdict PASS stands, v2.K6A's H = 3,000 refutation stands, and
+`K6 = NO` at the deploy-gate geometry stands.
+
+**What this rider is NOT.** It does not relax the stop conditions of K6A.1.10, does not change the
+frozen configuration of K6A.1.2, and does not touch K6.12's T2 construction. K6A.3.1 registers the
+*driver* for a check K6A.1.10 already registered as mandatory; K6A.3.2 names a manifest field the
+build already emits; K6A.3.3 states a mechanism that makes an already-registered dependency worse,
+not better.
+
+### K6A.3.1 THE NULL-GROWTH SCREEN DRIVER — registered, because the check was mandatory and nothing called it
+
+**The gap, stated exactly.** K6A.1.10 registers the null-growth screen as **registered stop
+condition (2)**, quoted:
+
+> **if `>= 1` of `250` fresh calibration draws at the frozen `κ = 0.6820` has positive null growth
+> `log κ + (1-κ)·E[-log p|null,S] > 0`, STOP, investigate, do not run.**
+
+and adds, quoted: *"This screen is run on fresh draws at run time, not inherited from this
+amendment — that is what makes it a stop condition rather than a citation."* K6A.1.10 further binds
+the screen to the OTHER stop condition's reporting: *"a fired T1 stop condition must therefore be
+reported with the null-growth screen's reading beside it."*
+
+**The module exports `nullGrowthScreen` (C49 task 3) and NOTHING CALLS IT.** No item of K6A.1.13's
+nine-item table and no item of K6A.2.1's three name a driver, so the build wired every other
+registered mechanism and left the run-time stop condition unexecuted. **A stop condition with no
+caller is a citation, which is precisely what K6A.1.10 said it must not be.** Registered here, in
+full, as the thirteenth code item of this build.
+
+**Placement.** In `run-battery.mjs`, the driver runs **after `assertRegistryAgreement()` and after
+`--classes` is resolved, and BEFORE the first trajectory of any cell of any class is generated.** It
+runs **if and only if `K6-slow` is in `CLASSES_RUN`** — the screen is a property of this
+construction's calibrator, so it is neither run nor reported for a scope that contains no K6-slow
+cell. Ordering is registered, not incidental: the screen exists to stop a run before it reads an
+endpoint.
+
+**The screen's own construction, per draw `S`.** `g_null(S) = log κ + (1-κ)·Ê[-log p | null, S]`,
+the estimator K6A.1.5 registers verbatim, at the frozen `κ = 0.6820`, with `S` a **fresh** 100,000-row
+calibration draw at the registered geometry (`W = 150`, `n_A = 25,000`, `m = 500`) and each MC term a
+**fresh independent length-150 null window** scored against `S`. Draws are at `φ = 0`.
+
+```
+SCREEN_DRAWS               = 250        K6A.1.10's own number ("250 fresh calibration draws")
+SCREEN_MC_WINDOWS          = 8000       null windows per draw; the precision derivation below
+draw substrate             = 100,000 rows, ONE continuously-advanced stream (C1.2's form)
+kappa                      = 0.6820     the frozen literal; NOT re-derived here or anywhere
+STOP if                    #{d : g_null(S_d) > 0} >= 1
+```
+
+**Why `M = 8,000` and not a round smaller number — the screen's own false-fire rate, bounded before
+it can fire.** `Ê[-log p|null,S]` is an MC mean, so `g_null` carries MC noise of
+`(1-κ)·sd(-log p)/sqrt(M)`. Under the exact discrete null law at `m = 500`, `sd(-log p) = 0.975005`
+(computed from `-log(k/501)`, `k = 1..501`, the same law whose mean `0.991961` K6A.1.5 already
+registers; the same computation gives `g_null = -0.067282` at the exact mean, reproducing
+K6A.1.5's measured per-draw mean `-6.754e-2`). So:
+
+| `M` | MC SE on `g_null` | worst registered draw (`-1.501e-2`, K6A.1.5) in SE |
+|---|---|---|
+| 200 | `0.021924` | `0.68` — **unusable: MC noise alone exceeds the margin** |
+| 1,000 | `0.009805` | `1.53` |
+| 2,000 | `0.006933` | `2.17` |
+| 4,000 | `0.004902` | `3.06` |
+| **8,000** | **`0.003466`** | **`4.33`** |
+
+**Registered: `M = 8,000`, because the screen must not fire on its own noise.** At `M = 8,000` the
+worst draw K6A.1.5 measured sits `4.33` MC-SE below zero, so a clean draw's chance of a spurious
+positive is `≈ 7e-6`, and across 250 draws the screen's **false-STOP rate is `≈ 0.2%`** — stated up
+front, the same discipline K6A.1.10 applied to the paging bound's own `≈ 4%` lottery. **A screen
+whose false-fire rate is not bounded is not evidence either way, and `M = 200` would have made this
+falsifier fire more often on noise than on a defect.**
+
+**Seeds — a registered fresh band, disjoint by enumeration.** Freshness rests on exact-seed
+disjointness (K6A.2.3's sole registered ground; the band-ordering argument is withdrawn and is not
+re-used here):
+
+```
+calibration draws   seed(d)    = 41,000,000 + d                      d = 0..249
+MC null windows     seed(d, j) = 42,000,000 + 10,000*d + j           j = 0..M-1, M <= 10,000
+```
+
+Both ranges are contiguous and enumerable: `[41000000, 41000249]` and, at `M = 8,000`,
+`[42000000, 44497999]` — `2,000,250` seeds, mutually disjoint. **The maximum seed any registered
+stream of this study starts at is `37,033,479`** (arm 30's K2 matrix, `CELL_SEED 20260837 +
+7919*1999 + 104729*9`; the next highest is arm 47's own trajectory maximum `36,090,935`, and the
+highest `HELDOUT_SEED` is `20,760,855`). **Every screen seed exceeds `37,033,479`, so exact-seed
+disjointness from every registered seed of this study holds by the bound and is checkable by
+arithmetic rather than by trust.** All screen seeds are `< 2^32`, so `seed >>> 0` performs no wrap on
+them — **stated as a fact about the seeds, NOT as a freshness argument** (K6A.2.3 withdrew that
+inference). **The one-orbit limitation K6A.2.3 registered applies here unchanged and is inherited,
+not re-argued:** distinct seeds are offsets into ONE full-period LCG orbit, so disjoint start points
+do not guarantee disjoint consumed segments, and the probe families of v2.K6A/v2.K6A.1 are not
+archived at seed level in this document. **Disclosed, not corrected** — it is the harness's own
+generator, and the screen is a validity check on the calibrator rather than an endpoint.
+
+**Wiring of the outcome — both branches registered.**
+
+- **FAILED screen (`>= 1` positive draw): the run ABORTS before any registered endpoint is read.**
+  No `summary.json`, no cell, no manifest, no trajectory of any class generated. The harness writes a
+  **screen-failure record** to `<results-root>/screen-failed/screen-<stamp>.json` — deliberately
+  **outside `live/` and `sim/`**, because `loadEvidence` enumerates *every* directory under
+  `validation/*/results/live/` (`collect.mjs:320-324`) and a failure record inside it would be
+  reported as a skipped run forever. The record carries: the per-draw `g_null` readings, the seeds
+  that produced them, the positive draws named individually, `draws`, `mc_windows_per_draw`, `kappa`,
+  the geometry, `classes_run`, `git_sha`, `engine_pin`, `node`, and the `screen_mode` below. The
+  harness then exits non-zero. **A failed screen is a publishable result (§0 rule 2) and REFUTES
+  `shape_ecdf_accumulator` on the record** (K6A.1.10: "A fired stop condition on either tier
+  REFUTES `shape_ecdf_accumulator` on the record"); the record is the artifact that makes it
+  citable.
+- **PASSED screen: the reading is recorded in two places, and neither is optional.** (1) the run
+  manifest gains `null_growth_screen` — `{draws, mc_windows_per_draw, positive, kappa, seed_bands,
+  g_null: {mean, sd, max, p99}, screen_mode}` — present as `null` on any run whose scope contains no
+  K6-slow cell, so a consumer can distinguish "screened and passed" from "not applicable" without
+  reading the class list; and (2) **cell 47's S2 row carries `null_growth_screen: {draws, positive,
+  g_null_max}`**, which is what makes K6A.1.10's reporting obligation mechanical rather than a
+  reader's duty: the paging bound and the screen's reading are then on the same row, so
+  screen-clean-plus-paging-fired (the lottery's signature) cannot be reported as a construction
+  defect by omission.
+
+**The smoke path, registered so it cannot be mistaken for the stop condition.** A run at the
+registered `n = 2000` with no test hook engaged — the only run that may write to `results/live` —
+**must screen at `250 × 8,000` and may not override either number**; the harness refuses
+`--screen-draws`/`--screen-mc` at `n === REGISTERED_N`. Every other run (`n != 2000`, or any hook
+engaged: `MODE = 'sim'`) screens at a reduced **`SCREEN_DRAWS_SMOKE = 5`, `SCREEN_MC_WINDOWS_SMOKE =
+200`**, overridable by those two flags, and records `screen_mode: 'smoke'` in the manifest.
+**Registered reading: a smoke screen is a WIRING CHECK and is not the registered stop condition** —
+at `M = 200` its MC noise (`0.0219`) exceeds the margin it would be testing, which is exactly why
+the registered path is not allowed to use it. The manifest's existing `smoke` flag and `results/sim`
+routing already prevent such a run from being evidence.
+
+**Cost, measured on the build machine rather than estimated:** `21 ms` per 100,000-row calibration
+and `22.5 µs` per scored window, so the registered screen is `≈ 5 s + 45 s ≈ 50 s`, against `≈ 21 s`
+for the K6-slow battery itself. **The stop condition costs more than the measurement it guards, and
+that is accepted rather than optimized away**: the alternative registered in the table above is a
+falsifier that fires on noise.
+
+**Boundary, named because it is a real limit of what this screens.** The screen runs on `φ = 0`
+draws only. Cell 46 (`mix-d1.5-ar1`, `φ = 0.6`) has its own calibration draw, and **that draw is not
+screened** — K6A.1.10 registers ONE screen and K6A.1.5 measured ONE law (`φ = 0`), and screening a
+second law would be a new measurement this rider is not entitled to register. **Disclosed: a
+positive-null-growth defect confined to the `φ = 0.6` calibrator would pass this screen.**
+
+**Mutation obligations for the implementing task** (house rule 7's discipline, stated so the driver
+cannot be wired inertly): removing the driver must fail a test; inverting the stop comparison
+(`> 0` → `< 0`) must fail a test; and a **positive control** — a synthetic calibration draw
+constructed to have positive null growth — must trip the abort, produce the failure record, and
+leave no `summary.json`. Without the positive control, a screen that cannot fire is
+indistinguishable from a screen that never fires.
+
+### K6A.3.2 `manifest.class_spans` — named as an A8 additive extension, with the consumer rule
+
+The C49 build emits a manifest field A8's registered field list does not name. Registered here
+rather than left as an unregistered addition in a task report.
+
+**The field.** `class_spans: { default: {ticks, onset}, 'K6-slow': {ticks, onset, windows,
+window_len, window_span} }`.
+
+**Why it exists.** K6A.1.9 makes the scenario span per class. `manifest.ticks`/`manifest.onset` are
+A8-registered scalars, and on a run whose scope includes K6-slow cells they describe only the
+deploy-gate classes — **a manifest reading `ticks: 300` for a run containing 6,300-tick cells states
+a false constant about its own run, which is the identical defect K6A.2.5 named at the
+`HELDOUT_ROWS` provenance site.**
+
+**The precedent this follows, cited.** `supersedes` entered the manifest the same way: Amendment
+v2.C1 (C1.6) registered it in one line as *"an A8 field-list extension"*
+(`validation/coverage/PREREGISTRATION.md:3421`), with the mechanism, the consumer and the inertness
+on the existing corpus all stated. **`class_spans` is registered on that precedent: additive, never
+replacing a registered field, and inert for any consumer that does not read it.**
+
+**The consumer rule, registered so two fields cannot disagree about the same run.**
+
+- **`ticks`/`onset` keep A8's registered meaning and their registered values (`300`/`100`).** They
+  are the deploy-gate scenario, which every class but K6-slow still runs at. They are NOT redefined
+  and NOT made per class.
+- **A consumer that needs a cell's span reads `class_spans`, keyed by the cell's own
+  `fault_class`** — or, for an arm, by the class its `hint` names — **and falls back to
+  `class_spans.default`.** Every emitted cell also carries its own `ticks`/`onset`, and those are
+  authoritative for that cell.
+- **`class_spans` is always present** (both entries, always true statements of the registered
+  design), so it does not vary with run scope and no consumer must branch on the class list.
+
+**Registered consequence, disclosed:** the eight committed certification run directories and every
+committed coverage run manifest predate this field and are **not rewritten** — the same append-only
+rule the `report_format` gate honours (K6A.2.1's ruling). A manifest without `class_spans` is a
+pre-K6-slow run, and its `ticks`/`onset` describe it completely.
+
+### K6A.3.3 ARM 47'S S3 SATURATION, registered as MECHANISM — one level beyond K6A.2.2
+
+K6A.2.2 registered, in one sentence, that **the card's route to `USE` rests on the `mix-d2.0` cell
+that K6A.1.8 itself rules a boundary artifact and NOT evidence of shape sensitivity.** The C49 build
+**measured the mechanism underneath that sentence, and it is worse than the sentence says.**
+
+**The arithmetic, and it is arithmetic rather than an observation.** At `d = 2.0` the mixture's
+component sd is `s = sqrt(1 - d²/4) = 0` exactly, so `injectShapeMix` emits a two-point `±1σ` law
+(K6A.1.8's own reading). Every live window's energy distance against `F̂_A` then exceeds
+`max_j T(B_j)`, so the tie-inclusive rank returns the floor `p = 1/(m+1) = 1/501` at **every one of
+the 40 windows**, and the wealth path is a CONSTANT independent of the data:
+
+```
+e            = kappa * p^(kappa-1) = 0.682 * 501^0.318 = 4.924167       (every window)
+wealth(40)   = e^40               = 4.9352693425143e+27                (every trajectory)
+```
+
+**A `3σ` mean step saturates the same rank.** The energy feature reads a mean-shifted window as
+extreme too (live `~N(3,1)` against `F̂_A` of `N(0,1)`: `T ≈ 4.87` against a reference maximum
+`≈ 1.17`), so it also returns `p = 1/501` at every window and the identical wealth. **Measured on
+the build: substituting `injectStep(delta = 3)` for the registered `injectShapeMix(d = 2.0)` on
+arm 47 leaves the emitted S3 row BIT-IDENTICAL** — `detection_rate 1`, `fires` unchanged,
+`final_wealth_mean 4.935269342514303e+27`, `verdict POWERED`, `null_id` and `params` unchanged.
+
+**REGISTERED, plainly: arm 47's S3 `POWERED` carries no information about WHICH fault produced it.**
+The row is a saturated rank, and a saturated rank is compatible with a distributional shape change,
+a mean step, and any other perturbation that leaves every window outside the reference support.
+**This is one level beyond K6A.2.2**: that section registered a *cell*-level dependency (the class's
+`USE` route runs through a severity the amendment declines to call evidence of shape sensitivity);
+this section registers that **the ARM row — the candidate's own S3 power evidence, the row that makes
+`s3Powered` non-empty and lifts the card off `score.mjs:567`'s valid-but-inert `ADVISORY` cap — is
+itself uninformative about its own fault class.** Cross-reference K6A.2.2 in both directions: the
+conjunction it registered stands, and this is the mechanism that makes it bind on the arm as well as
+on cell 45.
+
+**Three consequences, registered, and none of them a repair.**
+
+1. **The card must carry this.** The `shape_ecdf_accumulator` claim card states the dependency in its
+   own notes: the route past the ADVISORY cap runs through a row that cannot evidence its own fault
+   class. A reader must not have to intersect an amendment and a task report to find it.
+2. **No behavioural test can guard the arm's injection kind, and the build's structural test is
+   registered as the substitute.** The kill for an arm-47 injection substitution is a source-level
+   assertion on the dispatch (the C49 build's own choice, adopted here), because every emitted field
+   is invariant to the substitution. **The behavioural kill lives on cell 44 (`mix-d1.5`), which is
+   NOT saturated** and whose reading an independent reconstruction pins exactly.
+3. **What would restore an informative S3 arm is named and NOT done.** An arm at a non-degenerate
+   severity — `d = 1.5`, the class canonical, where the wealth path is data-dependent — would carry
+   shape information, and its registered power would be the canonical `≈ 0.62` rather than `1.0000`.
+   **Changing the S3 arm's severity is a protocol change and not this rider's call** (the same ruling
+   K6E.9 made about which field carries an S2 verdict), and K6.8's construction is reused verbatim
+   throughout this class precisely so that no stronger or invented probe is substituted. **Named as
+   not-done, with its cost: the S3 arm as registered proves the module fires, not what it fires on.**
+
+### K6A.3.4 Four cosmetic defects in v2.K6A.2, corrected by quote-and-correct
+
+Originals quoted and left intact. **No claim any of them supports moves.**
+
+**(a) "registered IDENTICALLY here and in the correction to K6A.1.12" — the duplication does not
+exist.** Quoted, K6A.2.4(a):
+
+> **Corrected by separating two objects v2.K6A.1 conflated, and the rule below is registered
+> IDENTICALLY here and in the correction to K6A.1.12:**
+
+and the amendment summary repeats it as *"the rule stated identically in both sections"*.
+**Correct: the rule's text appears ONCE, in K6A.2.4(a)'s block.** K6A.1.12's cell-44 row was written
+before it and is not restated. **Registered wording, replacing the claim: K6A.2.4(a)'s block is the
+SINGLE registered statement of the band/interval/disposition rule, and it GOVERNS K6A.1.12's cell-44
+row.** One statement governing two sections is what was meant; two identical statements is what was
+written, and a reader who went looking for the second copy would not find it. The rule itself —
+prediction band `[0.333, 0.848]`, consistency interval `[0.333, 0.958]`, `(0.848, 0.958]` CONSISTENT,
+falsified below `0.333` or above `0.958` — is unchanged.
+
+**(b) "sixth significant figure" is the fifth.** Quoted, K6A.2.6:
+
+> The review's figure differs in the sixth significant figure.
+
+**Correct: the fifth.** `-0.938368` against the review's `-0.938375`: the significant digits are
+`9,3,8,3,6,8` and `9,3,8,3,7,5`, which first differ at position **5**. The exact value
+`-0.938368026` and the conclusion that no endpoint moves are unchanged.
+
+**(c) The review's own false-fire count was omitted, and it is recorded here beside v2.K6A.1's.**
+Quoted, K6A.2.6:
+
+> characterized the T1 conditional false-fire rate as **"a few percent, quantization-dominated"**
+> against v2.K6A.1's `3.9%`. **Registered: both replicate.**
+
+**The review reported a count, `19/280`, and K6A.2.6 recorded only its adjective.** Both readings,
+registered side by side with their sources and their arithmetic, neither superseding the other:
+
+| source | count | rate | what it measures |
+|---|---|---|---|
+| v2.K6A.1 K6A.1.10 | `11/280` | `3.9%` | draws on which the Wilson-LB stop condition would fire |
+| the C49 review, independent | `19/280` | `6.8%` | the same quantity, independently measured |
+
+**They differ by 8 draws of 280 (`2.9` percentage points) and both are "a few percent".** The
+difference is the quantization K6A.2.6 already adopted: the Wilson lower bound at `n = 2000` moves in
+steps of one crossing (`5e-4`), so the count of draws either side of the `0.05` threshold is granular
+and a two-figure rate over-reports the precision of either number. **Registered: the T1 healthy stop
+condition's false-fire rate from the calibration lottery alone is "a few percent", bracketed by the
+two independent readings `3.9%` and `6.8%`; the stop condition and its reporting rule (K6A.1.10) do
+not move, and neither reading is withdrawn.** Recording only the adjective made the two
+measurements look like one.
+
+**(d) The `1.8`-SE separation uses one study's SE where two are being compared.** Quoted, K6A.2.6:
+
+> the reviewer measured healthy `6,000`-tick paging at **`0.0206`** against v2.K6A.1's
+> `0.0181 ± 0.0014` (both `<= α = 0.05`, `1.8` SE apart)
+
+**Correct: `1.8` divides the difference by ONE measurement's SE.** Comparing two independent
+measurements uses the combined SE:
+
+```
+difference                       0.0206 - 0.0181 = 0.0025
+v2.K6A.1's SE                                     0.0014
+the review's SE (same 280-draw probe design)      0.0014   <- stated as an assumption, not a datum
+combined SE                      sqrt(0.0014^2 + 0.0014^2) = 0.0019799
+separation                       0.0025 / 0.0019799 = 1.2 SE     (not 1.8)
+```
+
+**Registered: the two readings are `1.2` combined-SE apart, not `1.8`.** The assumption that the
+review's probe has v2.K6A.1's precision is **named as an assumption** — the review reported no SE of
+its own, and if its probe were smaller the separation would be smaller still, never larger. **The
+correction is in the direction of MORE agreement between the two measurements, i.e. against this
+document's rhetorical convenience in the direction that matters: it makes the replication stronger,
+so the temptation was to leave it.** Both readings remain `<= α = 0.05` and the "both replicate"
+conclusion is unchanged.
+
+### K6A.3.5 House rules, mapped
+
+(1) **Committed before any artifact it authorizes** — the screen driver, its tests, the card and the
+golden-verdicts row are all commits AFTER this one, and no K6-slow run exists at this commit.
+(2) A failed endpoint is a publishable result: **a failed null-growth screen is registered as exactly
+that**, with a named artifact (the screen-failure record) so the refutation is citable.
+(3) No post-hoc analysis: **this rider re-measures nothing.** Its only new numbers are closed-form
+(the `sd(-log p) = 0.975005` MC-precision table, computed from the discrete null law K6A.1.5 already
+registers) or arithmetic on already-registered quantities (the saturation constant of K6A.3.3, the
+combined SE of K6A.3.4d, the seed-band bound of K6A.3.1). The one measured statement — that the
+step-substituted arm-47 S3 row is bit-identical — is a property of the HARNESS, not of an endpoint,
+and it was measured before this rider was written and is registered here rather than left in a task
+report. (4) New seeds ARE registered here (the screen's two bands), with their disjointness shown by
+enumeration and their one-orbit limitation inherited from K6A.2.3 rather than re-argued.
+(5)–(6) No new cell, fallback or result; `results/` stays append-only and no committed manifest is
+rewritten. (7) **Quote-and-correct for text**, which is what K6A.3.4 does four times with the
+originals intact — including one correction (d) that strengthens the claim it corrects, and one (c)
+that records a reading this document had omitted. (8) Every endpoint's number and verdict stand as
+K6A.1.12 registers them.
+
+**Write-back obligations, unchanged and still NOT done, plus one added:** the design page must carry
+K6A.3.3's mechanism — that the registered S3 arm proves the module fires and not what it fires on —
+alongside the `d = 2.0` boundary-artifact disclosure it already owes from v2.K6A K6A.11.
+
+### Amendment summary
+
+Registers the **micro-amendment rider** the C49 build review requires, prereg text only, before the
+code it authorizes, with **nothing re-measured and no endpoint, band, floor, prediction or verdict
+moved**. **(1) The null-growth screen gets a DRIVER** (K6A.3.1): K6A.1.10 registered the screen as
+run-time stop condition (2) — *"run on fresh draws at run time, not inherited from this amendment"* —
+and the module exports `nullGrowthScreen`, but **nothing called it and no code item named a driver**,
+leaving a stop condition that was a citation. Registered as the build's thirteenth item: placement
+**after `assertRegistryAgreement()` and the `--classes` resolution and BEFORE any trajectory of any
+class**, run **iff `K6-slow` is in scope**; `250` draws (K6A.1.10's own number) × **`8,000` MC null
+windows per draw**, the count **derived rather than chosen** — `sd(-log p) = 0.975005` at the exact
+`m = 500` law gives MC SE `0.003466` on `g_null`, putting K6A.1.5's worst measured draw
+(`-1.501e-2`) `4.33` SE below zero and the screen's own **false-STOP rate at `≈ 0.2%` over 250
+draws**, where `M = 200` would have made MC noise (`0.0219`) exceed the margin it tests; a
+**registered fresh seed band** (`41,000,000 + d`; `42,000,000 + 10,000d + j`) whose every member
+exceeds the study's maximum registered seed `37,033,479`, **disjoint by enumeration**, with
+K6A.2.3's withdrawn band-ordering argument NOT re-used and its one-orbit limitation inherited;
+**a failed screen ABORTS before any endpoint is read**, writes a screen-failure record to
+`<results-root>/screen-failed/` (outside `live/`, because `collect.mjs:320-324` enumerates every
+directory under it) and **REFUTES the candidate on the record**; **a passed screen is reported
+twice** — the manifest's `null_growth_screen` (`null` when out of scope) and **cell 47's S2 row**,
+which makes K6A.1.10's obligation to report the screen beside a fired paging bound mechanical; a
+**smoke path** (`5 × 200`, refused at `n = 2000`) registered explicitly as a WIRING CHECK and not the
+stop condition; cost `≈ 50 s` against the battery's `≈ 21 s`, accepted; and the `φ = 0.6`
+calibrator's **non-screening disclosed** as a real limit. **(2) `manifest.class_spans` is named as an
+A8 additive extension** (K6A.3.2) on the `supersedes` precedent (`:3421`), with the consumer rule
+registered: `ticks`/`onset` keep A8's registered meaning and values (`300`/`100`), a consumer needing
+a span reads `class_spans` keyed by the cell's own class (arms by their `hint`) with
+`class_spans.default` as fallback, every cell carries its own authoritative `ticks`/`onset`, the field
+is always present, and committed manifests are not rewritten. **(3) Arm 47's S3 SATURATION is
+registered as mechanism** (K6A.3.3), one level beyond K6A.2.2's cell-level statement: at `d = 2.0`,
+`s = sqrt(1-d²/4) = 0` exactly, so every one of the 40 windows returns the rank floor `p = 1/501`,
+`e = 4.924167` and a data-independent `wealth = 4.9352693425143e+27` — **and a `3σ` mean step
+saturates identically, measured: substituting `injectStep(delta=3)` for the registered
+`injectShapeMix(d=2.0)` leaves arm 47's emitted S3 row bit-identical.** Registered plainly: **the arm
+row that lifts the card off `score.mjs:567`'s ADVISORY cap cannot evidence its own fault class**;
+consequences registered are that the card must state the dependency, that the injection-kind kill is
+therefore structural on the arm and behavioural only on the non-saturated cell 44, and that an
+informative `d = 1.5` arm is **named not-done** because changing the S3 severity is a protocol change
+(K6E.9's ruling reused). **(4) Four cosmetic defects in v2.K6A.2 corrected by quote-and-correct**
+(K6A.3.4): the claim that the lottery rule is *"registered IDENTICALLY here and in the correction to
+K6A.1.12"* is corrected to **one statement in K6A.2.4(a) that GOVERNS K6A.1.12's row** — the second
+copy a reader would go looking for does not exist; *"the sixth significant figure"* is **the fifth**
+(`9,3,8,3,6,8` against `9,3,8,3,7,5`); the review's **omitted count `19/280` (`6.8%`) is recorded
+beside v2.K6A.1's `11/280` (`3.9%`)**, 8 draws of 280 apart, both "a few percent" under the
+quantization K6A.2.6 already adopted, **neither withdrawn**; and the *"`1.8` SE apart"* separation is
+corrected to **`1.2` combined-SE** (`0.0025 / sqrt(0.0014² + 0.0014²)`), with the equal-precision
+assumption named and the correction acknowledged as **strengthening the replication it corrects**.
+**The gate verdict, the frozen configuration, the H = 6,000 PASS, v2.K6A's H = 3,000 refutation and
+`K6 = NO` at the deploy-gate geometry all stand unchanged.**
+
+---
+
+## Amendment v2.K6A.4 — 2026-08-08, correcting v2.K6A.3's own smoke screen: it FIRED on noise on the first run, the count is raised, and a suspected lattice defect is measured and found ABSENT
+
+**Registered because the code v2.K6A.3 authorized was run and the rider's own smoke path aborted a
+clean run.** This corrects **this document's own amendment of the same day**, by quote-and-correct,
+with the original intact. **No candidate endpoint, band, floor, prediction or verdict moves. The
+candidate is NOT refuted by the event described here** — the reason it is not is the whole content of
+K6A.4.1. **Prereg text only, own commit, before the corrected code lands.**
+
+### K6A.4.1 The smoke screen fired on MC noise — quoted, measured, and the count raised
+
+**Quoted, v2.K6A.3 K6A.3.1:**
+
+> Every other run (`n != 2000`, or any hook engaged: `MODE = 'sim'`) screens at a reduced
+> **`SCREEN_DRAWS_SMOKE = 5`, `SCREEN_MC_WINDOWS_SMOKE = 200`**
+
+and, in the same section, the reason that count is too small, which the rider **stated and then wired
+the stop rule to anyway**:
+
+> | 200 | `0.021924` | `0.68` — **unusable: MC noise alone exceeds the margin** |
+
+**What happened, first run of the driver** (`--n 5 --classes K6-slow`, `MODE = sim`, smoke screen
+`5 × 200`): draw 3 (`cal_seed 41000003`) read `g_null = +0.008760`, the stop condition fired, the
+run aborted and wrote its screen-failure record. **The abort was mechanically correct and the reading
+was noise.** Re-measured on the same draw, same seeds, nothing else changed:
+
+| draw (`cal_seed`) | `M = 200` | `M = 2,000` | `M = 8,000` |
+|---|---|---|---|
+| **3 (41000003)** | **`+0.008760` POSITIVE** | `-0.041339` | `-0.047401` |
+| 2 (41000002) | `-0.025797` | `-0.072754` | `-0.072265` |
+| 0 (41000000) | `-0.089994` | `-0.053410` | `-0.061964` |
+
+**Registered: draw 41000003 does NOT have positive null growth. `shape_ecdf_accumulator` is NOT
+refuted by this event**, and the screen-failure record it produced is a record of a smoke-path
+defect in this document's own rider, not of a construction defect. Nothing about the frozen `κ`, the
+`m = 500` law, or K6A.1.5's `0/280` is disturbed.
+
+**The correction, with the arithmetic the rider should have done before wiring the count.** The
+quantity that matters is not MC noise alone but the probability that a draw whose true `g_null` is
+negative READS positive, composing MC noise with the across-draw spread K6A.1.5 registers
+(`sd = 1.571e-2` about a mean of `-6.754e-2`):
+
+| `M` | MC SE | combined sd | `z` | P(one draw reads positive) | P(any draw in the run) |
+|---|---|---|---|---|---|
+| `200` (as registered) | `0.021924` | `0.026966` | `2.50` | `6.2e-3` | **`3.0%` over 5 draws** |
+| **`2,000` (registered here)** | `0.006933` | `0.017163` | `3.93` | `4.2e-5` | **`2.1e-4` over 5 draws** |
+| `8,000` (the registered run) | `0.003466` | `0.016078` | `4.20` | `1.3e-5` | **`0.34%` over 250 draws** |
+
+**Registered: `SCREEN_MC_WINDOWS_SMOKE = 2,000`, superseding K6A.3.1's `200`.** At `5 × 2,000` the
+smoke screen's own false-STOP probability is `2.1e-4` per run instead of `3.0%`, and it costs
+`10,000` scored windows — `≈ 0.34 s` at the measured `22.5 µs`, against `≈ 0.11 s` for the count it
+replaces. **A falsifier that fires on 3% of clean smoke runs is not a wiring check, it is a flaky
+test that would eventually be silenced**, which is the failure mode this correction exists to
+prevent.
+
+**And a correction to K6A.3.1's own false-STOP figure for the REGISTERED path, in the conservative
+direction.** Quoted:
+
+> across 250 draws the screen's **false-STOP rate is `≈ 0.2%`**
+
+**Correct: `≈ 0.34%`.** The `0.2%` composed MC noise alone against K6A.1.5's single worst observed
+draw; the figure above composes MC noise with the across-draw distribution, which is the population
+the 250 draws are actually sampled from. **The registered `250 × 8,000` does not change. Only the
+number stating its own false-fire rate does, upward.**
+
+**The enforcement rule, made explicit because this event raised it.** The obvious alternative repair
+— have the smoke screen REPORT without stopping — is **rejected and registered as rejected**: a
+screen that does not stop is the citation K6A.1.10 forbade, and a rule that enforces on one path and
+not another is a rule a reader cannot check. **Registered: the screen ENFORCES on every run it runs
+on, one rule for both paths, and the smoke count is set high enough that enforcement is not
+noise-driven.** The positive control still exercises the abort, because the control's whole purpose
+is a draw that genuinely has positive null growth.
+
+### K6A.4.2 A suspected lattice defect, MEASURED and found ABSENT — the seed scheme stands
+
+**The first hypothesis for the false fire was that K6A.3.1's MC seed scheme reproduces C1.1's defect
+in a new place**, and it is registered here as **not supported**, because a suspicion recorded
+without its measurement becomes folklore.
+
+K6A.3.1 draws the MC null windows at arithmetically-spaced seeds (`42,000,000 + 10,000d + j`), which
+is the same *shape* as the pre-C1 held-out draw Amendment v2.C1 (C1.1) found to be a rank-1
+Kronecker lattice. **Measured against the alternative** — one continuously-advanced stream per draw,
+consumed as `M` consecutive disjoint 150-blocks, which is C1.2's corrected form and K6A.1.3's own
+"consecutive disjoint blocks of ONE continuously advanced stream":
+
+| draw | spaced-seed `M = 8,000` | one-stream `M = 8,000` | difference |
+|---|---|---|---|
+| 3 | `-0.047401` | `-0.048393` | `0.000992` |
+| 2 | `-0.072265` | `-0.078611` | `0.006346` |
+| 0 | `-0.061964` | `-0.062194` | `0.000230` |
+
+**All three agree inside the `M = 8,000` MC SE of `0.003466` except draw 2, which is `1.8` SE — i.e.
+sampling noise, with no consistent sign.** No bias is detectable, and the reason is mechanical and
+worth stating: **C1.1's lattice arose because each spaced seed produced exactly ONE gaussian**, so
+both uniforms `gaussFrom` consumes were affine in the seed index. **Here each seed produces a whole
+150-value window from its own stream**, so the affine-in-`j` structure is confined to the first draw
+of each window and is diluted 150-fold. **Registered: K6A.3.1's MC seed scheme STANDS as registered.
+The one-orbit limitation K6A.2.3 registered still applies and is still inherited, unchanged — this
+measurement bounds a bias, not the segment-overlap question.**
+
+**Named not-done:** the same check at the registered `250 × 8,000` (this compares three draws, not
+250), and any characterization of the spaced-seed scheme at consumption levels other than one
+150-block per seed.
+
+### K6A.4.3 House rules, mapped
+
+(1) **Committed before the corrected code** — the driver's smoke count is changed in the commit that
+follows this one, and no K6-slow run exists. (2) **A failed endpoint is a publishable result, and
+this amendment is one**: the rider's own smoke path was refuted by its first execution, the record it
+wrote is retained in the build scratchpad, and nothing is quietly retuned. (3) No post-hoc analysis
+of any candidate endpoint: the numbers here are the screen's own diagnostics (`g_null` at three MC
+counts on three screen draws) plus closed-form probability arithmetic on already-registered
+quantities (`sd = 1.571e-2`, mean `-6.754e-2`, `sd(-log p) = 0.975005`). **No candidate cell, arm or
+class endpoint was read to produce them** — the aborted run generated no trajectory of any class.
+(4) No new seeds: the bands of K6A.3.1 stand and are re-affirmed by K6A.4.2's measurement.
+(5)–(6) No new cell, fallback or result; `results/` untouched. (7) **Quote-and-correct**, twice
+against **this document's own amendment of the same day** (the smoke count and its own false-STOP
+figure), with the originals intact and both corrections against this author's convenience: one
+admits the rider wired a count it had itself called unusable, the other raises the screen's stated
+false-fire rate. (8) Every candidate endpoint and verdict stands as K6A.1.12 registers them.
+
+### Amendment summary
+
+Corrects **v2.K6A.3, the same day, after its own driver was run**: the registered smoke screen
+(`5 × 200`) **fired on the first execution** — draw `41000003` read `g_null = +0.008760` and the run
+aborted — and **re-measurement on the same draw and the same seeds gives `-0.041339` at `M = 2,000`
+and `-0.047401` at `M = 8,000`, so the reading was MC noise and the candidate is NOT refuted**. The
+rider had itself tabulated `M = 200` as *"unusable: MC noise alone exceeds the margin"* and then
+wired the stop rule to it. **Registered: `SCREEN_MC_WINDOWS_SMOKE = 2,000`**, which takes the smoke
+path's false-STOP probability from **`3.0%` per run to `2.1e-4`** at a cost of `≈ 0.34 s`, composing
+MC noise with K6A.1.5's across-draw spread rather than MC noise alone; **and K6A.3.1's own
+false-STOP figure for the registered `250 × 8,000` path is corrected upward from `≈ 0.2%` to
+`≈ 0.34%`** by the same composition. The obvious alternative repair — a smoke screen that reports
+without stopping — is **registered as REJECTED**, because a screen that does not stop is the citation
+K6A.1.10 forbade: **the screen enforces on every run it runs on, and the count is what makes
+enforcement honest.** Separately, the first hypothesis for the fire — that the MC seed scheme
+reproduces C1.1's rank-1 lattice — is **measured and found ABSENT** (spaced-seed against
+one-continuous-stream at `M = 8,000` on three draws: `0.000992`, `0.006346`, `0.000230` apart, no
+consistent sign, all within or at `1.8` MC SE), with the mechanical reason registered (C1.1's lattice
+came from ONE gaussian per spaced seed; here each seed yields a whole 150-value window, diluting the
+affine structure 150-fold), so **K6A.3.1's seed bands stand** and K6A.2.3's one-orbit limitation is
+still inherited unchanged. **The gate verdict, the frozen configuration, the H = 6,000 PASS and
+`K6 = NO` at the deploy-gate geometry all stand.**
+
+---
+
+## Amendment v2.K6A.5 — 2026-08-08, the pre-run fix round: an eighth manifest field, a boundary stated two incompatible ways, a silent 14-card re-freeze disclosed, and three cosmetic corrections
+
+Registered after the C49 task-5 review (spec PASS, quality APPROVED, RUNS-MAY-PROCEED) found four
+things, **before the registered runs**. **Prereg text only, own commit.** Nothing re-measures. **No
+candidate endpoint, band, floor, seed, prediction or verdict moves**; the H = 6,000 gate verdict PASS
+stands. Two of the four corrections are against **this author's own amendments of the same day**, and
+one discloses **a change that rode silently in this author's own commit**.
+
+### K6A.5.1 `manifest.null_growth_screen` has an EIGHTH field the rider did not name — the same defect class K6A.3.2 exists for, inside the rider's own enumerated object
+
+**Quoted, v2.K6A.3 K6A.3.1**, enumerating the manifest field it registers:
+
+> the run manifest gains `null_growth_screen` — `{draws, mc_windows_per_draw, positive, kappa,
+> seed_bands, g_null: {mean, sd, max, p99}, screen_mode}`
+
+**The driver emits an eighth key: `forced_positive_hook`.** Registered here as part of the object.
+
+**And the defect class is worth naming rather than just fixing, because it is the second instance in
+two days.** K6A.3.2 exists precisely because the build emitted a manifest field (`class_spans`) that
+no registration named. **The rider that registered that field then enumerated its own new object and
+under-counted it** — same class, one level deeper: an enumeration is a specification, and a
+specification that omits an emitted key is exactly as wrong as an unregistered field. **Registered as
+a standing reading rule for this document: an enumerated manifest object is a CLOSED list, and any
+key the code emits beyond it is a registration defect, not an addition.**
+
+**The duplication, named, with one side made authoritative.** The same fact is now recorded twice on a
+run manifest: `screen_positive_hook` at the top level (the harness's registered hook-recording
+convention, beside `force_throw_hook`, `spectral_force_degenerate_hook`,
+`shape_force_degenerate_hook`, `heldout_lattice_hook`) and `null_growth_screen.forced_positive_hook`
+inside the screen object. **Registered: on a RUN MANIFEST the top-level `screen_positive_hook` is
+authoritative** — it is the field a reader already checks for every other hook, and a consumer
+scanning hooks must not have to know which nested objects also carry them. **Inside a
+screen-failure record the nested `forced_positive_hook` is authoritative, because that artifact has
+no manifest and no top-level hook block.** Both are emitted; neither is removed; a disagreement
+between them is a defect in the harness.
+
+### K6A.5.2 The smoke/registered boundary is stated two incompatible ways — the code's reading is registered
+
+**Quoted, v2.K6A.3 K6A.3.1**, two sentences that do not describe the same set of runs:
+
+> A run at the registered `n = 2000` with no test hook engaged — the only run that may write to
+> `results/live` — **must screen at `250 × 8,000` and may not override either number**; the harness
+> refuses `--screen-draws`/`--screen-mc` at `n === REGISTERED_N`.
+
+**The first clause is `MODE === 'live'` (`n = 2000` AND no hook). The second is `n === REGISTERED_N`
+ALONE.** They differ on exactly one kind of run: `n = 2000` **with** a hook engaged — which the first
+clause calls a smoke run and the second forbids from overriding the counts. **The implementation
+takes the first reading** (`const registered = MODE === 'live';`, governing both the count selection
+and the override refusal, and its error message says so: *"n === 2000, no hook engaged"*).
+
+**Registered, as the single reading: `registered = MODE === 'live'`, i.e. `n === REGISTERED_N` AND no
+test hook engaged.** A run at `n = 2000` with a hook engaged is a **smoke** run for every purpose —
+it screens at the smoke counts, accepts the overrides, is flagged `smoke` only via `mode: 'sim'`
+routing, and can never reach `results/live`. **Rationale, so the choice is not merely a deference to
+the code: the property that matters is "may this run become evidence", and that property is exactly
+`MODE === 'live'`. A hook-engaged run at the registered `n` is already barred from the evidence path,
+so binding it to the registered screen counts would cost 50 s to protect a run nothing can cite.**
+The second clause is corrected, not the first.
+
+### K6A.5.3 DISCLOSURE: a 14-card re-freeze rode silently inside this author's card commit, and it un-expired 9 cards this author's own earlier commit had expired
+
+**Measured, not recalled** (card `source_files` shas against the file contents at each commit):
+
+| commit | what it changed | cards EXPIRED at that commit |
+|---|---|---|
+| `d281e3d` (BASE) | — | **0** |
+| `8486229` (C49 task 4, item 11) | `verdict.mjs` `report_format 5 → 6` | **9** |
+| `6d51dc5` (C49 task 4, items 1–10, 12) | harness, constants, tests | 9 |
+| `77b86ee` (C49 task 5, the card) | the new card **+ a 14-card re-freeze** | **0** |
+
+**Nine cards pin `validation/certification/verdict.mjs`** (`family_A_betting_e_process`,
+`family_A_mixture_supermartingale`, `family_C_safe_hotelling`, `family_D_spectral_e_detector`,
+`family_E_conformal`, `safe_t_e_value`, `sequential_mmd_betting_e_process`,
+`sequential_ui_e_process`, `universal_inference_e_value`), and five of them pin
+`lib/score.mjs` as well. **The `report_format 5 → 6` bump of item 11 therefore EXPIRED nine cards,
+and that commit did not re-freeze them or say so.** The freeze in `77b86ee` re-stamped every card's
+`source_files` sha as well as its `engine_pin`, which **cleared all nine** — and that commit's
+message described the operation only as *"freeze-cards re-stamped all fifteen cards' engine_pin, the
+same way every prior freeze did"*. **The engine_pin half was disclosed; the source-sha half — the
+half that silently un-expired nine cards — was not.**
+
+**Registered, so the record is not left resting on a commit message:**
+
+- **The re-freeze was PINS-ONLY.** No `guarantee`, `regime`, `falsifier`, `shipped_path`, `budget`,
+  `prior_evidence`, `class` or `aliases` field of any of the fourteen sibling cards changed; the diff
+  is `engine_pin.sha` on all fourteen plus `source_files[].sha256` on the nine that pin the two
+  certification files. **No claim any card makes moved.** (Verifiable from `git show 77b86ee` —
+  fourteen 2-to-4-line diffs.)
+- **What the expiry actually meant, stated rather than waved past:** `report_format` is
+  *"the shape of this run's emitted markdown, NOT the protocol version"* (`verdict.mjs:64`), so the
+  edit that expired nine cards changed no scoring rule and no guarantee. **The expiry was correct
+  anyway and the mechanism worked as designed** — a card pins the file that produces its verdicts,
+  and that file changed. **The defect was the silence, not the expiry.**
+- **The ordering lesson, registered because this build will not be the last to hit it:** a commit
+  that touches a file any card pins **must either re-freeze in the same commit and say so, or state
+  that it leaves cards expired and name them.** Nine cards spent two commits expired with nothing in
+  the record saying so.
+
+**And the gap that let it pass every gate, MEASURED and corrected against the review's own
+statement.** The review reported that `expiry-check.mjs` *"exits 0 even when reporting EXPIRED"*.
+**That is not what it does:** on a drifted card it prints `EXPIRED <card>: <path> (changed)` to stderr
+and **exits 1** (`process.exit(drifted.length ? 1 : 0)`, verified by injecting a wrong sha). **The
+real gap is that NOTHING RUNS IT.** `test:cert`'s `expiry.test.mjs` exercises `checkExpiry` against
+temp fixtures only and never against the real `cards/` directory, and `cert:expiry` is a separate
+npm script in no suite. **So a drifted real card passes `npm test`, `test:cert` and
+`test:coverage-battery`, and only a manual `npm run cert:expiry` catches it.** That is the same shape
+as C48(3) — *changes to the evidence path expire nothing that any gate enforces*. **Filed as a
+write-back obligation, NOT fixed here** (adding a real-cards assertion to `test:cert` would fail the
+suite the moment any pinned file is edited, which is a protocol decision about when a card must be
+re-frozen and belongs to the certification protocol's own rules, not to this coverage amendment).
+
+### K6A.5.4 Three cosmetic corrections, quote-and-correct
+
+**(a) The `4.30`-sd margin belongs to the MEAN, not to the worst draw, and the card juxtaposed them.**
+Quoted, the `shape_ecdf_accumulator` card's third quantifier:
+
+> measured 0/280 draws positive, worst draw 1.501e-2 below zero, 4.30 sd margin
+
+**Correct: K6A.1.5's `4.30 sd` is the MEAN's margin** (`6.754e-2 / 1.571e-2 = 4.30` across-draw sd
+below zero); **the worst observed draw's own margin is `1.501e-2`, which is `0.96` across-draw sd.**
+Reading the two clauses in sequence implies the worst draw is 4.30 sd clear of zero, which is `4.5×`
+its actual distance. **Registered wording: the per-draw mean sits `4.30` across-draw sd below zero
+and the worst of the 280 draws sits `1.501e-2` (`0.96` sd) below zero.** The card is corrected in the
+commit that follows this one; K6A.1.5's own text, which states the two figures on separate lines of
+its own table, is not at fault and is unchanged.
+
+**(b) The lottery band/interval rule is K6A.2.4(a), not (b).** Quoted, the same card's notes:
+
+> THE LOTTERY REPORTING RULE, BOTH DIRECTIONS, quoted from Amendment v2.K6A.2 K6A.2.4(b)
+
+**Correct: (b) registers only the MIRROR rule for YES.** The prediction band `[0.333, 0.848]`, the
+consistency interval `[0.333, 0.958]` and the `(0.848, 0.958]` disposition — all of which that
+passage also states — are **K6A.2.4(a)**, as K6A.3.4(a) itself records. **Registered attribution:
+the single-draw NO wording and the mirror single-draw YES wording are K6A.2.4(b); the band, the
+interval and the disposition are K6A.2.4(a).**
+
+**(c) The smoke screen's superseded cost is `0.128 s`, not `0.11 s`.** Quoted, v2.K6A.4 K6A.4.1:
+
+> `10,000` scored windows — `≈ 0.34 s` at the measured `22.5 µs`, against `≈ 0.11 s` for the count it
+> replaces
+
+**Correct: `≈ 0.128 s`.** The `5 × 200` count costs `1,000` windows at `22.5 µs` (`0.0225 s`) **plus
+the five 100,000-row calibrations at `21 ms` each (`0.105 s`)**, which the `0.11 s` figure left out of
+one side of a comparison it included on the other. The `0.34 s` for `5 × 2,000` is unchanged
+(`0.225 + 0.105`). **No decision rests on either figure**; the correction is registered because a
+document that pins numbers may not round one side of its own comparison.
+
+### K6A.5.5 House rules, mapped
+
+(1) **Committed before the runs it clears the way for**, and before the card re-freeze it authorizes.
+(2) A failed endpoint is a publishable result; nothing here is an endpoint. (3) No post-hoc analysis:
+**this amendment re-measures no candidate quantity.** Its only measurements are of the REPOSITORY —
+card expiry at four commits, and the `expiry-check` CLI's exit code under an injected wrong sha —
+both properties of the record-keeping, not of the accumulator. (4)–(6) No new cell, seed, fallback or
+result. (7) **Quote-and-correct five times**: twice against this author's own v2.K6A.3, once against
+this author's own v2.K6A.4, once against this author's own card, and **once against the review's own
+statement about `expiry-check.mjs`** — with the originals intact. (8) Every candidate endpoint and
+verdict stands as K6A.1.12 registers them.
+
+**Write-back obligations, unchanged, plus one added:** the certification protocol needs a rule for
+when a card must be re-frozen and a gate that enforces it — nine cards were expired for two commits
+and every suite stayed green.
+
+### Amendment summary
+
+The **pre-run fix round**, prereg text only, with no candidate quantity moved. **(1)** The rider's own
+enumerated manifest object under-counted itself: `manifest.null_growth_screen` emits an **eighth key,
+`forced_positive_hook`**, now registered — **the same defect class K6A.3.2 exists for, recurring one
+level deeper inside the amendment that registered it**, so an enumerated manifest object is registered
+as a CLOSED list and any extra emitted key is a registration defect; the duplication with the
+top-level `screen_positive_hook` is named and resolved by making the **top-level field authoritative
+on a run manifest and the nested one authoritative inside a screen-failure record**, which has no
+manifest (K6A.5.1). **(2)** K6A.3.1 stated the smoke/registered boundary **two incompatible ways** —
+`MODE === 'live'` for the counts, `n === REGISTERED_N` alone for the override refusal — differing on a
+run at the registered `n` with a hook engaged; **the code's reading is registered
+(`registered = MODE === 'live'`)** on the stated ground that the property that matters is whether a
+run can become evidence, which a hook-engaged run cannot (K6A.5.2). **(3) DISCLOSED: a 14-card
+re-freeze rode silently inside this author's own card commit.** Nine cards pin
+`validation/certification/verdict.mjs`, so task 4's `report_format 5 → 6` bump (`8486229`)
+**EXPIRED nine cards** — measured: 0 expired at BASE, 9 from `8486229`, 0 after `77b86ee` — and
+`77b86ee`'s freeze re-stamped `source_files[].sha256` as well as `engine_pin`, clearing all nine while
+its message disclosed only the `engine_pin` half. **The re-freeze was PINS-ONLY** (no guarantee,
+regime, falsifier, shipped_path, budget, prior_evidence, class or alias field of any sibling card
+changed), the expiry itself was correct and the mechanism worked, and **the defect was the silence**;
+registered as an ordering rule for future commits, plus the gap that let it pass — **and the review's
+own claim that `expiry-check.mjs` "exits 0 even when reporting EXPIRED" is CORRECTED: it prints
+`EXPIRED` to stderr and exits 1; the real gap is that NO SUITE RUNS IT**, `expiry.test.mjs` testing
+only temp fixtures, so a drifted real card passes every suite — filed as a write-back obligation and
+deliberately not fixed here (K6A.5.3). **(4)** Three cosmetic corrections (K6A.5.4): the card's
+**`4.30`-sd juxtaposition** is corrected — `4.30` sd is the per-draw MEAN's margin, the worst of the
+280 draws is `1.501e-2` = **`0.96` sd** below zero, and reading the clauses in sequence overstated the
+worst draw's clearance by `4.5×`; the lottery **band/interval/disposition is K6A.2.4(a)**, not (b),
+which registers only the mirror YES rule; and the superseded smoke screen's cost is **`0.128 s`**, not
+`0.11 s`, the quoted figure having omitted the five calibrations from one side of its own comparison.
+**The gate verdict, the frozen configuration, the H = 6,000 PASS and `K6 = NO` at the deploy-gate
+geometry all stand.**
+
+---
+
+### Erratum to K6A.5.3, dated 2026-08-08 (carry-tier, appended not edited)
+
+**Quoted, v2.K6A.5 K6A.5.3:**
+
+> **The real gap is that NOTHING RUNS IT.**
+
+**Correct: CI runs it, non-gating.** `.github/workflows/ci.yml:92-95` has a step
+*"Certification card expiry (reported, not gating — see comment)"* running `npm run cert:expiry`
+with `continue-on-error: true`, and the workflow's own comment states why: a runner checks out this
+repo only, `family_E_conformal` pins `../deploysignal/tools/calibrators/family-e.ts`, and
+`expiry-check.mjs` cannot distinguish *"changed"* from *"not present here"*, so a gating step would
+fail every run for a reason that says nothing about the cards.
+
+**The corrected statement of the gap: the expiry check RUNS on every CI run and its finding reaches
+a log, but NO GATE ENFORCES IT** — not the CI step (`continue-on-error`), and not any suite
+(`expiry.test.mjs` exercises `checkExpiry` on temp fixtures only). So a drifted card still passes
+`npm test`, `test:cert`, `test:coverage-battery` and CI. **The correction is against this
+document's own convenience: "nothing runs it" made the gap sound like an oversight, and the truth is
+that it is run deliberately in a non-gating shape for a stated reason. That is a harder gap to
+close, and the write-back obligation K6A.5.3 filed now has the sibling-pin problem attached to it:
+making the check gating requires either checking out the sibling repo with `CERT_SIBLING_ROOT` set,
+or teaching the tool to report an unreadable sibling pin separately from a changed hash.** No claim
+of K6A.5.3 moves otherwise, and the 0/9/9/0 expiry measurement stands.
+

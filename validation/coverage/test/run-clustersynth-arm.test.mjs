@@ -275,3 +275,67 @@ test('provenance: an independently re-driven (shard, coordinate) pair matches th
   assert.equal(row.k, crossed ? 1 : 0, 'independently recomputed crossing must match the harness row exactly');
   assert.equal(row.n_reference_blocks, cal.m);
 });
+
+// ── Amendment v2.K6A.1 (K6A.1.11) — the K6-slow accumulator's own T2 validity arm ─────────────
+// K6.12's construction applied UNCHANGED with detector: 'shape_ecdf_accumulator', at the m = 45
+// geometry K6A.1.11 derives by arithmetic: W = 150 cannot be fed m = 500 (75,000 >> the 9,000
+// reference ticks the scenario supplies), so the frozen 1:3 A/B ratio gives A = 2,250 and
+// B = 6,750 -> 45 blocks of 150 exactly, with 600/150 = 4 live windows.
+test('K6A.1.11: the accumulator T2 arm runs at m = 45 with 4 live windows, on its own scenario seed', () => {
+  const { summary, manifest } = runHarness(['--detector', 'shape_ecdf_accumulator', '--shards', '2', '--steps', '9600']);
+  assert.equal(manifest.detector, 'shape_ecdf_accumulator');
+  assert.equal(manifest.scenario_seed, 20260855, 'K6A.1.9: K6SLOW_T2_SCENARIO_SEED = BASE_SEED + 48');
+  assert.equal(manifest.w, 150, 'K6A.1.2 freezes W = 150');
+  assert.equal(manifest.reference_a_ticks, 2250, 'K6A.1.11: the frozen 1:3 ratio against B = 6,750');
+  assert.equal(manifest.n_reference_blocks_registered, 45, 'K6A.1.11: T2 m is 45, NOT T1 500');
+  assert.equal(manifest.reference_a_ticks + manifest.n_reference_blocks_registered * manifest.w, 9000,
+    'A + m*W must exhaust the 9,000 reference ticks exactly — the split is not floored');
+  const pairs = summary.cells.filter((c) => c.arm === 'T2-clustersynth');
+  assert.ok(pairs.length > 0);
+  for (const c of pairs) {
+    assert.equal(c.detector, 'shape_ecdf_accumulator');
+    assert.equal('fault_class' in c, false, 'K6.1.3: no fault_class field at all on this arm');
+    assert.equal('crossing_rate' in c, false, 'K6.1.3: t2_crossing_rate, never the S2 instrument name');
+    assert.equal('increment_estimator' in c, false,
+      'K6.1.3 binding: the S2 instrument name must not appear, or the scorer reads a T2 row as a validity candidate');
+    if (c.skipped) continue;
+    assert.equal(c.n_reference_blocks, 45, `${c.shard_id} ${c.counter}: m`);
+    assert.equal(c.n_live_windows, 4, 'K6A.1.11: 600/150 = 4 live windows');
+    // v2.K6A.2 K6A.2.6: the T2 increment mean is its OWN registered prediction (0.960274 at
+    // m = 45, band [0.94, 0.98]); a reading near T1's 0.9914 would indicate the wrong m.
+    assert.ok(Number.isFinite(c.t2_increment_mean), 'the registered T2 increment reading');
+  }
+  const pooled = summary.cells.find((c) => c.arm === 'T2-clustersynth-pooled');
+  assert.ok(pooled);
+  assert.equal(pooled.detector, 'shape_ecdf_accumulator');
+  assert.ok(Number.isFinite(pooled.t2_increment_mean));
+  assert.ok(['FAIL', 'not-refuted', 'NOT-EXECUTABLE'].includes(pooled.t2_verdict));
+});
+
+test('K6.1.3: the sibling T2 arm keeps its registered field set — no increment field is added to it', () => {
+  const { summary, manifest } = runHarness(['--shards', '2', '--steps', '9600']);
+  assert.equal(manifest.detector, 'shape_block_conformal_bet', 'the default detector is unchanged');
+  assert.equal(manifest.scenario_seed, 20260842, 'K6.12: the sibling arm keeps its own scenario seed');
+  assert.equal(manifest.w, 30);
+  assert.equal(manifest.reference_a_ticks, null, 'the sibling blocks the whole reference, with no A/B split');
+  assert.equal(manifest.n_reference_blocks_registered, 300);
+  for (const c of summary.cells) {
+    assert.equal(c.detector, 'shape_block_conformal_bet');
+    assert.equal('t2_increment_mean' in c, false,
+      'K6.1.3 fixes this arm\'s field set and registers no increment field on it');
+  }
+});
+
+test('an unregistered --detector is refused', () => {
+  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 't2-detector-'));
+  let threw = false;
+  let stderr = '';
+  try {
+    execFileSync(process.execPath, [HARNESS, '--detector', 'safe_t', '--shards', '2', '--steps', '9600'], {
+      env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot }, encoding: 'utf8', stdio: 'pipe',
+    });
+  } catch (err) { threw = true; stderr = String(err.stderr ?? ''); }
+  assert.ok(threw);
+  assert.match(stderr, /is not a registered T2 candidate/);
+  fs.rmSync(outRoot, { recursive: true, force: true });
+});

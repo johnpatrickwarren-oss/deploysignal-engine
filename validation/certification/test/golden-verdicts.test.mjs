@@ -272,6 +272,35 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // with no cells behind it, so every existing card gains a K6-slow coverage entry at NO_EVIDENCE
 // and nothing else changes. COVERAGE.md gains a seventh row, | K6-slow | NO |, under
 // report_format 6 (v2.K6A.2 K6A.2.1's registered gate).
+// Updated 2026-08-08, C49 task 6 — THE REGISTERED K6-SLOW RUNS (coverage T1
+// run-20260809T035934Z, T2 run-t2-20260809T040552Z; cert run-20260809T040659Z, the FIRST
+// format-6 certification run). The ONE-ROW delta the previous entry predicted:
+// shape_ecdf_accumulator NOT_EXECUTABLE -> USE, tier null -> T1, s2 MISSING -> PASS, s3 MISSING
+// -> PASS (s1 MISSING and s4 PASS unchanged). No other row moves.
+//
+// BOTH REGISTERED STOP CONDITIONS CLEARED BEFORE ANY POWER ENDPOINT WAS READ. The null-growth
+// screen ran at its registered 250 x 8,000 and read 0/250 positive (max g_null -0.025749), which
+// is K6A.1.12's prediction exactly. Arm 47's S2 healthy paging bound read k = 108/2000,
+// crossing_rate 0.0540, Wilson one-sided 95% lower bound 0.046273 <= alpha -- not fired, and
+// recorded with the screen's reading beside it as K6A.1.10 requires. T2's pooled bound read
+// 0.007528 <= alpha.
+//
+// WHAT S2 PASS AND S3 PASS REST ON, because neither is what a reader would assume. S2 PASS is
+// arm 47's crossing_rate row clearing its Wilson bound; the same row's increment_estimator.mean
+// reads 1.0250, OUTSIDE K6A.1.12's registered [0.97, 1.01] falsifier range, and K6A.1.10 gives
+// that field no verdict authority -- so a fired field-level falsifier sits beside a cleared S2.
+// S3 PASS is arm 47's power row at detection_rate 1.0000, and v2.K6A.3 K6A.3.3 registers that
+// this row CANNOT EVIDENCE ITS OWN FAULT CLASS: at d = 2.0 every one of the 40 windows returns
+// the rank floor and the wealth is the data-independent 4.935269342514437e+27, which a 3-sigma
+// mean step reproduces bit-identically. Both are registered readings, not defects in this test.
+//
+// THE CLASS ANSWER, in the registered wording and not otherwise. COVERAGE.md's K6-slow row goes
+// NO -> YES, carried by shape_ecdf_accumulator at T1 with canonical rate 0.8515. Per Amendment
+// v2.K6A.2 K6A.2.4(b)'s mirror rule, quoted, that is reported as "class K6-slow YES at this
+// calibration draw; gate P(YES) approx 0.79" and NEVER as a settled class answer. The canonical
+// reading 0.8515 sits above K6A.2.4(a)'s prediction band p95 of 0.848 and inside its consistency
+// interval [0.333, 0.958], which that section dispositions explicitly: CONSISTENT with the gate,
+// an upper-tail calibration draw, NOT a falsification. K6 stays NO; K1/K2/K3/K4/K5 unchanged.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
@@ -288,7 +317,7 @@ const GOLDEN = {
   spectral_bet_e_process: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
   shape_block_conformal_bet: { verdict: 'ADVISORY', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'INERT', s4: 'PASS' },
   // Amendment v2.K6A.1 K6A.1.13's registered golden expectation, pre-run.
-  shape_ecdf_accumulator: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'MISSING', s4: 'PASS' },
+  shape_ecdf_accumulator: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
 };
 
 function runHarness(t) {

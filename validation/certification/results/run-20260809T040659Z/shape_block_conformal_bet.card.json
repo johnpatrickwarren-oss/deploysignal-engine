@@ -1,0 +1,514 @@
+{
+  "card": {
+    "protocol_version": 1,
+    "detector_id": "shape_block_conformal_bet",
+    "aliases": [
+      "shape_bet",
+      "k6_bet"
+    ],
+    "family": null,
+    "class": "test_martingale",
+    "engine_pin": {
+      "version": "0.6.6-pre",
+      "sha": "0522faf1586dbb544473067dcd92185b8b5d1228"
+    },
+    "source_files": [
+      {
+        "path": "detectors/shape-block-conformal-bet.ts",
+        "sha256": "25226e1a98542845c49e22017bef5d8de9e7670bcb04a6b0849cb46a736200ce"
+      }
+    ],
+    "guarantee": {
+      "sentence": "block-conformal distance-rank shape bet: per registered held-out segment, m disjoint contiguous W=30-tick reference blocks give per-feature (raw kurtosis, |skew|) medians and |deviation-from-median| distances; p = (1+#{ref |dev| >= live |dev|})/(m+1) is super-uniform under block exchangeability of the m reference blocks and the live window's own distance-to-median statistic (stationarity across the calibration+test span -- the registered regime; O(1/m) qualifier at finite m, not the continuous-p identity exactly); e = kappa*p^(kappa-1) satisfies E[e|H0] <= 1 per feature per window (kappa=0.1, shared K3/K4 derivation); per window, features combine by averaging (never max); across disjoint windows, per-window averages combine by product, a genuine test martingale; contiguity preserves each coordinate's own serial dependence, which is this construction's own answer to C22 (fired on 82% of healthy clustersynth shards, knowledge/stats/shape-clustersynth-2026-08-05) -- validity requires calibration and live to share the same dependence structure (matched process), not a known phi; MISMATCHED calibration/live process is out-of-claim, measured for the record (PREREGISTRATION.md Amendment v2.K6 K6.11). Registered before any run: this candidate's own canonical-severity power is DERIVED NOT_POWERED (Amendment v2.K6 K6.4) -- the class martingale is validity-sound by construction but structurally weak at the class's canonical mixture separation (d=1.5) at the registered W=30.",
+      "quantifiers": [
+        {
+          "text": "block-conformal rank super-uniformity under block exchangeability, O(1/m) qualifier at finite m",
+          "tag": "proof",
+          "proof_artifact": "conformal rank identity (integral of kappa*p^(kappa-1)=1) + tie-inclusive >= countGte, detectors/shape-block-conformal-bet.ts:142-152,255-281; degenerate-reference throw + live-side NaN-hold e=1 fixtures, test/shape-block-conformal-bet.test.ts"
+        },
+        {
+          "text": "healthy crossing rate under stationarity (iid and matched-process AR(1) phi=0.6), across disjoint windows",
+          "tag": "empirical",
+          "proof_artifact": null
+        }
+      ],
+      "regime": {
+        "phi_max": null,
+        "m_min": 100,
+        "baseline": "heldout-empirical",
+        "nulls": "stationary",
+        "stationarity": true,
+        "contamination_out_of_claim": true,
+        "phi_regime": "matched-calibration",
+        "phi_regime_note": "validity is not gated by a phi ceiling -- it requires calibration and live blocks to share the SAME generating process (matched phi tested at phi=0 and phi=0.6 in the module's own unit tests, task-9-report.md); MISMATCHED calibration/live phi is out-of-claim, measured for the record: pooled per-feature exceedance 0.0584-0.0589 (cal phi=0.6/live phi=0) and 0.0532-0.0577 (cal phi=0.9/live phi=0.6), well above nominal -- PREREGISTRATION.md Amendment v2.K6 K6.11 (kurtosis exceedance inflates under mismatch, absSkew mildly deflates; the pooled figure masks the split)"
+      }
+    },
+    "shipped_path": {
+      "kind": "block-conformal shape bet on disjoint 30-tick reference/live windows, two features (raw kurtosis, |skew|) (K6 distributional-shape-change candidate)",
+      "estimator": null,
+      "notes": "K6 (distributional shape change) candidate; not deploysignal's shipped selector path. Supersedes, on the record, detectors/shape-kurtosis-e-value.ts (DO NOT WIRE: fired on 82% of healthy clustersynth shards, knowledge/stats/shape-clustersynth-2026-08-05, root cause C22) and Family C's MMD (blind to shape by construction, knowledge/stats/family-c-blind-to-shape-2026-08-04). Registered before any run as DERIVED NOT_POWERED at the class's own canonical severity (PREREGISTRATION.md Amendment v2.K6 K6.4) -- the run confirms or falsifies a derivation, it does not discover the class answer."
+    },
+    "budget": {
+      "participating": true,
+      "alpha_booked": null,
+      "resolution_claim": null
+    },
+    "falsifier": "healthy-arm crossing rate Wilson 95% lower bound > 0.05",
+    "prior_evidence": [
+      {
+        "stage": "S2",
+        "study": "coverage",
+        "runs": "coverage/results/live/*",
+        "wiki": "methodology/fault-class-coverage-matrix"
+      },
+      {
+        "stage": "design",
+        "study": "coverage-gap-detectors",
+        "runs": null,
+        "wiki": "methodology/coverage-gap-detectors"
+      }
+    ]
+  },
+  "s1": {
+    "status": "MISSING"
+  },
+  "s2": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "shape_block_conformal_bet",
+        "arm": "healthy",
+        "cell_index": 34,
+        "null_id": "K6-arm-heldout",
+        "phi": 0,
+        "params": "heldout-empirical",
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 300,
+        "onset": 100,
+        "windows": 6,
+        "window_len": 30,
+        "window_span": "[100,280)",
+        "k": 0,
+        "crossing_rate": 0,
+        "lower_95": 0,
+        "increment_estimator": {
+          "n": 2000,
+          "mean": 0.44367965142547167,
+          "sd": 0.3942916676674421,
+          "se": 0.008816629718661565,
+          "lower95_one_sided": 0.4291762955382734,
+          "upper95_one_sided": 0.4581830073126699
+        },
+        "p_uniformity": {
+          "n": 24000,
+          "decile_counts": [
+            2229,
+            2386,
+            2687,
+            2565,
+            2274,
+            2122,
+            2445,
+            2426,
+            2427,
+            2439
+          ],
+          "ks_statistic": 0.022903692614770432,
+          "ks_critical_at_alpha": 0.008778762251403479
+        },
+        "final_wealth_mean": 0.006919166421942829,
+        "final_wealth_median": 0.0002535132235447907,
+        "degenerate_windows": 0,
+        "non_finite_wealth": 0,
+        "adapter_failures": 0,
+        "verdict": "not-refuted",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "heldout_seed": 20760841,
+        "heldout_rows": 10000,
+        "cal_fingerprint": {
+          "W": 30,
+          "m": 333,
+          "kurtosis": {
+            "median": 2.6644363885973315,
+            "absdev_p50": 0.3425145656267814,
+            "absdev_p90": 1.0036647232998992,
+            "absdev_max": 5.3419151098793565
+          },
+          "absSkew": {
+            "median": 0.25544547370027243,
+            "absdev_p50": 0.16266114263130668,
+            "absdev_p90": 0.41481028013415683,
+            "absdev_max": 1.551302497224448
+          }
+        },
+        "__study": "coverage",
+        "__run": "run-20260808T133746Z",
+        "__git_sha": "40d4cb37e36a895800988c1c3518141266f2d97c",
+        "__tier": "T1",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      }
+    ],
+    "excluded": [],
+    "missing": [],
+    "mean_rule_overrides": [],
+    "suppressed_verdicts": {}
+  },
+  "s3": {
+    "status": "INERT",
+    "perCell": [
+      {
+        "detector": "shape_block_conformal_bet",
+        "arm": "power",
+        "cell_index": 34,
+        "null_id": "K6-arm-heldout",
+        "phi": 0,
+        "params": "heldout-empirical",
+        "shift_sigma": 3,
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 300,
+        "onset": 100,
+        "fires": 1,
+        "detection_rate": 0.0005,
+        "final_wealth_mean": 1.774886107555634,
+        "final_wealth_median": 1.423973562363408,
+        "degenerate_windows": 0,
+        "adapter_failures": 0,
+        "non_finite_wealth": 0,
+        "verdict": "INERT",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "heldout_seed": 20760841,
+        "heldout_rows": 10000,
+        "cal_fingerprint": {
+          "W": 30,
+          "m": 333,
+          "kurtosis": {
+            "median": 2.6644363885973315,
+            "absdev_p50": 0.3425145656267814,
+            "absdev_p90": 1.0036647232998992,
+            "absdev_max": 5.3419151098793565
+          },
+          "absSkew": {
+            "median": 0.25544547370027243,
+            "absdev_p50": 0.16266114263130668,
+            "absdev_p90": 0.41481028013415683,
+            "absdev_max": 1.551302497224448
+          }
+        },
+        "__study": "coverage",
+        "__run": "run-20260808T133746Z",
+        "__git_sha": "40d4cb37e36a895800988c1c3518141266f2d97c",
+        "__tier": "T1"
+      }
+    ],
+    "excluded": [],
+    "missing": [
+      {
+        "detector": "shape_block_conformal_bet",
+        "null_id": null,
+        "reason": "power cell with no shift_sigma recorded x4: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT"
+      }
+    ],
+    "suppressed_verdicts": {}
+  },
+  "s4": {
+    "status": "PASS",
+    "reasons": [
+      "no envelope wiring"
+    ]
+  },
+  "pairing": [],
+  "overall": {
+    "verdict": "ADVISORY",
+    "tier": "T1",
+    "regime": {
+      "phi_max": null,
+      "m_min": 100,
+      "baseline": "heldout-empirical",
+      "nulls": "stationary",
+      "stationarity": true,
+      "contamination_out_of_claim": true,
+      "phi_regime": "matched-calibration",
+      "phi_regime_note": "validity is not gated by a phi ceiling -- it requires calibration and live blocks to share the SAME generating process (matched phi tested at phi=0 and phi=0.6 in the module's own unit tests, task-9-report.md); MISMATCHED calibration/live phi is out-of-claim, measured for the record: pooled per-feature exceedance 0.0584-0.0589 (cal phi=0.6/live phi=0) and 0.0532-0.0577 (cal phi=0.9/live phi=0.6), well above nominal -- PREREGISTRATION.md Amendment v2.K6 K6.11 (kurtosis exceedance inflates under mismatch, absSkew mildly deflates; the pooled figure masks the split)",
+      "excluded_cells": [
+        {
+          "stage": "S3",
+          "detector": "shape_block_conformal_bet",
+          "null_id": "K6-arm-heldout",
+          "mapped": "INERT",
+          "reason": "inert: detection_rate 0.0005 < floor 0.1 at shift 3 sigma"
+        }
+      ]
+    },
+    "reasons": [
+      "S1 reachability not run-backed (v1 floor)",
+      "S3 inert across all claimed cells: valid-but-inert fails USE"
+    ]
+  },
+  "coverage": {
+    "K1": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K2": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K3": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K4": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K5": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6": {
+      "status": "NOT_POWERED",
+      "cells": [
+        {
+          "detector": "shape_block_conformal_bet",
+          "fault_class": "K6",
+          "severity": "mix-d1.0",
+          "canonical": false,
+          "cell_index": 26,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 2,
+          "detection_rate": 0.001,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 0.0053373436700275495,
+          "final_wealth_median": 0.00017753448593458106,
+          "degenerate_windows": 0,
+          "cal_fingerprint": {
+            "W": 30,
+            "m": 333,
+            "kurtosis": {
+              "median": 2.638979317364432,
+              "absdev_p50": 0.3763963532002421,
+              "absdev_p90": 1.0499844892696868,
+              "absdev_max": 3.560917190293082
+            },
+            "absSkew": {
+              "median": 0.2501975378467398,
+              "absdev_p50": 0.15406010843492401,
+              "absdev_p90": 0.4050678227407467,
+              "absdev_max": 1.0358839552674928
+            }
+          },
+          "heldout_seed": 20760833,
+          "heldout_rows": 10000,
+          "__study": "coverage",
+          "__run": "run-20260808T133746Z",
+          "__git_sha": "40d4cb37e36a895800988c1c3518141266f2d97c",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "shape_block_conformal_bet",
+          "fault_class": "K6",
+          "severity": "mix-d1.5",
+          "canonical": true,
+          "cell_index": 27,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 0,
+          "detection_rate": 0,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 0.0007783585926776172,
+          "final_wealth_median": 0.00024168234910816686,
+          "degenerate_windows": 0,
+          "cal_fingerprint": {
+            "W": 30,
+            "m": 333,
+            "kurtosis": {
+              "median": 2.6310618946655007,
+              "absdev_p50": 0.3271183088943226,
+              "absdev_p90": 0.9794497093552854,
+              "absdev_max": 2.991297628017425
+            },
+            "absSkew": {
+              "median": 0.25397776032183056,
+              "absdev_p50": 0.1491949288529491,
+              "absdev_p90": 0.36731308447291305,
+              "absdev_max": 1.01235663028686
+            }
+          },
+          "heldout_seed": 20760834,
+          "heldout_rows": 10000,
+          "__study": "coverage",
+          "__run": "run-20260808T133746Z",
+          "__git_sha": "40d4cb37e36a895800988c1c3518141266f2d97c",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "shape_block_conformal_bet",
+          "fault_class": "K6",
+          "severity": "mix-d2.0",
+          "canonical": false,
+          "cell_index": 28,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 9,
+          "detection_rate": 0.0045,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 2.402954830673063,
+          "final_wealth_median": 1.7953368783967592,
+          "degenerate_windows": 0,
+          "cal_fingerprint": {
+            "W": 30,
+            "m": 333,
+            "kurtosis": {
+              "median": 2.7445249487536305,
+              "absdev_p50": 0.40976371843708437,
+              "absdev_p90": 0.9662774590286995,
+              "absdev_max": 3.1789605071903555
+            },
+            "absSkew": {
+              "median": 0.25218007492369904,
+              "absdev_p50": 0.15876869704173152,
+              "absdev_p90": 0.40519571617326516,
+              "absdev_max": 0.9262746919314346
+            }
+          },
+          "heldout_seed": 20760835,
+          "heldout_rows": 10000,
+          "__study": "coverage",
+          "__run": "run-20260808T133746Z",
+          "__git_sha": "40d4cb37e36a895800988c1c3518141266f2d97c",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "shape_block_conformal_bet",
+          "fault_class": "K6",
+          "severity": "mix-d1.5-ar1",
+          "canonical": false,
+          "cell_index": 29,
+          "null_id": "N3-p06",
+          "phi": 0.6,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 0,
+          "detection_rate": 0,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 0.0008148560192778623,
+          "final_wealth_median": 0.00021704963841426668,
+          "degenerate_windows": 0,
+          "cal_fingerprint": {
+            "W": 30,
+            "m": 333,
+            "kurtosis": {
+              "median": 2.5763361591914458,
+              "absdev_p50": 0.3534717295585721,
+              "absdev_p90": 0.8341661682825547,
+              "absdev_max": 4.386241465357632
+            },
+            "absSkew": {
+              "median": 0.28383969146057275,
+              "absdev_p50": 0.1638426884237143,
+              "absdev_p90": 0.37342647502254,
+              "absdev_max": 1.1602563320727195
+            }
+          },
+          "heldout_seed": 20760836,
+          "heldout_rows": 10000,
+          "__study": "coverage",
+          "__run": "run-20260808T133746Z",
+          "__git_sha": "40d4cb37e36a895800988c1c3518141266f2d97c",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        }
+      ],
+      "canonical": {
+        "severity": "mix-d1.5",
+        "rate": 0
+      },
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6-slow": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    }
+  },
+  "generated_from": {
+    "runs": [
+      "coverage/run-20260808T133746Z",
+      "coverage-t2-clustersynth/run-t2-20260808T121710Z"
+    ]
+  }
+}

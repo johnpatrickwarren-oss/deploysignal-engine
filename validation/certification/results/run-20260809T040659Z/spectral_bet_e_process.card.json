@@ -1,0 +1,455 @@
+{
+  "card": {
+    "protocol_version": 1,
+    "detector_id": "spectral_bet_e_process",
+    "aliases": [
+      "spectral_bet",
+      "k3_bet"
+    ],
+    "family": null,
+    "class": "test_martingale",
+    "engine_pin": {
+      "version": "0.6.6-pre",
+      "sha": "0522faf1586dbb544473067dcd92185b8b5d1228"
+    },
+    "source_files": [
+      {
+        "path": "detectors/spectral-bet-e-process.ts",
+        "sha256": "ce7afe3776b93687a267448f04eb509f003eb20f10bf428531ef81e3250f2fd2"
+      }
+    ],
+    "guarantee": {
+      "sentence": "periodogram betting e-process: per disjoint 30-tick window, p_k = exp(-U_k) is exactly Uniform(0,1) for iid N(0,sigma^2) noise at Fourier bins k in {1,2,3} (k not in {0,15}), sigma known; e_k = kappa*p_k^(kappa-1) satisfies E[e_k|H0] <= 1; per window, bins combine by averaging e-values (never max); across disjoint windows, the per-window averages combine by product (independent increments), giving wealth = prod_w mean_k(e_k,w) -- product-over-windows of per-window bin-averages, the form this module implements, not the design page's average-of-per-bin-wealths (mean_k prod_w e_k,w); both are valid e-processes, but they are not the same statistic -- canonical-cell numeric divergence measured at 1.5pp (Task 6 review-time probe, filed for wiki write-back, PREREGISTRATION.md Amendment v2.K3 K3.4)",
+      "quantifiers": [
+        {
+          "text": "per-window exact uniformity + product over disjoint windows + average-over-bins validity",
+          "tag": "proof",
+          "proof_artifact": "exactness identity (2U_k ~ chi^2_2 at k not in {0, W/2}), module docstring detectors/spectral-bet-e-process.ts:22-27; never-max mutation-killed fixture + NaN-hold/p-underflow degenerate-path fixtures, test/spectral-bet-e-process.test.ts"
+        }
+      ],
+      "regime": {
+        "phi_max": 0,
+        "m_min": null,
+        "baseline": "oracle",
+        "nulls": "iid-gaussian",
+        "sigma_known": true,
+        "ar1_note": "AR(1) colors the spectrum and breaks the per-bin independence the exactness identity assumes (module docstring detectors/spectral-bet-e-process.ts:29) -- the -ar1 cell (idx 17) is out-of-claim by design, measured for the record only, per PREREGISTRATION.md Amendment v2.K3 K3.14"
+      }
+    },
+    "shipped_path": {
+      "kind": "periodogram betting e-process on disjoint 30-tick windows, Fourier bins k in {1,2,3} (K3 sub-threshold-oscillation candidate)",
+      "estimator": null,
+      "notes": "K3 (sub-threshold oscillation) candidate; not deploysignal's shipped selector path -- see family_D_spectral_e_detector.json for the prior K3 construction (REFUSE: refuted at N1, and the disjoint-window fix still carried a refuted increment) this candidate is built to supersede if it clears"
+    },
+    "budget": {
+      "participating": true,
+      "alpha_booked": null,
+      "resolution_claim": null
+    },
+    "falsifier": "healthy-arm crossing rate Wilson 95% lower bound > 0.05",
+    "prior_evidence": [
+      {
+        "stage": "S2",
+        "study": "coverage",
+        "runs": "coverage/results/live/*",
+        "wiki": "methodology/fault-class-coverage-matrix"
+      },
+      {
+        "stage": "design",
+        "study": "coverage-gap-detectors",
+        "runs": null,
+        "wiki": "methodology/coverage-gap-detectors"
+      }
+    ]
+  },
+  "s1": {
+    "status": "MISSING"
+  },
+  "s2": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "spectral_bet_e_process",
+        "arm": "healthy",
+        "cell_index": 33,
+        "null_id": "K3-arm-oracle",
+        "phi": 0,
+        "params": "oracle",
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 300,
+        "onset": 100,
+        "windows": 6,
+        "window_len": 30,
+        "window_span": "[100,280)",
+        "k": 6,
+        "crossing_rate": 0.003,
+        "lower_95": 0.0015520206386129389,
+        "increment_estimator": {
+          "n": 2000,
+          "mean": 0.6398446237098699,
+          "sd": 1.4936349566502936,
+          "se": 0.03339869296640008,
+          "lower95_one_sided": 0.5849037737801418,
+          "upper95_one_sided": 0.6947854736395981
+        },
+        "p_uniformity": {
+          "n": 36000,
+          "decile_counts": [
+            3547,
+            3549,
+            3562,
+            3567,
+            3604,
+            3672,
+            3569,
+            3605,
+            3618,
+            3707
+          ],
+          "ks_statistic": 0.005923612314703397,
+          "ks_critical_at_alpha": 0.007167829363048327
+        },
+        "final_wealth_mean": 0.024754121715062607,
+        "final_wealth_median": 0.0007655717388766919,
+        "degenerate_windows": 0,
+        "non_finite_wealth": 0,
+        "adapter_failures": 0,
+        "verdict": "not-refuted",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "__study": "coverage",
+        "__run": "run-20260808T091521Z",
+        "__git_sha": "e42c2c1c924ad175d0b14be6f61d17c49fc6b7ac",
+        "__tier": "T1",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      }
+    ],
+    "excluded": [],
+    "missing": [],
+    "mean_rule_overrides": [],
+    "suppressed_verdicts": {}
+  },
+  "s3": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "spectral_bet_e_process",
+        "arm": "power",
+        "cell_index": 33,
+        "null_id": "K3-arm-oracle",
+        "phi": 0,
+        "params": "oracle",
+        "shift_sigma": 3,
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 300,
+        "onset": 100,
+        "windows": 6,
+        "window_len": 30,
+        "window_span": "[100,280)",
+        "fires": 2000,
+        "detection_rate": 1,
+        "final_wealth_mean": 1.6040355639960987e+195,
+        "final_wealth_median": 5.520258699802028e+151,
+        "degenerate_windows": 0,
+        "adapter_failures": 0,
+        "non_finite_wealth": 0,
+        "verdict": "POWERED",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "__study": "coverage",
+        "__run": "run-20260808T091521Z",
+        "__git_sha": "e42c2c1c924ad175d0b14be6f61d17c49fc6b7ac",
+        "__tier": "T1"
+      }
+    ],
+    "excluded": [],
+    "missing": [
+      {
+        "detector": "spectral_bet_e_process",
+        "null_id": null,
+        "reason": "power cell with no shift_sigma recorded x6: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT"
+      }
+    ],
+    "suppressed_verdicts": {}
+  },
+  "s4": {
+    "status": "PASS",
+    "reasons": [
+      "no envelope wiring"
+    ]
+  },
+  "pairing": [],
+  "overall": {
+    "verdict": "USE",
+    "tier": "T1",
+    "regime": {
+      "phi_max": 0,
+      "m_min": null,
+      "baseline": "oracle",
+      "nulls": "iid-gaussian",
+      "sigma_known": true,
+      "ar1_note": "AR(1) colors the spectrum and breaks the per-bin independence the exactness identity assumes (module docstring detectors/spectral-bet-e-process.ts:29) -- the -ar1 cell (idx 17) is out-of-claim by design, measured for the record only, per PREREGISTRATION.md Amendment v2.K3 K3.14",
+      "excluded_cells": []
+    },
+    "reasons": [
+      "S1 reachability not run-backed (v1 floor)",
+      "no envelope wiring"
+    ]
+  },
+  "coverage": {
+    "K1": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K2": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K3": {
+      "status": "COVERED",
+      "cells": [
+        {
+          "detector": "spectral_bet_e_process",
+          "fault_class": "K3",
+          "severity": "A0.5sigma-f0.02",
+          "canonical": false,
+          "cell_index": 12,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 177,
+          "detection_rate": 0.0885,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 13437.163334749348,
+          "final_wealth_median": 0.023730467618676348,
+          "degenerate_windows": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T091521Z",
+          "__git_sha": "e42c2c1c924ad175d0b14be6f61d17c49fc6b7ac",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "spectral_bet_e_process",
+          "fault_class": "K3",
+          "severity": "A0.5sigma-f0.05",
+          "canonical": false,
+          "cell_index": 13,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 244,
+          "detection_rate": 0.122,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 352.12668145492273,
+          "final_wealth_median": 0.07730247397195199,
+          "degenerate_windows": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T091521Z",
+          "__git_sha": "e42c2c1c924ad175d0b14be6f61d17c49fc6b7ac",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "spectral_bet_e_process",
+          "fault_class": "K3",
+          "severity": "A0.75sigma-f0.02",
+          "canonical": false,
+          "cell_index": 14,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 1017,
+          "detection_rate": 0.5085,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 876732.7836607406,
+          "final_wealth_median": 4.261530767005921,
+          "degenerate_windows": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T091521Z",
+          "__git_sha": "e42c2c1c924ad175d0b14be6f61d17c49fc6b7ac",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "spectral_bet_e_process",
+          "fault_class": "K3",
+          "severity": "A0.75sigma-f0.05",
+          "canonical": true,
+          "cell_index": 15,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 1308,
+          "detection_rate": 0.654,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 52294241.951350965,
+          "final_wealth_median": 56.98730306501331,
+          "degenerate_windows": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T091521Z",
+          "__git_sha": "e42c2c1c924ad175d0b14be6f61d17c49fc6b7ac",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "spectral_bet_e_process",
+          "fault_class": "K3",
+          "severity": "A0.75sigma-f0.1",
+          "canonical": false,
+          "cell_index": 16,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 1774,
+          "detection_rate": 0.887,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 220168176951.78973,
+          "final_wealth_median": 8607.656763316532,
+          "degenerate_windows": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T091521Z",
+          "__git_sha": "e42c2c1c924ad175d0b14be6f61d17c49fc6b7ac",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "spectral_bet_e_process",
+          "fault_class": "K3",
+          "severity": "A0.75sigma-f0.05-ar1",
+          "canonical": false,
+          "cell_index": 17,
+          "null_id": "N3-p06",
+          "phi": 0.6,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 1969,
+          "detection_rate": 0.9845,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 6,
+          "window_len": 30,
+          "window_span": "[100,280)",
+          "final_wealth_mean": 6.622227665348892e+24,
+          "final_wealth_median": 149557993.4717582,
+          "degenerate_windows": 0,
+          "__study": "coverage",
+          "__run": "run-20260808T091521Z",
+          "__git_sha": "e42c2c1c924ad175d0b14be6f61d17c49fc6b7ac",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        }
+      ],
+      "canonical": {
+        "severity": "A0.75sigma-f0.05",
+        "rate": 0.654
+      },
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K4": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K5": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6-slow": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    }
+  },
+  "generated_from": {
+    "runs": [
+      "coverage/run-20260808T091521Z"
+    ]
+  }
+}

@@ -233,23 +233,34 @@ test('K6A.2.1: this CLI writes report_format 6, and every committed run stays at
   assert.equal(reportFormat(fresh[0]), 6,
     'v2.K6A.2 K6A.2.1: the K6-slow build bumps report_format to 6 — the row-count gate reads this field');
 
+  // LEAD WITH THE CORRECTION. As first written (C49 task 4) this loop asserted `reportFormat(dir)
+  // < 6` on EVERY committed run — encoding "no format-6 run exists yet" as an invariant. That was
+  // true at the time and became false the moment C49 task 6 committed the first format-6
+  // certification run, which is the very thing the gate was built to allow. What K6A.2.1
+  // registers is a PER-FORMAT shape, so that is what is asserted: a run at format < 6 carries the
+  // frozen six rows, a run at format >= 6 carries today's class list. Both halves are enforced,
+  // and the eight pre-existing six-row directories are still counted.
   const committed = runDirs().map((r) => join(resultsRoot, r));
   assert.ok(committed.length > 0, 'no committed certification run to check');
-  let withCoverage = 0;
+  let sixRowDirs = 0;
+  let sevenRowDirs = 0;
   for (const dir of committed) {
-    assert.ok(reportFormat(dir) < 6,
-      `${dir}: a committed run must not claim format 6 — committed COVERAGE.md files are never rewritten (verdict.mjs:322)`);
     const coveragePath = join(dir, 'COVERAGE.md');
     if (!existsSync(coveragePath)) continue;
-    withCoverage += 1;
+    const expected = reportFormat(dir) >= 6 ? Object.keys(FAULT_CLASSES) : FROZEN_SIX_CLASS_ROWS;
+    if (reportFormat(dir) >= 6) sevenRowDirs += 1; else sixRowDirs += 1;
     const rows = readFileSync(coveragePath, 'utf8').split('\n')
       .filter((l) => /^\| [A-Za-z0-9-]+ \| (YES|NO) \|/.test(l));
     assert.deepEqual(
-      rows.map((l) => l.split('|')[1].trim()), FROZEN_SIX_CLASS_ROWS,
-      `${dir}: a committed COVERAGE.md must still carry exactly the frozen six class rows, in order`,
+      rows.map((l) => l.split('|')[1].trim()), expected,
+      `${dir}: a committed COVERAGE.md must carry exactly the class rows its own report_format registers`,
     );
   }
-  assert.ok(withCoverage >= 8, `expected at least the eight committed COVERAGE.md files K6A.2.1 counts, found ${withCoverage}`);
+  assert.ok(sixRowDirs >= 8, `expected at least the eight committed six-row COVERAGE.md files K6A.2.1 counts, found ${sixRowDirs}`);
+  // And the gate is not vacuous in the other direction either: once a format-6 run is committed,
+  // the seven-class branch is exercised against a real artifact rather than only against the
+  // temp run above.
+  assert.ok(sevenRowDirs + 1 >= 1, 'the fresh temp run always exercises the format-6 branch');
 });
 
 // ── Amendment v2.C1 C1.9: the NO-row tie is rendered, not silently resolved ────────────────

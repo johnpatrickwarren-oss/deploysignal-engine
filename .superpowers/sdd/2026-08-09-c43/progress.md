@@ -45,3 +45,29 @@ run: no stage status, class answer or pairing list moves on any of the four affe
 Suite deltas: `test:coverage-battery` 141 → **144**; `test:cert` 181 (task-1 delta held); `npm test`
 351; `validate-cards` 15 OK; `cert:expiry` EXPIRED shape_ecdf_accumulator → **current** after the
 pins-only freeze.
+
+## Task 3 — review findings F1–F9 (review APPROVED with findings)
+
+| # | item | commit |
+|---|---|---|
+| 7 | correction append F1–F9 + both probes committed to `tools/` (F5) + README rows | `830b916` |
+| 8 | F4: `lib/score.mjs:265` literal NUL → `\0` escape | `d8e60eb` |
+| 9 | card identity re-freeze, pins only (9 cards pin `score.mjs`) | `fcfb9b4` |
+
+**F1 is the substantive one and it corrected my own price sheet.** A class answers YES iff a card
+with overall `USE` has it `COVERED`, so the strict reading strikes a class through the CARRIER, not
+the coverage layer. `point_tail_bet_e_value` and `group_average_e_value` are each one S2 cell wide →
+both `NOT_EXECUTABLE`. **K4 flips YES→NO under the strict reading ALONE** (C43.5 had said no class
+moves without a second change); K2 and K5 still need the second change; two card verdicts move.
+`safe_t_e_value` unmoved, `USE`/T1 either way. Verified portfolio-wide with the real scorer through
+`overallVerdict`; probe input limitation disclosed per card.
+
+F2: 111 → **121** rows (UI's 10 `N3-p06` rows). F3: the "results/ untouched" sentence corrected
+against its own commit. F6: filename misquote. F7: the cites this branch's own insertion moved,
+tabulated. F8/F9: the `N2-m100`-beside-`params: 'oracle'` inconsistency named, and the four
+held-out candidates' ids promoted from cosmetic choice to a named open item with a measured
+consequence (they ARE the K4 exposure).
+
+Suites at `fcfb9b4`: `npm test` 351 · `test:cert` 181 · `test:coverage-battery` 144 (143 + 1
+skipped) · `validate-cards` 15 OK · `cert:expiry` all cards current. Zero NUL bytes remain in the
+certification lib, the coverage harness or the probes.

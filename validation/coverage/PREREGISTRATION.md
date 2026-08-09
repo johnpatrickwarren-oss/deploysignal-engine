@@ -8412,3 +8412,79 @@ finite-variance claim gains its across-draw evidence; centred-below-null or run-
 → a new contradiction filed under SCHEMA §9 with neither claim gaining. **This study re-scores no
 card, moves no class row, touches no `COVERAGE.md` row, and leaves the one-attempt rule and
 `K6-slow YES at this calibration draw` exactly as they stand.**
+
+---
+
+### Results append to v2.K6A.6, dated 2026-08-08 (appended not edited)
+
+`run-acrossdraw-20260809T065107Z`, one run, `mode: live`, at `e61e0ca`, `227.97 s`. Numbers are
+readable off `results/live/run-acrossdraw-20260809T065107Z/{rows,distributions,manifest}.json`;
+the narrative is that directory's `REPORT.md`. **Six of seven banded predictions HELD.**
+
+| # | predicted | band | measured | verdict |
+|---|---|---|---|---|
+| E1 | `0.6207` | `[0.593, 0.648]` | `0.62514` | HELD (`+0.29` SE) |
+| E2 | `0.1416` | `[0.117, 0.166]` | `0.151398` | HELD |
+| E3 | `0.196` | `[0.12, 0.28]` | `0.21` | HELD |
+| E4 | `0.079` | `[0.03, 0.15]` | `0.03` | HELD, at the lower edge |
+| E5 | `0.039` | `[0.01, 0.10]` | `0.00` | **DEVIATION** |
+| E6 | `0.991433` | disposition rule | `0.989903` (`−0.80` SE) | **READING A — TAIL DRAW** |
+| E7 | `0.0013` | `0` | `0` | HELD |
+| E8 | none registered | — | KS median `0.036537` | DESCRIPTIVE |
+
+**E6's disposition, selected by K6A.6.5's rule and not after the fact.** The across-draw
+distribution of `increment_estimator.mean` is centred on the exact null (`0.989903` against
+`0.991433`, `−0.80` SE of the across-draw mean), across-draw sd `0.019139`, and the registered
+run's `1.024959` lies inside the measured support at the 97th percentile, **`1.75` across-draw sd**
+above the exact null. **READING A: the lottery explanation gains its across-draw evidence; the
+finite-variance claim does not acquire across-draw support.** The registered run's `16.26 SE`
+figure quoted the **within-draw** Wald SE `0.002062` against a **between-draw** spread of
+`0.019139`, a factor of `9.3` — **K6A.2.4c's category error, now measured on the increment field
+rather than on detection.** No card is re-scored, no S2 authority moves, and the `[0.97, 1.01]`
+range is not withdrawn.
+
+**E7 reproduces K6A.1.5's screen distribution on a disjoint seed band**, unprompted: `g_null` mean
+`−6.821e-2` against `−6.754e-2`, sd `1.379e-2` against `1.571e-2`, `0/100` positive.
+
+**DEVIATION E5, and its measured mechanism — filed against this document's own REGISTRATION, not
+against the endpoint, which stands as measured.** `0/100` at a registered `p = 0.039` is a `1.9%`
+outcome. **E4 and E5 are both defined on an OBSERVED healthy rate, so both are functions of the
+trajectory count at which that rate is observed, and K6A.1.10 estimated them from a `TJ = 72`
+probe while this study measures at `TJ = 500`.** Replaying K6A.1.10's own two rules on this study's
+own 100 draw-level rates, at the gate's own `TJ = 72`: the `> α` rule gives **`0.081`** against the
+gate's `22/280 = 0.079`, and the Wilson-LB rule gives **`0.039`** against the gate's
+`11/280 = 0.039`. **The draw-level healthy-rate distribution REPLICATES the gate's; only `TJ`
+differs.** At `TJ = 500` the same rules give `0.041` and `0.011` against measured `0.030` and
+`0.000`, both inside binomial noise on 100 draws.
+
+**The registration defect this exposes, filed as a write-back obligation and NOT fixed here.**
+K6A.1.10's E5 rule applies an `n = 2000` Wilson threshold (point rate `0.0585`) to a rate measured
+on `72` trajectories, where the granularity is `1/72 = 0.0139` and the threshold is effectively
+"`k >= 5`". **A stop condition's false-fire rate estimated that way is a property of the probe's
+trajectory count, not of the stop condition.** Nothing in K6A.1.10 moves: this study has no
+authority over a stop condition, and the `≈ 4%` figure it registers is left standing with this
+measurement recorded beside it.
+
+**Quote-and-correct against THIS amendment's own text, in the direction against its convenience.**
+Quoted, K6A.6.4 E2:
+
+> `[0.117, 0.166]` (the chi-square 95% interval at `df = 99`)
+
+**Correct: the exact chi-square 95% interval about `0.1416` at `df = 99` is `[0.1219, 0.1613]`.**
+The registered band is **wider** than the interval it names, so it was easier to hit than it
+claimed to be. E2's `0.151398` is inside both and the verdict does not change; the correction is
+recorded because a band that misdescribes itself is a band a reader cannot check.
+
+**One comparability limit on E8, stated because the number invites a comparison it cannot carry.**
+`p_uniformity` pools `TJ × 40` values, so this study reads KS at `n = 20,000` and the registered run
+read it at `n = 80,000`. **The KS statistic exceeds its critical value on `100/100` draws here, the
+smallest at `1.88×`** — so the registered run's `8.56×` is not a hot-draw property but what this
+discrete-`p` construction does on every draw, which is the ground K6.7/K3.1.7 stripped the field's
+verdict authority on. E8 registered no prediction and none is claimed.
+
+**The registered run located, descriptive per K6A.6.4:** canonical `0.8515` at fraction `0.93`,
+healthy `0.0540` at `0.97`, increment `1.024959` at `0.97`, **all three inside the measured
+support**. The "hot draw" is measured rather than asserted, and it is one draw of the 100.
+
+**Unchanged by this run:** `K6-slow YES at this calibration draw`, the one-attempt rule, every
+K6A.1.12 endpoint, `K6 = NO` at the deploy-gate geometry, and every `COVERAGE.md` row.

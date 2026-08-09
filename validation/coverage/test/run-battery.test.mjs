@@ -2028,3 +2028,77 @@ test('C38.1.2: n < 2 emits the bound and its sd as absent (NaN), not as a number
   assert.equal(s2.mean_e_sd, null, 'mean_e_sd must be NaN (JSON null) at n < 2');
   assert.equal(s2.mean_e_lower_95, null, 'mean_e_lower_95 must be NaN (JSON null) at n < 2');
 });
+
+// ── Amendment v2.C39 — `increment_estimator` as the terminal class's REPORTED mean instrument ──
+// WORKLIST C39. The instrument needed no building (K3.1.1's summarise() already computes it); what
+// these tests pin is WHERE it lands, that it is the same sample `mean_e` is the mean of, that it
+// carries no verdict field, and the n < 2 boundary C39.5 registers rather than smooths over.
+
+test('C39.2: increment_estimator lands on all three terminal-instrument S2 rows, and on neither their S3 rows nor any fault cell', () => {
+  const { summary } = smoke();
+  for (const det of C38_TERMINAL_ARMS) {
+    const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === det);
+    const inc = s2.increment_estimator;
+    assert.ok(inc && typeof inc === 'object', `${det}: no increment_estimator on the S2 row`);
+    // summarise()'s exact field set, in K3.1.1's shape — no more, no fewer.
+    assert.deepEqual(Object.keys(inc).sort(),
+      ['lower95_one_sided', 'mean', 'n', 'sd', 'se', 'upper95_one_sided'],
+      `${det}: increment_estimator must be summarise()'s shape`);
+    for (const k of Object.keys(inc)) assert.ok(Number.isFinite(inc[k]), `${det}: increment_estimator.${k}`);
+    const s3 = summary.cells.find((c) => c.arm === 'power' && c.detector === det);
+    assert.ok(!('increment_estimator' in s3), `${det}: K3.1.4's exclusion — the S3 row must not carry it`);
+  }
+  for (const row of summary.cells.filter((c) => c.fault_class != null)) {
+    assert.ok(!('increment_estimator' in row),
+      `fault cell ${row.cell_index} ${row.detector}: K3.1.4's exclusion — no fault cell carries it`);
+  }
+  // C39.2: no verdict derived from this instrument is emitted on ANY row, ever. lib/score.mjs:182
+  // routes a non-test_martingale cell carrying increment_verdict into missing[] as a foreign
+  // verdict, and that branch must stay unreachable from this battery's rows.
+  for (const row of summary.cells) {
+    assert.ok(!('increment_verdict' in row),
+      `${row.detector} ${row.arm ?? row.severity}: increment_verdict must never be emitted`);
+  }
+});
+
+test('C39.5: the terminal S2 row\'s increment_estimator is the SAME sample mean_e is the mean of — all four registered invariants', () => {
+  const { summary } = smoke();
+  for (const det of C38_TERMINAL_ARMS) {
+    const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === det);
+    const inc = s2.increment_estimator;
+    const n = c38SampleN(s2);
+    assert.ok(n >= 2, `${det}: this test asserts the n >= 2 invariants and n is ${n}`);
+    // MUTATION KILL: point the estimator at any other sample — the per-trajectory `es` on the
+    // per-point row, or the power arm's reads — and `n`, `mean` or `sd` stops matching.
+    assert.equal(inc.n, n, `${det}: increment_estimator.n must be the row's own sample size`);
+    assert.equal(inc.mean, s2.mean_e, `${det}: increment_estimator.mean must BE mean_e`);
+    assert.equal(inc.sd, s2.mean_e_sd, `${det}: increment_estimator.sd must BE mean_e_sd`);
+    assert.equal(Math.max(0, inc.lower95_one_sided), s2.mean_e_lower_95,
+      `${det}: mean_e_lower_95 is the clamped form of the same bound (C39.5)`);
+    // se is the bound's own denominator, so it is pinned too: a bound built on a different se
+    // would satisfy nothing above and still be wrong.
+    assert.equal(inc.lower95_one_sided, inc.mean - 1.645 * inc.se, `${det}: the bound is mean - 1.645*se`);
+    assert.equal(inc.se, Math.sqrt((inc.sd * inc.sd) / n), `${det}: se = sd/sqrt(n) at the row's own n`);
+  }
+  // The per-point row is where the two bookkeeping paths could silently diverge: its estimator must
+  // be over the 400,000 per-POINT reads (n_points), NOT the 20 per-trajectory injected-tick reads.
+  const pt = summary.cells.find((c) => c.arm === 'healthy' && c.detector === 'point_tail_bet_e_value');
+  assert.equal(pt.increment_estimator.n, pt.n_points, 'K4.1.4: the per-point row\'s estimator is per-POINT');
+  assert.notEqual(pt.increment_estimator.n, pt.n, 'a per-trajectory n here would be the wrong sample');
+});
+
+test('C39.5: the n < 2 boundary is exactly as registered — summarise\'s zero-width interval beside a null mean_e_sd', () => {
+  const { summary } = runHarness(['--n', '1', '--classes', 'K2']);
+  const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === 'group_average_e_value');
+  const inc = s2.increment_estimator;
+  assert.equal(inc.n, 1);
+  // K3.1.1's own convention at n <= 1: varr = 0, so sd and se are 0 and the interval is zero-width.
+  assert.equal(inc.sd, 0, 'summarise gives sd 0 at n <= 1 (K3.1.1\'s varr = 0 branch)');
+  assert.equal(inc.se, 0);
+  assert.equal(inc.lower95_one_sided, inc.mean);
+  assert.equal(inc.upper95_one_sided, inc.mean);
+  // And the addendum's rule for its own two fields is NaN, which JSON writes as null. The two
+  // conventions DISAGREE here by construction, which is what C39.5 registers.
+  assert.equal(s2.mean_e_sd, null, 'the addendum\'s convention is NaN at n < 2, not 0');
+  assert.equal(s2.mean_e_lower_95, null);
+});

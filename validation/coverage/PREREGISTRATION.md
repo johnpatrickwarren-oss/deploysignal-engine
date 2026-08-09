@@ -9713,3 +9713,222 @@ already refute on the point estimate at `mean_e` `4.176` and `1.914`. **Nothing 
 nothing is recomputed** — the bound is not recoverable from a recorded mean, so it becomes evaluable
 on this battery only on the next run that touches these rows, which this amendment does not
 authorize.
+
+---
+
+## Amendment v2.C39 — 2026-08-09, before the emission exists: the increment estimator becomes the terminal class's REPORTED mean instrument, with no verdict authority and a mandatory across-draw caveat
+
+WORKLIST `C39`. Sections §1–14 and every prior Amendment and Erratum stay intact; this amendment
+**adds one field to one row shape** and moves no endpoint, floor, threshold, seed, grid, falsifier or
+verdict. Registered **before** the harness change it authorizes; **no run is re-run**.
+
+### C39.1 What is missing, and what already exists
+
+The WORKLIST row reads:
+
+> No `terminal_e_value` card computes an increment-style reading; `TERMINAL_MEAN_BOUND` gates only
+> on the raw 300-tick sample mean, whose N=2000 behavior is exactly what
+> `stats/terminal-mean-rule-contested` leaves unresolved. Build and pre-register (before use) either
+> the increment estimator or a trimmed/bootstrap-lower-bound instrument for terminal cards.
+
+**The instrument itself does not need building.** `summarise()`
+(`harness/run-battery.mjs`, K3.1.1's verbatim copy of
+`validation/detector-audit/harness/run-sequential.mjs:37-44`) already computes it, and three
+`test_martingale`-class rows already carry it: cell 33 (K3.1.1), cell 34 (K6.7) and arm 47
+(K6A.1.12). Amendment v2.K6A.7 K6A.7.5 registered the T2 counterpart's three pooling levels. **What
+is missing is the registration of that instrument on the terminal class's row, and the caveat that
+must travel with it.** This amendment supplies both and builds nothing new.
+
+### C39.2 The instrument, registered: which rows, which sample, which shape
+
+**WHICH ROWS.** The same rows Amendment v2.C38.1 scopes: the S2 (`arm: 'healthy'`) row of any A1
+arm whose emission takes the **terminal instrument pair** branch (`exceedance` + `mean_e`,
+`CLASS_INSTRUMENTS.terminal_e_value`, `validation/certification/lib/constants.mjs:11`). At this
+commit: arms **30**, **31**, **32**. **Not** the S3 row, **not** any fault cell — K3.1.4's binding
+exclusion is inherited unchanged and extended to this field by name.
+
+**WHICH SAMPLE, and why "increment" is the right word for a terminal read.** A terminal e-value's
+wealth path has **exactly one increment per replicate** — the terminal e itself, `M_T/M_0` — so the
+increment sample and the terminal sample are the same numbers. There is nothing to choose:
+
+| kind | arm | the sample | `n` |
+|---|---|---|---|
+| `terminal` | 30 | per-trajectory terminal e-values (`acc.es`) | `healthy.finite` |
+| `process` | 31 | per-trajectory final wealth `M_T` (`acc.es`) | `healthy.finite` |
+| `point` | 32 | the per-POINT e-values of K4.1.4's per-point row | `healthy.pointFinite` |
+
+**This is the same sample `mean_e` is the mean of.** No second sample is introduced, and no
+trimming, bootstrap or re-weighting is registered — the WORKLIST row's alternative
+("trimmed/bootstrap-lower-bound instrument") is **NOT adopted**, because a bootstrap needs a new
+seeded stream and would make the run non-reproducible from its recorded fields, where this estimator
+is closed form and recomputable from `n`, `mean_e` and `mean_e_sd` alone.
+
+**SHAPE.** `summarise()`'s object verbatim: `{ n, mean, sd, se, lower95_one_sided,
+upper95_one_sided }`, `n-1` variance, `z = 1.645`. On the `terminal`/`process` path this is
+`summarise(acc.es)` literally. On the `point` path the sample is not in memory, so the identical
+algebra is applied to the running moments (`pointSumE`, and the Welford `pointM2` Amendment v2.C38.1
+registered), through one helper whose only job is to be that algebra once.
+
+**THE FIELD NAME IS `increment_estimator`, AND `increment_verdict` IS EXPLICITLY NOT EMITTED.**
+`lib/score.mjs:182` routes a non-`test_martingale` cell that carries `increment_verdict` and no
+class verdict into `missing[]` as *"foreign increment_verdict ignored"*. These rows carry their
+class's own `verdict`, so that branch cannot fire — and it stays that way because **no verdict field
+derived from this instrument is emitted, on any row, ever.**
+
+### C39.3 NO VERDICT AUTHORITY — the mechanism, and the boundary named as out of scope
+
+**The field is REPORTED. It decides nothing.** Three independent reasons it cannot, each checkable:
+
+1. **The recorded token does not move.** The S2 `verdict` stays
+   `s2Lower95 > ALPHA ? 'FAIL' : 'not-refuted'` — derived from the exceedance's own Wilson bound,
+   exactly as it is today. This amendment does not touch that expression.
+2. **The scorer treats it as annotation.** `applyGuards`
+   (`validation/certification/lib/guards.mjs`) implements Finding 4: a foreign instrument present
+   **alongside** the class's own instrument is *"annotation, not a veto"*. Quoted:
+
+   > A foreign instrument present ALONGSIDE the class's own instrument is annotation, not a veto —
+   > e.g. a sequential_ui_e_process (e_process) cell that carries increment_estimator
+   > (test_martingale's instrument) next to its own crossing_rate scores by crossing_rate.
+
+   These rows carry `exceedance` and `mean_e`, so `ownPresent.length > 0` and the VOID branch cannot
+   be reached. The returned `{status: 'OK', reason}` string is **not read anywhere** in
+   `lib/score.mjs` (only `'VOID'`, `'NON_FINITE'` and `'VACUOUS'` are branched on), so the field's
+   presence has **no observable effect on any stage score**. `increment_estimator`'s own
+   finiteness/vacuousness guards are gated `cls === 'test_martingale'` and do not apply here, and
+   `internalConsistency` returns `[]` for every other class.
+3. **`isValidityCell` already admits these rows** on `exceedance`/`mean_e` (`lib/score.mjs:11`), so
+   candidacy does not move either.
+
+**THE AUTHORITY PATTERN THIS FOLLOWS, cited rather than invented.** K3.1.3 (Critical) registered
+exactly this arrangement for cell 33: the instrument is emitted *"precisely so this reading is
+visible and auditable, not to let an infinite-variance Wald bound silently gate a fresh detector's
+certification"*, while the verdict stays with the other instrument. K6.7 applied the same split to
+cell 34. **This amendment is the third application of that pattern and adds nothing to it.**
+
+**AND THE REPORTING RULE, transcribed from K3.1.3 clause 2.** If a future run reads
+`increment_estimator.lower95_one_sided > 1` on a terminal-class S2 row, that reading is **filed as a
+discrepancy to `~/concord/knowledge/stats/pages/terminal-mean-rule-contested.md`** — it is **not
+scored**, and it does not move the card's S2 verdict.
+
+**OUT OF SCOPE, NAMED.** Giving this field verdict authority on the terminal class means changing
+`CLASS_INSTRUMENTS.terminal_e_value` and the S2 scoring path in
+`validation/certification/lib/score.mjs`. **That is a certification-protocol change, not a battery
+amendment**, and it is **explicitly not done here**. No protocol page is edited, no constant in
+`lib/constants.mjs` moves, and this document has no authority to make that change.
+
+### C39.4 THE ACROSS-DRAW CAVEAT — registered text, and it is mandatory
+
+**Registered: no reading of `increment_estimator` on any row this battery emits may be reported
+without the following caveat beside it.** This is not stylistic. WORKLIST `C51` recorded a category
+error committed on this exact field, by this author's own filing, and the correction is measured:
+
+> **CAVEAT (registered, v2.C39.4 — mandatory beside any `increment_estimator` reading).** This
+> field's `se`, `lower95_one_sided` and `upper95_one_sided` are **within-draw** quantities: they
+> describe the spread of the mean over trajectories **at one calibration draw**, and they are not
+> the uncertainty on the class's answer. The spread that governs a reading's distance from its null
+> is the **between-draw** spread, and on the one construction where both have been measured it is
+> **9.3× larger**: `shape_ecdf_accumulator`'s registered single-draw reading was framed as
+> **16.26 SE** above the exact null `0.991433` using the within-draw Wald SE **`0.00206`**, where
+> the across-draw sd of the same field over 100 fresh calibration draws is **`0.01914`**
+> (`results/live/run-acrossdraw-20260809T065107Z`, Amendment v2.K6A.6). The across-draw
+> distribution is **centred on the exact null** (mean `0.989903` vs `0.991433`, `−0.80` SE) and the
+> single-draw `1.024959` sits at its **97th percentile** — a tail draw, by the disposition rule
+> registered before that run. Two further measured consequences: the registered range
+> `[0.97, 1.01]` **false-fires on 32/100 draws from the calibration lottery alone**, and
+> K6A.1.12's per-draw band `[0.985, 0.998]` for this field is **contradicted at 74/100**. So a
+> within-draw interval on this field **cannot** be read as evidence about the class, and an
+> apparent departure of many within-draw SEs is the expected appearance of a single draw.
+
+**Scope of the caveat, stated exactly.** The `9.3×` and the two false-fire rates are measured on
+**one construction** — `shape_ecdf_accumulator` at `κ = 0.682`, `m = 500`, `W = 150`. **The
+across-draw spread of this field on the three terminal-class rows is UNMEASURED**, and the caveat
+does not claim otherwise: what transfers is the **category** (within-draw SE is not between-draw
+spread), which is a property of the single-draw-per-cell protocol and not of one κ. The ratio on the
+terminal rows could be larger or smaller and nothing here predicts it.
+
+### C39.5 The invariants against Amendment v2.C38.1's fields, and the one boundary where they part
+
+On every terminal-instrument S2 row with `n >= 2`, registered as **checked** rather than asserted:
+
+```
+increment_estimator.n                      === n  (n_points on the K4.1.4 per-point row)
+increment_estimator.mean                   === mean_e
+increment_estimator.sd                     === mean_e_sd
+max(0, increment_estimator.lower95_one_sided) === mean_e_lower_95
+```
+
+The fourth line is an identity with a `max`, not an equality, and the reason is registered at
+C38.1.2: `mean_e_lower_95` is **clamped at 0** because the addendum that owns that field name
+clamps it; `summarise`'s `lower95_one_sided` is **unclamped** because K3.1.1 does not clamp. **Each
+field keeps its own owner's convention** so one field name never means two statistics across two
+studies, and the relation between them is registered here instead of being left for a reader to
+guess.
+
+**THE ONE BOUNDARY: `n < 2`.** `summarise` returns `sd: 0` with a zero-width interval at `n <= 1`
+(its `varr = 0` branch); the addendum's rule for `mean_e_sd`/`mean_e_lower_95` is `NaN`. **So at
+`n < 2` the three fields disagree by construction, and that is registered rather than smoothed
+over:** `increment_estimator` follows K3.1.1, `mean_e_sd`/`mean_e_lower_95` follow the addendum.
+Every registered run of this battery is at `N = 2000`, so the boundary is reachable only on a smoke
+run — where a test pins it, so it cannot drift unnoticed.
+
+### C39.6 Named-not-done
+
+1. **The two historical mean-rule overrides get NOTHING recomputed.**
+   `group_average_e_value` (`mean_e 1.9140717432761356`, `run-20260808T201635Z`) and
+   `family_E_conformal_heldout` (`mean_e 4.175984181731008`, `run-20260808T133859Z`) were overridden
+   to REFUTED on the point estimate. Their increment estimators are **not recoverable** from what
+   was recorded — only the sample mean exists — so re-examining them **requires reruns**, and no
+   rerun is performed or authorized here.
+2. **No verdict authority transfer.** C39.3's boundary: a protocol change, out of scope.
+3. **No trimmed or bootstrap instrument.** C39.2: considered and not adopted, with the reason.
+4. **The across-draw spread of this field on the terminal rows is unmeasured.** C39.4's scope
+   clause. Measuring it is the terminal-class analogue of Amendment v2.K6A.6 and is not attempted.
+5. **`safe_t_e_value`'s and `universal_inference_e_value`'s rows are untouched** — this battery
+   emits no terminal-class S2 row for either (their coverage rows are fault/S3 rows), so the field
+   appears for them only if `terminal-evalue`'s own harness registers it, which this amendment does
+   not do.
+6. **The card expiry of C38.1.7 applies unchanged** and no card is re-frozen.
+
+### C39.7 Registered code and test items
+
+| # | item | site |
+|---|---|---|
+| 1 | `summariseFromMoments(n, mean, varr)` — `summarise()`'s own tail algebra, for the point path where the sample is not held | `harness/run-battery.mjs` |
+| 2 | `increment_estimator` on the terminal-instrument S2 branch, per-kind sample as tabled | `harness/run-battery.mjs` S2 emission |
+| 3 | test: the field is present on all three terminal-class S2 rows and absent from their S3 rows and from every fault cell | `test/run-battery.test.mjs` |
+| 4 | test: the four C39.5 invariants hold on every terminal-class S2 row at `n >= 2` — **mutation kill: feed the estimator a different sample (e.g. the per-trajectory `es` on the point row) and the `n`/`mean`/`sd` identities fail** | `test/run-battery.test.mjs` |
+| 5 | test: the `n < 2` boundary of C39.5 is exactly as registered (`sd: 0` and a zero-width interval beside a `null` `mean_e_sd`) | `test/run-battery.test.mjs` |
+| 6 | test: no row of any kind carries `increment_verdict` | `test/run-battery.test.mjs` |
+
+### C39.8 House rules, mapped
+
+(1) **Committed before the code.** (2) No endpoint or threshold moves. (3) The two `mean_e` figures
+quoted in C39.6 are **already-published readings of already-scored rows**, quoted to say what is
+*not* being recomputed — no new analysis of any candidate endpoint. (4) §9's fallback untouched.
+(5) No new substrate. (6) `results/` untouched; **no run written, no row edited.** (7) No rerun.
+(8) Binding on the next report that emits this field: it must state the estimator's `n`, `mean`,
+`sd` and one-sided bound **and carry C39.4's caveat verbatim**.
+
+### Amendment summary
+
+**Registers `increment_estimator` — `summarise()`'s object, unchanged — on this battery's
+terminal-instrument S2 rows, as a REPORTED instrument with no verdict authority.** The instrument
+needed no building: K3.1.1's `summarise()` already computes it and three `test_martingale` rows
+already carry it; what was missing was its registration on the terminal row and the caveat that must
+travel with it. For a terminal e-value the wealth path has exactly one increment per replicate, so
+the increment sample **is** the sample `mean_e` is the mean of — no second sample, no bootstrap
+(rejected: it would break recomputability from the recorded fields). **Authority does not move, on
+three independently checkable grounds:** the S2 token stays exceedance-derived, `applyGuards`
+Finding 4 treats a foreign instrument beside the class's own as *"annotation, not a veto"* and its
+`OK` reason string is read nowhere in `lib/score.mjs`, and `isValidityCell` already admitted these
+rows. **This is K3.1.3/K6.7's pattern applied a third time**, including its reporting rule: a
+`lower95_one_sided > 1` reading is filed to `stats/terminal-mean-rule-contested`, not scored.
+**Transferring verdict authority is a certification-protocol change and is explicitly out of scope.**
+**And C39.4 registers a MANDATORY caveat** — no reading of this field may be reported without it —
+built on the C51 category error measured on this exact field: a **16.26-SE** framing that used the
+**within-draw** Wald SE `0.00206` where the **between-draw** sd is `0.01914`, **9.3× larger**, with
+the across-draw distribution centred on the exact null and the registered single-draw reading at its
+97th percentile. The caveat's numbers are scoped to the one construction they were measured on and
+the terminal rows' own across-draw spread is named unmeasured. **The two historical mean-rule
+overrides are not recomputed** — their increment estimators are unrecoverable from a recorded mean,
+so re-examination needs reruns, and none is performed.

@@ -1128,6 +1128,17 @@ function summarise(xs) {
   return { n, mean: m, sd: Math.sqrt(varr), se, lower95_one_sided: m - 1.645 * se, upper95_one_sided: m + 1.645 * se };
 }
 
+// Amendment v2.C39, C39.2/C39.7 item 1: `summarise()`'s own tail algebra — everything after the
+// two reductions — for the ONE path where the sample is not held in memory (K4.1.4's per-POINT row,
+// where `record()` keeps `pointSumE` and the Welford `pointM2` and never the 400,000 values). Same
+// n-1 variance, same `z`, same field names and same order, so a per-point increment estimator and a
+// per-trajectory one are the same statistic computed from different bookkeeping. `summarise` above
+// is left byte-for-byte as K3.1.1's verbatim copy rather than refactored to call this.
+function summariseFromMoments(n, m, varr) {
+  const se = Math.sqrt(varr / n);
+  return { n, mean: m, sd: Math.sqrt(varr), se, lower95_one_sided: m - 1.645 * se, upper95_one_sided: m + 1.645 * se };
+}
+
 // K3.1.7: pooled per-bin p values (across N trajectories x 6 windows x 3 bins) into decile
 // counts, plus the one-sample Kolmogorov-Smirnov statistic against Uniform(0,1) and the
 // standard asymptotic critical value c(alpha=0.05)=1.36 at the actual pooled sample size —
@@ -1590,9 +1601,19 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   const s2MeanE = pointKind
     ? (s2PointN ? healthy.pointSumE / s2PointN : NaN)
     : (healthy.es ? mean(healthy.es) : NaN);
-  const s2MeanSd = pointKind
-    ? (s2PointN > 1 ? Math.sqrt(healthy.pointM2 / (s2PointN - 1)) : NaN)
-    : (healthy.es && healthy.es.length > 1 ? summarise(healthy.es).sd : NaN);
+  // Amendment v2.C39, C39.2: the terminal class's REPORTED mean instrument — `summarise()`'s object
+  // over the SAME sample `mean_e` is the mean of. A terminal e-value's wealth path has exactly one
+  // increment per replicate (the terminal e itself), so the increment sample and the terminal sample
+  // are the same numbers and there is nothing to choose. It carries NO verdict authority: the S2
+  // token below stays exceedance-derived, and `applyGuards`'s Finding 4 reads a foreign instrument
+  // beside the class's own as annotation rather than a veto (C39.3).
+  const s2IncrementEstimator = pointKind
+    ? summariseFromMoments(s2PointN, s2MeanE, s2PointN > 1 ? healthy.pointM2 / (s2PointN - 1) : 0)
+    : summarise(healthy.es ?? []);
+  // C38.1's sd is read off that same object on the two-pass paths, so the two fields cannot drift
+  // apart. C39.5: at n < 2 they part by construction — `summarise` gives sd 0 (K3.1.1's own
+  // convention) and the addendum's rule for `mean_e_sd` is NaN — and that boundary is registered.
+  const s2MeanSd = s2MeanN > 1 ? s2IncrementEstimator.sd : NaN;
   const s2MeanLower95 = meanLower95(s2MeanE, s2MeanSd, s2MeanN);
   const s2 = {
     detector: detId,
@@ -1631,6 +1652,12 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
         // only add refutations — it can never clear a cell the point estimate refutes.
         mean_e_sd: s2MeanSd,
         mean_e_lower_95: s2MeanLower95,
+        // Amendment v2.C39, C39.2 (registered code item 2): REPORTED, never scored. Any reading of
+        // this field must be reported with C39.4's caveat verbatim — its se and bounds are
+        // WITHIN-draw, and on the one construction where both are measured the between-draw spread
+        // is 9.3x larger. A `lower95_one_sided > 1` reading is FILED to
+        // stats/terminal-mean-rule-contested (K3.1.3's reporting rule), not scored.
+        increment_estimator: s2IncrementEstimator,
       }),
     lower_95: s2Lower95,
     ...(spectralKind ? {

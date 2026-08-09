@@ -438,12 +438,15 @@ test('K4.1.8 mutation guard: cell 32 S2 mean_e is within the registered 3-sd ban
     `K4.1.8 predicts mean_e ~0.6246 (3-sd band at n_points=${s2.n_points} smoke); got ${s2.mean_e}`);
 });
 
-test('params negative scope: every row outside the two heldout-empirical candidates keeps params=oracle', () => {
+test('params negative scope: every row outside the heldout-empirical candidates keeps params=oracle', () => {
   const { summary } = smoke();
   // Amendment v2.K6, K6.9: shape_block_conformal_bet joins point_tail_bet_e_value as the
   // second heldout-empirical candidate — both excluded here, everything else must still
   // read 'oracle'. Amendment v2.K6A.1, K6A.1.10: shape_ecdf_accumulator is the third.
-  const HELDOUT_EMPIRICAL_DETECTORS = ['point_tail_bet_e_value', 'shape_block_conformal_bet', 'shape_ecdf_accumulator'];
+  // Amendment v2.C47.2, C47.2.5(a): family_E_conformal_heldout is the FOURTH, and the widening is
+  // registered rather than quietly edited. The mutation this test exists to kill (a collapsed or
+  // swapped ternary) is still killed — the remaining detectors' rows are all on 'oracle'.
+  const HELDOUT_EMPIRICAL_DETECTORS = ['point_tail_bet_e_value', 'shape_block_conformal_bet', 'shape_ecdf_accumulator', 'family_E_conformal_heldout'];
   const nonHeldoutRows = summary.cells.filter((c) => !HELDOUT_EMPIRICAL_DETECTORS.includes(c.detector));
   assert.ok(nonHeldoutRows.length > 0);
   for (const c of nonHeldoutRows) {
@@ -1944,4 +1947,265 @@ test('K6A.3.1: the registered run screens at 250 x 8,000 — the branch, pinned 
   // The screen must be called with the class scope, before the cells, and only for K6-slow.
   assert.match(src, /const NULL_GROWTH_SCREEN = CLASSES_RUN\.includes\('K6-slow'\) \? runNullGrowthScreen\(CLASSES_RUN\) : null;/,
     'the driver call site is registered: iff K6-slow is in scope');
+});
+
+// ── Amendment v2.C38.1 — `mean_e_sd` / `mean_e_lower_95` on the terminal-instrument S2 rows ──
+// WORKLIST C38 item (1). The field safe-t's frozen card falsifier names ("one-sided 95% lower bound
+// of mean(e) > 1") existed in `terminal-evalue`'s rows and on no row this battery emits, so on this
+// battery's evidence the mean rule fell back to the point estimate. These three tests pin the
+// emission, its arithmetic, and its registered absence.
+
+const C38_TERMINAL_ARMS = ['group_average_e_value', 'family_E_conformal_heldout', 'point_tail_bet_e_value'];
+const C38_NON_TERMINAL_ARMS = ['spectral_bet_e_process', 'shape_block_conformal_bet', 'shape_ecdf_accumulator'];
+// The `n` the bound's sqrt divides by, per C38.1.2's per-kind table: the per-POINT count on the
+// K4.1.4 row, the per-trajectory count everywhere else.
+const c38SampleN = (row) => (row.detector === 'point_tail_bet_e_value' ? row.n_points : row.n);
+
+test('C38.1.2: the terminal-instrument S2 rows carry mean_e_sd and mean_e_lower_95; the spectral/shape S2 rows and every S3 row do not', () => {
+  const { summary } = smoke();
+  for (const det of C38_TERMINAL_ARMS) {
+    const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === det);
+    assert.ok(s2, `${det}: no healthy (S2) arm`);
+    assert.ok(Number.isFinite(s2.mean_e_sd), `${det}: mean_e_sd ${s2.mean_e_sd}`);
+    // Strictly positive on every row: a 0 sd is what "the spread was never accumulated" looks
+    // like, and on the point row it is the only observable that the Welford pass in record() ran
+    // at all (mutation kill: delete the pointM2 update and this fails on point_tail_bet_e_value).
+    assert.ok(s2.mean_e_sd > 0, `${det}: mean_e_sd must be strictly positive, got ${s2.mean_e_sd}`);
+    assert.ok(Number.isFinite(s2.mean_e_lower_95), `${det}: mean_e_lower_95 ${s2.mean_e_lower_95}`);
+    assert.ok(s2.mean_e_lower_95 >= 0, `${det}: the bound is clamped at 0, got ${s2.mean_e_lower_95}`);
+    assert.ok(s2.mean_e_lower_95 <= s2.mean_e,
+      `${det}: a LOWER bound cannot exceed the point estimate (${s2.mean_e_lower_95} > ${s2.mean_e})`);
+    const s3 = summary.cells.find((c) => c.arm === 'power' && c.detector === det);
+    assert.ok(!('mean_e_lower_95' in s3) && !('mean_e_sd' in s3),
+      `${det}: the S3 row carries no mean instrument, so it must carry neither field`);
+  }
+  // K3.1.1/K3.1.2 and K6.7 put these arms on the other branch: no `mean_e`, so a bound on the
+  // mean would be a field with no sample behind it.
+  for (const det of C38_NON_TERMINAL_ARMS) {
+    for (const row of summary.cells.filter((c) => c.detector === det)) {
+      assert.ok(!('mean_e_sd' in row), `${det} ${row.arm ?? row.severity}: mean_e_sd must be absent`);
+      assert.ok(!('mean_e_lower_95' in row), `${det} ${row.arm ?? row.severity}: mean_e_lower_95 must be absent`);
+    }
+  }
+  // And no fault (S3) cell of any detector gains either field.
+  for (const row of summary.cells.filter((c) => c.fault_class != null)) {
+    assert.ok(!('mean_e_lower_95' in row), `fault cell ${row.cell_index} ${row.detector}: mean_e_lower_95 must be absent`);
+  }
+});
+
+test('C38.1.2 provenance: mean_e_lower_95 recomputes from the row\'s own mean_e, mean_e_sd and n — the clamp and z = 1.645 both pinned by a row that exercises them', () => {
+  const { summary } = smoke();
+  let clamped = 0;
+  let unclamped = 0;
+  for (const det of C38_TERMINAL_ARMS) {
+    const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === det);
+    const n = c38SampleN(s2);
+    const raw = s2.mean_e - 1.645 * s2.mean_e_sd / Math.sqrt(n);
+    // TOLERANCE, and why it is not laziness. The emitted bound is now STRUCTURALLY the increment
+    // estimator's own `lower95_one_sided` clamped (v2.C45 review round), and `summarise` builds that
+    // from `se = sqrt(varr / n)` where the recompute here goes through `sqrt(varr) / sqrt(n)`. The
+    // two routes differ in the last bit, so an EXACT assertion here would pass or fail on the seed —
+    // which is precisely the fragility this round removed from the harness, and it must not be
+    // reintroduced in the test that checks it. The exact identity is asserted against its structural
+    // source in the C39.5 test below; what this assertion is for is the CONVENTION (the clamp and
+    // z = 1.645), whose mutations move the value by ~1e-2, ten orders of magnitude above this bound.
+    const rel = Math.abs(s2.mean_e_lower_95 - Math.max(0, raw)) / Math.max(1e-300, Math.abs(s2.mean_e));
+    assert.ok(rel < 1e-12,
+      `${det}: max(0, ${s2.mean_e} - 1.645*${s2.mean_e_sd}/sqrt(${n})) != ${s2.mean_e_lower_95} `
+      + `(relative gap ${rel}, tolerance 1e-12)`);
+    if (raw < 0) clamped += 1; else unclamped += 1;
+    // z: the 1.96 quantile gives a strictly lower bound wherever the clamp is not active, so a
+    // z mutation is observable exactly on the unclamped rows.
+    if (raw > 0) {
+      const at196 = Math.max(0, s2.mean_e - 1.96 * s2.mean_e_sd / Math.sqrt(n));
+      assert.ok(Math.abs(s2.mean_e_lower_95 - at196) / Math.abs(s2.mean_e) > 1e-6,
+        `${det}: the emitted bound must be the 1.645 quantile, not 1.96 (${s2.mean_e_lower_95} vs ${at196})`);
+    }
+  }
+  // MUTATION KILL, both directions, and both are exercised at the smoke seeds: dropping the clamp
+  // is caught by the clamped row (family_E_conformal_heldout reads a raw -0.0229), moving z is
+  // caught by the unclamped rows. If either count ever falls to 0 this test stops killing its
+  // mutation and must be re-seeded rather than relaxed.
+  assert.ok(clamped >= 1, 'no terminal S2 row exercises the 0 clamp — the clamp mutation is unkilled');
+  assert.ok(unclamped >= 1, 'no terminal S2 row leaves the clamp inactive — the z mutation is unkilled');
+});
+
+test('C38.1.2: n < 2 emits the bound and its sd as absent (NaN), not as a number', () => {
+  // A one-trajectory run: the sample variance has no n-1 denominator, so the addendum's own
+  // convention (terminal-evalue/harness/run.mjs:67) is NaN for both fields — which JSON writes as
+  // null, and which `meanRule`'s Number.isFinite test reads as "no interval recorded".
+  const { summary } = runHarness(['--n', '1', '--classes', 'K2']);
+  const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === 'group_average_e_value');
+  assert.ok(s2, 'no healthy (S2) arm at n = 1');
+  assert.equal(s2.n, 1);
+  assert.ok(Number.isFinite(s2.mean_e), 'the point estimate still exists at n = 1');
+  assert.equal(s2.mean_e_sd, null, 'mean_e_sd must be NaN (JSON null) at n < 2');
+  assert.equal(s2.mean_e_lower_95, null, 'mean_e_lower_95 must be NaN (JSON null) at n < 2');
+});
+
+// ── Amendment v2.C39 — `increment_estimator` as the terminal class's REPORTED mean instrument ──
+// WORKLIST C39. The instrument needed no building (K3.1.1's summarise() already computes it); what
+// these tests pin is WHERE it lands, that it is the same sample `mean_e` is the mean of, that it
+// carries no verdict field, and the n < 2 boundary C39.5 registers rather than smooths over.
+
+test('C39.2: increment_estimator lands on all three terminal-instrument S2 rows, and on neither their S3 rows nor any fault cell', () => {
+  const { summary } = smoke();
+  for (const det of C38_TERMINAL_ARMS) {
+    const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === det);
+    const inc = s2.increment_estimator;
+    assert.ok(inc && typeof inc === 'object', `${det}: no increment_estimator on the S2 row`);
+    // summarise()'s exact field set, in K3.1.1's shape — no more, no fewer.
+    assert.deepEqual(Object.keys(inc).sort(),
+      ['lower95_one_sided', 'mean', 'n', 'sd', 'se', 'upper95_one_sided'],
+      `${det}: increment_estimator must be summarise()'s shape`);
+    for (const k of Object.keys(inc)) assert.ok(Number.isFinite(inc[k]), `${det}: increment_estimator.${k}`);
+    const s3 = summary.cells.find((c) => c.arm === 'power' && c.detector === det);
+    assert.ok(!('increment_estimator' in s3), `${det}: K3.1.4's exclusion — the S3 row must not carry it`);
+  }
+  for (const row of summary.cells.filter((c) => c.fault_class != null)) {
+    assert.ok(!('increment_estimator' in row),
+      `fault cell ${row.cell_index} ${row.detector}: K3.1.4's exclusion — no fault cell carries it`);
+  }
+  // C39.2: no verdict derived from this instrument is emitted on ANY row, ever. lib/score.mjs:182
+  // routes a non-test_martingale cell carrying increment_verdict into missing[] as a foreign
+  // verdict, and that branch must stay unreachable from this battery's rows.
+  for (const row of summary.cells) {
+    assert.ok(!('increment_verdict' in row),
+      `${row.detector} ${row.arm ?? row.severity}: increment_verdict must never be emitted`);
+  }
+});
+
+test('C39.5: the terminal S2 row\'s increment_estimator is the SAME sample mean_e is the mean of — all four registered invariants', () => {
+  const { summary } = smoke();
+  for (const det of C38_TERMINAL_ARMS) {
+    const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === det);
+    const inc = s2.increment_estimator;
+    const n = c38SampleN(s2);
+    assert.ok(n >= 2, `${det}: this test asserts the n >= 2 invariants and n is ${n}`);
+    // MUTATION KILL: point the estimator at any other sample — the per-trajectory `es` on the
+    // per-point row, or the power arm's reads — and `n`, `mean` or `sd` stops matching.
+    assert.equal(inc.n, n, `${det}: increment_estimator.n must be the row's own sample size`);
+    assert.equal(inc.mean, s2.mean_e, `${det}: increment_estimator.mean must BE mean_e`);
+    assert.equal(inc.sd, s2.mean_e_sd, `${det}: increment_estimator.sd must BE mean_e_sd`);
+    // EXACT, and it is exact by construction rather than by luck (v2.C45 review round): the harness
+    // reads this very field and clamps it, so no recomputation sits between the two numbers.
+    //
+    // WHAT THIS ASSERTION DOES AND DOES NOT KILL, measured rather than assumed. Reverting the
+    // harness to recompute the bound (`max(0, mu - 1.645*sd/sqrt(n))`) does NOT fail this test at
+    // the smoke seeds — the 1-ULP gap between `sqrt(varr)/sqrt(n)` and `sqrt(varr/n)` simply does not
+    // materialise on them. THAT IS THE FINDING, not a gap in the test: the old code was correct by
+    // luck and a reseed could break it with no defect present. What the exact form buys is that the
+    // identity can never drift SILENTLY — it fails the first time a seed exposes the gap instead of
+    // being hidden by re-rounding. The recompute mutation is killed deterministically by the source
+    // pin in the next test, which is why that test exists.
+    assert.equal(Math.max(0, inc.lower95_one_sided), s2.mean_e_lower_95,
+      `${det}: mean_e_lower_95 must BE max(0, increment_estimator.lower95_one_sided), exactly (C39.5)`);
+    // se is the bound's own denominator, so it is pinned too: a bound built on a different se
+    // would satisfy nothing above and still be wrong. This one is exact — it is summarise's own
+    // expression, character for character.
+    assert.equal(inc.lower95_one_sided, inc.mean - 1.645 * inc.se, `${det}: the bound is mean - 1.645*se`);
+    // se against sd: TOLERANCE, because summarise computes se = sqrt(varr/n) and sd = sqrt(varr),
+    // so sqrt(sd*sd/n) is a different rounding of the same quantity. An exact assertion here passed
+    // on this seed and would fail on another with no defect present — the same 1-ULP trap the
+    // harness was corrected for.
+    assert.ok(Math.abs(inc.se - Math.sqrt((inc.sd * inc.sd) / n)) <= 4 * Number.EPSILON * inc.se,
+      `${det}: se ${inc.se} is not sd/sqrt(n) = ${Math.sqrt((inc.sd * inc.sd) / n)} at n = ${n}`);
+  }
+  // The per-point row is where the two bookkeeping paths could silently diverge: its estimator must
+  // be over the 400,000 per-POINT reads (n_points), NOT the 20 per-trajectory injected-tick reads.
+  const pt = summary.cells.find((c) => c.arm === 'healthy' && c.detector === 'point_tail_bet_e_value');
+  assert.equal(pt.increment_estimator.n, pt.n_points, 'K4.1.4: the per-point row\'s estimator is per-POINT');
+  assert.notEqual(pt.increment_estimator.n, pt.n, 'a per-trajectory n here would be the wrong sample');
+});
+
+test('C39.5: the n < 2 boundary is exactly as registered — summarise\'s zero-width interval beside a null mean_e_sd', () => {
+  const { summary } = runHarness(['--n', '1', '--classes', 'K2']);
+  const s2 = summary.cells.find((c) => c.arm === 'healthy' && c.detector === 'group_average_e_value');
+  const inc = s2.increment_estimator;
+  assert.equal(inc.n, 1);
+  // K3.1.1's own convention at n <= 1: varr = 0, so sd and se are 0 and the interval is zero-width.
+  assert.equal(inc.sd, 0, 'summarise gives sd 0 at n <= 1 (K3.1.1\'s varr = 0 branch)');
+  assert.equal(inc.se, 0);
+  assert.equal(inc.lower95_one_sided, inc.mean);
+  assert.equal(inc.upper95_one_sided, inc.mean);
+  // And the addendum's rule for its own two fields is NaN, which JSON writes as null. The two
+  // conventions DISAGREE here by construction, which is what C39.5 registers.
+  assert.equal(s2.mean_e_sd, null, 'the addendum\'s convention is NaN at n < 2, not 0');
+  assert.equal(s2.mean_e_lower_95, null);
+});
+
+// ── Amendment v2.C47.2 — family_E's params provenance, and the invariant no name-scoped test saw ──
+// WORKLIST C47 item (2), forward fix. Erratum v1.4 recorded the mis-stamp and could not fix it (an
+// erratum registers nothing); v2.C47.2 registers the literal and replaces three enumerated ternaries
+// with one predicate. Historical rows stay exactly as the erratum records them.
+
+test('C47.2.2: every family_E_conformal_heldout row stamps heldout-empirical', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => c.detector === 'family_E_conformal_heldout');
+  assert.equal(rows.length, 6, '4 K4 fault cells + healthy(S2) + power(S3) arm rows');
+  for (const c of rows) {
+    assert.equal(c.params, 'heldout-empirical',
+      `cell ${c.cell_index} ${c.fault_class ?? c.arm}: A2 + §6's K4 block — fixed Sigma with an `
+      + `empirical held-out draw, never oracle constants (${JSON.stringify(c.params)})`);
+  }
+});
+
+test('C47.2.3 (binding): NO row carries heldout_seed beside params=oracle — the invariant the name-scoped tests could not see', () => {
+  const { summary } = smoke();
+  // A row that records the seed of the held-out draw it calibrated from, while naming its
+  // parameters oracle, is self-contradictory on its face. 18 committed rows carried exactly that
+  // contradiction (Erratum v1.4) and every params test was scoped to a detector-name list, so none
+  // of them could see it. This one is scoped to EVERY emitted row, so a fifth calibrated candidate
+  // cannot reintroduce the defect by being forgotten.
+  //
+  // MUTATION KILL: revert ANY ONE of the three `params` ternaries to its pre-C47.2 enumeration and
+  // this fails, where a per-detector positive test only fails for the detector it names.
+  let checked = 0;
+  for (const c of summary.cells) {
+    if (!('heldout_seed' in c)) continue;
+    checked += 1;
+    assert.notEqual(c.params, 'oracle',
+      `${c.detector} cell ${c.cell_index} ${c.fault_class ?? c.arm}: carries heldout_seed `
+      + `${c.heldout_seed} and params 'oracle' — a row cannot calibrate from a held-out draw and `
+      + 'call its parameters oracle (v2.C47.2 C47.2.3)');
+  }
+  assert.ok(checked >= 6, `expected the calibrated candidates' rows to carry heldout_seed, saw ${checked}`);
+  // And the converse direction, so the predicate cannot be satisfied by stamping everything:
+  // a row whose params is 'heldout-empirical' must be one of the registered calibrated candidates.
+  const REGISTERED = new Set(['point_tail_bet_e_value', 'shape_block_conformal_bet', 'shape_ecdf_accumulator', 'family_E_conformal_heldout']);
+  for (const c of summary.cells.filter((r) => r.params === 'heldout-empirical')) {
+    assert.ok(REGISTERED.has(c.detector),
+      `${c.detector}: stamps heldout-empirical without a registration (K4.1.5 / K6.9 / K6A.1.10 / v2.C47.2)`);
+  }
+});
+
+test('C47.2.2: family_D_spectral_e_detector still stamps oracle — the genuinely-oracle process sibling a kind-based predicate would have broken', () => {
+  const { summary } = smoke();
+  // family_D shares `kind: 'process'` with family_E_conformal_heldout but is genuinely oracle: A5
+  // passes {mu: 0, sigma: 1, phi: cell.phi, alpha, windows: 'disjoint'} directly (Erratum v1.3's
+  // "Scope — what stays valid" item 1). MUTATION KILL: make calibratesFromHeldout a kind test
+  // (`ADAPTERS[detId].kind === 'process' || ...`) and this fails.
+  const rows = summary.cells.filter((c) => c.detector === 'family_D_spectral_e_detector');
+  assert.ok(rows.length > 0, 'family_D emits rows at smoke');
+  for (const c of rows) assert.equal(c.params, 'oracle', `cell ${c.cell_index}: family_D is genuinely oracle (A5)`);
+  assert.ok(!rows.some((c) => 'heldout_seed' in c), 'family_D takes no held-out draw, so no row of it carries the seed');
+});
+
+test('C38.1/C39.5 (v2.C45 review round): mean_e_lower_95 is READ from the increment estimator, not recomputed — the branch pinned at the source', () => {
+  // A behavioural assertion cannot kill this mutation: the 1-ULP gap between the two algebraic
+  // routes does not appear at every seed, which is exactly why the old code passed while being
+  // correct only by luck. So the structural property is pinned at the source instead — the same
+  // trade-off, and the same precedent, as the K6A.3.1 registered-count test below.
+  const src = fs.readFileSync(HARNESS, 'utf8');
+  assert.match(src, /\? NaN : Math\.max\(0, inc\.lower95_one_sided\)/,
+    'the bound must be the increment estimator\'s own lower95_one_sided, clamped — never recomputed');
+  assert.match(src, /const s2MeanLower95 = clampedMeanLower95\(s2IncrementEstimator, s2MeanE, s2MeanN\);/,
+    'the emission site must pass the estimator object, so there is nothing to recompute from');
+  assert.match(src, /const s2MeanSd = s2MeanN > 1 \? s2IncrementEstimator\.sd : NaN;/,
+    'mean_e_sd must likewise be READ off the estimator, not recomputed');
+  // And the two conventions the addendum owns, which the clamp helper must keep.
+  assert.match(src, /n < 2 \|\| !Number\.isFinite\(inc\.sd\) \|\| !Number\.isFinite\(mu\) \? NaN/,
+    'n < 2 and a non-finite spread must both give NaN, not the 0 a clamped -Infinity would produce');
+  assert.doesNotMatch(src, /Math\.max\(0, mu - 1\.645 \* inc\.sd/,
+    'the recomputed form is the one this round removed; it must not come back');
 });

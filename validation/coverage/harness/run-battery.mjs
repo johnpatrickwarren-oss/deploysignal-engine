@@ -845,6 +845,35 @@ const SHAPE_DETECTORS = Object.freeze({
 });
 const shapeSpecOf = (detId) => SHAPE_DETECTORS[detId] ?? null;
 
+// Amendment v2.C47.2, C47.2.3: THE ONE PREDICATE the `params` literal is derived from — does this
+// detector calibrate from a held-out empirical draw? It replaces three ternaries that each
+// enumerated the calibrated candidates by name, so the `params` literal now has ONE site instead of
+// three.
+//
+// WHAT IT DOES NOT DO, corrected at review: it does not make the registered invariant "no row
+// carries `heldout_seed` beside params: 'oracle'" true by construction. `heldout_seed` is stamped by
+// SEPARATE conditions (`needsHeldout` on the fault-cell path; `detId === 'family_E_conformal_heldout'
+// || pointKind || shapeKind` on the arm path), and this predicate is a third expression that agrees
+// with them today. **The invariant holds because a TEST checks every emitted row for it** — which is
+// how C47.2.3 registers it ("registered as a test over EVERY emitted row") and what an earlier
+// version of this comment overstated.
+//
+// WHY IT EXISTS. The defect Erratum v1.4 recorded was not a typo: three separate ternaries each
+// enumerated the calibrated candidates BY NAME and each forgot the same one
+// (`family_E_conformal_heldout`), so 18 committed rows named their parameters oracle while carrying
+// the seed of the held-out draw they had calibrated from. Three enumerations of one fact is three
+// chances to forget a candidate, and a fifth candidate would have had the same exposure.
+//
+// WHY IT IS NOT A `kind` TEST. `family_D_spectral_e_detector` shares `kind: 'process'` with
+// `family_E_conformal_heldout` and is GENUINELY oracle — A5 passes it {mu: 0, sigma: 1, phi, ...}
+// directly (Erratum v1.3's "Scope — what stays valid" item 1). A kind-based predicate would relabel
+// it and be wrong; test/run-battery.test.mjs pins it on 'oracle' for exactly this reason.
+const calibratesFromHeldout = (detId) => (
+  detId === 'family_E_conformal_heldout'      // A2 + §6's K4 block (registered: v2.C47.2 C47.2.2)
+  || detId === 'point_tail_bet_e_value'       // K4.1.5
+  || shapeSpecOf(detId) !== null              // K6.9 (shape_block) + K6A.1.10 (shape_ecdf)
+);
+
 // §7 + A6: which detectors are scored on which class, and (family_D) on which cells.
 function detectorsFor(cell) {
   switch (cell.fault_class) {
@@ -982,6 +1011,11 @@ const freshAcc = () => ({
   // post-onset window, read by K4.1.4's healthy (S2) arm; windowCrossed is the K4.6
   // descriptive secondary (fault cells) and K4.5's own per-trajectory reading (S3 arm).
   pointFinite: 0, pointNonFinite: 0, pointK: 0, pointSumE: 0, windowCrossed: 0,
+  // Amendment v2.C38.1, C38.1.2 (registered code item 1): Welford accumulators for the per-POINT
+  // sample's sd, which the per-point `mean_e_lower_95` needs and which `pointSumE` alone cannot
+  // give. ADDED BESIDE the existing counters, never replacing them: `mean_e` on the point row
+  // stays `pointSumE / pointFinite` bit-for-bit, and `pointMeanW` is used only for the variance.
+  pointMeanW: 0, pointM2: 0,
   // spectral_bet_e_process only (`kind: 'spectral'`): degenerateWindows sums, across every
   // trajectory AND window scored for the cell, the count of individual spectralBetWindow
   // calls whose eAvg was non-finite (K3.1.6). spectralEAvgMeans holds one number per
@@ -1033,6 +1067,10 @@ function record(acc, detId, out) {
       if (Number.isFinite(e)) {
         acc.pointFinite += 1;
         acc.pointSumE += e;
+        // Amendment v2.C38.1, C38.1.2: Welford, in the same pass, for the per-point sd only.
+        const d = e - acc.pointMeanW;
+        acc.pointMeanW += d / acc.pointFinite;
+        acc.pointM2 += d * (e - acc.pointMeanW);
         if (e >= THRESHOLD) { acc.pointK += 1; anyFired = true; }
       } else {
         acc.pointNonFinite += 1;
@@ -1097,12 +1135,47 @@ const median = (xs) => {
   return n % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
 
+// Amendment v2.C38.1, C38.1.2: the one-sided 95% lower bound on a MEAN, whose field name
+// `mean_e_lower_95` is owned by
+// validation/terminal-evalue/POWER-PER-CELL-ADDENDUM-2026-08-07.md change (a) (emitted at
+// validation/terminal-evalue/harness/run.mjs:70-71) — so one field name cannot mean two statistics
+// across two studies.
+//
+// CORRECTED at the v2.C45/v2.C38.1 review round: this used to RECOMPUTE the bound as
+// `max(0, mu - 1.645 * sd / sqrt(n))`, which is the addendum's expression but NOT the expression
+// `summarise()` uses. `summarise` computes `se = sqrt(varr / n)` where this computed
+// `sqrt(varr) / sqrt(n)`; the two differ in the last bit, so the identity C39.5 registers
+// (`mean_e_lower_95 === max(0, increment_estimator.lower95_one_sided)`) held only because the
+// re-rounding and the 0 clamp happened to hide the 1-ULP gap. A reseed can break it with no defect
+// present. **The identity is now STRUCTURAL: the bound is the increment estimator's own
+// `lower95_one_sided`, clamped.** The convention is unchanged — the `z` and the `n-1` variance come
+// from `summarise` (K3.1.1), and the CLAMP AT 0 is the addendum's, kept because e >= 0 and clamping
+// can only lower a bound, so it can never make a falsifier fire.
+//
+// `n < 2` and a non-finite spread both give NaN, which is the field's registered absence (the
+// addendum's `meanSd` convention, terminal-evalue/harness/run.mjs:67) — not the 0 the clamp would
+// otherwise produce from a -Infinity bound.
+const clampedMeanLower95 = (inc, mu, n) => (
+  n < 2 || !Number.isFinite(inc.sd) || !Number.isFinite(mu) ? NaN : Math.max(0, inc.lower95_one_sided)
+);
+
 // K3.1.1, copied verbatim from validation/detector-audit/harness/run-sequential.mjs:37-44
 // (PREREGISTRATION.md's own citation for cell 33's increment_estimator shape).
 function summarise(xs) {
   const n = xs.length;
   const m = xs.reduce((a, b) => a + b, 0) / n;
   const varr = n > 1 ? xs.reduce((a, b) => a + (b - m) ** 2, 0) / (n - 1) : 0;
+  const se = Math.sqrt(varr / n);
+  return { n, mean: m, sd: Math.sqrt(varr), se, lower95_one_sided: m - 1.645 * se, upper95_one_sided: m + 1.645 * se };
+}
+
+// Amendment v2.C39, C39.2/C39.7 item 1: `summarise()`'s own tail algebra — everything after the
+// two reductions — for the ONE path where the sample is not held in memory (K4.1.4's per-POINT row,
+// where `record()` keeps `pointSumE` and the Welford `pointM2` and never the 400,000 values). Same
+// n-1 variance, same `z`, same field names and same order, so a per-point increment estimator and a
+// per-trajectory one are the same statistic computed from different bookkeeping. `summarise` above
+// is left byte-for-byte as K3.1.1's verbatim copy rather than refactored to call this.
+function summariseFromMoments(n, m, varr) {
   const se = Math.sqrt(varr / n);
   return { n, mean: m, sd: Math.sqrt(varr), se, lower95_one_sided: m - 1.645 * se, upper95_one_sided: m + 1.645 * se };
 }
@@ -1361,7 +1434,11 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       // Amendment v2.K6A.1, K6A.1.10: shape_ecdf_accumulator stamps the same accurate literal
       // for the same reason — its calibration is an empirical statistic of an independent
       // held-out draw (K6A.1.9's 100,000 rows), not an oracle constant.
-      params: (detId === 'point_tail_bet_e_value' || shapeSpecOf(detId) !== null) ? 'heldout-empirical' : 'oracle',
+      // Amendment v2.C47.2, C47.2.2/C47.2.3: family_E_conformal_heldout joins them — the candidate
+      // Erratum v1.3 singled out as "neither" and the only calibrated one that never got the
+      // literal (Erratum v1.4). The enumeration is GONE: `calibratesFromHeldout` is the one
+      // predicate, and it agrees by construction with the held-out stamping condition below.
+      params: calibratesFromHeldout(detId) ? 'heldout-empirical' : 'oracle',
       alpha: ALPHA,
       n: N,
       ticks: spanFor(cell.fault_class).T,
@@ -1557,6 +1634,34 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
   const s2Lower95 = pointKind
     ? (s2PointN ? lower95(s2PointK, s2PointN) : NaN)
     : (s2n ? lower95(s2k, s2n) : NaN);
+  // Amendment v2.C38.1, C38.1.2: the terminal-instrument row's mean, the spread that produced it,
+  // and its one-sided 95% lower bound — all three over the SAME sample `mean_e` is already the mean
+  // of, per adapter kind (C38.1.2's table). `terminal`/`process` hold the whole sample in
+  // `acc.es`, so the sd is two-pass and `summarise` supplies it; `point` holds running aggregates
+  // only, so the sd is Welford's (record(), point branch) and `mean_e` stays `pointSumE /
+  // pointFinite` bit-for-bit. `meanSd`'s n < 2 -> NaN convention
+  // (validation/terminal-evalue/harness/run.mjs:67) is kept, so the sd and the bound are absent
+  // together or present together.
+  const s2MeanN = pointKind ? s2PointN : s2n;
+  const s2MeanE = pointKind
+    ? (s2PointN ? healthy.pointSumE / s2PointN : NaN)
+    : (healthy.es ? mean(healthy.es) : NaN);
+  // Amendment v2.C39, C39.2: the terminal class's REPORTED mean instrument — `summarise()`'s object
+  // over the SAME sample `mean_e` is the mean of. A terminal e-value's wealth path has exactly one
+  // increment per replicate (the terminal e itself), so the increment sample and the terminal sample
+  // are the same numbers and there is nothing to choose. It carries NO verdict authority: the S2
+  // token below stays exceedance-derived, and `applyGuards`'s Finding 4 reads a foreign instrument
+  // beside the class's own as annotation rather than a veto (C39.3).
+  const s2IncrementEstimator = pointKind
+    ? summariseFromMoments(s2PointN, s2MeanE, s2PointN > 1 ? healthy.pointM2 / (s2PointN - 1) : 0)
+    : summarise(healthy.es ?? []);
+  // C38.1's sd AND its bound are both read off that same object, so neither can drift from the
+  // estimator by a recomputation: `mean_e_sd` IS `increment_estimator.sd` and `mean_e_lower_95` IS
+  // its `lower95_one_sided` clamped at 0. C39.5: at n < 2 they part — `summarise` gives sd 0
+  // (K3.1.1's own convention) and the addendum's rule for `mean_e_sd`/`mean_e_lower_95` is NaN —
+  // and that boundary is registered rather than smoothed over.
+  const s2MeanSd = s2MeanN > 1 ? s2IncrementEstimator.sd : NaN;
+  const s2MeanLower95 = clampedMeanLower95(s2IncrementEstimator, s2MeanE, s2MeanN);
   const s2 = {
     detector: detId,
     arm: 'healthy',
@@ -1569,7 +1674,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     // SHAPE_DETECTORS so the two shape arms cannot share one string by accident.
     null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : (arm.phi === 0 ? 'N1' : 'N3-p06'),
     phi: arm.phi,
-    params: (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle',
+    params: calibratesFromHeldout(detId) ? 'heldout-empirical' : 'oracle',   // v2.C47.2 C47.2.3
     alpha: ALPHA,
     n: s2n,
     ticks: span.T,
@@ -1586,7 +1691,20 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       ? { k: s2k, crossing_rate: s2n ? s2k / s2n : NaN }
       : {
         exceedance: pointKind ? (s2PointN ? s2PointK / s2PointN : NaN) : (s2n ? s2k / s2n : NaN),
-        mean_e: pointKind ? (s2PointN ? healthy.pointSumE / s2PointN : NaN) : (healthy.es ? mean(healthy.es) : NaN),
+        mean_e: s2MeanE,
+        // Amendment v2.C38.1, C38.1.2 (registered code item 2): the field safe-t's frozen card
+        // falsifier names ("one-sided 95% lower bound of mean(e) > 1"), and the spread it cannot
+        // be read without. `meanRule` (validation/certification/lib/guards.mjs) is refusal-only
+        // and tests this bound and the point estimate INDEPENDENTLY, so emitting the field can
+        // only add refutations — it can never clear a cell the point estimate refutes.
+        mean_e_sd: s2MeanSd,
+        mean_e_lower_95: s2MeanLower95,
+        // Amendment v2.C39, C39.2 (registered code item 2): REPORTED, never scored. Any reading of
+        // this field must be reported with C39.4's caveat verbatim — its se and bounds are
+        // WITHIN-draw, and on the one construction where both are measured the between-draw spread
+        // is 9.3x larger. A `lower95_one_sided > 1` reading is FILED to
+        // stats/terminal-mean-rule-contested (K3.1.3's reporting rule), not scored.
+        increment_estimator: s2IncrementEstimator,
       }),
     lower_95: s2Lower95,
     ...(spectralKind ? {
@@ -1628,7 +1746,7 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
     cell_index: arm.idx,
     null_id: spectralKind ? 'K3-arm-oracle' : shapeKind ? spec.armNullId : (arm.phi === 0 ? 'N1' : 'N3-p06'),
     phi: arm.phi,
-    params: (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle',
+    params: calibratesFromHeldout(detId) ? 'heldout-empirical' : 'oracle',   // v2.C47.2 C47.2.3
     // K6A.1.12's cell-47 S3 row: `shift_sigma: 3` IS the d = 2.0 injectShapeMix above for a
     // shape arm (the same equivalence K6.1.1/K6.8 registered for arm 34), not a mean step.
     shift_sigma: 3,

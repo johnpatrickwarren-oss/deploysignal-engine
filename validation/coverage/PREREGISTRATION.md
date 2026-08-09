@@ -9385,3 +9385,1135 @@ e62af91be3af27c952216dc1181e6082cc0d0cf9`, so `e62af91` is the engine sha it was
 **The ancestry argument holds under either, and both are checked:** `git merge-base --is-ancestor`
 confirms `e62af91` and `563bfee` are each ancestors of `4a48450`, so the card definitions the prior
 re-score read predate the `collect.mjs` pin however the sha is named.
+
+---
+
+## Erratum v1.4 — 2026-08-09 (post-run, discloses, changes nothing): `family_E_conformal_heldout` stamps `params: 'oracle'`, and Erratum v1.3 named the class without naming these rows
+
+WORKLIST `C47` item (2). This is an **erratum, not an amendment**: it postdates every run it
+describes, so it cannot register anything. It **changes no endpoint, no floor, no threshold, no
+seed, no grid, no falsifier, and no verdict.** Nothing in §1–14, any Amendment, or Erratum v1.3 is
+superseded. No cell is edited and no run is re-run — the disclosure is the correction (§11 rule 6).
+
+### The mis-stamped field, quoted
+
+Every row this battery emits for `family_E_conformal_heldout` carries
+
+```
+params: 'oracle'
+```
+
+reached through the `else` branch of two ternaries, both of which enumerate the calibrated
+candidates by name and omit this one:
+
+| site | expression | rows it stamps |
+|---|---|---|
+| `harness/run-battery.mjs:1364` | `params: (detId === 'point_tail_bet_e_value' \|\| shapeSpecOf(detId) !== null) ? 'heldout-empirical' : 'oracle'` | the K4 fault cells 18, 19, 20, 21 |
+| `harness/run-battery.mjs:1572` | `params: (pointKind \|\| shapeKind) ? 'heldout-empirical' : 'oracle'` | arm 31's healthy (S2) row |
+| `harness/run-battery.mjs:1631` | same expression | arm 31's power (S3) row |
+
+### The true provenance, at the lines
+
+`family_E_conformal_heldout` takes **neither** §4's passed oracle constants **nor** the
+calibration-window estimation Erratum v1.3 found in the other three detectors. Its nuisance route
+is a fixed `Σ = [[1]]` (A2) plus an **empirical held-out calibration set**: `HELDOUT_ROWS = 10,000`
+rows drawn at `HELDOUT_SEED = CELL_SEED + HELDOUT_OFFSET` (§6's K4 block, A7's T1 substrate),
+turned into the detector's parameters by `stampHeldoutFamilyE`
+(`tools/stamp-heldout-family-e.mjs`, wrapped at `run-battery.mjs:974`) and threaded into the read
+at `run-battery.mjs:1324` (fault cells) and `:1482` (the arm). **The same rows that mis-name the
+provenance record it correctly two fields later:** `heldout_seed` and `heldout_rows`
+(`:1380-1381`, `:1660-1664`).
+
+**The accurate literal already exists and is already registered — for three sibling candidates and
+not for this one.** `'heldout-empirical'` is registered at **K4.1.5** for
+`point_tail_bet_e_value` ("stamps its own accurate literal rather than reusing `'oracle'`
+(Erratum v1.3's defect class)"), at **K6.9** for `shape_block_conformal_bet`, and at **K6A.1.10**
+for `shape_ecdf_accumulator`. Each of those three registrations cites Erratum v1.3's defect class
+as its reason. `family_E_conformal_heldout` — the candidate v1.3 actually singled out — never got
+one.
+
+### Where the correct calibration route is registered
+
+1. **A2** — the fixed `Σ = [[1]]` construction and its per-tick wealth reading.
+2. **§6's K4 block** and **A7** — the held-out stream: `HELDOUT_ROWS`, `HELDOUT_OFFSET`, and the
+   T1 substrate the rows are drawn from.
+3. **Amendment v2.K4, K4.4** — the identical held-out stream reused by `point_tail_bet_e_value`,
+   "drawn once here, so both candidates calibrate from the same rows".
+4. **Erratum v1.3's own "Scope — what stays valid", item 2**, quoted verbatim:
+
+   > `family_E_conformal_heldout` is neither: it uses a fixed `Σ = [[1]]` (A2) with an empirical
+   > held-out calibration set (§6's K4 block, A7's T1 substrate).
+
+### Quote-and-correct against Erratum v1.3, which had the provenance right and the scope short
+
+v1.3, "Scope — which cells", quoted:
+
+> Every cell scored by `safe_t`, `universal_inference`, or `group_average_e_value`: all of K1, K2,
+> K3, K5, K6, `safe_t`'s A6 rows on K4, and A1's arm 30. The `params: 'oracle'` stamp on those rows
+> is wrong and is **left as committed** (results are append-only, §11 rule 6); this erratum is the
+> correction.
+
+**That list is correct for the defect v1.3 was describing** — parameters estimated from the
+100-tick calibration window while stamped oracle. **What it does not say is that
+`family_E_conformal_heldout`'s own rows carry the same wrong literal for a third reason.** v1.3
+classified this candidate as "neither" in a *stays-valid* section and stopped there, so the reader
+is left with the stamp unchallenged on those rows. **Correct: the stamp is wrong on
+`family_E_conformal_heldout`'s rows too, and the accurate literal for them is
+`'heldout-empirical'`** — the same literal the three siblings were given, for the same reason.
+
+### Scope — which rows, enumerated
+
+**Six rows per affected run, not one.** Cells 18, 19, 20, 21 (the K4 fault rows) plus arm 31's
+`healthy` and `power` rows. Three live runs carry them:
+
+| run | rows | manifest `git_sha` |
+|---|---|---|
+| `results/live/run-20260808T010208Z` | 18, 19, 20, 21, arm 31 healthy, arm 31 power | `5ae5076` |
+| `results/live/run-20260808T064039Z` | the same six | `43f3386` |
+| `results/live/run-20260808T133859Z` | the same six | `ef58647` |
+
+**18 rows total.** Two of those three REPORTs already carried a one-line note that *"Arm 31 stamps
+`params: 'oracle'`"* (`run-20260808T064039Z` §5, `run-20260808T133859Z` §7). **Those notes
+understate the scope by four rows each**, and the dated appends this erratum files into all three
+REPORTs correct that.
+
+### What stays valid, and why "changes nothing" is checkable rather than asserted
+
+1. **The endpoint numbers are unaffected as measured quantities.** Each row's rate is what the
+   named detector did to the named data at the registered seeds; how it obtained its nuisance
+   parameters does not change what it did.
+2. **No verdict reads this field on these rows.** `params` reaches the certification scorer only
+   through `phiIsEstimated` (`validation/certification/lib/nulls.mjs`), which tests
+   `cell.phi_source` first and then the single literal `params === 'estimated-phi'`. All six rows
+   carry `null_id` `N1` or `N3-p06`, so `annotatePhi` (`lib/collect.mjs:16-27`) annotates
+   `phi_source: 'oracle'` and the `params` value is never consulted; `annotatePhi` also only fills
+   `params` when it is absent, so it never overwrites the wrong literal with a right one.
+   `params` appears **zero** times in `validation/certification/lib/score.mjs`. So the mis-stamp
+   is inert to the mechanical verdict — it misleads a **reader**, which is why the correction is a
+   disclosure and not a re-score.
+3. **The `phi_known` question of v1.3 item 4 is untouched** and stays open as WORKLIST `C43`.
+
+### Named-not-done
+
+- **The harness is NOT changed.** Emitting `'heldout-empirical'` for this candidate on future runs
+  would change a registered field's value, and on the three sibling candidates that took a
+  registration each (K4.1.5, K6.9, K6A.1.10). This erratum cannot register it — an erratum
+  registers nothing. **The forward fix requires its own amendment**, and until one exists the stamp
+  on future runs will still read `'oracle'`. Named here so the gap is a stated boundary rather
+  than a silence.
+- **C47 item (1)** — the O(1/n)-approximate, mildly anti-conservative conformal exchangeability
+  identity (K4.1.10) — is untouched by this erratum and remains open.
+
+---
+
+## Amendment v2.C38.1 — 2026-08-09, before the emission exists: `mean_e_lower_95` on this battery's terminal-class S2 rows, and a WORKLIST claim corrected at HEAD
+
+WORKLIST `C38` item (1). Sections §1–14 and every prior Amendment and Erratum stay intact; this
+amendment **adds two fields to one row shape** and moves no endpoint, floor, threshold, seed, grid,
+falsifier or verdict. Registered **before** the harness change it authorizes, and **no run is
+re-run**: the fields appear on the next run that touches these rows.
+
+### C38.1.1 LEAD WITH THE CORRECTION — "no run anywhere in the repo records that field" is FALSE at HEAD
+
+The WORKLIST row reads:
+
+> safe-t's frozen falsifier names `mean_e_lower_95`, a one-sided lower bound on the mean, and no
+> run anywhere in the repo records that field — the scorer falls back to testing the point estimate.
+
+**Measured over the corpus `validation/certification/lib/collect.mjs`'s `loadEvidence` actually
+returns, at this commit: 54 cells record it.** Census, by card and by run, counting cells that carry
+either terminal instrument (`mean_e` or `exceedance`):
+
+| card | validity-candidate cells | of which carry `mean_e_lower_95` |
+|---|---|---|
+| `safe_t_e_value` | 47 | **27** — `2026-08-terminal-evalue/run-20260807T215034Z` (20/20), `2026-08-phi-identifiability/run-20260807T215105Z` (7/7); `2026-08-terminal-evalue/run-20260802T041353Z` 0/20 |
+| `universal_inference_e_value` | 77 | **27** — the same two runs at 20/20 and 7/7; `run-20260802T041353Z` 0/20, `clustersynth-ui` 0/30 |
+| `family_E_conformal_heldout` | 1 | 0 |
+| `point_tail_bet_e_value` | 1 | 0 |
+| `group_average_e_value` | 1 | 0 |
+| `family_E_conformal` | 0 | — |
+
+The field was registered by `validation/terminal-evalue/POWER-PER-CELL-ADDENDUM-2026-08-07.md`
+change (a) and emitted at `validation/terminal-evalue/harness/run.mjs:116`
+(`mean_e: mean, mean_e_sd: sd, mean_e_lower_95: meanLo`). `validation/certification/README.md`'s
+"Which run is current" section already describes what it did and did not fire on. **So safe-t's
+frozen falsifier is evaluable today, on 27 of its 47 candidate cells.**
+
+**The residue the row is right about, restated exactly: THIS battery records neither field on any
+of its terminal-class S2 rows.** Three such rows exist in the corpus, and all three are
+scored on the point estimate:
+
+| run | card | `exceedance` | `mean_e` | recorded token |
+|---|---|---|---|---|
+| `run-20260808T133859Z` | `family_E_conformal_heldout` | `0.0455` | **`4.175984181731008`** | `not-refuted` |
+| `run-20260808T133859Z` | `point_tail_bet_e_value` | `0.001855` | `0.5275562291180412` | `not-refuted` |
+| `run-20260808T201635Z` | `group_average_e_value` | `0.0005` | **`1.9140717432761356`** | `not-refuted` |
+
+Two of the three carry `mean_e` above `TERMINAL_MEAN_BOUND = 1`, so
+`meanRule` (`validation/certification/lib/guards.mjs`) already overrides their recorded
+`not-refuted` to REFUTED on the point estimate — **those are the two historical mean-rule
+overrides, and this amendment recomputes nothing about them** (see C38.1.5).
+
+### C38.1.2 The emission, registered: which rows, and the exact estimator
+
+**WHICH ROWS.** The S2 (`arm: 'healthy'`) row of any A1 arm whose emission takes the
+**terminal instrument pair** branch — the `else` of the ternary at
+`harness/run-battery.mjs:1585-1592`, which emits `exceedance` and `mean_e`, the pair
+`CLASS_INSTRUMENTS.terminal_e_value` registers (`validation/certification/lib/constants.mjs:11`).
+At this commit that is exactly three arms: **30** (`group_average_e_value`, `kind: 'terminal'`),
+**31** (`family_E_conformal_heldout`, `kind: 'process'`) and **32** (`point_tail_bet_e_value`,
+`kind: 'point'`). The scoping is the branch, not a detector-id list, so a future terminal-class arm
+inherits it without a further amendment. `spectral_bet_e_process` and the two shape detectors take
+the other branch (K3.1.1/K3.1.2, K6.7) and are **excluded**: they carry no `mean_e` and this field
+would be meaningless on them.
+
+**THE ESTIMATOR.** Transcribed from the addendum that owns the field name, so one field name cannot
+mean two things across two studies
+(`validation/terminal-evalue/POWER-PER-CELL-ADDENDUM-2026-08-07.md`, change (a)):
+
+```
+n     = the count of finite reads in the row's own sample   (the sample mean_e is the mean of)
+mu    = mean_e
+s^2   = sum (e_i - mu)^2 / (n - 1)                          (sample variance, n-1 denominator)
+lower = max(0, mu - 1.645 * s / sqrt(n))                    -> mean_e_lower_95
+```
+
+`NaN` when `n < 2`. `z = 1.645` is the constant `lower95(k, n)`
+(`harness/run-battery.mjs:1086-1090`) already uses for the exceedance bound on the same row, so
+both intervals on a row use one quantile. **`mean_e_sd` (`s`) is registered alongside it**, for the
+addendum's own stated reason — the bound cannot be read without the spread that produced it, and
+recording both makes the bound recomputable by a reader from `mean_e`, `mean_e_sd` and `n` without
+a re-run.
+
+**WHICH SAMPLE, per adapter kind.** The sample is always the one `mean_e` on that row is already
+the mean of — this amendment introduces no second sample:
+
+| kind | arm | the sample | `n` field on the row |
+|---|---|---|---|
+| `terminal` | 30 | the per-trajectory terminal e-values, `acc.es` | `n` (`healthy.finite`) |
+| `process` | 31 | the per-trajectory final wealth `M_T`, `acc.es` | `n` (`healthy.finite`) |
+| `point` | 32 | the per-POINT e-values across the whole post-onset window (K4.1.4's per-point row) | `n_points` (`healthy.pointFinite`) |
+
+**CONSISTENCY WITH `lower95_one_sided`, and the ONE difference, stated because it is a real
+difference.** `summarise` (`harness/run-battery.mjs:1101-1108`, K3.1.1's verbatim copy) computes
+`lower95_one_sided = mean - 1.645 * se` with the same `n-1` variance and the same `z`. It is
+**unclamped**; `mean_e_lower_95` is **clamped at 0**. The clamp is part of the field's own
+registered estimator (`e >= 0`, and it can only lower the bound, so it can never make a falsifier
+fire), and it is kept rather than dropped so that a `mean_e_lower_95` emitted by this battery and
+one emitted by `terminal-evalue` are the same statistic. On the terminal path the relation is
+therefore exactly `mean_e_lower_95 === max(0, summarise(sample).lower95_one_sided)`, and Amendment
+v2.C39 registers that identity as a checked invariant.
+
+**NUMERICAL NOTE, disclosed.** On the `terminal`/`process` path the whole sample is in memory
+(`acc.es`), so `s` is the two-pass sample sd. On the `point` path only running aggregates are kept
+(`pointSumE`, `pointFinite`), so `s` is accumulated by **Welford** in `record()`. `mean_e` itself
+is **unchanged, bit-for-bit**: it stays `pointSumE / pointFinite`, and Welford's running mean is
+used only for the variance. The two means agree to floating-point rounding and the recorded `mean_e`
+remains the one a reader recomputes from.
+
+### C38.1.3 What this changes in the scorer: nothing, and the direction is checked
+
+`mean_e_lower_95` is read at exactly one site, `meanRule`
+(`validation/certification/lib/guards.mjs`), and that rule is **refusal-only**. Its FIX 1 form
+tests the recorded bound and the point estimate **independently**, and neither branch can clear:
+
+- recorded bound `> 1` → override to REFUTED;
+- otherwise point estimate `mean_e > 1` → override to REFUTED, with the recorded bound named as
+  *uninformative, not exculpatory*.
+
+So emitting the field on a row **can only add refutations, never remove one**. It is not an
+instrument under `CLASS_INSTRUMENTS`, so `applyGuards` cannot read it as a foreign instrument and
+no cell can be VOIDed by its presence. `isValidityCell` (`lib/score.mjs:11`) already admits these
+rows on `exceedance`/`mean_e`, so candidacy does not move either.
+
+### C38.1.4 When the falsifier becomes evaluable, stated plainly
+
+**On this battery's rows it is NOT evaluable now and will not be until a run emits it.** The three
+rows above stay exactly as committed. The next `run-battery.mjs` run that scores a terminal-class
+arm — any run of classes K2 or K4, or of arms 30/31/32 — will carry `mean_e_sd` and
+`mean_e_lower_95`, and safe-t's frozen falsifier clause *"one-sided 95% lower bound of mean(e) > 1"*
+becomes literally evaluable on that row at that point. **No such run is authorized by this
+amendment and none is performed with it.**
+
+### C38.1.5 Named-not-done
+
+1. **No rerun.** The three existing rows are not re-measured. The bound is **not recoverable** from
+   them: only the sample mean was recorded, so `s` cannot be reconstructed without re-running.
+2. **The two historical mean-rule overrides are not recomputed** (`group_average_e_value`,
+   `family_E_conformal_heldout`). Re-examining them requires reruns, which are out of scope here.
+3. **`safe_t`'s own coverage rows are untouched.** Its A6 rows on K2/K4 are fault (S3) rows carrying
+   `detection_rate`, not S2 rows carrying `mean_e`, so no field of theirs moves.
+4. **WORKLIST `C38` items (2)–(6) are untouched** and each stays open independently.
+5. **The WORKLIST row itself is not edited** — the wiki is not this repository's to correct; the
+   census in C38.1.1 is filed for write-back.
+
+### C38.1.6 Registered code and test items
+
+| # | item | site |
+|---|---|---|
+| 1 | Welford `pointM2`/`pointMeanW` accumulators, updated beside the existing `pointFinite`/`pointSumE` and never replacing them | `harness/run-battery.mjs` `freshAcc` + `record` (`point` branch) |
+| 2 | `mean_e_sd` and `mean_e_lower_95` on the terminal-instrument S2 branch, per-kind sample as tabled | `harness/run-battery.mjs` S2 emission |
+| 3 | the estimator as one helper (`meanLower95`), so the clamp and the `z` exist once | `harness/run-battery.mjs` |
+| 4 | test: the two fields are present on a terminal-class S2 row and absent from spectral/shape S2 rows | `test/run-battery.test.mjs` |
+| 5 | test: `mean_e_lower_95 === max(0, mu - 1.645*s/sqrt(n))` recomputed from the row's own `mean_e`, `mean_e_sd` and `n` — **mutation kill: drop the clamp, or move `z` to `1.96`, and the test fails** | `test/run-battery.test.mjs` |
+| 6 | test: `n < 2` gives `NaN`, not a number | `test/run-battery.test.mjs` |
+
+### C38.1.7 DISCLOSURE — this change EXPIRES one card, and the card is deliberately NOT re-frozen
+
+`validation/certification/cards/shape_ecdf_accumulator.json` pins
+`validation/coverage/harness/run-battery.mjs` in its `source_files[]` expiry surface (the only card
+that does). So the moment the harness changes, `npm run cert:expiry` reports
+
+```
+EXPIRED shape_ecdf_accumulator: validation/coverage/harness/run-battery.mjs (changed)
+```
+
+**That is the mechanism working, not a defect**, and it is disclosed here rather than discovered by
+the next reader of CI. Three facts about it:
+
+1. **No claim, endpoint or verdict of that card moves.** The change adds two fields to a row shape
+   that card does not read: `shape_ecdf_accumulator`'s arm-47 S2 row takes the `crossing_rate`
+   branch (K6.7/K6A.1.10), so it gains neither field. Verified by a paired smoke run at the same
+   seeds: **0 pre-existing fields changed on any of the 66 emitted rows, 2 new fields added**, and
+   the new fields appear on 3 rows and no others.
+2. **The card is NOT re-frozen by this amendment.** `validation/certification/tools/freeze-cards.mjs`
+   has no per-card mode — it restamps `engine_pin.sha` on **all 15 cards** — and a re-freeze riding
+   silently inside an unrelated commit is the exact defect **K6A.5.3** disclosed and this document
+   refuses to repeat. A freeze is a deliberate act with its own row in
+   `validation/certification/README.md`'s freeze table.
+3. **The expiry check is a reported, non-gating CI step** (`validation/certification/README.md`,
+   `CERT_SIBLING_ROOT` section), so the EXPIRED status blocks nothing and hides nothing. It stands
+   until a freeze is taken as its own decision.
+
+### C38.1.8 House rules, mapped
+
+(1) **Committed before the code**: this section commits in the commit that precedes the harness
+change, and no run of the changed harness exists. (2) No endpoint or threshold moves, so nothing
+can move under a reading. (3) The census in C38.1.1 is a **corpus count, not a post-hoc analysis of
+a candidate endpoint** — it reads which cells carry a field, no rate and no verdict.
+(4) The fallback rule (§9) is untouched; a `NaN` bound at `n < 2` is the field's own registered
+absence, not a fallback. (5) No new substrate. (6) `results/` untouched — **no run is written, and
+none of the three existing rows is edited.** (7) No rerun. (8) Binding on the report of the next
+run that emits these fields: it must state both numbers with the row's `n`. **And the card expiry of
+C38.1.7 is part of the record, not a side effect left unstated.**
+
+### Amendment summary
+
+**Registers `mean_e_sd` and `mean_e_lower_95` on this battery's terminal-instrument S2 rows**
+(arms 30, 31, 32 at this commit; the scoping is the `exceedance`/`mean_e` branch, so a future
+terminal-class arm inherits it), with the estimator transcribed verbatim from the addendum that
+owns the field name — `max(0, mu - 1.645*s/sqrt(n))`, `n-1` variance, `NaN` at `n < 2`, clamped
+where `summarise`'s `lower95_one_sided` is not, and the clamp kept so the field means one thing
+across studies. **And corrects the WORKLIST claim it is filed against:** "no run anywhere in the
+repo records that field" is **false at HEAD — 54 cells record it**, on
+`terminal-evalue/run-20260807T215034Z` and `phi-identifiability/run-20260807T215105Z`, so safe-t's
+frozen falsifier is already evaluable on 27 of its 47 candidate cells. The residue is real and is
+this battery's alone: **0 of its 3 terminal-class S2 rows carry the bound**, and two of those three
+already refute on the point estimate at `mean_e` `4.176` and `1.914`. **Nothing is re-run and
+nothing is recomputed** — the bound is not recoverable from a recorded mean, so it becomes evaluable
+on this battery only on the next run that touches these rows, which this amendment does not
+authorize.
+
+---
+
+## Amendment v2.C39 — 2026-08-09, before the emission exists: the increment estimator becomes the terminal class's REPORTED mean instrument, with no verdict authority and a mandatory across-draw caveat
+
+WORKLIST `C39`. Sections §1–14 and every prior Amendment and Erratum stay intact; this amendment
+**adds one field to one row shape** and moves no endpoint, floor, threshold, seed, grid, falsifier or
+verdict. Registered **before** the harness change it authorizes; **no run is re-run**.
+
+### C39.1 What is missing, and what already exists
+
+The WORKLIST row reads:
+
+> No `terminal_e_value` card computes an increment-style reading; `TERMINAL_MEAN_BOUND` gates only
+> on the raw 300-tick sample mean, whose N=2000 behavior is exactly what
+> `stats/terminal-mean-rule-contested` leaves unresolved. Build and pre-register (before use) either
+> the increment estimator or a trimmed/bootstrap-lower-bound instrument for terminal cards.
+
+**The instrument itself does not need building.** `summarise()`
+(`harness/run-battery.mjs`, K3.1.1's verbatim copy of
+`validation/detector-audit/harness/run-sequential.mjs:37-44`) already computes it, and three
+`test_martingale`-class rows already carry it: cell 33 (K3.1.1), cell 34 (K6.7) and arm 47
+(K6A.1.12). Amendment v2.K6A.7 K6A.7.5 registered the T2 counterpart's three pooling levels. **What
+is missing is the registration of that instrument on the terminal class's row, and the caveat that
+must travel with it.** This amendment supplies both and builds nothing new.
+
+### C39.2 The instrument, registered: which rows, which sample, which shape
+
+**WHICH ROWS.** The same rows Amendment v2.C38.1 scopes: the S2 (`arm: 'healthy'`) row of any A1
+arm whose emission takes the **terminal instrument pair** branch (`exceedance` + `mean_e`,
+`CLASS_INSTRUMENTS.terminal_e_value`, `validation/certification/lib/constants.mjs:11`). At this
+commit: arms **30**, **31**, **32**. **Not** the S3 row, **not** any fault cell — K3.1.4's binding
+exclusion is inherited unchanged and extended to this field by name.
+
+**WHICH SAMPLE, and why "increment" is the right word for a terminal read.** A terminal e-value's
+wealth path has **exactly one increment per replicate** — the terminal e itself, `M_T/M_0` — so the
+increment sample and the terminal sample are the same numbers. There is nothing to choose:
+
+| kind | arm | the sample | `n` |
+|---|---|---|---|
+| `terminal` | 30 | per-trajectory terminal e-values (`acc.es`) | `healthy.finite` |
+| `process` | 31 | per-trajectory final wealth `M_T` (`acc.es`) | `healthy.finite` |
+| `point` | 32 | the per-POINT e-values of K4.1.4's per-point row | `healthy.pointFinite` |
+
+**This is the same sample `mean_e` is the mean of.** No second sample is introduced, and no
+trimming, bootstrap or re-weighting is registered — the WORKLIST row's alternative
+("trimmed/bootstrap-lower-bound instrument") is **NOT adopted**, because a bootstrap needs a new
+seeded stream and would make the run non-reproducible from its recorded fields, where this estimator
+is closed form and recomputable from `n`, `mean_e` and `mean_e_sd` alone.
+
+**SHAPE.** `summarise()`'s object verbatim: `{ n, mean, sd, se, lower95_one_sided,
+upper95_one_sided }`, `n-1` variance, `z = 1.645`. On the `terminal`/`process` path this is
+`summarise(acc.es)` literally. On the `point` path the sample is not in memory, so the identical
+algebra is applied to the running moments (`pointSumE`, and the Welford `pointM2` Amendment v2.C38.1
+registered), through one helper whose only job is to be that algebra once.
+
+**THE FIELD NAME IS `increment_estimator`, AND `increment_verdict` IS EXPLICITLY NOT EMITTED.**
+`lib/score.mjs:182` routes a non-`test_martingale` cell that carries `increment_verdict` and no
+class verdict into `missing[]` as *"foreign increment_verdict ignored"*. These rows carry their
+class's own `verdict`, so that branch cannot fire — and it stays that way because **no verdict field
+derived from this instrument is emitted, on any row, ever.**
+
+### C39.3 NO VERDICT AUTHORITY — the mechanism, and the boundary named as out of scope
+
+**The field is REPORTED. It decides nothing.** Three independent reasons it cannot, each checkable:
+
+1. **The recorded token does not move.** The S2 `verdict` stays
+   `s2Lower95 > ALPHA ? 'FAIL' : 'not-refuted'` — derived from the exceedance's own Wilson bound,
+   exactly as it is today. This amendment does not touch that expression.
+2. **The scorer treats it as annotation.** `applyGuards`
+   (`validation/certification/lib/guards.mjs`) implements Finding 4: a foreign instrument present
+   **alongside** the class's own instrument is *"annotation, not a veto"*. Quoted:
+
+   > A foreign instrument present ALONGSIDE the class's own instrument is annotation, not a veto —
+   > e.g. a sequential_ui_e_process (e_process) cell that carries increment_estimator
+   > (test_martingale's instrument) next to its own crossing_rate scores by crossing_rate.
+
+   These rows carry `exceedance` and `mean_e`, so `ownPresent.length > 0` and the VOID branch cannot
+   be reached. The returned `{status: 'OK', reason}` string is **not read anywhere** in
+   `lib/score.mjs` (only `'VOID'`, `'NON_FINITE'` and `'VACUOUS'` are branched on), so the field's
+   presence has **no observable effect on any stage score**. `increment_estimator`'s own
+   finiteness/vacuousness guards are gated `cls === 'test_martingale'` and do not apply here, and
+   `internalConsistency` returns `[]` for every other class.
+3. **`isValidityCell` already admits these rows** on `exceedance`/`mean_e` (`lib/score.mjs:11`), so
+   candidacy does not move either.
+
+**THE AUTHORITY PATTERN THIS FOLLOWS, cited rather than invented.** K3.1.3 (Critical) registered
+exactly this arrangement for cell 33: the instrument is emitted *"precisely so this reading is
+visible and auditable, not to let an infinite-variance Wald bound silently gate a fresh detector's
+certification"*, while the verdict stays with the other instrument. K6.7 applied the same split to
+cell 34. **This amendment is the third application of that pattern and adds nothing to it.**
+
+**AND THE REPORTING RULE, transcribed from K3.1.3 clause 2.** If a future run reads
+`increment_estimator.lower95_one_sided > 1` on a terminal-class S2 row, that reading is **filed as a
+discrepancy to `~/concord/knowledge/stats/pages/terminal-mean-rule-contested.md`** — it is **not
+scored**, and it does not move the card's S2 verdict.
+
+**OUT OF SCOPE, NAMED.** Giving this field verdict authority on the terminal class means changing
+`CLASS_INSTRUMENTS.terminal_e_value` and the S2 scoring path in
+`validation/certification/lib/score.mjs`. **That is a certification-protocol change, not a battery
+amendment**, and it is **explicitly not done here**. No protocol page is edited, no constant in
+`lib/constants.mjs` moves, and this document has no authority to make that change.
+
+### C39.4 THE ACROSS-DRAW CAVEAT — registered text, and it is mandatory
+
+**Registered: no reading of `increment_estimator` on any row this battery emits may be reported
+without the following caveat beside it.** This is not stylistic. WORKLIST `C51` recorded a category
+error committed on this exact field, by this author's own filing, and the correction is measured:
+
+> **CAVEAT (registered, v2.C39.4 — mandatory beside any `increment_estimator` reading).** This
+> field's `se`, `lower95_one_sided` and `upper95_one_sided` are **within-draw** quantities: they
+> describe the spread of the mean over trajectories **at one calibration draw**, and they are not
+> the uncertainty on the class's answer. The spread that governs a reading's distance from its null
+> is the **between-draw** spread, and on the one construction where both have been measured it is
+> **9.3× larger**: `shape_ecdf_accumulator`'s registered single-draw reading was framed as
+> **16.26 SE** above the exact null `0.991433` using the within-draw Wald SE **`0.00206`**, where
+> the across-draw sd of the same field over 100 fresh calibration draws is **`0.01914`**
+> (`results/live/run-acrossdraw-20260809T065107Z`, Amendment v2.K6A.6). The across-draw
+> distribution is **centred on the exact null** (mean `0.989903` vs `0.991433`, `−0.80` SE) and the
+> single-draw `1.024959` sits at its **97th percentile** — a tail draw, by the disposition rule
+> registered before that run. Two further measured consequences: the registered range
+> `[0.97, 1.01]` **false-fires on 32/100 draws from the calibration lottery alone**, and
+> K6A.1.12's per-draw band `[0.985, 0.998]` for this field is **contradicted at 74/100**. So a
+> within-draw interval on this field **cannot** be read as evidence about the class, and an
+> apparent departure of many within-draw SEs is the expected appearance of a single draw.
+
+**Scope of the caveat, stated exactly.** The `9.3×` and the two false-fire rates are measured on
+**one construction** — `shape_ecdf_accumulator` at `κ = 0.682`, `m = 500`, `W = 150`. **The
+across-draw spread of this field on the three terminal-class rows is UNMEASURED**, and the caveat
+does not claim otherwise: what transfers is the **category** (within-draw SE is not between-draw
+spread), which is a property of the single-draw-per-cell protocol and not of one κ. The ratio on the
+terminal rows could be larger or smaller and nothing here predicts it.
+
+### C39.5 The invariants against Amendment v2.C38.1's fields, and the one boundary where they part
+
+On every terminal-instrument S2 row with `n >= 2`, registered as **checked** rather than asserted:
+
+```
+increment_estimator.n                      === n  (n_points on the K4.1.4 per-point row)
+increment_estimator.mean                   === mean_e
+increment_estimator.sd                     === mean_e_sd
+max(0, increment_estimator.lower95_one_sided) === mean_e_lower_95
+```
+
+The fourth line is an identity with a `max`, not an equality, and the reason is registered at
+C38.1.2: `mean_e_lower_95` is **clamped at 0** because the addendum that owns that field name
+clamps it; `summarise`'s `lower95_one_sided` is **unclamped** because K3.1.1 does not clamp. **Each
+field keeps its own owner's convention** so one field name never means two statistics across two
+studies, and the relation between them is registered here instead of being left for a reader to
+guess.
+
+**THE ONE BOUNDARY: `n < 2`.** `summarise` returns `sd: 0` with a zero-width interval at `n <= 1`
+(its `varr = 0` branch); the addendum's rule for `mean_e_sd`/`mean_e_lower_95` is `NaN`. **So at
+`n < 2` the three fields disagree by construction, and that is registered rather than smoothed
+over:** `increment_estimator` follows K3.1.1, `mean_e_sd`/`mean_e_lower_95` follow the addendum.
+Every registered run of this battery is at `N = 2000`, so the boundary is reachable only on a smoke
+run — where a test pins it, so it cannot drift unnoticed.
+
+### C39.6 Named-not-done
+
+1. **The two historical mean-rule overrides get NOTHING recomputed.**
+   `group_average_e_value` (`mean_e 1.9140717432761356`, `run-20260808T201635Z`) and
+   `family_E_conformal_heldout` (`mean_e 4.175984181731008`, `run-20260808T133859Z`) were overridden
+   to REFUTED on the point estimate. Their increment estimators are **not recoverable** from what
+   was recorded — only the sample mean exists — so re-examining them **requires reruns**, and no
+   rerun is performed or authorized here.
+2. **No verdict authority transfer.** C39.3's boundary: a protocol change, out of scope.
+3. **No trimmed or bootstrap instrument.** C39.2: considered and not adopted, with the reason.
+4. **The across-draw spread of this field on the terminal rows is unmeasured.** C39.4's scope
+   clause. Measuring it is the terminal-class analogue of Amendment v2.K6A.6 and is not attempted.
+5. **`safe_t_e_value`'s and `universal_inference_e_value`'s rows are untouched** — this battery
+   emits no terminal-class S2 row for either (their coverage rows are fault/S3 rows), so the field
+   appears for them only if `terminal-evalue`'s own harness registers it, which this amendment does
+   not do.
+6. **The card expiry of C38.1.7 applies unchanged** and no card is re-frozen.
+
+### C39.7 Registered code and test items
+
+| # | item | site |
+|---|---|---|
+| 1 | `summariseFromMoments(n, mean, varr)` — `summarise()`'s own tail algebra, for the point path where the sample is not held | `harness/run-battery.mjs` |
+| 2 | `increment_estimator` on the terminal-instrument S2 branch, per-kind sample as tabled | `harness/run-battery.mjs` S2 emission |
+| 3 | test: the field is present on all three terminal-class S2 rows and absent from their S3 rows and from every fault cell | `test/run-battery.test.mjs` |
+| 4 | test: the four C39.5 invariants hold on every terminal-class S2 row at `n >= 2` — **mutation kill: feed the estimator a different sample (e.g. the per-trajectory `es` on the point row) and the `n`/`mean`/`sd` identities fail** | `test/run-battery.test.mjs` |
+| 5 | test: the `n < 2` boundary of C39.5 is exactly as registered (`sd: 0` and a zero-width interval beside a `null` `mean_e_sd`) | `test/run-battery.test.mjs` |
+| 6 | test: no row of any kind carries `increment_verdict` | `test/run-battery.test.mjs` |
+
+### C39.8 House rules, mapped
+
+(1) **Committed before the code.** (2) No endpoint or threshold moves. (3) The two `mean_e` figures
+quoted in C39.6 are **already-published readings of already-scored rows**, quoted to say what is
+*not* being recomputed — no new analysis of any candidate endpoint. (4) §9's fallback untouched.
+(5) No new substrate. (6) `results/` untouched; **no run written, no row edited.** (7) No rerun.
+(8) Binding on the next report that emits this field: it must state the estimator's `n`, `mean`,
+`sd` and one-sided bound **and carry C39.4's caveat verbatim**.
+
+### Amendment summary
+
+**Registers `increment_estimator` — `summarise()`'s object, unchanged — on this battery's
+terminal-instrument S2 rows, as a REPORTED instrument with no verdict authority.** The instrument
+needed no building: K3.1.1's `summarise()` already computes it and three `test_martingale` rows
+already carry it; what was missing was its registration on the terminal row and the caveat that must
+travel with it. For a terminal e-value the wealth path has exactly one increment per replicate, so
+the increment sample **is** the sample `mean_e` is the mean of — no second sample, no bootstrap
+(rejected: it would break recomputability from the recorded fields). **Authority does not move, on
+three independently checkable grounds:** the S2 token stays exceedance-derived, `applyGuards`
+Finding 4 treats a foreign instrument beside the class's own as *"annotation, not a veto"* and its
+`OK` reason string is read nowhere in `lib/score.mjs`, and `isValidityCell` already admitted these
+rows. **This is K3.1.3/K6.7's pattern applied a third time**, including its reporting rule: a
+`lower95_one_sided > 1` reading is filed to `stats/terminal-mean-rule-contested`, not scored.
+**Transferring verdict authority is a certification-protocol change and is explicitly out of scope.**
+**And C39.4 registers a MANDATORY caveat** — no reading of this field may be reported without it —
+built on the C51 category error measured on this exact field: a **16.26-SE** framing that used the
+**within-draw** Wald SE `0.00206` where the **between-draw** sd is `0.01914`, **9.3× larger**, with
+the across-draw distribution centred on the exact null and the registered single-draw reading at its
+97th percentile. The caveat's numbers are scoped to the one construction they were measured on and
+the terminal rows' own across-draw spread is named unmeasured. **The two historical mean-rule
+overrides are not recomputed** — their increment estimators are unrecoverable from a recorded mean,
+so re-examination needs reruns, and none is performed.
+
+---
+
+## Amendment v2.C45 — 2026-08-09, the p_uniformity KS residual: MECHANISM CLOSED — it is the shared calibration draw's own Kolmogorov statistic, and the test's critical value never applied
+
+WORKLIST `C45`. Sections §1–14 and every prior Amendment and Erratum stay intact. This amendment
+**registers one bounded probe and its numbers**, and **moves no endpoint, floor, threshold, seed,
+grid, falsifier, verdict, cell or class row.** No run is written, no run is re-run, and nothing is
+re-scored. The probe is a **derivation on non-registered seeds**, disclosed in full below.
+
+### C45.1 LEAD WITH THE CORRECTION — the C45 row pairs two DIFFERENT statistics as "the same formula"
+
+The WORKLIST row reads:
+
+> After the lattice fix (C1) the per-window conformal p still KS-rejects uniformity on T1 (0.02290
+> vs critical 0.00878) while confirming on T2 (0.01671) — same formula, opposite readings.
+
+**Checked against the committed rows: `0.02290` and `0.01671` are not the same statistic, and one of
+them is not a KS statistic at all.**
+
+| figure | what it actually is | where |
+|---|---|---|
+| `0.022903692614770432` | `p_uniformity.ks_statistic`, arm 34, `n = 24,000` | `results/live/run-20260808T133746Z` summary + REPORT §2 |
+| `0.01671` | **`P(p <= 0.05)`** — the α-point rate, not a KS statistic | `results/live/run-t2-20260808T121710Z/REPORT.md:83` |
+| `0.050167` | the T1 α-point rate after the C1 fix — **the actual T2 counterpart of `0.01671`** | the same REPORT line |
+
+The T2 run's own REPORT is not at fault: its "same formula, two signs" sentence compares
+**K6.1.2's α-point conservativeness claim** across the two tiers (T2 `0.01671` against T1
+`0.050167`) and mentions the KS test in a separate clause. **The WORKLIST row merged the T1 KS
+statistic with the T2 α-point rate**, which is why "same formula, opposite readings" reads as a
+paradox: there is no single formula with two signs there.
+
+**And the α-point pairing does not survive its own arithmetic either.** Per calibration draw the
+α-point rate has sd `sqrt(alpha(1-alpha)/m)` — the reference has only `m` blocks, so the rate a draw
+delivers at `u = 0.05` is a binomial-scale fluctuation around nominal:
+
+| tier | `m` | per-draw sd | reading | distance from nominal `0.05` |
+|---|---|---|---|---|
+| T2 | 45 | `0.032489` | `0.01671` | **`-1.02` sd** |
+| T1 (post-C1) | 333 | `0.011943` | `0.050167` | **`+0.014` sd** |
+| T1 (pre-C1, the lattice defect) | 333 | `0.011943` | `0.10017` | `+4.20` sd |
+
+So the post-fix T1 rate is dead on nominal and **T2's "conservative, as registered" reading is a
+one-sd draw of the calibration lottery**. Registered as a probe-derived observation with **no
+verdict**: it does not refute K6.1.2's closed-form claim, it shows that the T2 measurement cited as
+confirming it cannot distinguish it from nominal. Filed for write-back; nothing on any card moves.
+
+**What the residual actually is, and what this amendment decomposes, is the KS pair the task names:
+`0.022904` (arm 34, T1, `n_p = 24,000`) and `0.037646` (the mean over 100 fresh draws on K6-slow,
+`run-acrossdraw-20260809T065107Z`, `n_p = 20,000` per draw), with arm 47's own single draw at
+`0.041150` (`n_p = 80,000`).**
+
+### C45.2 The probe, registered: three components, four arms, and what would falsify each
+
+`validation/coverage/tools/ks-decomposition.mjs`. **A probe, not a harness** (`tools/README.md`):
+it writes no run directory, emits no cell, is not read by
+`validation/certification/lib/collect.mjs`, and computes no `p` of its own — every `p` comes from
+the shipped modules (`dist/detectors/shape-ecdf-accumulator.js`,
+`dist/detectors/shape-block-conformal-bet.js`) at the geometries the runs use.
+
+**SEEDS, disclosed.** Probe bases `840000000` (K6-slow) and `850000000` (K6), both `>= 6e8`; every
+registered seed in this study is `<= 1e8`. **No registered scenario seed is read.** Generator:
+`mulberry32 -> Box-Muller`, the form `overlap-screen.mjs` already uses — **deliberately NOT
+`lib/inject.mjs`'s LCG**, so that a shared arm reproducing the runs' magnitudes cannot be a property
+of the study's own PRNG.
+
+**KS convention.** `computePUniformity`'s formula, copied verbatim (`ks()` in the probe): a
+differently-conventioned KS would answer a different question.
+
+**THE THREE CANDIDATE COMPONENTS, and the arm that isolates each.**
+
+| component | what it is | arm | what would show it carries the reading |
+|---|---|---|---|
+| (a) **atom** | `p = (1 + #{ref >= live})/(m+1)` lives on an `(m+1)`-atom lattice; `sup_u \|F_lattice(u) - u\| = 1/(m+1)` exactly, and the KS is computed against the CONTINUOUS uniform | `n_p` i.i.d. draws from the uniform `(m+1)`-atom lattice | the lattice-only KS reaching the readings |
+| (b) **shared reference** | every window of every trajectory ranks against ONE calibration draw; conditional on it, `p`'s CDF deviates from the identity by that draw's own empirical fluctuation — deterministic given the draw, `O(1/sqrt(m))`, and it does NOT shrink with `n_p` | `D`-sweep: the same `n_p` spread over `D` independent calibration draws, `D = 1` (what a run does) to `D = n_windows` (full independence) | `D = 1` reaching the readings and the excess decaying as `1/sqrt(D)` onto the (a) floor |
+| (c) **residual** | anything left: the estimated-median two-sided distance rank (K6), the reference measure `A` shared inside `T` (K6-slow), tie handling | full independence minus the atom arm **at the same `n_p`** | a gap that survives full independence |
+
+**AND A CLOSED-FORM PREDICTION FOR (b), STATED BEFORE THE NUMBERS.** Write `Ghat_m` for the
+empirical CDF of the `m` reference block statistics. Then
+`p = (1 + m(1 - Ghat_m(T)))/(m+1)`, so for a fresh null `T ~ G`,
+`P(p <= u | cal) - u` is the **uniform empirical process of the `m` calibration blocks**, and its
+sup over `u` is the calibration draw's own `m`-sample Kolmogorov statistic `D_m`. Therefore
+
+```
+E[p_uniformity.ks_statistic]  ~  E[D_m]  =  0.8687 / sqrt(m)
+sd[p_uniformity.ks_statistic] ~  sd[D_m] =  0.2606 / sqrt(m)
+```
+
+up to the atom discretisation, which is `1/(m+1)` and therefore second order. **Predicted before
+reading the probe: `0.038849` (K6-slow, `m = 500`) and `0.047604` (K6, `m = 333`).** This is
+falsifiable in the strong sense: it predicts not two moments but the whole **distribution** of the
+reading across draws, and the registered 100-draw study already measured that distribution.
+
+### C45.3 THE NUMBERS — component (b) carries it, and the residual is 0.6%–3.7%
+
+`shape_ecdf_accumulator` (K6-slow), `m = 500`, `W = 150`, `n_p = 20,000`, `R = 12` (`R = 4` at
+`D >= 100`):
+
+```
+(a) ATOM    exact 1/(m+1)                        0.001996
+            lattice-only MC at n_p = 20,000       mean 0.007326   sd 0.002531   [0.004399, 0.013529]
+            KS critical at that n_p                    0.009617   <- the lattice alone does NOT reject
+
+(b) D-SWEEP D=1     0.042637  sd 0.016530   [0.022340, 0.079036]   <- what a run does
+            D=2     0.032884  sd 0.011205
+            D=5     0.019288  sd 0.007437
+            D=10    0.012966  sd 0.002898
+            D=25    0.010272  sd 0.002373
+            D=50    0.008198  sd 0.001269   <- at the (a) floor: 1.12x the lattice-only MC
+            D=250   0.007428                <- 1.01x
+            D=1000  0.008377                <- 1.14x
+
+(c) FULL INDEPENDENCE, one fresh calibration draw PER WINDOW (D = 4,000) at n_p = 4,000
+            independent                           0.015861  sd 0.004988  (R = 3)
+            atom MC at the SAME n_p               0.014345  sd 0.005321
+            RESIDUAL                              0.001516  = 3.70% of the shared arm at that n_p
+            shared (D = 1) at the SAME n_p        0.041000  sd 0.016205
+
+(d) DISCRIMINATOR — shared (D = 1) against pooled size
+            n_p       shared        atom MC     KS critical
+              5,000   0.037823      0.013184    0.019233
+             20,000   0.037028      0.007447    0.009617
+             80,000   0.034337      0.004695    0.004808
+            200,000   0.044938      0.003194    0.003041     (R = 4, the noisiest row)
+```
+
+`shape_block_conformal_bet` (K6), `m = 333`, `W = 30`, two features per window, `n_p = 20,000`:
+
+```
+(a) ATOM    exact 1/(m+1) 0.002994;  lattice-only MC 0.008697  sd 0.001526
+(b) D-SWEEP D=1 0.037574 (sd 0.016908) -> D=2 0.022737 -> D=5 0.016755 -> D=10 0.015208
+            -> D=25 0.009351 (1.08x the floor) -> D=1000 0.007992 (0.92x)
+(c) FULL INDEPENDENCE (D = 10,000) at n_p = 20,000
+            independent 0.007137 sd 0.001574;  atom MC 0.006918 sd 0.001086
+            RESIDUAL 0.000219 = 0.61% of the shared arm at the same n_p (0.035674)
+(d) DISCRIMINATOR  n_p 5,000 / 20,000 / 80,000 / 200,000 -> 0.032378 / 0.035352 / 0.033718 / 0.033528
+            against an atom MC of 0.016165 / 0.007331 / 0.004083 / 0.004459
+```
+
+**FIVE INDEPENDENT WAYS THE ANSWER COMES OUT THE SAME.**
+
+1. **The closed form predicts the registered measurement.** `0.8687/sqrt(500) = 0.038849` against
+   the 100-draw across-draw mean **`0.037646`** — a ratio of **`0.969`**. The sd:
+   `0.2606/sqrt(500) = 0.011654` against **`0.010502`**, ratio **`0.901`**.
+2. **It predicts the whole DISTRIBUTION, not two moments.** The registered 100-draw KS quantiles
+   against `K_p/sqrt(500)`, `K` the Kolmogorov law:
+
+   | quantile | measured (100 draws) | `K_p/sqrt(500)` | ratio |
+   |---|---|---|---|
+   | p05 | `0.022891` | `0.023238` | `0.985` |
+   | p25 | `0.029821` | `0.030252` | `0.986` |
+   | p50 | `0.036537` | `0.037010` | `0.987` |
+   | p75 | `0.042774` | `0.045579` | `0.939` |
+   | p95 | `0.057030` | `0.060736` | `0.939` |
+
+3. **The shared arm reproduces the readings under a DIFFERENT generator.** `D = 1` reads
+   `0.042637` (K6-slow) and `0.037574` (K6) on mulberry32, where the runs read `0.041150` /
+   `0.037646` and `0.022904` on the LCG. So the mechanism is not the study's PRNG.
+4. **The excess decays as `1/sqrt(D)`.** `KS(D)*sqrt(D)` over `D = 1, 2, 5, 10` on K6-slow:
+   `0.04264`, `0.04650`, `0.04313`, `0.04100` — flat, exactly the `1/sqrt(D)` an average of `D`
+   independent empirical processes gives. It stops being flat from `D = 25` on (`0.05136`,
+   `0.05797`) because by then the atom/finite-`n_p` floor dominates and the floor does not scale
+   in `D`.
+5. **The discriminator settles bias against noise.** The shared arm is **FLAT in `n_p`** (K6:
+   `0.0324 / 0.0354 / 0.0337 / 0.0335` across a 40× range) while the lattice-only arm falls as
+   `1/sqrt(n_p)` (`0.0162 -> 0.0045`). A statistic that does not shrink with the sample is a
+   deterministic distortion, not sampling error.
+
+**AND THE TWO READINGS THE TASK NAMES ARE ORDINARY DRAWS OF THIS MECHANISM.** Arm 34's `0.022904`
+sits at **`-0.87` sd** of the shared arm's own spread; arm 47's `0.041150` at **`+0.99` sd** of the
+shared arm at its own `n_p = 80,000`, and at `+0.33` sd of the registered 100-draw distribution.
+Neither is anomalous **once the reading's own spread is the calibration lottery's rather than
+`1.36/sqrt(n_p)`**.
+
+**One number that does NOT match, stated rather than buried.** On K6 the probe's shared arm reads
+`0.037574` where the closed form predicts `0.047604` — a ratio of `0.789`. The mechanical reason is
+K6's **two features pooled into one KS**: the pooled deviation is the average of two correlated
+per-feature empirical processes, so its sup is smaller than either. K6-slow has one feature and
+reads `1.098` of its closed form. So the closed form is an upper bound on a multi-feature pooled
+reading, and it is quoted as such. **This does not affect the verdict** — every arm above is a
+measurement, and the closed form is a check on them, not their source.
+
+### C45.4 THE VERDICT: (b) carries the readings, and the KS test's critical value never applied
+
+**Component (b) carries essentially all of it.** Full independence lands within `0.000219` (K6) and
+`0.001516` (K6-slow) of the pure-lattice floor at matched `n_p` — **0.61% and 3.70%** of the shared
+arm's reading — so **the residual (c) is at the probe's own noise level and no third mechanism is
+needed.** Component (a) is real but small: `1/(m+1)` is `0.002994` / `0.001996`, and the
+lattice-only arm does not reject at the runs' own `n_p`.
+
+**THE CONSEQUENCE, and it is a correction to the diagnostic rather than a finding about the
+detectors.** `computePUniformity` compares its statistic against `1.36/sqrt(n)` — the critical value
+for `n` **independent** draws from a **continuous** uniform. **The construction satisfies neither
+premise**: the pooled `p` are dependent through the one shared calibration draw, and they are
+supported on `m+1` atoms. So the rejection was never a well-formed test of exchangeability, and
+`n_p` was the wrong denominator throughout: **the sample size that governs this statistic is `m`
+(500 / 333 reference blocks), not `n_p` (20,000 / 80,000 pooled p values).** At `m = 500` a KS
+statistic of `0.0376` is the **median** outcome, not a `4×`-critical excess.
+
+**WHAT THIS DOES NOT SAY.** It does not say the detectors are valid — validity is the marginal
+`E[e|H0] <= 1`, which the exact null `0.991433` and the across-draw increment centring
+(`0.989903`, `-0.80` SE, Amendment v2.K6A.6) speak to and this probe does not touch. It says the
+per-run KS reading measured the **single-draw calibration lottery** that K6A.1.7 already registered
+as the dominant uncertainty on every endpoint of this construction, and measured it in a statistic
+whose stated critical value assumed the lottery away.
+
+### C45.5 What is NOT closed, and what this probe excluded
+
+1. **The single-draw-per-cell protocol question stays open and binding.** C45's own "related
+   unmeasured debt" — the across-draw calibration spread, and the fact that the single-draw caveat
+   on K4/K6 endpoints is undischarged — is **untouched**. This probe explains a diagnostic; it does
+   not amend the protocol. That is WORKLIST `C51` item (4).
+2. **`computePUniformity`'s critical value is NOT changed.** Registering a different reference
+   distribution for this field is a change to a registered emission and needs its own amendment
+   with its own null. **Named-not-done.** Until then the field's `ks_critical_at_alpha` remains
+   what it is and **must be read with C45.4 beside it.**
+3. **No run is re-run and no reading is restated.** `0.022904`, `0.041150` and `0.037646` stand
+   exactly as committed. Their **interpretation** changes; their values do not.
+4. **The α-point observation of C45.1 carries no verdict** and does not move K6.1.2.
+5. **The two-feature attenuation is measured, not modelled.** C45.3's `0.789` is explained
+   mechanically and not derived; a closed form for the pooled multi-feature sup is not attempted.
+6. **T2's own KS is not measured here.** The T2 arm emits no `p_uniformity` field
+   (`run-clustersynth-arm.mjs`), so the T2 tier contributes an α-point rate and no KS statistic;
+   this probe does not add one.
+7. **`spectral_bet_e_process` (cell 33, `m` = the K3 window count) is not probed.** Its own reading
+   `0.005924` against critical `0.007168` (`run-20260808T091521Z`) does **not** reject, so it was
+   never part of C45 — but by the same mechanism its reading is governed by its own reference count
+   and not by `n = 36,000` either. Not measured here.
+
+### C45.6 House rules, mapped
+
+(1) **Committed with the probe it describes**, and the probe is committed in the same commit as
+these numbers — `tools/README.md`'s standard for probe provenance, and the F6 finding's own remedy.
+(2) No endpoint or threshold moves, so nothing could move under a reading. (3) **This section IS the
+clearly-labelled post-hoc analysis** and it carries **no verdict**: no cell, arm or class endpoint
+was read to produce it. The three run readings quoted are already published. (4) §9's fallback
+untouched. (5) The substrate is the probe's own disclosed generator, not the study's. (6) `results/`
+untouched — **no run directory written, no row edited.** (7) No rerun. (8) Every number this probe
+produced is stated above with its `R`, including the noisiest row.
+
+### Amendment summary
+
+**C45's mechanism is CLOSED: the `p_uniformity` KS excess is the shared calibration draw's own
+`m`-sample Kolmogorov statistic.** Decomposed on the shipped modules at the runs' own geometries:
+**(a)** the discrete-rank atom floor is exactly `1/(m+1)` — `0.001996` / `0.002994` — and the
+lattice alone does not reject at the runs' `n_p`; **(b)** the shared reference carries it, `D = 1`
+reading `0.042637` (K6-slow) and `0.037574` (K6) with the excess decaying as `1/sqrt(D)` onto the
+(a) floor; **(c)** the residual under full independence is `0.001516` and `0.000219` — **3.70% and
+0.61%** — i.e. at the probe's noise level, so **no third mechanism is needed**. Five independent
+confirmations: the closed form `0.8687/sqrt(m)` predicts the registered 100-draw mean to `0.969`
+and its sd to `0.901`; it predicts all five measured quantiles to within `6%`; the shared arm
+reproduces the readings under a **different PRNG**; `KS(D)*sqrt(D)` is flat over `D = 1..10`; and
+the shared arm is **flat across a 40× range of `n_p`** where sampling noise would fall `6×`. **The
+consequence is a correction to the diagnostic, not a finding about the detectors:**
+`computePUniformity` tests against `1.36/sqrt(n)`, whose two premises — independence and a
+continuous reference — the construction satisfies neither, and **the governing sample size is `m`
+(500 / 333 reference blocks), not `n_p` (20,000 / 80,000 pooled p)**. At `m = 500`, `0.0376` is the
+**median** outcome, not a `4×`-critical excess; arm 34's `0.022904` is a `-0.87` sd draw and arm 47's
+`0.041150` a `+0.99` sd draw. **And the C45 row's own framing is corrected:** `0.02290` and
+`0.01671` are **not the same statistic** — the first is a KS statistic on T1, the second is
+`P(p <= 0.05)` on T2 — and the α-point pairing does not survive its arithmetic either, with T2's
+"conservative" `0.01671` sitting `-1.02` draw-sd from nominal at `m = 45` and T1's post-fix
+`0.050167` at `+0.014` sd. **Validity is untouched and not claimed:** `E[e|H0] <= 1` rests on the
+marginal, which the exact null and the across-draw increment centring speak to; what the KS reading
+measured is the single-draw lottery K6A.1.7 already registered, in a statistic whose critical value
+assumed the lottery away. **The single-draw protocol question (C51 item 4) stays open, and
+`computePUniformity`'s critical value is deliberately NOT changed here.**
+
+### Clarification append to Amendment v2.C38.1 C38.1.1, dated 2026-08-09 (appended not edited)
+
+C38.1.1's `54` is counted **per terminal-class card**: cells matched to a card by `detector_id` or
+alias that carry either terminal instrument (`mean_e` or `exceedance`). A **corpus-wide** count of
+cells carrying `mean_e_lower_95` — every detector, power arms included — is **`72`**
+(`2026-08-terminal-evalue/run-20260807T215034Z` `58`,
+`2026-08-phi-identifiability/run-20260807T215105Z` `14`). The `54` splits as `40` in the first run
+(`20` `safe_t` + `20` `universal_inference`) and `14` in the second (`7` + `7`). Both counts are
+correct for their own scope; stated here so neither can be mis-quoted against the other. **The
+finding does not turn on which is used: under either count the WORKLIST claim of zero is false, and
+under both the residue is the same — 0 of this battery's 3 terminal-class S2 rows.**
+
+---
+
+## Amendment v2.C47.2 — 2026-08-09, the micro-amendment Erratum v1.4 named as not-done: `family_E_conformal_heldout` stamps `'heldout-empirical'` on future emissions, and the stamp stops being an enumeration
+
+WORKLIST `C47` item (2), forward fix. Sections §1–14 and every prior Amendment and Erratum stay
+intact. This amendment **changes one registered field's VALUE on future emissions of one detector's
+rows** and moves no endpoint, floor, threshold, seed, grid, falsifier, verdict or cell. Registered
+**before** the harness change it authorizes. **No run is re-run and no committed row is edited** —
+every historical row stays exactly as Erratum v1.4 records it.
+
+### C47.2.1 What this closes, quoted from the erratum that could not close it
+
+Erratum v1.4's own "Named-not-done", quoted:
+
+> **The harness is NOT changed.** Emitting `'heldout-empirical'` for this candidate on future runs
+> would change a registered field's value, and on the three sibling candidates that took a
+> registration each (K4.1.5, K6.9, K6A.1.10). This erratum cannot register it — an erratum registers
+> nothing. **The forward fix requires its own amendment**, and until one exists the stamp on future
+> runs will still read `'oracle'`.
+
+**This is that amendment.**
+
+### C47.2.2 The registration, matching the three siblings it is modelled on
+
+**Registered: every row this battery emits for `family_E_conformal_heldout` stamps
+`params: 'heldout-empirical'`.** The literal, the reason and the wording are taken from the three
+registrations that already exist for it, cited rather than re-derived:
+
+| candidate | registered at | the registered reason |
+|---|---|---|
+| `point_tail_bet_e_value` | **K4.1.5** | *"stamps its own accurate literal rather than reusing `'oracle'` (Erratum v1.3's defect class) — its median/MAD are empirical statistics of an independent held-out sample, not oracle constants"* |
+| `shape_block_conformal_bet` | **K6.9** | *"stamps the same accurate literal … its calibration is an empirical statistic of an independent held-out sample (K6.3), not an oracle constant like K3's sigma"* |
+| `shape_ecdf_accumulator` | **K6A.1.10** | *"stamps the same accurate literal for the same reason — its calibration is an empirical statistic of an independent held-out draw (K6A.1.9's 100,000 rows)"* |
+
+`family_E_conformal_heldout` satisfies the identical condition and always did: fixed `Σ = [[1]]`
+(A2) plus `HELDOUT_ROWS = 10,000` rows at `HELDOUT_SEED = CELL_SEED + HELDOUT_OFFSET` (§6's K4
+block, A7's T1 substrate), stamped through `stampHeldoutFamilyE`. **It is the candidate Erratum v1.3
+singled out as "neither" and the one that never got the literal.**
+
+**`family_D_spectral_e_detector` keeps `'oracle'`, and that is not an oversight.** It is genuinely
+oracle — `{ mu: 0, sigma: 1, phi: cell.phi, alpha, windows: 'disjoint' }` is passed at the call site
+(A5, and Erratum v1.3's "Scope — what stays valid" item 1). It shares `kind: 'process'` with
+`family_E_conformal_heldout`, which is exactly why the predicate below cannot be a kind test.
+
+### C47.2.3 THE MECHANISM CHANGE, and it is the point: the stamp stops being an enumeration
+
+**Registered: the `params` literal is derived from whether the detector takes a held-out calibration
+draw — the same predicate that already decides whether the row is stamped with `heldout_seed` and
+`heldout_rows` — and not from a list of candidate names.**
+
+The defect Erratum v1.4 recorded was not a typo. It was **three separate ternaries, each enumerating
+the calibrated candidates by name, each one forgetting the same candidate**:
+
+```
+run-battery.mjs:1364   (detId === 'point_tail_bet_e_value' || shapeSpecOf(detId) !== null) ? 'heldout-empirical' : 'oracle'
+run-battery.mjs:1593   (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle'
+run-battery.mjs:1652   (pointKind || shapeKind) ? 'heldout-empirical' : 'oracle'
+```
+
+Three enumerations of one fact is three chances to forget a candidate, and the fourth candidate would
+have the same exposure. **Registered: one predicate, `calibratesFromHeldout(detId)`, at all three
+sites, defined to agree by construction with the held-out stamping condition the harness already
+uses** (`detId === 'family_E_conformal_heldout' || pointKind || shapeKind`, the arm path's own test,
+and `needsHeldout`'s on the fault-cell path).
+
+**AND THE INVARIANT THAT MAKES IT CHECKABLE, registered:**
+
+```
+no row may carry `heldout_seed` and `params: 'oracle'` at the same time
+```
+
+A row that records the seed of the held-out draw it calibrated from, while naming its parameters
+oracle, is self-contradictory on its face. **That contradiction was emitted on 18 committed rows and
+no test could see it, because every `params` test was scoped to a detector-name list.** The
+invariant is registered as a test over **every** emitted row, so a fifth calibrated candidate cannot
+reintroduce the defect by being forgotten.
+
+### C47.2.4 What is NOT changed
+
+1. **No historical row moves.** The 18 rows Erratum v1.4 enumerates (cells 18–21 and arm 31's two
+   rows, across `run-20260808T010208Z`, `run-20260808T064039Z`, `run-20260808T133859Z`) stay
+   byte-for-byte as committed, and the erratum plus its three dated REPORT appends remain the record
+   for them. **`results/` is append-only and this amendment does not touch it.**
+2. **No rerun**, and none is authorized.
+3. **No verdict, endpoint or class row moves.** `params` reaches the certification scorer only
+   through `phiIsEstimated`'s `'estimated-phi'` literal (`lib/nulls.mjs`); `'heldout-empirical'` is
+   not that literal and neither is `'oracle'`, so the change is inert to the mechanical verdict in
+   both directions — the same property Erratum v1.4 checked and stated.
+4. **`family_D_spectral_e_detector` keeps `'oracle'`** (C47.2.2).
+5. **C47 item (1) stays open** — the O(1/n)-approximate, mildly anti-conservative exchangeability
+   identity (K4.1.10) is untouched by this amendment.
+
+### C47.2.5 DISCLOSURES
+
+**(a) An existing test's registered scope widens, and it is named rather than quietly edited.**
+`test/run-battery.test.mjs`'s *"params negative scope: every row outside the two heldout-empirical
+candidates keeps params=oracle"* holds an exclusion list that K6.9 and K6A.1.10 each already
+extended (to three). **This amendment extends it to four**, adding
+`family_E_conformal_heldout` — and the mutation the test exists to kill (a collapsed or swapped
+ternary) is still killed, because 8 of the smoke run's 12 detectors' rows remain on `'oracle'`.
+
+**(b) The card expiry re-fires with this commit, and the commit AFTER it closes it.**
+`cards/shape_ecdf_accumulator.json` pins `validation/coverage/harness/run-battery.mjs` (C38.1.7), so
+this harness change moves that pin's sha256 again and `cert:expiry` reports `EXPIRED` at this commit.
+**That is sequenced deliberately: the dedicated card re-freeze is the NEXT and LAST commit on this
+branch, so `cert:expiry` is current at branch HEAD and the re-freeze rides in no other change** —
+K6A.5.3's lesson, applied to the shape of the commit sequence rather than only to its disclosure.
+
+### C47.2.6 Registered code and test items
+
+| # | item | site |
+|---|---|---|
+| 1 | `calibratesFromHeldout(detId)` — one predicate, agreeing by construction with the held-out stamping condition | `harness/run-battery.mjs` |
+| 2 | the predicate replaces the enumerated ternary at all three `params` sites | `harness/run-battery.mjs` :1364, :1593, :1652 |
+| 3 | test: every `family_E_conformal_heldout` row (4 fault cells + 2 arm rows) stamps `'heldout-empirical'` | `test/run-battery.test.mjs` |
+| 4 | test: the C47.2.3 invariant over EVERY emitted row — `heldout_seed` present implies `params !== 'oracle'`. **Mutation kill: revert any one of the three ternaries and this fails, where the name-scoped tests do not** | `test/run-battery.test.mjs` |
+| 5 | the negative-scope test's exclusion list gains a fourth detector (C47.2.5a) | `test/run-battery.test.mjs` |
+| 6 | test: `family_D_spectral_e_detector` still stamps `'oracle'` on every row — the genuinely-oracle `kind: 'process'` sibling, which a kind-based predicate would have broken | `test/run-battery.test.mjs` |
+
+### C47.2.7 House rules, mapped
+
+(1) **Committed before the code.** (2) No endpoint or threshold moves. (3) No post-hoc analysis: this
+amendment reads no cell and no endpoint. (4) §9's fallback untouched. (5) No new substrate or seed —
+the held-out draw, its seed formula and its row count are all unchanged; only the label of what they
+are is corrected. (6) `results/` untouched; **no run written, no committed row edited.** (7) No
+rerun. (8) Binding on the next run that emits these rows: its report states the stamp.
+
+### Amendment summary
+
+**Closes the forward fix Erratum v1.4 named as not-done.** `family_E_conformal_heldout` stamps
+`params: 'heldout-empirical'` on future emissions, on the identical condition and in the identical
+words as the three siblings registered at **K4.1.5**, **K6.9** and **K6A.1.10** — it is the candidate
+Erratum v1.3 singled out as "neither" and the only calibrated one that never got the literal.
+**And the stamp stops being an enumeration:** the defect was three separate ternaries each listing
+the calibrated candidates by name and each forgetting the same one, so the literal is now derived
+from **one predicate** that agrees by construction with the condition already deciding whether a row
+carries `heldout_seed`. **Registered with it, the invariant no test could previously see:** no row
+may carry `heldout_seed` beside `params: 'oracle'` — a self-contradiction that was emitted on 18
+committed rows precisely because every `params` test was scoped to a detector-name list.
+`family_D_spectral_e_detector` keeps `'oracle'` and is pinned by its own test, because it is
+genuinely oracle and shares `kind: 'process'` with the candidate being fixed — which is why the
+predicate cannot be a kind test. **Nothing historical moves:** the 18 rows stay byte-for-byte as
+committed and Erratum v1.4 plus its three dated REPORT appends remain their record. Disclosed: this
+re-expires `shape_ecdf_accumulator`, and the **dedicated re-freeze is the next and last commit**, so
+`cert:expiry` is current at branch HEAD and rides in nothing else.
+
+### Correction append to C38.1.7 and C39, dated 2026-08-09 (appended not edited): the paired-smoke row count was 103, not 66
+
+C38.1.7 item 1 states the invariance check as *"0 pre-existing fields changed on any of the **66**
+emitted rows"*, and Amendment v2.C39's summary carries the same figure. **`66` is wrong: it is the
+cell count of `results/live/run-20260808T010208Z`, not of the smoke run the check was performed on.
+The smoke run (`--n 20`, all seven classes) emits `103` rows.** Re-measured at this commit:
+
+```
+paired smoke diff, --n 20, same seeds, COVERAGE_RESULTS_DIR redirected
+  rows compared                    103
+  pre-existing fields changed        0   (Amendments v2.C38.1 and v2.C39)
+  new fields                         3   mean_e_sd, mean_e_lower_95, increment_estimator, on 3 rows
+```
+
+**The finding is unchanged and is strengthened rather than weakened — the check covered 103 rows,
+not 66.** The wrong number was a transcription of a live run's cell count into a smoke run's
+description; corrected here by append, with the original intact.
+
+**And the same check for Amendment v2.C47.2, stated at its own commit:** `103` rows compared,
+**exactly `6` fields changed** — `params` on `family_E_conformal_heldout`'s cells `18`, `19`, `20`,
+`21` and arm `31`'s two rows, `'oracle'` → `'heldout-empirical'`. **No other field on any row, and no
+new field.** Those are precisely the six rows per run Erratum v1.4 enumerates.
+
+---
+
+## Correction append to Amendment v2.C45 and v2.C38.1, dated 2026-08-09 (appended not edited): three quantitative corrections from review, all against this author's own numbers
+
+Quote-and-correct, originals intact. **No endpoint, floor, threshold, seed, grid, falsifier, verdict,
+cell or class row moves.** Two of the three corrections make the closed form's agreement **tighter**
+than v2.C45 claimed and one removes two figures that should never have been quoted at all.
+
+### (a) C45.3's two draw-level z-scores are UNSTABLE ESTIMATES and are WITHDRAWN
+
+**Quoted, from C45.3 and repeated in v2.C45's Amendment summary:**
+
+> **AND THE TWO READINGS THE TASK NAMES ARE ORDINARY DRAWS OF THIS MECHANISM.** Arm 34's `0.022904`
+> sits at **`-0.87` sd** of the shared arm's own spread; arm 47's `0.041150` at **`+0.99` sd** of the
+> shared arm at its own `n_p = 80,000`, and at `+0.33` sd of the registered 100-draw distribution.
+
+**Correct: both z-scores are estimates against a mean and sd measured at `R = 12` and `R = 4`, and
+neither is stable at that `R`.** Re-measured at `R = 80` on committed code
+(`tools/ks-decomposition.mjs --shared-only --reps 80`):
+
+| construction | C45.3's z (at `R = 12` / `R = 4`) | at `R = 80` | review's independent value |
+|---|---|---|---|
+| K6 arm 34, `0.022904` | `-0.87` | **`-1.14`** | `-1.06` / `-1.10` |
+| K6-slow arm 47, `0.041150` | `+0.99` | **`+0.25`** | `+0.19` / `+0.59` |
+
+The K6-slow figure moves by `0.74` sd between estimates of its own reference. **A quantity that
+unstable is not a finding and is withdrawn.** The `+0.33` sd against the registered 100-draw
+distribution stands — that reference is measured at `n = 100` and is the one stable comparison of the
+three.
+
+**REGISTERED IN THEIR PLACE, the stable statement, which needs no Monte Carlo at all.** Under the
+corrected reference of C45.4 the reading's null is the Kolmogorov law scaled by `1/sqrt(m)`, so its
+95th percentile is `K_0.95 / sqrt(m)` with `K_0.95 = 1.358099`:
+
+| construction | `m` | `K_0.95 / sqrt(m)` | reading | verdict |
+|---|---|---|---|---|
+| K6 arm 34 | 333 | **`0.074423`** | `0.022904` | **does not reject** |
+| K6-slow arm 47 | 500 | **`0.060736`** | `0.041150` | **does not reject** |
+| K6-slow across-draw mean | 500 | **`0.060736`** | `0.037646` | **does not reject** |
+
+**NEITHER READING REJECTS against its own reference distribution**, and that statement is closed
+form, seed-free and `R`-free. It is what C45.4's correction to the diagnostic actually implies, and it
+is strictly stronger than the two withdrawn z-scores were.
+
+### (b) C45.3's headline shared-arm figures are HIGH at `R = 12`, and the closed form agrees BETTER than claimed
+
+**Quoted, from C45.3:**
+
+> `(b) D-SWEEP D=1     0.042637  sd 0.016530 …`  and  **"K6-slow … reads `1.098` of its closed
+> form"**, and: **"On K6 the probe's shared arm reads `0.037574` where the closed form predicts
+> `0.047604` — a ratio of `0.789`."**
+
+**Correct: those are `R = 12` estimates of `E[shared KS]` and both are high.** Settled at `R = 80`:
+
+```
+K6-slow   mean 0.038451   sd 0.010908   se 0.001220   95% CI [0.036061, 0.040841]
+          closed form 0.038849            measured/closed = 0.9897      (C45.3 said 1.098)
+K6        mean 0.035812   sd 0.011305   se 0.001264   95% CI [0.033334, 0.038289]
+          closed form 0.047604            measured/closed = 0.7523      (C45.3 said 0.789)
+```
+
+Both CIs contain the review's independently settled ranges (`0.0386`–`0.0393` and
+`0.0356`–`0.0360`). **The direction of the correction is against this author's own presentation and
+in favour of the finding: on K6-slow the closed form is accurate to `1.0%`, not the `9.8%` C45.3
+implied.** The two-feature attenuation ratio on K6 is **`0.75`** (review's range `0.68`–`0.76`), not
+`0.789`; C45.3's mechanical explanation of it is unchanged, only its number.
+
+**C45.3's other arms are NOT re-measured and their `R` stands as printed** — the `D`-sweep's shape,
+the full-independence residual and the `n_p` discriminator each rest on a comparison at matched `R`
+within their own arm, and the verdict of C45.4 turns on those comparisons rather than on the absolute
+level of `D = 1`. **Named-not-done: settling the `D`-sweep and the residual arms at `R = 80` as
+well.**
+
+### (c) C45.2's `sd[K]` and C45.3's "within 6%"
+
+- **`sd[K] = 0.260333`**, not `0.2606` as C45.2 states. Exactly:
+  `Var[K] = pi^2/12 - (sqrt(pi/2) ln 2)^2 = 0.822467033 - 0.754693832 = 0.067773204`. The predicted
+  across-draw sd at `m = 500` is therefore `0.011642` and the measured `0.010502` is **`0.902`** of it
+  — the ratio C45.3 quoted, unchanged, so nothing downstream moves.
+- **C45.3's "predicts all five measured quantiles to within `6%`" is `6.15%`**, at p75
+  (`0.042774 / 0.045579 = 0.9385`); p95 is `6.10%`. Four of the five are within `1.5%`. The claim was
+  rounded in its own favour by `0.15` points; corrected.
+- `E[K] = sqrt(pi/2) ln 2 = 0.868731161` is confirmed from theory, as C45.2 states.
+
+### (d) v2.C38.1 / v2.C39: the registered identity was true by FLOATING-POINT LUCK, and is now structural
+
+**C39.5 registers** `max(0, increment_estimator.lower95_one_sided) === mean_e_lower_95`, and
+C38.1.6 item 3 registered the estimator as one helper *"so the clamp and the `z` exist once"*.
+**Correct: it did not exist once.** `summarise` builds its bound from `se = sqrt(varr / n)`; the
+helper recomputed `1.645 * sd / sqrt(n)` = `1.645 * sqrt(varr) / sqrt(n)`. **The two routes differ in
+the last bit, and the identity held only because the re-rounding and the `0` clamp happened to hide
+the gap** — a review measured a reseed that breaks it with no defect present.
+
+**Registered: the bound IS the increment estimator's own `lower95_one_sided`, clamped at `0`.** The
+convention does not move — the `z` and the `n-1` variance are `summarise`'s (K3.1.1), the clamp is the
+addendum's, and `n < 2` or a non-finite spread still gives `NaN` rather than the `0` a clamped
+`-Infinity` would produce. **C38.1.6 item 3 is superseded: the estimator's algebra now exists once in
+`summarise` and nowhere else, which is what that item was trying to say.** Verified: the structural
+form reproduces **every emitted value bit-for-bit** at the smoke seeds (103 rows, 0 fields changed).
+
+**And the test that checks it is corrected in the same direction.** Two assertions asserted exact
+equality across the two algebraic routes and passed on this seed only — the same trap. They now carry
+a stated relative tolerance, the exact assertion is made against the structural source instead, and
+**the recompute mutation is killed by a source pin, because it is measurably NOT killed
+behaviourally at these seeds** (reverting the harness to the recomputed form fails no behavioural
+test — that is the finding, not a gap).
+
+### (e) Named-not-done, from the same review
+
+- **The `heldout_seed`/`params` invariant test is ONE-DIRECTIONAL.** It checks that a row carrying
+  `heldout_seed` does not say `'oracle'`, and that a row saying `'heldout-empirical'` is a registered
+  candidate — but **not** that every registered candidate's rows carry `heldout_seed`, so a candidate
+  that silently stopped taking a held-out draw would keep its label and pass. The review measured the
+  test's coverage at **6 of 24 (detector, direction) pairs**. **Registered as not-done and NOT
+  expanded here** — widening it is a test-coverage change with its own scope, and this round is
+  corrections only.
+- **v2.C45's arms other than `D = 1` are not settled at higher `R`** (see (b)).
+- **C47.2.3's own prose was right and the harness comment was wrong.** The comment claimed the
+  invariant is *"true by construction"*; it is not — `heldout_seed` is stamped by separate conditions
+  and the invariant holds because a test checks every row, which is how C47.2.3 states it. The
+  comment is corrected to mirror the registration.
+
+### Correction summary
+
+**Three of this author's numbers corrected against review, two of them in the finding's favour.**
+C45.3's two draw-level z-scores (`-0.87`, `+0.99`) are `R = 12`/`R = 4` estimates that move to
+`-1.14` and `+0.25` at `R = 80`; **withdrawn** and replaced by the seed-free statement that under
+`K_0.95/sqrt(m)` — `0.074423` at `m = 333`, `0.060736` at `m = 500` — **neither reading rejects**.
+The shared-arm headline figures settle to `0.038451` (K6-slow) and `0.035812` (K6) at `R = 80`, so
+the closed form is accurate to **`1.0%`** on K6-slow rather than the `9.8%` C45.3 implied, and the
+two-feature ratio is `0.75`, not `0.789`. `sd[K]` is `0.260333`; "within `6%`" is `6.15%`.
+**And the registered `mean_e_lower_95` identity was true by floating-point luck: it is now
+structural**, the estimator's algebra exists once in `summarise`, and the mutation that would undo it
+is killed by a source pin because it is measurably not killed behaviourally. **The C45 verdict —
+mechanism closed, the excess is the shared draw's own `m`-sample Kolmogorov statistic, the
+diagnostic's critical value never applied — is unchanged and better supported.**

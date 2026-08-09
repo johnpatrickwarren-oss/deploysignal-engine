@@ -9,7 +9,7 @@
   "class": "e_process",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "4a48450ce3d489c4354fd5b61455241a1203a092"
+    "sha": "3952ea013cdbab29ada9b6f7a300d64fb50f9042"
   },
   "source_files": [
     {

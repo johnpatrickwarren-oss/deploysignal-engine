@@ -98,11 +98,13 @@ one line per YES class naming any card that also measured the class COVERED but 
 from carrying it by its own non-USE verdict. `test/report-consistency.test.mjs` reads that
 field so a preserved run is checked against the shape it was written under.
 
-### Card pins, and why the sha moved six times
+### Card pins, and why the sha keeps moving
 
-The cards have been frozen six times — the nine original claim cards through all six, the two
-2026-08-08 candidates (`group_average_e_value`, `family_E_conformal_heldout`) through the last
-two. Each freeze restamped `engine_pin.sha` and recomputed `source_files[].sha256`:
+The cards have been frozen at least nine times. **The rows below record eight, and the gap between
+`597a97c` and `4a48450` is named in the table rather than papered over.** The nine original claim
+cards ran through the first six; the two 2026-08-08 candidates (`group_average_e_value`,
+`family_E_conformal_heldout`) joined at the fifth. Each freeze restamps `engine_pin.sha` and
+recomputes every `source_files[].sha256`:
 
 | freeze | pin | what changed in the cards |
 |---|---|---|
@@ -111,18 +113,24 @@ two. Each freeze restamped `engine_pin.sha` and recomputed `source_files[].sha25
 | `6eef189` | `45ce230` | added `detectors/validity-envelope.ts`, `lib/score.mjs` and `verdict.mjs` to every card's expiry surface, and `regime.phi_known: true` to safe-t (the machine form of its own frozen guarantee sentence) |
 | `7b1e9be` | `77067e6` | `lib/score.mjs`'s pinned sha256 moved: the mean-rule strongest-signal fix and the `FAIL` → `REFUTED` vocabulary fix (see "Which run is current" above). `verdict.mjs`'s sha256 is unchanged — it wasn't touched. No card content changed; only the pin. |
 | `6b01274` | `4c16092` | the two new candidate cards land and every card is restamped to the same pin (identity/freeze only) |
-| (this freeze) | `597a97c` | `verdict.mjs`'s pinned sha256 moved on the nine cards that pin it: COVERAGE.md now names, per YES row, any card that measured the class COVERED but is barred by its own non-USE verdict (I4), and `bestBlocked`'s detector_id tiebreak is now in the code rather than only in its comment (M1). No detector source sha moved, no card content changed, and no verdict moved — the eleven card JSONs of `run-20260808T014809Z` are byte-identical to `run-20260808T011035Z`'s outside the two pin fields. |
+| `c59ea9a` | `597a97c` | `verdict.mjs`'s pinned sha256 moved on the nine cards that pin it: COVERAGE.md now names, per YES row, any card that measured the class COVERED but is barred by its own non-USE verdict (I4), and `bestBlocked`'s detector_id tiebreak is now in the code rather than only in its comment (M1). No detector source sha moved, no card content changed, and no verdict moved — the eleven card JSONs of `run-20260808T014809Z` are byte-identical to `run-20260808T011035Z`'s outside the two pin fields. |
+| (not recorded) | … → `4a48450` | **NO ROW WAS EVER ADDED FOR THESE.** The table's last recorded pin is `597a97c`; the cards stood at `4a48450` immediately before the freeze below. **Four merges touched `cards/` in between** (`4d9380c`, `80edc86`, `b852059`, `5b95e2a` on first-parent history) and this table gained a row for none of them. The `0522faf` → `4a48450` movement is recorded in coverage `PREREGISTRATION.md`, at the correction append to v2.K6A.7 (F5 and its addendum). The gap is named by the batch that noticed it; reconstructing the individual rows is archaeology outside that batch's scope. |
+| `3f55f55` (this freeze) | `3f55f55` | **Pins only, and the diff is stated.** One `source_files[].sha256` moved on one card: `shape_ecdf_accumulator`'s pin of `validation/coverage/harness/run-battery.mjs`, `e7d4735…` → `26f3e07…`, because Amendments v2.C38.1 / v2.C39 / v2.C47.2 changed that harness. The other fourteen cards changed **only `engine_pin.sha`** (`4a48450` → `3f55f55`), the acceptable collateral of a whole-directory freeze route (`tools/freeze-cards.mjs` has no per-card mode) — the `f487800` precedent, and disclosed there in the same terms. **No `guarantee`, `regime`, `falsifier`, `shipped_path`, `budget`, `prior_evidence`, `class`, `aliases` or `detector_id` field of any card changed, and no DETECTOR source sha moved anywhere:** exactly one `source_files` sha moved across all 15 cards, and it is the harness pin above. `engine_pin.version` is unchanged (`0.6.6-pre`) on all 15. **A dedicated commit carrying nothing else — the K6A.5.3 lesson.** |
+| `f3503ce` | `3f55f55` | **CORRECTS THE ROW ABOVE, which put a PIN in the freeze column.** The freeze above was carried by commit **`f3503ce`**; `3f55f55` is the sha the cards were pinned TO, not the commit that pinned them. Both cells said `3f55f55`. The wrong row is left standing because this table is the provenance record and a silently-edited provenance record is worth less than a corrected one. **The trap is structural, not careless:** `freeze-cards.mjs` stamps `git rev-parse HEAD`, so a freeze commit cannot name its own sha — which is why every earlier row wrote `(this freeze)` in that column and why the rows below do too. |
+| (this freeze) | `3952ea0` | **Pins only, and stated in the commit that does it.** One `source_files[].sha256` moved, on one card: `shape_ecdf_accumulator`'s pin of `validation/coverage/harness/run-battery.mjs`, `26f3e078…` → `6d3ccb16…`, because the review round made the `mean_e_lower_95` identity structural (coverage `PREREGISTRATION.md`, the correction append to v2.C45/v2.C38.1, item (d)). The other fourteen changed **only `engine_pin.sha`** (`3f55f55` → `3952ea0`). No detector source sha moved anywhere; no `guarantee`, `regime`, `falsifier`, `shipped_path`, `budget`, `prior_evidence`, `class`, `aliases` or `detector_id` field of any card changed; `engine_pin.version` is `0.6.6-pre` on all fifteen. **A dedicated commit carrying nothing else**, and the column above is `(this freeze)` for the reason the corrected row gives. |
 
-**Every detector source file is byte-identical across all six pins.** The restamp records
+**Every detector source file is byte-identical across every pin above, including this freeze:** the
+only `source_files` sha to move in it is a HARNESS pin, not a detector's. The restamp records
 when a card was frozen, not a change in the detector it describes. Verifiable directly:
 
 ```
-for sha in 7dc473b 017599f 45ce230; do
+for sha in 7dc473b 017599f 45ce230 4a48450 3f55f55; do
   git show $sha:detectors/safe-t-e-value.ts | shasum -a 256
 done
 ```
 
-which prints `8a5103401ab0…` three times, matching the `sha256` in
+which prints `8a5103401ab0…` five times — the three original pins plus the two most recent, so the
+claim above covers the freezes this table gained rows for last. It matches the `sha256` in
 `cards/safe_t_e_value.json`. The same holds for the other eight detector modules and for
 `detectors/validity-envelope.ts` (`750808f33eaf…`).
 

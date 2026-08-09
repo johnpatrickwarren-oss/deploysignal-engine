@@ -1,0 +1,52 @@
+{
+ "study": "coverage-t2-clustersynth",
+ "prereg": "../PREREGISTRATION.md (Amendment v2.K6A.1, K6A.1.11 + K6A.1.9; K6.12/K6.1.3 applied unchanged)",
+ "detector": "shape_ecdf_accumulator",
+ "git_sha": "5224f92064a1a130a59d5f218a3d6e053ff32975",
+ "engine_pin": "0.6.6-pre",
+ "engine_version": "0.6.6-pre",
+ "node": "v25.9.0",
+ "mode": "live",
+ "smoke": false,
+ "tier": "T2",
+ "family": "gb200",
+ "pods": 1,
+ "dt_s": 30,
+ "faults": false,
+ "scenario_seed": 20260855,
+ "registered_shards": 120,
+ "registered_steps": 9600,
+ "shards": 120,
+ "steps": 9600,
+ "reference_ticks": 9000,
+ "reference_a_ticks": 2250,
+ "reference_a_layout": "strided",
+ "reference_a_stride": 4,
+ "reference_a_phase": 0,
+ "n_reference_blocks_registered": 45,
+ "live_ticks": 600,
+ "w": 150,
+ "alpha": 0.05,
+ "threshold": 20,
+ "counters": [
+  "gpu_temp_c",
+  "power_w",
+  "sm_util",
+  "hbm_bw_gbps",
+  "nvlink_tx_gbps"
+ ],
+ "t2_force_degenerate_hook": false,
+ "t2_force_all_degenerate_hook": false,
+ "clustersynth_root": "/Users/johnwarren/concord/clustersynth",
+ "supersedes": [
+  {
+   "study": "coverage-t2-clustersynth",
+   "run": "run-t2-20260809T040552Z",
+   "detectors": [
+    "shape_ecdf_accumulator"
+   ],
+   "reason": "PREREGISTRATION.md Amendment v2.K6A.7 (K6A.7.7): the A-placement degree of freedom the ratified ruling knowledge/methodology/pages/t2-reference-placement.md closes. Cutting reference segment A from the front rather than the back of the same 9,000-tick span erased all 8 recorded crossings and flipped 112-120 of 120 shards per coordinate (this run's own REPORT.md confound append). Not defective measurement: the run reproduces exactly and its stop condition cleared. Superseded as SCORED T2 evidence only, detector-scoped; the directory is preserved byte-for-byte and its confound append stands as the record of the DOF."
+  }
+ ],
+ "generated_at": "20260809T075607Z"
+}

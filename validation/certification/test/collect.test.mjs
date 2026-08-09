@@ -661,10 +661,16 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
     'run-20260808T010208Z': 64,
     'run-20260808T064039Z': 12,
     'run-20260808T121548Z': 6,
+    // Amendment v2.K6A.7 (K6A.7.7): the T2 A-placement supersession. `shape_ecdf_accumulator`'s
+    // rows from the front-A run are dropped in favour of the strided-A rerun; the sibling T2 run
+    // scoring `shape_block_conformal_bet` is untouched, which is what detector-scoping buys.
+    // The corpus census is UNCHANGED at 2266 because the replacement emits the same 600 + 5 + 1
+    // rows the superseded run did — registered as that arithmetic in K6A.7.7, not discovered here.
+    'run-t2-20260809T040552Z': 606,
     'run-20260801T062612Z': 144,
     'run-20260801T062824Z': 148,
     'run-20260801T064237Z': 148,
-  }, 'the same six runs at the same counts as before A2 — three manifest-declared, three registry');
+  }, 'seven runs — four manifest-declared, three registry');
 });
 
 // C44's reviewer's fixture, verbatim in structure: run-old measures detector d, run-empty measures

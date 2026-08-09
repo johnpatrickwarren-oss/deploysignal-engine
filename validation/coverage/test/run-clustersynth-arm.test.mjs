@@ -339,3 +339,294 @@ test('an unregistered --detector is refused', () => {
   assert.match(stderr, /is not a registered T2 candidate/);
   fs.rmSync(outRoot, { recursive: true, force: true });
 });
+
+// ── Amendment v2.K6A.7 — the strided reference (the ratified C50 ruling) ───────────────────────
+// knowledge/methodology/pages/t2-reference-placement.md, RATIFIED 2026-08-08: A becomes a stride-4,
+// phase-0 sample of the whole 9,000-tick reference span instead of its contiguous prefix, so the
+// front/back placement DOF no longer exists to be chosen. B's 45 blocks are the SAME contiguous
+// slices of the SAME 6,750 ticks — only A moves (K6A.7.1).
+// Cached like `smoke()` above: four tests read this run, and it is also how the flip-collapse
+// regression gets clustersynth's root without resolving anything itself (C50 review F1).
+let accumulatorSmokeCache = null;
+const accumulatorSmoke = () => (accumulatorSmokeCache
+  ??= runHarness(['--detector', 'shape_ecdf_accumulator', '--shards', '2', '--steps', '9600']));
+
+// MUTATION KILL: change REFERENCE_A_STRIDE to 3 (or REFERENCE_A_PHASE to 1) in the harness and the
+// re-derived A below stops matching the calibration the harness actually built, failing this test.
+test('K6A.7.1: the manifest records the strided layout, and A is exactly every 4th tick from phase 0', async () => {
+  const { manifest, summary } = accumulatorSmoke();
+  assert.equal(manifest.reference_a_layout, 'strided', 'K6A.7.1: the accumulator arm strides A');
+  assert.equal(manifest.reference_a_stride, 4, 'K6A.7.1: 9000/2250 = 4 exactly, a registered literal');
+  assert.equal(manifest.reference_a_phase, 0, 'K6A.7.1 registers phase 0');
+  assert.equal(manifest.reference_a_ticks, 2250, 'n_A is UNCHANGED by C50');
+  assert.equal(manifest.n_reference_blocks_registered, 45, 'm is UNCHANGED by C50');
+  // The stride must be exact: a remainder would silently shorten A.
+  assert.equal(manifest.reference_ticks % manifest.reference_a_ticks, 0);
+  assert.equal(manifest.reference_ticks / manifest.reference_a_ticks, manifest.reference_a_stride);
+  for (const c of summary.cells.filter((x) => x.arm === 'T2-clustersynth')) {
+    assert.equal(c.n_reference_blocks, 45, 'striding A must not change m');
+    assert.equal(c.n_live_windows, 4, 'striding A must not change the live geometry');
+  }
+});
+
+// THE POSITIVE CONTROL for the stride, and the one that kills the plumbing mutation.
+// MUTATION KILL: revert the harness to `SPEC.calibrate(reference)` — i.e. A back to the contiguous
+// prefix — and `sortedA` matches the prefix layout, failing the first assertion. The paired
+// assertion that `blockT` is IDENTICAL is what proves only A moved: if a future change also moved
+// B, this fails in the other direction.
+test('K6A.7.1 positive control: the harness consumed the STRIDE (A differs from the prefix) while B did not move', async () => {
+  const { manifest, summary } = accumulatorSmoke();
+  const distRequire = createRequire(import.meta.url);
+  const acc = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/shape-ecdf-accumulator.js'));
+  const cs = await import(`file://${path.join(manifest.clustersynth_root, 'dist', 'index.js')}`);
+  const sc = cs.buildScenario({
+    family: manifest.family, pods: manifest.pods, seed: manifest.scenario_seed,
+    window: { steps: manifest.steps, dt_s: manifest.dt_s }, faults: manifest.faults,
+  });
+  const shardId = sc.gpuIds[0];
+  const rec = cs.realizeShard(sc.seed, shardId, sc.ctx, sc.graph, sc.applier, undefined, undefined);
+  const reference = rec.gpu_temp_c.slice(0, manifest.reference_ticks);
+  const live = rec.gpu_temp_c.slice(manifest.reference_ticks, manifest.steps);
+  const geom = { W: manifest.w, nA: manifest.reference_a_ticks, m: manifest.n_reference_blocks_registered };
+
+  // A re-derived from the manifest's own stride/phase, B contiguous from n_A — K6A.7.1's layout.
+  const strideA = [];
+  for (let t = manifest.reference_a_phase; t < reference.length; t += manifest.reference_a_stride) strideA.push(reference[t]);
+  assert.equal(strideA.length, manifest.reference_a_ticks, 'the stride must yield exactly n_A ticks');
+  const stridedRows = [...strideA, ...reference.slice(manifest.reference_a_ticks, manifest.reference_ticks)];
+  const strided = acc.calibrateEcdfAccumulator(stridedRows, geom);
+  const prefix = acc.calibrateEcdfAccumulator(reference.slice(0, manifest.reference_ticks), geom);
+
+  assert.notDeepEqual(strided.sortedA, prefix.sortedA,
+    'a strided A must differ from the contiguous prefix — if these match, the harness never strided');
+
+  // THE KILL, and the reason it has to be phrased against the harness's OWN emitted row rather than
+  // against a second re-derivation: comparing two locally-built calibrations to each other proves
+  // only that this test can stride, never that the HARNESS did. So the pair's emitted
+  // t2_increment_mean is required to match the strided re-derivation and to DIFFER from the prefix
+  // one — which is what fails if the harness goes back to passing the raw prefix.
+  // It is checked over EVERY pair rather than one, because the two layouts do not always separate:
+  // measured 8 of 10 pairs at this smoke geometry, and `gpu_temp_c` is NOT one of them — both
+  // layouts drive it to the same p-floor grid values on this scenario, so its increment is identical
+  // under both. A single-pair form of this check picked `gpu_temp_c` and passed the mutation.
+  const incUnder = (cal, windows) => {
+    const es = windows.map((win) => acc.ecdfAccumulatorWindow(win, cal).e);
+    return es.reduce((a, b) => a + b, 0) / es.length;
+  };
+  let separated = 0;
+  for (const counter of COUNTER_NAMES) {
+    const series = rec[counter];
+    const ownRef = series.slice(0, manifest.reference_ticks);
+    const ownLive = series.slice(manifest.reference_ticks, manifest.steps);
+    const windows = [];
+    for (let w = 0; (w + 1) * geom.W <= ownLive.length; w++) windows.push(ownLive.slice(w * geom.W, w * geom.W + geom.W));
+    const ownStrideA = [];
+    for (let t = manifest.reference_a_phase; t < ownRef.length; t += manifest.reference_a_stride) ownStrideA.push(ownRef[t]);
+    const ownStrided = acc.calibrateEcdfAccumulator(
+      [...ownStrideA, ...ownRef.slice(manifest.reference_a_ticks, manifest.reference_ticks)], geom);
+    const ownPrefix = acc.calibrateEcdfAccumulator(ownRef.slice(0, manifest.reference_ticks), geom);
+    const row = summary.cells.find((c) => c.arm === 'T2-clustersynth' && c.shard_id === shardId && c.counter === counter);
+    assert.ok(row, `no ${counter} row for the first shard`);
+    assert.ok(Math.abs(row.t2_increment_mean - incUnder(ownStrided, windows)) < 1e-12,
+      `${counter}: the harness must have scored this pair against the STRIDED A (K6A.7.1)`);
+    if (Math.abs(row.t2_increment_mean - incUnder(ownPrefix, windows)) > 1e-9) separated++;
+  }
+  assert.ok(separated >= 1,
+    'at least one coordinate must separate the two layouts, or this control cannot tell whether the '
+    + 'harness strided at all — the pre-C50 prefix is the mutation it exists to kill');
+  // B's blockT values CANNOT be compared across layouts: T(B_j) is the energy distance from B_j to
+  // Fhat_A (detectors/shape-ecdf-accumulator.ts:283), so every one of them moves when A moves.
+  // What "B did not move" means is testable directly, and more sharply — which TICKS each block is
+  // cut from, and in what order. Re-deriving T over reference[2250 + j*150, +150) against each
+  // layout's own A must reproduce that layout's own blockT, block for block.
+  for (const [name, cal] of [['strided', strided], ['prefix', prefix]]) {
+    for (let j = 0; j < geom.m; j++) {
+      const lo = manifest.reference_a_ticks + j * geom.W;
+      assert.equal(acc.ecdfAccumulatorWindow(reference.slice(lo, lo + geom.W), cal).T, cal.blockT[j],
+        `${name}: B_${j + 1} must be reference ticks [${lo}, ${lo + geom.W}) in that order — C50 moves A only (K6A.7.1)`);
+    }
+  }
+  // A OVERLAPS B by arithmetic (n_A + m*W = 9000 saturates the span, K6A.7.2). Pinned as a
+  // property so the overlap cannot be quietly removed without the prereg being revisited: every
+  // 150-tick B block contributes 37 or 38 of its ticks to A (150/4 = 37.5).
+  const aSet = new Set();
+  for (let t = manifest.reference_a_phase; t < manifest.reference_ticks; t += manifest.reference_a_stride) aSet.add(t);
+  for (let j = 0; j < geom.m; j++) {
+    let shared = 0;
+    for (let t = manifest.reference_a_ticks + j * geom.W; t < manifest.reference_a_ticks + (j + 1) * geom.W; t++) {
+      if (aSet.has(t)) shared++;
+    }
+    assert.ok(shared === 37 || shared === 38, `B_${j + 1} shares ${shared} ticks with A, expected 37 or 38 (K6A.7.2)`);
+  }
+});
+
+// THE FLIP-COLLAPSE REGRESSION (the ratified page's "with strided A the front/back flip must
+// collapse", re-run as a registered check). Scored on a NON-REGISTERED scenario seed — 700000002,
+// the crossing-carrying seed of Amendment v2.K6A.7's 12-seed pre-registration probe (base 7.0e8,
+// disjoint from both registered T2 seeds 20260842 / 20260855) — so this test can pin digits without
+// touching the registered endpoint.
+//
+// Frozen 2026-08-09 from the probe, one shard (cluster-0-pod-0-rack-0-tray-0-gpu-0), gpu_temp_c.
+// The reading these numbers exist to pin is K6A.7.8's finding: strided A tracks FRONT-A, it does
+// NOT land between the placements, so the flip does not collapse.
+//
+// This test pins the STATISTICS, not the harness's plumbing — the plumbing mutation is killed by
+// the positive control above, stated here rather than left implied (heldout-substrate.test.mjs's
+// own convention for saying where a kill actually lives).
+// MUTATION KILL: change the stride, the phase, or which contiguous slice B tiles, and the pinned
+// triple below stops matching.
+test('K6A.7.8 flip-collapse regression: strided A tracks front-A, not the front/back midpoint (non-registered seed)', async () => {
+  const distRequire = createRequire(import.meta.url);
+  const acc = distRequire(path.join(HERE, '..', '..', '..', 'dist/detectors/shape-ecdf-accumulator.js'));
+  // clustersynth is resolved through the HARNESS's own resolveClustersynthRoot(), read back off the
+  // manifest it records — never re-derived here (C50 review F1). This line used to hand-roll
+  // `path.resolve(HERE, '..', '..', '..', '..', 'clustersynth')`, which is wrong under a git
+  // worktree for exactly the reason the harness header documents: the worktree's own parent is the
+  // worktree container (~/.sdd-worktrees), not the sibling-repos directory. That form passed only
+  // because CLUSTERSYNTH_ROOT happened to be exported, and failed the moment it was not. The
+  // manifest carries whatever the harness resolved, worktree or not.
+  const csRoot = accumulatorSmoke().manifest.clustersynth_root;
+  assert.ok(csRoot, 'the manifest must record clustersynth_root — this test resolves nothing itself');
+  const cs = await import(`file://${path.join(csRoot, 'dist', 'index.js')}`);
+
+  const PROBE_SEED = 700000002;   // NOT a registered seed (v2.K6A.7 K6A.7.8, probe base 7.0e8)
+  const REF = 9000, STEPS = 9600, W = 150, NA = 2250, M = 45;
+  const sc = cs.buildScenario({ family: 'gb200', pods: 1, seed: PROBE_SEED, window: { steps: STEPS, dt_s: 30 }, faults: false });
+  const rec = cs.realizeShard(sc.seed, sc.gpuIds[0], sc.ctx, sc.graph, sc.applier, undefined, undefined);
+  const series = rec.gpu_temp_c;
+  const reference = series.slice(0, REF);
+  const live = series.slice(REF, STEPS);
+  const windows = [];
+  for (let w = 0; (w + 1) * W <= live.length; w++) windows.push(live.slice(w * W, w * W + W));
+  assert.equal(windows.length, 4);
+
+  const strided = [];
+  for (let t = 0; t < REF; t += 4) strided.push(reference[t]);
+  const layouts = {
+    frontA: reference.slice(0, REF),
+    backA: [...reference.slice(6750, 9000), ...reference.slice(0, 6750)],
+    stridedA: [...strided, ...reference.slice(2250, 9000)],
+  };
+  const read = {};
+  for (const [name, rows] of Object.entries(layouts)) {
+    const cal = acc.calibrateEcdfAccumulator(rows, { W, nA: NA, m: M });
+    read[name] = windows.map((w) => Number(acc.ecdfAccumulatorWindow(w, cal).p.toFixed(6)));
+  }
+
+  // The pinned triple.
+  assert.deepEqual(read.frontA, [0.065217, 0.086957, 0.021739, 0.021739], 'front-A p values (frozen 2026-08-09)');
+  assert.deepEqual(read.backA, [0.869565, 0.869565, 0.565217, 0.673913], 'back-A p values (frozen 2026-08-09)');
+  assert.deepEqual(read.stridedA, [0.065217, 0.108696, 0.021739, 0.021739], 'strided-A p values (frozen 2026-08-09)');
+
+  // And the reading, asserted as a property rather than left to the reader of the literals:
+  // front-A and back-A sit on opposite sides (the confound), and strided-A stays on front-A's side
+  // instead of moving to the middle. THE FLIP DOES NOT COLLAPSE (K6A.7.8's H_substrate).
+  const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  assert.ok(mean(read.frontA) < 0.15, 'front-A puts the live span in the reference tail');
+  assert.ok(mean(read.backA) > 0.60, 'back-A inverts it — the A-placement confound');
+  assert.ok(mean(read.stridedA) < 0.15,
+    'strided A must stay on front-A\'s side: the ratified page expects a collapse and K6A.7.8 registers that it does not');
+  assert.ok(Math.abs(mean(read.stridedA) - mean(read.frontA)) < 0.05,
+    'strided A tracks front-A, it does not average the two placements (K6A.7.4)');
+});
+
+// MUTATION KILL: delete the LIVE_TICKS < W throw, or weaken `<` to `<=`, and the harness produces a
+// pooled row reading `not-refuted` from zero scored windows — the fail-open path K6A.7.6 names.
+test('K6A.7.6 fails closed: a geometry with no full live window is refused, and writes no run directory', () => {
+  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 't2-nowindow-'));
+  let threw = false;
+  let stderr = '';
+  try {
+    // 9060 - 9000 = 60 live ticks against W = 150: not one full window. The SAME --steps is a
+    // legitimate 2-window smoke on the block arm at W = 30, which is why the guard is W-relative.
+    execFileSync(process.execPath, [HARNESS, '--detector', 'shape_ecdf_accumulator', '--shards', '2', '--steps', '9060'], {
+      env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot }, encoding: 'utf8', stdio: 'pipe',
+    });
+  } catch (err) { threw = true; stderr = String(err.stderr ?? ''); }
+  assert.ok(threw, 'a zero-live-window geometry must abort, not score');
+  assert.match(stderr, /fewer than W = 150/);
+  assert.match(stderr, /K6A\.7\.6/);
+  // The abort must precede the run: neither results root may exist.
+  assert.equal(fs.existsSync(path.join(outRoot, 'live')), false);
+  assert.equal(fs.existsSync(path.join(outRoot, 'sim')), false);
+  fs.rmSync(outRoot, { recursive: true, force: true });
+});
+
+// MUTATION KILL: restore `typeof x === 'number'` at either aggregation site and a NaN increment
+// reaches the coordinate and pooled means (typeof NaN === 'number'), which is the second half of
+// K6A.7.6's fail-open path.
+test('K6A.7.5/K6A.7.6: every emitted increment is finite, and the three pooling levels agree with the registered estimator', () => {
+  const { summary } = accumulatorSmoke();
+  const pairs = summary.cells.filter((c) => c.arm === 'T2-clustersynth' && !c.skipped);
+  assert.ok(pairs.length > 0);
+  for (const c of pairs) {
+    assert.ok(Number.isFinite(c.t2_increment_mean), 'a non-finite increment must never be emitted');
+  }
+  const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  // K6A.7.5: coordinate = unweighted mean of that coordinate's pair-means.
+  for (const row of summary.cells.filter((c) => c.arm === 'T2-clustersynth-coordinate')) {
+    const own = pairs.filter((c) => c.counter === row.counter).map((c) => c.t2_increment_mean);
+    assert.ok(Math.abs(row.t2_increment_mean - mean(own)) < 1e-12,
+      `${row.counter}: coordinate increment must be the unweighted mean of its pair-means (K6A.7.5)`);
+  }
+  // K6A.7.5: pooled = unweighted mean of ALL pair-means, every coordinate together — NOT the mean
+  // of the five coordinate means. The two coincide only while every coordinate scores the same n,
+  // which is exactly why the registered definition names one of them.
+  const pooled = summary.cells.find((c) => c.arm === 'T2-clustersynth-pooled');
+  assert.ok(Math.abs(pooled.t2_increment_mean - mean(pairs.map((c) => c.t2_increment_mean))) < 1e-12,
+    'pooled increment must be the unweighted mean of all pair-means (K6A.7.5)');
+
+  // A SOURCE-TEXT PIN, and the reason it is one rather than a behavioural check — stated because a
+  // pin that is not justified reads as a test that gave up (run-battery.test.mjs:1925-1932's own
+  // convention). K6A.7.6 part 3 replaces `typeof x === 'number'` with `Number.isFinite(x)` at both
+  // aggregation sites. That mutation is UNREACHABLE behaviourally once parts 1 and 2 are in place:
+  // the only producer of a NaN increment was a zero-window pair, and parts 1 and 2 now refuse that
+  // geometry before any pair is scored. So the filter is defence in depth against a future
+  // producer, and the only way to hold it is to pin the text. `typeof NaN === 'number'` is what
+  // made the old form admit a NaN into these means.
+  const harnessSrc = fs.readFileSync(HARNESS, 'utf8');
+  assert.equal((harnessSrc.match(/filter\(\(x\) => Number\.isFinite\(x\)\)/g) ?? []).length, 2,
+    'both increment aggregation sites must filter with Number.isFinite (K6A.7.6 part 3)');
+  assert.equal(harnessSrc.includes("typeof x === 'number'"), false,
+    "typeof NaN === 'number', so a typeof-based filter admits a NaN increment into a mean (K6A.7.6)");
+  assert.match(harnessSrc, /windowEs && windowEs\.length \?/,
+    'the pair-level emission guard must test length: `[]` is truthy and emitted 0/0 = NaN (K6A.7.6)');
+});
+
+// MUTATION KILL: drop the target-manifest study assertion and a locator naming
+// `coverage/run-t2-...` (the DIRECTORY's study, not the manifest's) is accepted, writing a
+// supersession declaration that collect.mjs will never apply — the inert-declaration failure
+// K6A.7.7 names.
+test('K6A.7.7: --supersedes requires its reason, and refuses a locator whose target manifest records a different study', () => {
+  const attempt = (args) => {
+    const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 't2-supersede-'));
+    let stderr = '';
+    let threw = false;
+    try {
+      execFileSync(process.execPath, [HARNESS, ...args], {
+        env: { ...process.env, COVERAGE_RESULTS_DIR: outRoot }, encoding: 'utf8', stdio: 'pipe',
+      });
+    } catch (err) { threw = true; stderr = String(err.stderr ?? ''); }
+    fs.rmSync(outRoot, { recursive: true, force: true });
+    return { threw, stderr };
+  };
+  const base = ['--detector', 'shape_ecdf_accumulator', '--shards', '2', '--steps', '9600'];
+
+  // Both flags travel together or neither does.
+  const lone = attempt([...base, '--supersedes', 'coverage-t2-clustersynth/run-t2-20260809T040552Z:shape_ecdf_accumulator']);
+  assert.ok(lone.threw);
+  assert.match(lone.stderr, /--supersedes and --supersedes-reason must be given together/);
+
+  // A malformed locator is a startup crash, not a run with a dead declaration.
+  const malformed = attempt([...base, '--supersedes', 'nocolon', '--supersedes-reason', 'x']);
+  assert.ok(malformed.threw);
+  assert.match(malformed.stderr, /must read study\/run:detector/);
+
+  // The registered difference from run-battery's copy: the target's OWN manifest names the study,
+  // and 'coverage' is the directory rather than the study for these runs.
+  const wrongStudy = attempt([...base,
+    '--supersedes', 'coverage/run-t2-20260809T040552Z:shape_ecdf_accumulator', '--supersedes-reason', 'x']);
+  assert.ok(wrongStudy.threw);
+  assert.match(wrongStudy.stderr, /manifest records study "coverage-t2-clustersynth"/);
+  assert.match(wrongStudy.stderr, /would supersede nothing/);
+});

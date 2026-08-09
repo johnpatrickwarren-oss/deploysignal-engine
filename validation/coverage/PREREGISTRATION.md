@@ -8627,3 +8627,761 @@ the band and is corrected here rather than quietly narrowed.**
   *measured* SE `0.015294`, giving `+0.29`; against the *registered* `0.1416/sqrt(100) = 0.01416`
   the gap is **`+0.31` SE**. Both are far inside the band and E1 holds either way; the registered
   denominator is the one E1's band was built from and `+0.31` is the figure that matches it.
+
+---
+
+## Amendment v2.K6A.7 — 2026-08-09, the strided reference: executing the C50 ruling, with the overlap it forces measured and the T2 increment estimator registered
+
+Registered before the stride exists in code and before one tick of the T2 rerun. Authority:
+`knowledge/methodology/pages/t2-reference-placement.md`, **RATIFIED 2026-08-08** (operator: "1, 3,
+4"), which closes the A-placement degree of freedom the confound append to
+`results/live/run-t2-20260809T040552Z/REPORT.md` measured. That page's execution section is quoted
+as this amendment's scope:
+
+> One amendment registering the stride (n_A unchanged, phase stated), the
+> `run-clustersynth-arm.mjs` change, tests (stride guard + positive control + the flip probe
+> re-run as a regression: with strided A the front/back flip must collapse), one registered T2
+> rerun (validity-only, prior run preserved append-only with the confound note), and **K6.12's
+> contiguity question re-posed** on the rerun's per-coordinate rows.
+
+Three things in this document are not in that page and are registered because the code will emit
+them: the overlap the stride's arithmetic forces and its measured cost (K6A.7.3), the residual
+B-placement DOF the ruling does not close (K6A.7.4), and the T2 increment estimator's definition,
+which has been an unregistered code choice since the arm was wired (K6A.7.5). **One prediction in
+the ratified page's own execution sentence — "with strided A the front/back flip must collapse" — is
+contradicted by this amendment's pre-registration probe and is registered as a competing hypothesis
+rather than as the expectation** (K6A.7.8).
+
+### K6A.7.1 The stride, as arithmetic
+
+`REFERENCE_TICKS = 9000`, `W = 150`, `n_A = 2250`, `m = 45` — every one unchanged from K6A.1.11.
+The stride is exact and forces no adjustment to `n_A`:
+
+```
+k = REFERENCE_TICKS / n_A = 9000 / 2250 = 4     exactly, no remainder
+phase = 0
+A = reference ticks {0, 4, 8, ..., 8996}                      -> 2250 ticks
+B = reference ticks [2250, 9000), tiled into 45 blocks of 150 -> 6750 ticks
+    each block 150 CONSECUTIVE original ticks
+check: 2250 + 45*150 = 9000; live = ticks [9000, 9600) -> 4 windows of 150
+```
+
+**`k = 4` and `phase = 0` are registered literals.** No search over `k` or phase was run and none
+may be run afterwards: `k` is fixed by `9000/2250` and phase 0 is the first tick of the span.
+
+**What the code will do, stated at the field level.** `calibrateEcdfAccumulator(rows, geom)`
+(`detectors/shape-ecdf-accumulator.ts:336`) splits `A = rows[0, nA)` and `B = rows[nA, nA + m*W)`
+from one array and takes no placement argument. The harness therefore builds that array under a
+registered layout rather than passing the raw reference slice:
+
+```
+rows = [ ...A_strided (2250) , ...reference[2250..9000) (6750) ]     length 9000
+```
+
+The detector module is **unchanged** by this amendment. `B`'s blocks are the same 45 slices of the
+same 6750 ticks the pre-C50 code used; **only A moves.** The manifest gains
+`reference_a_layout: 'strided'`, `reference_a_stride: 4`, `reference_a_phase: 0`, and the
+`shape_block_conformal_bet` arm — which has no A/B split at all (`aTicks: null`) — records
+`reference_a_layout: null` and is otherwise untouched.
+
+### K6A.7.2 Why the stride cannot be made disjoint, and why that is arithmetic rather than a choice
+
+`n_A + m*W = 2250 + 6750 = 9000` **exactly saturates the span**. So a disjoint A and B forces B onto
+the exact complement of A — the 6750 ticks the stride does not take — and that complement is the
+3-of-every-4 pattern, whose 150-value blocks each span 200 original ticks with every fourth tick
+removed. A decimated block is not a contiguous slice, and the ruling's own parenthetical forbids it:
+
+> B's blocks stay contiguous — the C22 serial-structure requirement applies to the *ranked*
+> objects, not the reference sample.
+
+**Registered: under the ratified geometry, A overlapping B is forced, not selected.** Each B block
+shares `150/4 = 37.5` of its 150 ticks with A — 37 or 38 depending on the block's offset modulo 4.
+The live windows share **none** (A's last tick is 8996; live begins at 9000).
+
+### K6A.7.3 The overlap's cost, measured — and a registered contradiction with the ratified ruling
+
+The ruling states:
+
+> **Validity is untouched.** The block-conformal rank identity requires only that A is fixed
+> before B and live are scored — A shapes the statistic T, not the exchangeability of T(live)
+> with T(B_j). Any fixed A yields the exact rank law.
+
+**That argument is incomplete, and the gap is measurable.** The rank identity needs `T(live)` and
+`T(B_1)..T(B_m)` **conditionally i.i.d. given A**. Conditioning on A does not make the `B_j`
+independent of A when `B_j` contributes 37–38 of its own values to A: each `T(B_j)` is an energy
+distance from a reference that partly contains `B_j`, while `T(live)` is a distance from a reference
+containing none of the live window. B and live are therefore not conditionally identically
+distributed, and the direction is anti-conservative (a block pulled toward its own reference scores
+a smaller `T`, which raises `T(live)`'s rank and lowers `p`).
+
+**Measured, on an i.i.d. substrate where drift is absent by construction so the overlap is the only
+thing left.** Probe `overlap-screen.mjs`, disclosed with its generator and seeds:
+`mulberry32(710000000 + r)` uniforms → Box–Muller standard normals; `R = 10,000` draws × 4 live
+windows at `W = 150`, `n_A = 2250`, `m = 45`, `κ = 0.6820`. Probe base `7.1e8` — above every
+registered seed (all `<= 1e8`) and not one of the eight named K6-probe bases (`1.7e9`–`4.1e9`). No
+registered seed and no registered study RNG is touched. Three arms score **the same live windows**
+against differently-built references, so the arm difference is paired:
+
+| arm | mean `e` | gap vs exact null `0.960274` | mean `p` | `P(p <= 1/46)` | crossings |
+|---|---|---|---|---|---|
+| **overlap** (strided A over the span B tiles) | **`0.971052`** | **`+6.48` SE** | `0.497951` | `0.0231` | `0/10,000` |
+| disjoint (A = ticks 0..2250, the pre-C50 layout) | `0.958981` | `-0.80` SE | `0.511259` | `0.0210` | `0/10,000` |
+| strided A from an INDEPENDENT span | `0.959075` | `-0.74` SE | `0.510984` | `0.0209` | `0/10,000` |
+
+```
+PAIRED  overlap - disjoint               delta E[e] = +0.012070 +- 0.000771   (15.66 SE)
+                                         delta E[p] = -0.013309 +- 0.000729  (-18.25 SE)
+PAIRED  overlap - strided_independent_A  delta E[e] = +0.011977 +- 0.000855   (14.01 SE)
+                                         delta E[p] = -0.013034 +- 0.000820  (-15.89 SE)
+uniform-grid reference: mean p = 0.510870, P(p <= 1/46) = 0.021739
+```
+
+**Three readings, registered separately because they point different ways.**
+
+1. **The ruling's "validity is untouched" is wrong as stated, and the error is `+1.26%` on `E[e]`.**
+   The overlap arm sits `6.48` SE above the exact null while both non-overlap arms sit within
+   `1` SE of it, and the two non-overlap arms agree with each other to `0.0001`. **The stride is not
+   the cause — the overlap is:** striding A from an independent span reproduces the disjoint
+   reading exactly. This is filed as a **contradiction with a ratified page, recorded and not
+   resolved** (the page is not this document's to edit; the write-back obligation is named in
+   K6A.7.11).
+2. **The registered endpoint is unaffected at this geometry, and this is arithmetic rather than
+   reassurance.** A crossing needs `S_4 >= 14.2337` of a maximum `4·log 46 = 15.3146`, which
+   requires `p = 1/46` at **three of the four** windows (three at `1/46` plus one at `2/46` gives
+   `14.6214`, clears; two and two gives `13.9282`, fails). At the measured floor rates that is
+   `~4.9e-5` per pair under overlap against `~3.7e-5` disjoint — `0.03` versus `0.02` expected
+   crossings over `n = 600`. **Measured directly: `0/10,000` pairs crossed in every arm.**
+3. **So the overlap moves the increment field and not the verdict field.** `t2_increment_mean`
+   carries a registered `+0.0121` anti-conservative bias under this layout that the pre-C50 layout
+   did not have. **Registered now, before the run, so it cannot be read afterwards as a substrate
+   finding.**
+
+### K6A.7.4 The residual B-placement DOF, which the ruling does not close
+
+The ruling removes the choice of where A is cut. It leaves the choice of **which contiguous 6750 of
+the 9000 ticks B tiles** — `[2250, 9000)` or `[0, 6750)` — and that choice moves the reading by more
+than the A-placement question did on three of twelve probe scenarios.
+
+Measured on 12 fresh scenario seeds × 120 shards (`placement-probe.mjs`, K6A.7.8's probe), strided A
+throughout, only B moving:
+
+| coordinate | B = `[2250,9000)` (registered) | B = `[0,6750)` | seeds where they differ |
+|---|---|---|---|
+| `gpu_temp_c` | `7 / 1440` crossings | **`25 / 1440`** | `700000002`: 6 → 21; `700000011`: 0 → 4 |
+| `power_w` | `33 / 1440` | `31 / 1440` | `700000002`: 30 → 30; `700000004`: 0 → 1 |
+| `sm_util`, `hbm_bw_gbps`, `nvlink_tx_gbps` | `0 / 1440` | `0 / 1440` | none |
+
+**Registered: `B = reference[2250, 9000)` — the pre-C50 B, unchanged.** Chosen because it changes
+exactly one thing about the construction, which is what the ruling authorizes and what makes the
+rerun a clean read on A placement. **The B DOF is disclosed as OPEN, with its magnitude measured, and
+is named not-done** (K6A.7.11). It is not closed by striding B's blocks across the span at block
+level: that would be a second unregistered design move in the same commit, and it substitutes a
+slot-phase choice for an end choice rather than removing one.
+
+**And the ruling's mechanism claim does not survive the probe either.** The page argues a strided A
+is "the time-averaged marginal of the whole reference period", which would put its reading between
+the two placements'. Measured across 12 seeds × 5 coordinates, `strided − mean(front, back)` on the
+increment mean has mean `−0.00204` but **sd `0.10620`, range `[−0.1714, +0.3557]`**, and on seed
+`700000008` `gpu_temp_c` reads `1.1915` strided against `1.0010` front and `0.8555` back — **outside
+the envelope of both placements.** Registered: **striding removes the front/back question; it does
+not average the two answers, and it can read more extreme than either.**
+
+### K6A.7.5 The T2 increment estimator, registered — an unregistered code choice since the arm was wired
+
+K6A.2.6 registered the T2 increment mean's **value** (`0.960274`, band `[0.94, 0.98]`) and never its
+**definition or scope**. Three pooling steps have been in the code, unregistered, since the arm was
+wired at `43dbe37`. Registered now, at the lines that implement them, as the operative estimator:
+
+| level | row `arm` | definition | site |
+|---|---|---|---|
+| pair | `T2-clustersynth` | **unweighted mean of `e` over the pair's live windows** (4 at the registered geometry), `e` from `ecdfAccumulatorWindow(...).e` | `run-clustersynth-arm.mjs:263` + `:283` |
+| coordinate | `T2-clustersynth-coordinate` | **unweighted mean of the pair-means** over that coordinate's non-skipped pairs | `:299` + `:307` |
+| pooled | `T2-clustersynth-pooled` | **unweighted mean of the pair-means over ALL non-skipped pairs, every coordinate together** | `:323` + `:331` |
+
+Field name `t2_increment_mean` at all three levels — never `increment_estimator`, which is K6.1.3's
+binding rule and is what keeps the field invisible to `isValidityCell`
+(`validation/certification/lib/score.mjs:11`).
+
+**The pooled level is where the unregistered choice bites, and the C51 branch's finding is the
+reason it is registered here.** The C51 review recorded that this estimator's definition and scope
+were an unregistered code choice which moves the headline by about `2.5×` under a different pooling.
+**That finding's ledger is not committed to this repository, so it is recorded as reported and the
+arithmetic is re-derived here from the committed
+`results/live/run-t2-20260809T040552Z/summary.json` rather than taken on report:**
+
+```
+pooled t2_increment_mean, as the code computes it (mean over 600 pair-means)   1.0510733694967698
+unweighted mean of the five coordinate means                                  1.0510733694967693
+  -> the two agree to 15 decimal places ONLY because every coordinate scored n = 120 with 0 skips;
+     they diverge as soon as skips differ per coordinate, and nothing registers which one is meant
+median of the 600 pair-means                                                  0.807700
+geometric mean of the 600 pair-means                                          0.968588   <- INSIDE [0.94, 0.98]
+gpu_temp_c  2.028722  against the mean of the other four  0.806661            = 2.515x
+```
+
+**So the verifiable `2.5×` is `gpu_temp_c` against its four siblings, and the consequence is that the
+registered band's status turns on the pooling rule.** The arithmetic mean reads `1.051073` and lands
+**outside** `[0.94, 0.98]`; the geometric mean of the same 600 numbers reads `0.968588` and lands
+**inside** it. **Registered: the arithmetic mean of pair-means, at all three levels, is the operative
+estimator, and the geometric mean is NOT adopted** — even though it is the aggregation the wealth
+path actually uses (`ecdfAccumulatorWealth` sums `log e`,
+`detectors/shape-ecdf-accumulator.ts:467`), because changing which functional carries a registered
+prediction after watching the registered one fire is the move K6A.5 refused and this document
+refuses it too. **The mismatch between the reported estimator (arithmetic) and the scored
+functional (geometric) is registered as a disclosed property of the field, and named not-done.**
+
+**Quote-and-correct against K6A.2.6, which this amendment's own probe contradicts.** Quoted:
+
+> **Registered T2 prediction: `t2` increment mean `0.960274`, band `[0.94, 0.98]`; the T1 value
+> `0.9914` is NOT the T2 expectation and a T2 reading near `0.99` would indicate the wrong `m` was
+> used.**
+
+**Correct: the point value `0.960274` stands — it is the exact `E[e|null]` at `m = 45` and this
+amendment's own i.i.d. screen reproduces it to `−0.80` SE (K6A.7.3, the disjoint arm). The BAND
+`[0.94, 0.98]` does not stand as a per-scenario-draw band for the T2 arm.** Measured over 12 fresh
+scenario seeds × 120 shards, the per-coordinate T2 increment mean on clustersynth ranges
+`[0.7321, 1.8914]` under front-A, `[0.7277, 1.3981]` under back-A and `[0.7373, 1.8907]` under
+strided A — **under every placement, and on 5 of 5 coordinates.** `[0.94, 0.98]` is the spread of
+the exact null under exchangeability, attached to a quantity whose scenario-to-scenario spread on
+this substrate is roughly `20×` wider. **This is the same defect the C51 branch filed against
+K6A.1.12's T1 increment band (`74/100` draws outside a band `4.77×` too narrow), now found in the T2
+counterpart.** The band is **characterised, not withdrawn**: K6A.7.8 registers the per-coordinate
+bands this amendment's probe supports, and `[0.94, 0.98]` is recorded as the exchangeability band it
+actually is.
+
+### K6A.7.6 A fail-open path on the crossing endpoint, named and fixed
+
+**The defect, at the line.** `run-clustersynth-arm.mjs:252` cuts live windows with
+`for (let w = 0; (w + 1) * W <= live.length; w++)`, so a geometry with `live.length < W` yields
+`windows = []`. Then:
+
+- `:256-257` `SPEC.wealthLog([], cal)` returns `log = []` and `[].some(...)` is `false`, so
+  `crossed = false` → `k = 0`, `n = 1`. **A pair that scored nothing files as a pair that cleared.**
+  It enters the pooled denominator and lowers the pooled rate.
+- `:263` `windowEs = []`, and `:283`'s guard is `windowEs ? {...} : {}` — **`[]` is truthy**, so the
+  row emits `t2_increment_mean: 0/0 = NaN`.
+- `:299` and `:323` filter with `typeof x === 'number'`, and **`typeof NaN === 'number'`**, so the
+  NaN propagates into the coordinate and pooled means.
+- `:340` `t2_verdict` then reads `t2PooledLower95 > ALPHA` with a NaN bound; `NaN > 0.05` is
+  `false` → **`'not-refuted'`**. A run that measured nothing reads as cleared.
+
+This is the same fail-open shape as the `n === 0` bug the Task-11a review fixed at `:340` and it sits
+one level below it: that fix caught "every pair skipped", this one is "every pair scored zero
+windows". **Unreachable on the registered geometry** (`600/150 = 4` windows) and reachable under any
+`--steps` in `9001..9149` at `W = 150`, or `9001..9029` at `W = 30`.
+
+**Registered fix, fail closed, three parts:**
+
+1. **Startup refusal, W-relative:** after `LIVE_TICKS` is computed (`:143`), throw if
+   `LIVE_TICKS < W`. A geometry that cannot score one full live window is refused before any shard
+   is realized. **W-relative and not a literal**, because the existing suite's `--steps 9060` smoke
+   is legitimate at `W = 30` (2 windows) and must stay bit-for-bit unchanged.
+2. **Per-pair guard, defence in depth:** throw if `windows.length === 0` at `:253`. Unreachable
+   after (1); registered so that a future change to the window-cutting rule cannot re-open the path
+   silently.
+3. **The NaN filters hardened:** `typeof x === 'number'` → `Number.isFinite(x)` at `:299` and
+   `:323`, and `:283`'s emission guard to `windowEs && windowEs.length`. A non-finite increment must
+   never enter a mean, whatever produced it.
+
+**Registered consequence: none of the three can change any committed row.** The registered geometry
+has 4 live windows and 0 skips, so `LIVE_TICKS >= W` holds, `windows.length === 4`, and every
+`t2_increment_mean` in `run-t2-20260809T040552Z/summary.json` is finite (verified: 600 of 600).
+
+### K6A.7.7 Supersession: the prior run is retained with its confound, the new run is the scored T2 evidence
+
+**Ruling.** `run-t2-20260809T040552Z` is **not defective measurement** — it is the evidence that
+established the confound, it reproduces digit for digit, and its stop condition cleared on its
+registered instrument. What disqualifies it as *scored* T2 evidence is that its A placement is a
+degree of freedom the ratified page has since closed. **So: the NEW run is registered as the scored
+T2 evidence for `shape_ecdf_accumulator`; the prior run is retained, preserved byte-for-byte, with
+its confound append standing; and the supersession mechanism carries the reason.**
+
+**Route: the manifest array on the superseding run** (`validation/certification/lib/collect.mjs:269`,
+`:283-297`), the shape the three existing coverage declarations use. Not the registry file: A2.3's
+survivor predicate (`collect.mjs:340-355`) is evaluated over registries only, and the registry route
+would additionally have to argue its `declared_by` authority across a study-name boundary. The
+manifest route binds the declaration to the run that replaces the evidence, which is the semantics
+the mechanism was built for.
+
+**The declaration, registered literally:**
+
+```json
+[{"study": "coverage-t2-clustersynth",
+  "run": "run-t2-20260809T040552Z",
+  "detectors": ["shape_ecdf_accumulator"],
+  "reason": "PREREGISTRATION.md Amendment v2.K6A.7 (K6A.7.7): the A-placement degree of freedom the ratified ruling knowledge/methodology/pages/t2-reference-placement.md closes. Cutting reference segment A from the front rather than the back of the same 9,000-tick span erased all 8 recorded crossings and flipped 112-120 of 120 shards per coordinate (this run's own REPORT.md confound append). Not defective measurement: the run reproduces exactly and its stop condition cleared. Superseded as SCORED T2 evidence only, detector-scoped; the directory is preserved byte-for-byte and its confound append stands as the record of the DOF."}]
+```
+
+**`detectors` carries the CELL string `shape_ecdf_accumulator`, not a card id** — `collect.mjs:420`
+keys on `cell.detector`. **Detector-scoped and therefore narrow by construction:** the sibling run
+`run-t2-20260808T121710Z` scores `shape_block_conformal_bet` and is untouched, as is every
+`shape_block_conformal_bet` row anywhere.
+
+**Registered code change: `run-clustersynth-arm.mjs` gains `--supersedes` / `--supersedes-reason`,
+mirroring `run-battery.mjs:271-294`** — it has no way to declare a supersession today, which is why
+this is a code item and not just a run argument. **One registered difference from run-battery's
+copy, because copying it verbatim would silently supersede nothing.** run-battery resolves the
+target as `path.resolve(STUDY, '..', s.study, 'results', 'live', s.run)`, which assumes the study
+name equals its directory name. **It does not here: the study is `coverage-t2-clustersynth` and the
+directory is `validation/coverage/results/live/`.** So the T2 arm resolves the target under its own
+`STUDY/results/live/<run>` and, additionally, **reads the target's `manifest.json` and asserts its
+`study` field equals the locator's study** — a stronger check than path existence, and the one that
+catches exactly this mismatch.
+
+**Registered consequences on the certification side, checked against the code rather than assumed.**
+T2 rows carry no `fault_class`, and `t2_crossing_rate`/`t2_increment_mean` are not the field names
+`isValidityCell` (`score.mjs:11`) or `isPowerCell` (`score.mjs:16`) test, so T2 cells are candidates
+for nothing: `coverageFor` filters on `fault_class` (`score.mjs:361`), and `t2_verdict` is read by no
+code in `validation/certification/`. **Registered prediction: superseding these rows moves no tuple
+in `golden-verdicts.test.mjs` — no `overall.verdict`, no `overall.tier`, no S1–S4 status, on any of
+the 15 cards — and the only observable that moves is `generated_from.runs`** (`verdict.mjs:58`).
+**Two test-side consequences are registered as expected, not discovered:** `collect.test.mjs:657`'s
+census literal and `:660-667`'s drop table gain the new declaration, and the census arithmetic is
+`2266 − 606 + 606 = 2266` (the new run emits the same `600 + 5 + 1` rows the superseded one did), so
+the count is predicted **unchanged at `2266`** with one new key in the drop map.
+
+### K6A.7.8 Registered predictions, with the probe they come from
+
+**The probe, disclosed in full because the predictions are derived from it rather than asserted.**
+`placement-probe.mjs`: the registered T2 construction — `cs.buildScenario({family:'gb200', pods:1,
+seed:<probe>, window:{steps:9600, dt_s:30}, faults:false})`, `sc.gpuIds.slice(0,120)`, `W = 150`,
+`n_A = 2250`, `m = 45`, `κ = 0.6820` — on **12 fresh scenario seeds `700000001..700000012`**, each at
+the full 120 shards × 5 coordinates, scoring four A/B layouts per pair. Probe base `7.0e8`: above
+every registered seed (`<= 1e8`), not one of the eight named K6-probe bases, and disjoint from the
+two registered T2 scenario seeds (`20260842`, `20260855`).
+
+**The probe machinery is validated against committed evidence before any prediction is read off it.**
+Run on the registered seed `20260855` with **only the two already-published layouts enabled**, it
+reproduces the confound append digit for digit: `gpu_temp_c` `8/120` crossings under front-A and
+`0/120` under back-A; first-shard front-A `p` `0.0435 / 0.0217 / 0.0217 / 0.0435` and back-A
+`0.9783 / 0.9130 / 0.8478 / 0.9783`; front-A `gpu_temp_c` `t2_increment_mean` `2.028722`, matching
+the committed `summary.json` to six decimals. **The strided layout was NOT run on seed `20260855` at
+any point before this amendment was committed** — that is the registered endpoint and peeking at it
+would void the rerun.
+
+**The flip-collapse prediction, and why it is registered AGAINST the ratified page's expectation.**
+The page's execution sentence says "with strided A the front/back flip must collapse". The probe
+says otherwise: **across all 12 fresh seeds, strided-A `gpu_temp_c` crossings equal front-A
+`gpu_temp_c` crossings exactly — 12 of 12, including both informative seeds (`6 → 6`, `1 → 1`).**
+The scenario draw, not the A placement, is what carries the crossings: 10 of 12 seeds give `0` on
+every coordinate under every layout, and 2 seeds carry essentially all of them.
+
+Two hypotheses are therefore registered, with near-disjoint bands, and the rerun discriminates:
+
+| | prediction for strided-A `gpu_temp_c` crossings | basis |
+|---|---|---|
+| **H_substrate (this amendment's registered prediction)** | **`8`**, band **`[2, 20]`** | 12/12 exact agreement with front-A on fresh seeds; registered front-A value is `8` |
+| H_placement (the ratified page's expectation) | `[0, 3]` | the front/back flip being wholly an A-placement artifact |
+
+**Every endpoint the rerun will read, with its band and its falsifier:**
+
+| endpoint | prediction | registered band | falsifier |
+|---|---|---|---|
+| `gpu_temp_c` crossings | **`8`** / 120 | `[2, 20]` | outside → H_substrate refuted; `<= 3` → H_placement instead |
+| `power_w` crossings | `0` / 120 | `[0, 30]` | `> 30` |
+| `sm_util`, `hbm_bw_gbps`, `nvlink_tx_gbps` crossings | `0` / 120 each | `[0, 2]` each | any of the three `> 2` |
+| **pooled `t2_crossing_rate`** | **`0.013333`** (`8/600`) | `[0.0033, 0.0533]` | outside |
+| **pooled `t2_pooled_lower_95`** | **`0.007528`** | `< 0.05` | `> 0.05` → **STOP, REFUTED** |
+| **the T2 stop condition** | **CLEARS** | — | fires at `k >= 39` of 600 (`LB = 0.050319`; `k = 38` gives `0.048856`) |
+| `gpu_temp_c` `t2_increment_mean` | `1.9343` | `[1.4308, 2.4150]` | outside |
+| `power_w` `t2_increment_mean` | `0.7945` | `[0.7392, 0.8486]` | outside |
+| `sm_util` `t2_increment_mean` | `0.8191` | `[0.6987, 0.9509]` | outside |
+| `hbm_bw_gbps` `t2_increment_mean` | `0.8343` | `[0.7160, 0.9462]` | outside |
+| `nvlink_tx_gbps` `t2_increment_mean` | `0.8502` | `[0.7422, 0.9502]` | outside |
+| pooled `t2_increment_mean` | `1.0512` | `[0.9143, 1.1014]` | outside |
+| degenerate-reference skips | **`0`** | — | any nonzero is a finding, disclosed per coordinate, never folded into a denominator (K6.12) |
+| `n_reference_blocks` every pair | **`45`** | — | anything else crashes the arm (`:247-250`) |
+| `n_live_windows` every pair | **`4`** | — | anything else |
+
+**The increment bands' method, stated because it is not a textbook band.** Each is the registered
+seed's own **published front-A value** multiplied by the min / median / max of the strided-to-front
+ratio measured across the 12 fresh seeds for that coordinate. Anchoring on the registered seed's
+front-A reading uses the one thing already known about this scenario; the ratio spread comes from
+seeds that are not it. **Not `[0.94, 0.98]`: K6A.7.5 corrects that band, and none of these five
+predictions is near `0.960274`.** Registered plainly: **the m = 45 exchangeability null is not where
+the T2 increment mean lives on clustersynth telemetry under any placement**, and predicting it near
+`0.960274` would be predicting exchangeability, which is the question rather than the expectation.
+
+**A property of the pooled denominator, registered because it inflates every T2 reading's apparent
+precision.** The 120 shards of one scenario share that scenario's load cycle — the probe's
+block-mean traces show `sm_util` moving `0.35 → 1.00 → 0.23` across the 9,600-tick span on every
+shard together. So `n = 600` pooled `(shard, coordinate)` pairs are **not 600 independent draws**;
+the effective unit is the scenario, of which there is one. **Registered: the pooled Wilson lower
+bound treats correlated pairs as independent and is therefore narrower than the evidence supports.**
+This is the same single-draw structure K6A.1.7 registered for the T1 calibration draw, in the T2
+arm's own denominator. It is **not** repaired here — the stop condition stays exactly as K6.13/K6.1.4
+register it, on `t2_pooled_lower_95` over `n = 600` — because changing a registered instrument on the
+run that reads it is the move house rule 7 forbids. Named not-done.
+
+### K6A.7.9 K6.12's contiguity question, re-posed
+
+**The registered question, in the form the rerun can answer:** *with the A-placement degree of
+freedom closed, does any of the five coordinates depart from block-exchangeability between the live
+span and the reference span's blocks?* The instrument is the per-coordinate row — crossings against
+`α`, the increment mean against its band, and the skip accounting — and the pooled row carries the
+stop condition.
+
+**What each outcome files. Registered before the run, so none of the four can be chosen afterwards:**
+
+1. **Pooled LB `<= 0.05` and all five coordinates inside their bands** → **the construction's
+   validity survives independent telemetry with a placement-free reference.** C22's question is
+   answered in `shape_ecdf_accumulator`'s favour at this geometry, with the near-vacuity of the
+   `W = 150` crossing endpoint (K6A.1.11) restated as the limit on how much that PASS is worth.
+2. **Pooled LB `<= 0.05`, but `gpu_temp_c` alone outside its band with crossings in
+   `[2, 20]`** — the registered prediction — → **a per-coordinate departure that survives the
+   placement fix, filed as a real finding about `gpu_temp_c` on clustersynth and NOT as a refutation
+   of the detector**, because the pooled instrument is what K6.13 gives verdict authority to.
+   H_substrate holds, H_placement is refuted, and the prior run's `2.028722` stops being explicable
+   as placement alone.
+3. **Crossings `<= 3` on every coordinate** → **H_placement holds**: the prior deviation was wholly
+   the A cut, the ratified page's expectation is confirmed, and the confound append's reading is the
+   complete explanation.
+4. **Pooled LB `> 0.05`** → **the T2 stop condition FIRES and `shape_ecdf_accumulator` is REFUTED on
+   the record** (K6A.1.10's ruling, unchanged), reported with the per-coordinate rows beside it.
+
+**What no outcome licenses.** The B-placement DOF stays open under all four (K6A.7.4), so a PASS
+here is a PASS at `B = [2250, 9000)` and not at every contiguous B. And the `+0.0121` overlap bias on
+`t2_increment_mean` (K6A.7.3) is subtracted from no reading and explains no deviation larger than
+itself.
+
+### K6A.7.10 Registered code and test items
+
+| # | file | change |
+|---|---|---|
+| 1 | `coverage/harness/run-clustersynth-arm.mjs` | the strided-A layout per K6A.7.1, as a per-detector `referenceLayout` on `T2_DETECTORS`; `shape_block_conformal_bet` keeps `null` |
+| 2 | same | three manifest fields: `reference_a_layout`, `reference_a_stride`, `reference_a_phase` |
+| 3 | same | the stride assertion: `REFERENCE_TICKS % nA === 0`, `k === 4`, `phase === 0`, and `A.length === nA` after building, all before any shard is realized |
+| 4 | same | K6A.7.6's three fail-closed parts |
+| 5 | same | `--supersedes` / `--supersedes-reason` per K6A.7.7, with the study-field assertion |
+| 6 | `coverage/test/run-clustersynth-arm.test.mjs` | the tests below |
+| 7 | `certification/test/collect.test.mjs` | the census and drop-table update K6A.7.7 predicts |
+
+**Registered tests, each with the mutation that kills it** (the convention
+`test/run-acrossdraw.test.mjs:1-2` states):
+
+1. **Stride guard.** The manifest records `reference_a_layout: 'strided'`, `stride 4`, `phase 0`; the
+   accumulator arm's `A` is `{0, 4, ..., 8996}` re-derived from clustersynth in the test, and
+   `n_reference_blocks === 45` on every pair. *Kill: change the stride to 3 or the phase to 1 and
+   the re-derivation fails.*
+2. **Positive control that the stride is actually consumed.** Rebuild the calibration both ways from
+   the manifest's own constants and assert `cal.sortedA` differs between strided and prefix layouts
+   while `cal.blockT` is **identical** — B did not move. *Kill: leave the harness passing the raw
+   prefix and `sortedA` matches, failing the test.*
+3. **Flip-collapse regression, on a NON-REGISTERED seed.** Front-A, back-A and strided-A scored on
+   one shard of scenario seed `700000002` (the probe's crossing-carrying seed), with the three
+   readings pinned as frozen literals in the `golden-verdicts.test.mjs:24-38` style. *Kill: swap
+   which layout the harness builds and the pinned triple fails.*
+4. **Fail-closed on zero live windows.** `--detector shape_ecdf_accumulator --steps 9060` (60 live
+   ticks at `W = 150`) exits non-zero, stderr names the geometry, and **no run directory is written
+   under either `live` or `sim`**. *Kill: delete the throw, or weaken `<` to `<=`, and the harness
+   produces a `not-refuted` pooled row from zero measurements.*
+5. **The NaN filters.** `Number.isFinite` rejects a NaN increment where `typeof === 'number'`
+   admitted it. *Kill: restore `typeof x === 'number'` and a NaN reaches the pooled mean.*
+6. **`--supersedes` shape and the study-field check.** Both flags required together; a locator whose
+   target manifest carries a different `study` throws. *Kill: drop the study-field assertion and a
+   locator naming `coverage/run-t2-...` is accepted, declaring a supersession no code will apply.*
+
+**Suite arithmetic, registered:** `test:coverage-battery` `125 → 131` (six new tests in
+`run-clustersynth-arm.test.mjs`, `14 → 20`), no subtests. `npm test` unchanged at `351` — nothing
+under `test/*.test.ts` is touched. `test:cert` changes count only if the census update adds a test;
+it updates literals in place, so it stays as it stands at this HEAD. **`cert:expiry` stays current:
+no card pins `run-clustersynth-arm.mjs`, `PREREGISTRATION.md` or `collect.mjs`'s neighbours that this
+work touches** — checked, `shape_ecdf_accumulator.json` pins `run-battery.mjs`, which is not edited.
+
+### K6A.7.11 House rules, mapped, and write-backs
+
+(1) **Committed before any artifact it authorizes** — at this commit there is no stride, no test, no
+rerun and no supersession declaration; this amendment is prereg text alone in its own commit. (2) A
+failed endpoint is a publishable result; **nothing above moves afterward, including the `8` crossings
+prediction, the five increment bands, and the prediction that no golden tuple moves.** (3) No
+post-hoc analysis: every number in K6A.7.3, K6A.7.4, K6A.7.5 and K6A.7.8 is either quoted from a
+committed artifact or measured at pre-registration time on disclosed fresh seeds, and **the strided
+layout has never been run on the registered scenario seed.** (4) Fallback rules: K6.12's
+skip-with-reason, unchanged. (5) Freeze: `k = 4`, `phase = 0`, `n_A = 2250`, `m = 45`, `W = 150`,
+`B = [2250, 9000)`, scenario seed `20260855` — all frozen here. (6) Results append-only; the prior
+T2 run is preserved byte-for-byte and its confound append stands. (7) Reruns only for a named cause,
+prior run preserved — the cause is named in K6A.7.7 and it is a **closed degree of freedom, not a
+code defect**, which is why the prior run is superseded as scored evidence rather than called wrong.
+(8) The report states every endpoint's number and verdict — discharged by K6A.7.8's table.
+
+**Write-back obligations, named and NOT done here** (the wiki is not this document's to edit):
+
+- **`knowledge/methodology/pages/t2-reference-placement.md` claims "Validity is untouched" and
+  "Any fixed A yields the exact rank law". K6A.7.3 measures `+0.012070 ± 0.000771` on `E[e]`
+  (`15.66` SE, paired) from the overlap the ruling's own geometry forces.** The page needs the
+  overlap named as a cost, with the arithmetic that makes it unavoidable at `n_A + m·W = 9000`.
+  **Filed as a contradiction with a ratified page, not resolved here.**
+- **The page's "with strided A the front/back flip must collapse" is contradicted at 12 of 12 fresh
+  seeds** (K6A.7.8). The page needs the scenario-draw lottery as the dominant term.
+- **The page's "time-averaged marginal" mechanism implies an intermediate reading; measured
+  `sd = 0.106` around the placements' midpoint, with readings outside both** (K6A.7.4).
+- **The B-placement DOF is open**, at `25/1440` against `7/1440` on `gpu_temp_c` (K6A.7.4).
+
+### K6A.7.12 Named-not-done
+
+- **The B-placement DOF** (K6A.7.4) — measured, disclosed, not closed. A block-level stride over B
+  is the candidate and is its own decision.
+- **The arithmetic/geometric mismatch in the increment field** (K6A.7.5): the reported estimator is
+  the arithmetic mean of pair-means; the functional the wealth path scores is the geometric one.
+- **The pooled denominator's independence assumption** (K6A.7.8): `n = 600` correlated pairs from one
+  scenario, read as 600 independent draws by `t2_pooled_lower_95`.
+- **A longer T2 clustersynth window** to restore a non-vacuous live crossing endpoint at `W = 150`
+  — K6A.1.15's item, unchanged and still not done.
+- **T1 is untouched.** Its held-out substrate is i.i.d. by construction, so neither placement nor
+  overlap can arise there, and this amendment changes no T1 constant, cell, seed or prediction.
+
+### Amendment summary
+
+Executes the ratified C50 ruling: **A becomes a stride-4, phase-0 sample of the full 9,000-tick
+reference span (`n_A = 2250` unchanged, `m = 45` unchanged, `B = [2250, 9000)` unchanged)**, in
+prereg text alone with no code at this commit. Registers three things the ruling does not: **the
+A/B overlap the geometry forces** — `2250 + 6750 = 9000` saturates the span, so a disjoint B would
+have to be decimated, which the ruling forbids — **with its measured cost of `+0.012070 ± 0.000771`
+on `E[e]` (`15.66` SE, paired, on an i.i.d. substrate), filed as a contradiction with the ratified
+page's "validity is untouched"** while showing the crossing endpoint unmoved (`0/10,000` in every
+arm, `~4.9e-5` against `~3.7e-5` per pair by the three-of-four-floors arithmetic); **the residual
+B-placement DOF**, open and measured at `25/1440` against `7/1440` `gpu_temp_c` crossings; and
+**the T2 increment estimator's definition and scope at all three pooling levels**, an unregistered
+code choice since `43dbe37`, whose pooling rule decides whether the headline `1.051073` sits outside
+K6A.2.6's band or the same 600 numbers' geometric mean `0.968588` sits inside it. **Corrects
+K6A.2.6's band `[0.94, 0.98]`** — the point `0.960274` stands and is reproduced to `−0.80` SE, the
+band does not, at `[0.7277, 1.8914]` measured across 12 fresh scenarios under every placement.
+**Names a fail-open path** at `:252-283` where zero live windows produced `k = 0`, a NaN increment
+past a `typeof`-based filter, and a `not-refuted` verdict from nothing measured, with a W-relative
+startup refusal as the fix. **Rules the prior T2 run superseded as scored evidence and retained as
+the record of the DOF**, detector-scoped via the manifest array, with the study-name/directory
+mismatch that would have made the declaration inert named and asserted against. **Registers the
+rerun's twelve endpoints with bands, derived from a 12-seed pre-registration probe whose machinery
+reproduces the committed confound append digit for digit and which was never run on the registered
+seed's strided layout** — including a prediction that **contradicts the ratified page's own
+expectation**: crossings `8`, band `[2, 20]`, against the page's implied `[0, 3]`, registered as two
+competing hypotheses the rerun discriminates. **Re-poses K6.12's contiguity question with four
+pre-registered outcomes.** No T1 constant, cell, seed, prediction or card tuple moves, and the
+predicted golden delta is **none**.
+
+---
+
+## Amendment v2.K6A.7 — correction append, 2026-08-09: the overlap was NOT forced, and four numbers that were wrong
+
+Filed after an independent review of the C50 branch returned NOT-APPROVED. **The review's central
+finding refutes a claim this amendment made in its own summary, and it is corrected here rather than
+narrowed.** Five items. Nothing below moves a scored endpoint of `run-t2-20260809T075607Z`: that run
+stays the scored T2 evidence, its stop condition stays cleared, and **no third T2 run is authorized.**
+
+**First, the one thing the review CONFIRMED, because it is the load-bearing measurement of the
+original amendment.** The overlap's cost reproduced independently: the reviewer measured
+`+0.012202 ± 0.000454` against K6A.7.3's registered `+0.012142 ± 0.000223` (this document's own
+`R = 120,000` re-measurement of the `R = 10,000` figure `+0.012070 ± 0.000771`). Three independent
+measurements, one of them not by this author, agree. **And the review adds a reading K6A.7.3 did not
+state: `E[e] <= 1` survives.** The overlap spends `0.012142` of the exact null's margin below one
+(`1 − 0.960274 = 0.039726`), i.e. **`30.6%` of the margin, not the guarantee.** `E[e] = 0.972328`
+remains below `1`, so the e-value property — and with it Ville's bound and the `α` guarantee — is
+intact. **Registered: the overlap degrades the null's conservatism, it does not break validity.**
+That is a materially weaker statement than "a measured violation of the exact rank law", and it is
+the correct one.
+
+### F2 — K6A.7.2's central claim is FALSE: a disjoint full-span layout exists at the frozen geometry
+
+Quoted, K6A.7.2, and again in this amendment's summary:
+
+> **Registered: under the ratified geometry, A overlapping B is forced, not selected.**
+
+and
+
+> **the A/B overlap the geometry FORCES.** `2250 + 6750 = 9000` saturates the span, so a disjoint B
+> would have to be decimated, which the ruling forbids
+
+**Both are WRONG.** The reviewer constructed the counterexample, and it is embarrassingly simple:
+**stride at BLOCK granularity instead of tick granularity.**
+
+```
+the span is 9000 ticks = 60 blocks of W = 150
+A = every 4th BLOCK  = blocks {0, 4, 8, ..., 56} = 15 blocks = 2250 ticks   <- full-span spread
+B = the other 45 blocks, in order                = 45 blocks = 6750 ticks   <- contiguous slices
+A n B = 0                       n_A = 2250 exactly       m = 45 exactly
+```
+
+**Disjoint, full-span, and every B block is still 150 consecutive ticks — at the frozen `n_A = 2250`
+and `m = 45`, changing nothing else.** K6A.7.2's saturation arithmetic (`2250 + 6750 = 9000`) is
+correct and its conclusion does not follow from it: saturation forces B onto A's complement, and the
+complement of a *block*-stride is 45 whole contiguous blocks. **The overlap was forced only under an
+unstated choice this document never registered as a choice — that A strides tick by tick.** The
+ruling says A is "a strided sample" and never fixes the granularity.
+
+**Measured, `R = 120,000` i.i.d. draws, `validation/coverage/tools/overlap-screen.mjs`, paired
+against the same live windows:**
+
+| layout | mean `e` | gap vs exact null `0.960274` | mean `p` | `P(p <= 1/46)` | crossings |
+|---|---|---|---|---|---|
+| **block-strided A (disjoint, full-span)** | **`0.960131`** | **`−0.30` SE** | `0.511214` | `0.0218` | `0/120,000` |
+| tick-strided A (this run's layout, overlapping) | `0.972328` | `+24.91` SE | `0.498242` | `0.0237` | `0/120,000` |
+| disjoint prefix A (pre-C50) | `0.960186` | `−0.19` SE | `0.510904` | `0.0217` | `0/120,000` |
+| strided A from an independent span | `0.960055` | `−0.46` SE | `0.511025` | `0.0217` | `0/120,000` |
+
+```
+PAIRED  tick-strided - block-strided   delta E[e] = +0.012198 +- 0.000237   (51.52 SE)
+                                       delta E[p] = -0.012972 +- 0.000215  (-60.33 SE)
+```
+
+**Block-strided A sits on the exact null (`−0.30` SE) and matches the uniform-grid
+`P(p <= 1/46) = 0.021739` to `0.0218`.** It has the full-span property the ruling wants and the exact
+null the overlap gives up. The reviewer's own figures (`−1.99` SE for block-strided;
+`+0.012245 ± 0.000973`, `12.58` SE for tick-striding) agree at their `R`.
+
+**REGISTERED: block-strided A is the layout for any FUTURE T2 run of this arm.**
+`A = ticks of blocks {0, 4, ..., 56}`, `B = the other 45 blocks in order`, `n_A = 2250`, `m = 45`,
+`W = 150`, block-stride `4`, block-phase `0`. **No rerun is performed and none is authorized.**
+`run-t2-20260809T075607Z` remains the scored T2 evidence: its bias is measured, registered, and
+endpoint-safe (`E[e] <= 1` holds; `0/120,000` false crossings in every arm; F4 below puts the exact
+per-pair null crossing probability at `1.1167e-6`), and a third run of the same arm to move a field
+that carries no verdict authority would be a rerun to improve a number, which house rule 7 forbids.
+
+**What the switch would cost, measured on clustersynth so the registration is not blind** — 12 fresh
+seeds × 120 shards, `validation/coverage/tools/placement-probe.mjs`:
+
+| coordinate | crossings, tick-strided | crossings, block-strided | increment mean, tick | block |
+|---|---|---|---|---|
+| `gpu_temp_c` | `7/1440` | **`7/1440`** | `1.1196` | `1.1127` |
+| `power_w` | `33/1440` | `40/1440` | `1.0139` | `1.0103` |
+| `sm_util` / `hbm_bw_gbps` / `nvlink_tx_gbps` | `0/1440` each | `0/1440` each | `0.8745`–`0.8827` | `0.8666`–`0.8928` |
+
+**The substantive reading does not move** — `gpu_temp_c` identical, increment means within `0.01` —
+so the future switch removes the bias without disturbing what the arm reports. **Registered
+consequence: this also means the switch would NOT have changed §4's contiguity answer**, which is
+why leaving the current run scored is not a convenience.
+
+**And the mechanism claim that produced the error is corrected.** K6A.7.2 reasoned from saturation
+to necessity. Saturation is a constraint on B's *tick count*, never on its *block structure*. The
+general statement, registered so this class of error is nameable: **at any geometry where `W` divides
+both `n_A` and `m·W`, a disjoint full-span A exists by striding at block granularity, and a
+tick-granularity stride is a choice that must be registered as one.**
+
+### F3 — K6A.7.10 item 4's registered mutation is wrong-direction
+
+Quoted, K6A.7.10 item 4:
+
+> *Kill: delete the throw, or weaken `<` to `<=`, and the harness produces a `not-refuted` pooled row
+> from zero measurements.*
+
+**`<=` is STRICTER than `<`, not weaker.** `if (LIVE_TICKS <= W) throw` refuses everything `<` refuses
+and additionally refuses `LIVE_TICKS === W`, a legitimate one-window geometry. **Measured: the
+mutation SURVIVES at `131` tests, `130` pass, `0` fail, `1` skip** — no test exercises a
+one-live-window geometry, so nothing sees it. **Corrected: the registered kill for item 4 is
+deleting the throw** (measured: kills the fail-closed test), and `<= ` is registered as a **surviving
+mutation with its reason** — the guard's boundary at exactly one window is untested, and adding a
+one-window smoke to close it is named not-done rather than done here, because it is a new registered
+geometry for this arm and not a correction.
+
+### F4 — the per-pair null crossing figures were 36× too high
+
+Quoted, K6A.7.3 reading 2, and repeated in `run-t2-20260809T075607Z/REPORT.md` §4:
+
+> that is `~4.9e-5` per pair under overlap against `~3.7e-5` disjoint
+
+**Both are `P(>= 3 of 4 windows at the p-floor)`, and `>= 3 floors` is NOT the clearing condition.**
+Three floors plus a fourth window anywhere gives `S_4 = 11.4859 + (−log p_4)`, which clears only if
+`−log p_4 >= 2.7488`, i.e. `p_4 <= 2/46`. Three floors plus `p_4 = 46/46` gives `S_4 = 11.4859`, far
+short. So the published figure counts vectors that do not cross.
+
+**The exact condition, and the exact probability.** Only window 4 can cross (three windows attain at
+most `3 × 0.834782 = 2.504 < log 20 = 2.9957323`), so the per-pair crossing probability is exactly
+`P(S_4 >= 14.2347005)` with `p_w` i.i.d. uniform on the 46-point grid. Enumerated over all `46^4 =
+4,477,456` vectors:
+
+```
+clearing vectors: 5 of 4,477,456   ->   P(cross per pair) = 1.1167e-6   (exact, not a bound)
+   the five: (1/46, 1/46, 1/46, 1/46) and the four permutations of (1/46, 1/46, 1/46, 2/46)
+expected crossings over n = 120:  1.340e-4        over n = 600:  6.700e-4
+published approximation 4.042e-5  ->  36.2x too high
+```
+
+**The error's direction is CONSERVATIVE and it weakened this document's own finding.** An overstated
+null crossing probability understates how extreme `8/120` is. Corrected, `gpu_temp_c`'s departure is
+stronger than §4 claimed: **`1.34e-4` expected against `8` observed**, not `0.003` against `8`.
+
+**And a transcription correction, three amendments deep.** K6A.1.11 registered the required
+`S_4 >= 14.2347`; K6A.7.3 and the run REPORT both quote **`14.2337`**, a digit-transposition.
+`(log 20 − 4 log 0.682)/(1 − 0.682) = 14.2347005`. **The correct value is `14.23470` and K6A.1.11 had
+it right.** No endpoint moves — `8` crossings are `8` crossings — and the maximum
+`4 log 46 = 15.3145656` is unchanged.
+
+### F5 — the supersession re-score's "one observable moved" accounting was incomplete
+
+Quoted, `validation/certification/results/run-20260809T080049Z/REPORT-T2-SUPERSESSION.md`:
+
+> ## The one observable that moved
+
+**Incomplete.** Diffing all fifteen `*.card.json` against `run-20260809T040659Z` shows two further
+movements on **every** card:
+
+```
+source_files[].sha  0522faf1586dbb544473067dcd92185b8b5d1228 -> 4a48450ce3d489c4354fd5b61455241a1203a092
+source_files[]      + { path: "validation/certification/lib/collect.mjs",
+                        sha256: "62389a1377c4f3e742c87c17069a4d839ae868e17f152ccef3cb567585e66e37" }
+```
+
+**Neither is C50's.** Both come from ancestor commits on `main` — `4a48450` ("pin `lib/collect.mjs`
+on all fifteen cards") and its follow-on `07a0a54` — and the prior re-score `run-20260809T040659Z`
+was emitted at `563bfee`, which `git merge-base --is-ancestor` confirms is an ancestor of `4a48450`.
+**So the card definitions themselves changed between the two re-scores, independently of this
+branch.** The claim should have been scoped to *what C50 moved* and instead read as *what moved*.
+
+**Corrected, and registered as the accounting rule this branch got wrong:** a re-score diff against
+the previous re-score is not a diff of this branch's effect unless the two share a card freeze.
+**C50's own effect on the fifteen cards is exactly one field —
+`shape_ecdf_accumulator.card.json`'s `generated_from.runs` — plus `COVERAGE.md`'s header sha.
+Every tuple is unchanged (0 of 15 moved), which is what K6A.7.7 predicted and what stands.** The
+inherited pin movements change no tuple either, and `cert:expiry` reads all cards current.
+
+### F6 — the probe scripts are committed
+
+K6A.7.3, K6A.7.4 and K6A.7.8 quote figures from two scripts that existed only in a task scratch
+directory. **Registered and committed: `validation/coverage/tools/`**, with a `README.md` stating
+that its contents are **probe provenance, not harnesses** — nothing there writes a run directory,
+emits a cell, or is read by `validation/certification/lib/collect.mjs`.
+
+| script | figures |
+|---|---|
+| `overlap-screen.mjs` | K6A.7.3's overlap cost and F2's four-layout table, i.i.d. substrate, paired |
+| `placement-probe.mjs` | K6A.7.4's B-DOF, K6A.7.8's 12-seed bands and the front/back/strided/block arms |
+
+Both are made path-portable in the same commit (they carried this author's absolute scratch paths)
+and both resolve clustersynth through the harness's own `git rev-parse --git-common-dir` form, so
+they run inside a worktree. The `README.md` binds the seed discipline: probe bases `>= 6e8`,
+registered seeds `<= 1e8`, and **no probe may be run on a registered scenario seed in a layout whose
+endpoint has not been read** — the rule K6A.7.8 depended on when it withheld the strided arm from
+seed `20260855`.
+
+### What this append does not change
+
+`run-t2-20260809T075607Z`'s stop condition (`t2_pooled_lower_95 = 0.007528`, cleared), its `8/120`
+`gpu_temp_c` crossings, the same-eight-shards result, H_substrate holding and H_placement refuted,
+the two recorded deviations (`power_w` and pooled increment), the contiguity answer of §4 — which F4
+strengthens rather than weakens — all fifteen card tuples, every `COVERAGE.md` row, and the T1 arm.
+The four wiki write-back obligations of K6A.7.11 stand, and **F2 adds a fifth: the ratified page's
+"strided sample" is granularity-ambiguous, and the block-granularity reading is the one that keeps
+the exact null.**
+
+### F5 addendum, 2026-08-09 — two field labels in F5 above, one of them wrong
+
+F5 lists the two per-card movements as `source_files[].sha` and `source_files[]`. **Checked against
+the committed JSON: the first label is wrong.** The sha that moved is
+**`card.engine_pin.sha`**, not a `source_files` entry:
+
+```
+card.engine_pin.sha        0522faf1586dbb544473067dcd92185b8b5d1228 -> 4a48450ce3d489c4354fd5b61455241a1203a092
+card.source_files[]        gained index [4] = validation/certification/lib/collect.mjs
+                           (sha256 62389a1377c4f3e742c87c17069a4d839ae868e17f152ccef3cb567585e66e37)
+```
+
+**Two fields, and `source_files[]` entries carry `sha256` rather than `sha`** — so `source_files[].sha`
+names nothing that exists on these cards. F5's substance is untouched: two per-card movements, both
+inherited, neither C50's, and no tuple moves.
+
+**And the provenance sentence is corrected.** F5 says the prior re-score was *"emitted at
+`563bfee`"*, which conflates two shas. `563bfee` is the commit that **committed** that run
+directory; the run's own `manifest.json` records `git_sha:
+e62af91be3af27c952216dc1181e6082cc0d0cf9`, so `e62af91` is the engine sha it was **produced at**.
+**The ancestry argument holds under either, and both are checked:** `git merge-base --is-ancestor`
+confirms `e62af91` and `563bfee` are each ancestors of `4a48450`, so the card definitions the prior
+re-score read predate the `collect.mjs` pin however the sha is named.

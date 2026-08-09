@@ -10,7 +10,7 @@
   "class": "terminal_e_value",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "431894accf204b954994ff893fb562b83cc34ec0"
+    "sha": "d8e60ebd5aa86378b7fa4799b0c84c2c61411b77"
   },
   "source_files": [
     {
@@ -27,7 +27,7 @@
     },
     {
       "path": "validation/certification/lib/score.mjs",
-      "sha256": "f9d2d57c3f6aa2aa9ffd43bf994995631800297bdb9655230de8fc7d6a1fb386"
+      "sha256": "91553b0bec1c9980e74c9f3ec758d3250de2f13f3693b2473d7dc5caa58267c8"
     },
     {
       "path": "validation/certification/verdict.mjs",

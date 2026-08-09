@@ -9932,3 +9932,270 @@ the across-draw distribution centred on the exact null and the registered single
 the terminal rows' own across-draw spread is named unmeasured. **The two historical mean-rule
 overrides are not recomputed** — their increment estimators are unrecoverable from a recorded mean,
 so re-examination needs reruns, and none is performed.
+
+---
+
+## Amendment v2.C45 — 2026-08-09, the p_uniformity KS residual: MECHANISM CLOSED — it is the shared calibration draw's own Kolmogorov statistic, and the test's critical value never applied
+
+WORKLIST `C45`. Sections §1–14 and every prior Amendment and Erratum stay intact. This amendment
+**registers one bounded probe and its numbers**, and **moves no endpoint, floor, threshold, seed,
+grid, falsifier, verdict, cell or class row.** No run is written, no run is re-run, and nothing is
+re-scored. The probe is a **derivation on non-registered seeds**, disclosed in full below.
+
+### C45.1 LEAD WITH THE CORRECTION — the C45 row pairs two DIFFERENT statistics as "the same formula"
+
+The WORKLIST row reads:
+
+> After the lattice fix (C1) the per-window conformal p still KS-rejects uniformity on T1 (0.02290
+> vs critical 0.00878) while confirming on T2 (0.01671) — same formula, opposite readings.
+
+**Checked against the committed rows: `0.02290` and `0.01671` are not the same statistic, and one of
+them is not a KS statistic at all.**
+
+| figure | what it actually is | where |
+|---|---|---|
+| `0.022903692614770432` | `p_uniformity.ks_statistic`, arm 34, `n = 24,000` | `results/live/run-20260808T133746Z` summary + REPORT §2 |
+| `0.01671` | **`P(p <= 0.05)`** — the α-point rate, not a KS statistic | `results/live/run-t2-20260808T121710Z/REPORT.md:83` |
+| `0.050167` | the T1 α-point rate after the C1 fix — **the actual T2 counterpart of `0.01671`** | the same REPORT line |
+
+The T2 run's own REPORT is not at fault: its "same formula, two signs" sentence compares
+**K6.1.2's α-point conservativeness claim** across the two tiers (T2 `0.01671` against T1
+`0.050167`) and mentions the KS test in a separate clause. **The WORKLIST row merged the T1 KS
+statistic with the T2 α-point rate**, which is why "same formula, opposite readings" reads as a
+paradox: there is no single formula with two signs there.
+
+**And the α-point pairing does not survive its own arithmetic either.** Per calibration draw the
+α-point rate has sd `sqrt(alpha(1-alpha)/m)` — the reference has only `m` blocks, so the rate a draw
+delivers at `u = 0.05` is a binomial-scale fluctuation around nominal:
+
+| tier | `m` | per-draw sd | reading | distance from nominal `0.05` |
+|---|---|---|---|---|
+| T2 | 45 | `0.032489` | `0.01671` | **`-1.02` sd** |
+| T1 (post-C1) | 333 | `0.011943` | `0.050167` | **`+0.014` sd** |
+| T1 (pre-C1, the lattice defect) | 333 | `0.011943` | `0.10017` | `+4.20` sd |
+
+So the post-fix T1 rate is dead on nominal and **T2's "conservative, as registered" reading is a
+one-sd draw of the calibration lottery**. Registered as a probe-derived observation with **no
+verdict**: it does not refute K6.1.2's closed-form claim, it shows that the T2 measurement cited as
+confirming it cannot distinguish it from nominal. Filed for write-back; nothing on any card moves.
+
+**What the residual actually is, and what this amendment decomposes, is the KS pair the task names:
+`0.022904` (arm 34, T1, `n_p = 24,000`) and `0.037646` (the mean over 100 fresh draws on K6-slow,
+`run-acrossdraw-20260809T065107Z`, `n_p = 20,000` per draw), with arm 47's own single draw at
+`0.041150` (`n_p = 80,000`).**
+
+### C45.2 The probe, registered: three components, four arms, and what would falsify each
+
+`validation/coverage/tools/ks-decomposition.mjs`. **A probe, not a harness** (`tools/README.md`):
+it writes no run directory, emits no cell, is not read by
+`validation/certification/lib/collect.mjs`, and computes no `p` of its own — every `p` comes from
+the shipped modules (`dist/detectors/shape-ecdf-accumulator.js`,
+`dist/detectors/shape-block-conformal-bet.js`) at the geometries the runs use.
+
+**SEEDS, disclosed.** Probe bases `840000000` (K6-slow) and `850000000` (K6), both `>= 6e8`; every
+registered seed in this study is `<= 1e8`. **No registered scenario seed is read.** Generator:
+`mulberry32 -> Box-Muller`, the form `overlap-screen.mjs` already uses — **deliberately NOT
+`lib/inject.mjs`'s LCG**, so that a shared arm reproducing the runs' magnitudes cannot be a property
+of the study's own PRNG.
+
+**KS convention.** `computePUniformity`'s formula, copied verbatim (`ks()` in the probe): a
+differently-conventioned KS would answer a different question.
+
+**THE THREE CANDIDATE COMPONENTS, and the arm that isolates each.**
+
+| component | what it is | arm | what would show it carries the reading |
+|---|---|---|---|
+| (a) **atom** | `p = (1 + #{ref >= live})/(m+1)` lives on an `(m+1)`-atom lattice; `sup_u \|F_lattice(u) - u\| = 1/(m+1)` exactly, and the KS is computed against the CONTINUOUS uniform | `n_p` i.i.d. draws from the uniform `(m+1)`-atom lattice | the lattice-only KS reaching the readings |
+| (b) **shared reference** | every window of every trajectory ranks against ONE calibration draw; conditional on it, `p`'s CDF deviates from the identity by that draw's own empirical fluctuation — deterministic given the draw, `O(1/sqrt(m))`, and it does NOT shrink with `n_p` | `D`-sweep: the same `n_p` spread over `D` independent calibration draws, `D = 1` (what a run does) to `D = n_windows` (full independence) | `D = 1` reaching the readings and the excess decaying as `1/sqrt(D)` onto the (a) floor |
+| (c) **residual** | anything left: the estimated-median two-sided distance rank (K6), the reference measure `A` shared inside `T` (K6-slow), tie handling | full independence minus the atom arm **at the same `n_p`** | a gap that survives full independence |
+
+**AND A CLOSED-FORM PREDICTION FOR (b), STATED BEFORE THE NUMBERS.** Write `Ghat_m` for the
+empirical CDF of the `m` reference block statistics. Then
+`p = (1 + m(1 - Ghat_m(T)))/(m+1)`, so for a fresh null `T ~ G`,
+`P(p <= u | cal) - u` is the **uniform empirical process of the `m` calibration blocks**, and its
+sup over `u` is the calibration draw's own `m`-sample Kolmogorov statistic `D_m`. Therefore
+
+```
+E[p_uniformity.ks_statistic]  ~  E[D_m]  =  0.8687 / sqrt(m)
+sd[p_uniformity.ks_statistic] ~  sd[D_m] =  0.2606 / sqrt(m)
+```
+
+up to the atom discretisation, which is `1/(m+1)` and therefore second order. **Predicted before
+reading the probe: `0.038849` (K6-slow, `m = 500`) and `0.047604` (K6, `m = 333`).** This is
+falsifiable in the strong sense: it predicts not two moments but the whole **distribution** of the
+reading across draws, and the registered 100-draw study already measured that distribution.
+
+### C45.3 THE NUMBERS — component (b) carries it, and the residual is 0.6%–3.7%
+
+`shape_ecdf_accumulator` (K6-slow), `m = 500`, `W = 150`, `n_p = 20,000`, `R = 12` (`R = 4` at
+`D >= 100`):
+
+```
+(a) ATOM    exact 1/(m+1)                        0.001996
+            lattice-only MC at n_p = 20,000       mean 0.007326   sd 0.002531   [0.004399, 0.013529]
+            KS critical at that n_p                    0.009617   <- the lattice alone does NOT reject
+
+(b) D-SWEEP D=1     0.042637  sd 0.016530   [0.022340, 0.079036]   <- what a run does
+            D=2     0.032884  sd 0.011205
+            D=5     0.019288  sd 0.007437
+            D=10    0.012966  sd 0.002898
+            D=25    0.010272  sd 0.002373
+            D=50    0.008198  sd 0.001269   <- at the (a) floor: 1.12x the lattice-only MC
+            D=250   0.007428                <- 1.01x
+            D=1000  0.008377                <- 1.14x
+
+(c) FULL INDEPENDENCE, one fresh calibration draw PER WINDOW (D = 4,000) at n_p = 4,000
+            independent                           0.015861  sd 0.004988  (R = 3)
+            atom MC at the SAME n_p               0.014345  sd 0.005321
+            RESIDUAL                              0.001516  = 3.70% of the shared arm at that n_p
+            shared (D = 1) at the SAME n_p        0.041000  sd 0.016205
+
+(d) DISCRIMINATOR — shared (D = 1) against pooled size
+            n_p       shared        atom MC     KS critical
+              5,000   0.037823      0.013184    0.019233
+             20,000   0.037028      0.007447    0.009617
+             80,000   0.034337      0.004695    0.004808
+            200,000   0.044938      0.003194    0.003041     (R = 4, the noisiest row)
+```
+
+`shape_block_conformal_bet` (K6), `m = 333`, `W = 30`, two features per window, `n_p = 20,000`:
+
+```
+(a) ATOM    exact 1/(m+1) 0.002994;  lattice-only MC 0.008697  sd 0.001526
+(b) D-SWEEP D=1 0.037574 (sd 0.016908) -> D=2 0.022737 -> D=5 0.016755 -> D=10 0.015208
+            -> D=25 0.009351 (1.08x the floor) -> D=1000 0.007992 (0.92x)
+(c) FULL INDEPENDENCE (D = 10,000) at n_p = 20,000
+            independent 0.007137 sd 0.001574;  atom MC 0.006918 sd 0.001086
+            RESIDUAL 0.000219 = 0.61% of the shared arm at the same n_p (0.035674)
+(d) DISCRIMINATOR  n_p 5,000 / 20,000 / 80,000 / 200,000 -> 0.032378 / 0.035352 / 0.033718 / 0.033528
+            against an atom MC of 0.016165 / 0.007331 / 0.004083 / 0.004459
+```
+
+**FIVE INDEPENDENT WAYS THE ANSWER COMES OUT THE SAME.**
+
+1. **The closed form predicts the registered measurement.** `0.8687/sqrt(500) = 0.038849` against
+   the 100-draw across-draw mean **`0.037646`** — a ratio of **`0.969`**. The sd:
+   `0.2606/sqrt(500) = 0.011654` against **`0.010502`**, ratio **`0.901`**.
+2. **It predicts the whole DISTRIBUTION, not two moments.** The registered 100-draw KS quantiles
+   against `K_p/sqrt(500)`, `K` the Kolmogorov law:
+
+   | quantile | measured (100 draws) | `K_p/sqrt(500)` | ratio |
+   |---|---|---|---|
+   | p05 | `0.022891` | `0.023238` | `0.985` |
+   | p25 | `0.029821` | `0.030252` | `0.986` |
+   | p50 | `0.036537` | `0.037010` | `0.987` |
+   | p75 | `0.042774` | `0.045579` | `0.939` |
+   | p95 | `0.057030` | `0.060736` | `0.939` |
+
+3. **The shared arm reproduces the readings under a DIFFERENT generator.** `D = 1` reads
+   `0.042637` (K6-slow) and `0.037574` (K6) on mulberry32, where the runs read `0.041150` /
+   `0.037646` and `0.022904` on the LCG. So the mechanism is not the study's PRNG.
+4. **The excess decays as `1/sqrt(D)`.** `KS(D)*sqrt(D)` over `D = 1, 2, 5, 10` on K6-slow:
+   `0.04264`, `0.04650`, `0.04313`, `0.04100` — flat, exactly the `1/sqrt(D)` an average of `D`
+   independent empirical processes gives. It stops being flat from `D = 25` on (`0.05136`,
+   `0.05797`) because by then the atom/finite-`n_p` floor dominates and the floor does not scale
+   in `D`.
+5. **The discriminator settles bias against noise.** The shared arm is **FLAT in `n_p`** (K6:
+   `0.0324 / 0.0354 / 0.0337 / 0.0335` across a 40× range) while the lattice-only arm falls as
+   `1/sqrt(n_p)` (`0.0162 -> 0.0045`). A statistic that does not shrink with the sample is a
+   deterministic distortion, not sampling error.
+
+**AND THE TWO READINGS THE TASK NAMES ARE ORDINARY DRAWS OF THIS MECHANISM.** Arm 34's `0.022904`
+sits at **`-0.87` sd** of the shared arm's own spread; arm 47's `0.041150` at **`+0.99` sd** of the
+shared arm at its own `n_p = 80,000`, and at `+0.33` sd of the registered 100-draw distribution.
+Neither is anomalous **once the reading's own spread is the calibration lottery's rather than
+`1.36/sqrt(n_p)`**.
+
+**One number that does NOT match, stated rather than buried.** On K6 the probe's shared arm reads
+`0.037574` where the closed form predicts `0.047604` — a ratio of `0.789`. The mechanical reason is
+K6's **two features pooled into one KS**: the pooled deviation is the average of two correlated
+per-feature empirical processes, so its sup is smaller than either. K6-slow has one feature and
+reads `1.098` of its closed form. So the closed form is an upper bound on a multi-feature pooled
+reading, and it is quoted as such. **This does not affect the verdict** — every arm above is a
+measurement, and the closed form is a check on them, not their source.
+
+### C45.4 THE VERDICT: (b) carries the readings, and the KS test's critical value never applied
+
+**Component (b) carries essentially all of it.** Full independence lands within `0.000219` (K6) and
+`0.001516` (K6-slow) of the pure-lattice floor at matched `n_p` — **0.61% and 3.70%** of the shared
+arm's reading — so **the residual (c) is at the probe's own noise level and no third mechanism is
+needed.** Component (a) is real but small: `1/(m+1)` is `0.002994` / `0.001996`, and the
+lattice-only arm does not reject at the runs' own `n_p`.
+
+**THE CONSEQUENCE, and it is a correction to the diagnostic rather than a finding about the
+detectors.** `computePUniformity` compares its statistic against `1.36/sqrt(n)` — the critical value
+for `n` **independent** draws from a **continuous** uniform. **The construction satisfies neither
+premise**: the pooled `p` are dependent through the one shared calibration draw, and they are
+supported on `m+1` atoms. So the rejection was never a well-formed test of exchangeability, and
+`n_p` was the wrong denominator throughout: **the sample size that governs this statistic is `m`
+(500 / 333 reference blocks), not `n_p` (20,000 / 80,000 pooled p values).** At `m = 500` a KS
+statistic of `0.0376` is the **median** outcome, not a `4×`-critical excess.
+
+**WHAT THIS DOES NOT SAY.** It does not say the detectors are valid — validity is the marginal
+`E[e|H0] <= 1`, which the exact null `0.991433` and the across-draw increment centring
+(`0.989903`, `-0.80` SE, Amendment v2.K6A.6) speak to and this probe does not touch. It says the
+per-run KS reading measured the **single-draw calibration lottery** that K6A.1.7 already registered
+as the dominant uncertainty on every endpoint of this construction, and measured it in a statistic
+whose stated critical value assumed the lottery away.
+
+### C45.5 What is NOT closed, and what this probe excluded
+
+1. **The single-draw-per-cell protocol question stays open and binding.** C45's own "related
+   unmeasured debt" — the across-draw calibration spread, and the fact that the single-draw caveat
+   on K4/K6 endpoints is undischarged — is **untouched**. This probe explains a diagnostic; it does
+   not amend the protocol. That is WORKLIST `C51` item (4).
+2. **`computePUniformity`'s critical value is NOT changed.** Registering a different reference
+   distribution for this field is a change to a registered emission and needs its own amendment
+   with its own null. **Named-not-done.** Until then the field's `ks_critical_at_alpha` remains
+   what it is and **must be read with C45.4 beside it.**
+3. **No run is re-run and no reading is restated.** `0.022904`, `0.041150` and `0.037646` stand
+   exactly as committed. Their **interpretation** changes; their values do not.
+4. **The α-point observation of C45.1 carries no verdict** and does not move K6.1.2.
+5. **The two-feature attenuation is measured, not modelled.** C45.3's `0.789` is explained
+   mechanically and not derived; a closed form for the pooled multi-feature sup is not attempted.
+6. **T2's own KS is not measured here.** The T2 arm emits no `p_uniformity` field
+   (`run-clustersynth-arm.mjs`), so the T2 tier contributes an α-point rate and no KS statistic;
+   this probe does not add one.
+7. **`spectral_bet_e_process` (cell 33, `m` = the K3 window count) is not probed.** Its own reading
+   `0.005924` against critical `0.007168` (`run-20260808T091521Z`) does **not** reject, so it was
+   never part of C45 — but by the same mechanism its reading is governed by its own reference count
+   and not by `n = 36,000` either. Not measured here.
+
+### C45.6 House rules, mapped
+
+(1) **Committed with the probe it describes**, and the probe is committed in the same commit as
+these numbers — `tools/README.md`'s standard for probe provenance, and the F6 finding's own remedy.
+(2) No endpoint or threshold moves, so nothing could move under a reading. (3) **This section IS the
+clearly-labelled post-hoc analysis** and it carries **no verdict**: no cell, arm or class endpoint
+was read to produce it. The three run readings quoted are already published. (4) §9's fallback
+untouched. (5) The substrate is the probe's own disclosed generator, not the study's. (6) `results/`
+untouched — **no run directory written, no row edited.** (7) No rerun. (8) Every number this probe
+produced is stated above with its `R`, including the noisiest row.
+
+### Amendment summary
+
+**C45's mechanism is CLOSED: the `p_uniformity` KS excess is the shared calibration draw's own
+`m`-sample Kolmogorov statistic.** Decomposed on the shipped modules at the runs' own geometries:
+**(a)** the discrete-rank atom floor is exactly `1/(m+1)` — `0.001996` / `0.002994` — and the
+lattice alone does not reject at the runs' `n_p`; **(b)** the shared reference carries it, `D = 1`
+reading `0.042637` (K6-slow) and `0.037574` (K6) with the excess decaying as `1/sqrt(D)` onto the
+(a) floor; **(c)** the residual under full independence is `0.001516` and `0.000219` — **3.70% and
+0.61%** — i.e. at the probe's noise level, so **no third mechanism is needed**. Five independent
+confirmations: the closed form `0.8687/sqrt(m)` predicts the registered 100-draw mean to `0.969`
+and its sd to `0.901`; it predicts all five measured quantiles to within `6%`; the shared arm
+reproduces the readings under a **different PRNG**; `KS(D)*sqrt(D)` is flat over `D = 1..10`; and
+the shared arm is **flat across a 40× range of `n_p`** where sampling noise would fall `6×`. **The
+consequence is a correction to the diagnostic, not a finding about the detectors:**
+`computePUniformity` tests against `1.36/sqrt(n)`, whose two premises — independence and a
+continuous reference — the construction satisfies neither, and **the governing sample size is `m`
+(500 / 333 reference blocks), not `n_p` (20,000 / 80,000 pooled p)**. At `m = 500`, `0.0376` is the
+**median** outcome, not a `4×`-critical excess; arm 34's `0.022904` is a `-0.87` sd draw and arm 47's
+`0.041150` a `+0.99` sd draw. **And the C45 row's own framing is corrected:** `0.02290` and
+`0.01671` are **not the same statistic** — the first is a KS statistic on T1, the second is
+`P(p <= 0.05)` on T2 — and the α-point pairing does not survive its arithmetic either, with T2's
+"conservative" `0.01671` sitting `-1.02` draw-sd from nominal at `m = 45` and T1's post-fix
+`0.050167` at `+0.014` sd. **Validity is untouched and not claimed:** `E[e|H0] <= 1` rests on the
+marginal, which the exact null and the across-draw increment centring speak to; what the KS reading
+measured is the single-draw lottery K6A.1.7 already registered, in a statistic whose critical value
+assumed the lottery away. **The single-draw protocol question (C51 item 4) stays open, and
+`computePUniformity`'s critical value is deliberately NOT changed here.**

@@ -486,6 +486,38 @@ test('without phi_known, the same estimated-phi cell stays in regime and refutes
   assert.equal(s2.status, 'REFUTED');
 });
 
+// C43 disclosure pin (coverage PREREGISTRATION.md, Erratum v1.5 C43.9 item 1). The ruling this
+// pins is recorded at lib/nulls.mjs:28-49: `phi_known` bounds DATA-GENERATING conditions, not API
+// call shapes, so the only cells it narrows away are those whose null IS autocorrelated and whose
+// phi was fitted from a finite window (N4). The N1/N2/N5/N6 ids stay in regime even though the
+// detector ran its own estimator on the cal window for N2/N5/N6 -- their phi is 0 by construction.
+// WORKLIST C43 assumed the opposite reading and concluded that three fault classes rested on
+// out-of-regime evidence. Asserted here so the mutation that reads phiIsEstimated as
+// `phi_source !== 'oracle'` re-decides no card's regime silently.
+test('phi_known narrows away fitted-phi cells only: N1/N2/N5/N6 stay in a known-phi regime', () => {
+  const knownCard = { ...tCard, guarantee: { regime: { phi_max: 0.95, m_min: null, phi_known: true } } };
+  // Both shapes phiIsEstimated reads: the bare id (derived) and the id already annotated with the
+  // phi_source lib/collect.mjs stamps on every collected cell. A mutation on either branch shows.
+  const tags = { N1: 'oracle', 'N2-m100': 'iid-by-construction', N5: 'iid-by-construction', N6: 'iid-by-construction' };
+  for (const annotated of [false, true]) {
+    const known = (id) => (annotated ? tCell({ null_id: id, phi: 0, phi_source: tags[id] }) : tCell({ null_id: id }));
+    const s2 = scoreS2(knownCard, [
+      ...Object.keys(tags).map(known),
+      tCell(annotated
+        ? { null_id: 'N4-p06', phi: 0.6, phi_source: 'estimated', mean_e: 0.467885693011932 }
+        : { null_id: 'N4-p06', mean_e: 0.467885693011932 }),
+    ]);
+    for (const id of Object.keys(tags)) {
+      assert.equal(s2.perCell.find((c) => c.null_id === id).out_of_regime, false,
+        `${id} (annotated=${annotated}): phi is 0 and known by construction, so a known-phi `
+        + 'regime must not narrow it away');
+    }
+    assert.equal(s2.perCell.find((c) => c.null_id === 'N4-p06').out_of_regime, true,
+      'N4 is the one class of cell a known-phi regime does not cover (lib/nulls.mjs:39-42)');
+    assert.equal(s2.status, 'PASS');
+  }
+});
+
 test('S3 does not fail closed on unknown phi: a pooled power control has no null and no phi', () => {
   const s3 = scoreS3(tCard, [rateCell({ detector: 'st' })]);
   assert.equal(s3.status, 'PASS');

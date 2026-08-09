@@ -197,3 +197,62 @@ above were produced by the registered scoring path.
 continuously advanced stream per (calibration draw, arm) — K6A.1.3's convention for the 280-draw MC
 this study replicates — rather than `run-battery.mjs:572`'s spaced per-trajectory seeds. The scored
 path is the module's, bit for bit.
+
+---
+
+## 8. Correction append, 2026-08-09 (appended not edited)
+
+Four corrections from an independent review, three against this document. The review re-derived
+`rows.json` byte-identically and confirmed E6's disposition was forced by the registered rule. No
+measurement is re-run and **no endpoint verdict moves.** Full text:
+`PREREGISTRATION.md` → "Correction append to v2.K6A.6's results, dated 2026-08-09".
+
+**(1) Section 5(b) mixed two rules.** Quoted: *"At `TJ = 500` the same rules give `0.041` and
+`0.011`"*. **The `0.039` replayed at `TJ = 72` is the point-rate `> 0.0585` rule; the `0.011` is the
+Wilson-LB-at-`n` rule. Like-for-like at `TJ = 500` for the point-rate rule is `0.0229`.** The three
+rules on this study's own 100 draw-level rates:
+
+| rule | `TJ = 72` | `TJ = 500` | `TJ = 2000` |
+|---|---|---|---|
+| observed rate `> alpha` (**E4's own rule**) | `0.0807` | **`0.0413`** | `0.0380` |
+| observed rate `> 0.0585` (the `n = 2000` LB proxy) | **`0.0395`** | `0.0229` | `0.0231` |
+| Wilson LB at `n` (**E5's own rule**) | `0.0084` | **`0.0109`** | `0.0240` |
+
+Each endpoint against its own rule: E4's registered `0.079` is `rate > alpha` at `TJ = 72`
+(replicated `0.0807`), predicting `0.0413` at `TJ = 500` against measured `0.030`. **E5's registered
+`0.039` is NOT E5's rule** — it is the point-rate proxy at `TJ = 72` (replicated `0.0395`); E5's own
+rule predicts `0.0109` at `TJ = 500`, i.e. `1.09` draws, `P(0) = 0.34`. **Measured `0` is
+unremarkable against the rule E5 applies.** The DEVIATION verdict against the registered band
+stands as recorded.
+
+**(2) Section 5's "a property of the probe's trajectory count, not of the stop condition"
+OVERSTATES.** At the stop condition's real `n = 2000` the Wilson-LB rule still false-fires on
+**`2.40%`** of draws from the lottery alone. The gate's `3.9%` is the `TJ = 72` proxy at `0.0395` —
+an inflation of **`×1.64`**, not a fabrication. **K6A.1.10's qualitative claim is correct, and the
+write-back obligation is correspondingly WEAKER than section 5 filed it: the registered `≈ 4%`
+should read `≈ 2.4%`, a number to correct rather than a method to withdraw.**
+
+**(3) READING A has stronger evidence than section 3 reported, and it contradicts a registered
+band.** Unreported here, measured on the committed rows: **`32/100` draws fall outside the
+registered falsifier range `[0.97, 1.01]` (15 above, 17 below), and `9/100` meet the run's own
+filing condition `LB > 1.01`. The range fires on roughly a third of clean calibration draws from
+the lottery alone** — which is the sharpest statement available that the registered run's reading
+was a draw, not a detection. Section 3's *"fires on roughly the upper decile of calibration draws"*
+is **corrected: `15%` on the upper side, `32%` two-sided.**
+
+And: **`74/100` draws fall outside K6A.1.12's registered per-calibration-draw band
+`[0.985, 0.998]`**; measured p05–p95 is `[0.9609, 1.0229]`, **`4.77×` wider**. Filed as an erratum
+to K6A.1.12 — **the BAND is wrong, not the field: the point prediction `0.9914` and the exact null
+`0.991433` are CONFIRMED** by this study's `0.989903`. The other two per-draw bands in the same
+table are right (detection excludes `8/100`, healthy `3/100`), so **one row is wrong, not the
+method.** Section 5 and the prereg summary line *"every K6A.1.12 endpoint stands unchanged"* is
+corrected accordingly: every endpoint, point prediction and verdict stands — that band does not.
+
+**(4) Four errata.** K6A.6.5's readings B and C overlap (`gap > 1.96·SE` **and** run draw outside
+support satisfies both) and the driver's B-first precedence was never registered — **not triggered
+here**, `gap = −0.80` SE with the run draw inside support gives A unambiguously. `sd` was
+unqualified: `n − 1` gives `−0.799` SE, `n` gives `−0.803`, **both select A**. E4's band comparison
+is inclusive in the driver and unstated in the prereg — measured `0.03` **equals** the lower bound,
+so an exclusive reading would make E4 a DEVIATION. E1's `+0.29 SE` used this study's measured SE;
+against the registered `0.1416/sqrt(100)` the gap is **`+0.31` SE**, which is the denominator E1's
+band was built from.

@@ -8488,3 +8488,142 @@ support**. The "hot draw" is measured rather than asserted, and it is one draw o
 
 **Unchanged by this run:** `K6-slow YES at this calibration draw`, the one-attempt rule, every
 K6A.1.12 endpoint, `K6 = NO` at the deploy-gate geometry, and every `COVERAGE.md` row.
+
+---
+
+### Correction append to v2.K6A.6's results, dated 2026-08-09 (appended not edited)
+
+Four corrections from an independent review of `run-acrossdraw-20260809T065107Z`, three of them
+against this amendment's own text and one against a band v2.K6A.1 registered and this amendment's
+summary declared unchanged. **No measurement is re-run and no endpoint verdict moves**; the review
+re-derived the rows byte-identically and confirmed E6's disposition was forced by the registered
+rule.
+
+#### (1) The E5 replay MIXED TWO RULES — corrected with the like-for-like table
+
+**Quoted, the results append:**
+
+> At `TJ = 500` the same rules give `0.041` and `0.011`, against measured `0.030` and `0.000`
+
+**Correct: "the same rules" is FALSE for E5.** The `0.039` replayed at `TJ = 72` is the
+**point-rate `> 0.0585`** rule; the `0.011` quoted at `TJ = 500` is the **Wilson-LB-at-`n`** rule.
+Those are two different rules, so the pair is not a like-for-like comparison. **Like-for-like at
+`TJ = 500` for the point-rate rule is `0.0229`, not `0.011`.** All three rules at all three counts,
+computed on this study's own 100 draw-level rates:
+
+| rule | `TJ = 72` | `TJ = 500` | `TJ = 2000` |
+|---|---|---|---|
+| observed rate `> α = 0.05` (**E4's own rule**) | `0.0807` | **`0.0413`** | `0.0380` |
+| observed rate `> 0.0585` (the `n = 2000` LB proxy) | **`0.0395`** | `0.0229` | `0.0231` |
+| Wilson LB at `n` `> α` (**E5's own rule**) | `0.0084` | **`0.0109`** | `0.0240` |
+
+**Each endpoint against its OWN rule, which is the honest comparison:**
+
+- **E4**'s rule is `rate > α`. Its registered `0.079` is that rule at `TJ = 72` (replicated here at
+  `0.0807`); at `TJ = 500` the same rule predicts `0.0413`; measured `0.030`. Consistent.
+- **E5**'s rule is the Wilson LB at `n`. Its registered `0.039` is **NOT that rule** — it is the
+  point-rate proxy at `TJ = 72` (replicated at `0.0395`). E5's own rule at `TJ = 500` predicts
+  `0.0109`, i.e. `1.09` draws of 100, and `P(0 | 1.09) = 0.34`. **Measured `0`: unremarkable
+  against the rule E5 actually applies.** The DEVIATION verdict against the registered
+  `[0.01, 0.10]` band stands as recorded — the band is what was registered.
+
+#### (2) "A property of the probe's trajectory count, not of the stop condition" OVERSTATES
+
+**Quoted, the results append and K6A.6's REPORT.md §5:**
+
+> **A stop condition's false-fire rate estimated that way is a property of the probe's trajectory
+> count, not of the stop condition.**
+
+**Correct, and against this document's own rhetorical convenience: the `TJ = 72` estimate inflates
+the figure, it does not create it.** At the stop condition's real `n = 2000` the Wilson-LB rule
+still false-fires on **`2.40%`** of calibration draws from the lottery alone (table above). The
+gate's `3.9%` came from the point-rate proxy at `TJ = 72`, which reads `0.0395` — an inflation of
+**`×1.64`**, not a fabrication. **The stop condition genuinely has a lottery-driven false-fire rate
+of about `2.4%`, and K6A.1.10's qualitative claim that it has one is CORRECT.**
+
+**Consequence, stated because it weakens this document's own filing: the write-back obligation
+against K6A.1.10 is WEAKER than the results append claimed.** It is no longer "the registered
+figure measures the wrong object"; it is "the registered `≈ 4%` should read `≈ 2.4%`, the `1.6×`
+gap being the `TJ = 72` proxy". A number to correct, not a method to withdraw. K6A.1.10's two-sided
+reporting rule (screen-clean plus paging-fired is the lottery's signature) is untouched and is
+confirmed by the `2.4%`.
+
+#### (3) READING A has stronger evidence than the results append reported — and it CONTRADICTS a band K6A.1.12 registered
+
+**Unreported by this author, measured by the review on the committed `rows.json`:**
+
+```
+draws outside the registered FALSIFIER range [0.97, 1.01]       32/100   (15 above, 17 below)
+draws whose one-sided LB > 1.01 (the run's own filing condition)  9/100
+draws outside K6A.1.12's registered per-draw band [0.985, 0.998] 74/100
+measured p05-p95                                    [0.9609, 1.0229]
+                                                     width 0.061995  vs  0.013 registered
+                                                     -> 4.77x wider
+```
+
+**This is the strongest single piece of READING-A evidence in the study and it was left out.** The
+`[0.97, 1.01]` range fires on **roughly a third of calibration draws from the lottery alone**, and
+the run's own filing condition (`LB > 1.01`) is met on `9/100`. A range that fires on `32%` of clean
+draws is not an instrument that detected something on the registered run.
+
+**And a MEASURED CONTRADICTION of a registered band, filed as an erratum to v2.K6A.1 K6A.1.12.**
+Quoted, K6A.1.12:
+
+> | cell 47 S2 `increment_estimator.mean` | `0.9914` | `[0.985, 0.998]` (exact `E[e|null] = 0.991433`) | outside `[0.97, 1.01]` |
+
+with K6A.1.12's own framing: *"Bands are per-calibration-draw (K6A.1.7), which is the quantity a
+one-draw run realizes."* **Measured: `74/100` draws fall outside `[0.985, 0.998]`. As a
+per-calibration-draw band it is wrong by a factor of `4.77` in width.**
+
+**The erratum is to the BAND, not to the field or the point prediction.** K6A.1.12's point
+prediction `0.9914` and the exact null `0.991433` are **CONFIRMED** by this study
+(measured across-draw mean `0.989903`, `−0.80` SE). What was wrong was the spread attached to it:
+`[0.985, 0.998]` is approximately the interval a *within-draw* SE implies, not the across-draw
+spread K6A.1.12 said its bands were. **Registered: the per-calibration-draw band for
+`increment_estimator.mean` is the measured `[0.9609, 1.0229]` (p05–p95, `R = 100`), superseding
+`[0.985, 0.998]`; the falsifier range `[0.97, 1.01]` is left as registered with its measured
+`32%` lottery false-fire rate recorded beside it.** K6A.5's rejection of withdrawing a range after
+watching it fire still stands: the range is not withdrawn, it is characterised.
+
+**The precision that matters, because it isolates the defect rather than smearing it across
+K6A.1.12.** The other two per-draw bands in the same table are RIGHT: detection's `[0.333, 0.848]`
+excludes `8/100` and healthy's `[0.000, 0.056]` excludes `3/100`, both what a p05–p95 band should
+do. **Only the increment row's band is wrong. The band-setting method is not in question; one row
+is.**
+
+**Quote-and-correct against this amendment's own summary, twice.** Quoted, K6A.6.7 (8):
+
+> **Every K6-slow endpoint and verdict of K6A.1.12 stands unchanged**
+
+and, quoted, the results append:
+
+> **Unchanged by this run:** `K6-slow YES at this calibration draw`, the one-attempt rule, every
+> K6A.1.12 endpoint, [...]
+
+**Correct: K6A.1.12's `increment_estimator.mean` BAND does NOT stand — it is contradicted at
+`74/100`.** Every K6A.1.12 **endpoint, point prediction and verdict** does stand, including
+`K6-slow YES at this calibration draw`, the class row, `K6 = NO` at the deploy-gate geometry and
+every `COVERAGE.md` row. **The blanket "stands unchanged" was written before the review measured
+the band and is corrected here rather than quietly narrowed.**
+
+#### (4) Four errata, one line each
+
+- **K6A.6.5's readings B and C OVERLAP.** B fires on `gap > 1.96·SE`; C fires on
+  `gap < −1.96·SE` **OR** the run draw outside the measured support. A result with
+  `gap > 1.96·SE` *and* the run draw outside support satisfies both. **The driver resolves it
+  B-first, which K6A.6.5 never registered** — an unregistered precedence rule in the disposition
+  code. **Not triggered here** (`gap = −0.80` SE, run draw inside support → A unambiguously), and
+  registered now so a future run cannot have it chosen after the fact.
+- **K6A.6.5 says `sd` without saying which.** The driver uses the sample sd (`n − 1`),
+  `0.019139`; the population form (`n`) gives `0.019043`. Gaps `−0.799` and `−0.803` SE
+  respectively — **both select READING A**, so nothing turns on it, and the `n − 1` convention is
+  registered as the operative one.
+- **E4's band comparison is INCLUSIVE in the driver and unstated in the prereg.** Measured `0.03`
+  equals the band's lower bound `0.03` exactly; `measured >= band[0]` returns HELD. **Under an
+  exclusive reading E4 would be a DEVIATION.** Registered: the comparison is inclusive at both
+  ends, stated now because a boundary hit is exactly where an unstated convention decides a
+  verdict.
+- **E1's `+0.29 SE` mixes denominators.** REPORT.md §2 divides the `0.00444` gap by this study's
+  *measured* SE `0.015294`, giving `+0.29`; against the *registered* `0.1416/sqrt(100) = 0.01416`
+  the gap is **`+0.31` SE**. Both are far inside the band and E1 holds either way; the registered
+  denominator is the one E1's band was built from and `+0.31` is the figure that matches it.

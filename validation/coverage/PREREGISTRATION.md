@@ -11453,3 +11453,309 @@ is verified only against the source text.
 
 **Nothing else in Amendment v2.C51.1 moves**, and in particular the registered run's median
 falsifier stays UNEVALUATED (C51.1.5) — this append records a code commit, not a reading.
+
+---
+
+## Amendment v2.C47.1 — 2026-08-09, before the probe exists: the K4 self-fit exchangeability gap gets a measurement design, with both outcomes and the number that separates them registered in advance
+
+WORKLIST `C47` item (1), the last one open. Sections §1–14 and every prior Amendment, Erratum and
+append stay intact. **This amendment registers a DERIVATION PROBE and its two disposition outcomes.
+It moves no endpoint, floor, threshold, seed, grid, falsifier, verdict, cell or class row, it writes
+no run directory, and it re-reads no committed cell.** Registered **before** the probe it authorizes.
+
+**What it is not.** It is not a rerun, not a registered measurement of any card's endpoint, and not a
+restructure of the K4 detector. The probe is a `validation/coverage/tools/` probe under that
+directory's own README discipline — non-registered seeds, run at any time, quoted in this document,
+resting on committed code.
+
+### C47.1.1 THE PREMISE, VERIFIED FROM CODE FIRST — and it is narrower than K4.1.10 says
+
+K4.1.10 records the debt and cites `point-tail-bet-e-value.ts:69-77`. **Two corrections to that
+citation, both from reading the file at HEAD.**
+
+**(a) The line numbers moved.** `calibrateTailBet` is at **`detectors/point-tail-bet-e-value.ts:81-94`**
+at HEAD; `:69-77` is now `countGte`. K4.1.10 was written before Amendment v2.C1 C1.9 inserted
+`assertKappaInUnitInterval` and the corrected docstring. Cited correctly at registration, stale now,
+corrected here.
+
+**(b) THE SUBSTANCE, and it sharpens the claim rather than restating it. The premise HOLDS, and the
+MAD half of it does not.** Quoted, K4.1.10:
+
+> each calibration row's score is computed against a reference that included that row itself, while a
+> live point's score is computed against a reference it never contributed to … (calibration scores
+> run systematically slightly smaller than a same-sized fresh-split reference would produce, since
+> each is measured against a median/MAD **pulled slightly toward itself**)
+
+The self-fit is real and is exactly where the erratum says it is — `:85-92`, verbatim:
+
+```
+const sortedRows = [...rows].sort((a, b) => a - b);
+const m = median(sortedRows);
+const absDevs = rows.map((x) => Math.abs(x - m));
+const mad = median([...absDevs].sort((a, b) => a - b));
+...
+const sortedScores = absDevs.map((d) => d / mad).sort((a, b) => a - b);
+```
+
+`m` and `mad` are computed from `rows`, and `sortedScores` is those same `rows`' deviations. A live
+point enters at `:116-118`:
+
+```
+const score = Math.abs(x - cal.median) / cal.mad;
+const p = (1 + countGte(cal.sortedScores, score)) / (n + 1);
+```
+
+**But `mad` CANCELS EXACTLY, and the departure is driven by the median ALONE.** Derivation, not a
+measurement: `countGte(sortedScores, score)` counts `#{ |a_i - m|/mad >= |x - m|/mad }`, and `mad > 0`
+is enforced at `:89-91`, so that set is identically `#{ |a_i - m| >= |x - m| }`. **`p` is invariant to
+`mad` — to any positive rescaling of it — and the module's own docstring already says why in general
+terms** (*"the score is rank-based through the conformal p-value below, so any monotone rescaling of
+the score, including a fixed consistency constant on MAD, leaves every rank and therefore every
+p-value unchanged"*). What the docstring states for a FIXED constant holds for the self-fit `mad` too,
+because `mad` is one number applied to every score on both sides of the comparison.
+
+**Registered correction to K4.1.10, by quote-and-correct:** *"a median/MAD pulled slightly toward
+itself"* should read **"a MEDIAN pulled slightly toward itself"**. The self-fit of `MAD_ref` is inert
+to `p`, therefore inert to `e`, therefore inert to every endpoint this card carries. K4.1.10's
+verdict — the exchangeability is approximate and not exact — **stands unweakened**; its attribution
+was one term too wide. **In floating point** the cancellation is exact in the sense that matters:
+IEEE-754 division by a positive constant is monotone non-decreasing, so it can create a tie but can
+never invert an order, and `p` can differ from the real-arithmetic value only on a tie boundary.
+
+**What this does NOT do:** it does not make the gap zero, and it does not make it small. `m` is the
+sample median of the same rows whose deviations are then ranked, and `sum_i |a_i - m|` is *minimised*
+at `m = m_A`, so the calibration deviations are shrunk relative to what an independent reference would
+give while the live point's deviation is not. The direction K4.1.10 registers is unchanged. **The size
+is what nobody has measured, and that is what this probe is for.**
+
+### C47.1.2 THE PROBE, frozen exactly: what varies is the reference, and nothing else
+
+Two constructions, identical in every respect except which sample the reference is fitted on. **Both
+call the REAL module** (`dist/detectors/point-tail-bet-e-value.js`) for `p` and `e` — the calibrator,
+`kappa`, `countGte` and the `(1 + rank)/(n + 1)` form are shared code, not re-implementations, so the
+comparison cannot be an artefact of a second implementation of the thing under test.
+
+| | AS-BUILT (self-fit) | OUT-OF-FOLD (comparator) |
+|---|---|---|
+| reference `(m, MAD)` | fitted on **A** | fitted on **B**, disjoint from A |
+| the `n` ranked calibration scores | `\|A_i − m_A\| / MAD_A` | `\|A_i − m_B\| / MAD_B` |
+| live point's score | `\|x − m_A\| / MAD_A` | `\|x − m_B\| / MAD_B` |
+| built by | `calibrateTailBet(A)`, unmodified | a `TailBetCalibration` object assembled in the probe |
+| scored by | `pointTailBetEValue`, unmodified | `pointTailBetEValue`, unmodified |
+| exchangeability of (calibration, live) scores | `O(1/n)`-approximate (C47.1.1) | **EXACT** |
+
+**Why the comparator is exactly exchangeable, registered as the derivation it rests on.** Condition on
+B. Then `m_B`, `MAD_B` are constants, and `A_1..A_n, x` are i.i.d. and independent of B, so their
+scores `|·− m_B|/MAD_B` are i.i.d., hence exchangeable, hence `p` is exactly super-uniform and
+`E[e | H0] <= 1` holds with the calibrator identity and nothing else. **It is the construction the
+restructure of outcome (b) would build**, so the measured difference is exactly the price of not
+having built it.
+
+**Substrate: the registered one.** i.i.d. standard normal — `drawFor(r, 0) = gaussFrom(r)`
+(`lib/inject.mjs:19-24`), which is the law cells 18–21 and arm 32's held-out draws come from at
+`phi = 0`. **`n = 10,000` on both arms**, §6's registered row count and the module's own floor at
+`:82`. **Per replicate `2n = 20,000` CONSECUTIVE values from one continuously-advanced stream**
+(C1.2's corrected form, so the probe cannot reproduce the rank-1 lattice C1.3 recorded), split
+`A = ` first 10,000, `B = ` second 10,000.
+
+**THE ENDPOINTS ARE COMPUTED EXACTLY, NOT BY LIVE-POINT MONTE CARLO — registered, because it is the
+design decision that makes a `1e-5`-scale reading possible at all.** For a reference `(m, mad)` with
+ascending calibration scores `s[0..n-1]`, `p(x)` is a step function of `|x − m|`, so both endpoints
+are closed-form integrals against the substrate's own CDF:
+
+```
+F(t)        = Phi(m + mad*t) - Phi(m - mad*t)              = P(|x - m| <= mad*t)
+P(rank = j) = F(s[n-j]) - F(s[n-j-1]),   s[n] := +inf,  F(s[-1]) := 0
+exceedance  = sum over j with e_j >= 20  of P(rank = j)    = 1 - F(s[n-K-1])
+E[e]        = sum over j = 0..n  of  e_j * P(rank = j),     e_j = kappa*((1+j)/(n+1))^(kappa-1)
+```
+
+`K = 26` is the largest rank with `e_j >= 20` at `kappa = 0.1`, `n = 10,000` (`p* = 0.0027752`,
+`(1+K)/(n+1) = 0.0026997 <= p* < 28/10001`). **This is the exact conditional value of the same
+quantity the battery's 400,000-point average estimates, with the live-point sampling noise removed** —
+so the probe's remaining variance is the calibration draw's alone, and the pairing removes most of
+that too. `Phi` is a **relative-accuracy** implementation (regularised-incomplete-gamma continued
+fraction for `erfc`, not a polynomial with `1.5e-7` ABSOLUTE error, which would be worthless at
+`P ≈ 1e-3` in the tail), asserted in the probe against three published `erfc` values.
+
+**Replicates and seeds, registered.** **`R = 4,000` replicates**, seed base **`6.3e8`**, one
+continuously-advanced stream across all replicates. The probe README's seed discipline is met: probe
+bases are `>= 6e8` (in use: `7.1e8`, `8.4e8`/`8.5e8`) and every registered seed in this study is
+`<= 1e8`. **No registered scenario seed is touched, and the endpoint being probed is not a registered
+endpoint of any run.**
+
+**Registered escalation, in advance:** the paired excess must be resolvable against the `1e-4` scale
+this amendment's prediction is stated at. **If the paired standard error on the excess exceeds
+`3e-5`** — the precision needed to separate `1e-4` from `0` at three standard errors — **`R` is raised
+to `40,000` and BOTH readings are reported, the `4,000` one included.** No other extension is
+authorized, and `R` is not chosen after seeing the answer.
+
+**Registered substrate-robustness arm, in advance.** The whole probe is repeated under a **second,
+independent generator** (a counter-based stream, not `lib/inject.mjs`'s 32-bit LCG with consecutive
+Box-Muller outputs). **Reported as a disclosed sensitivity, never as the headline**, and its purpose
+is one specific doubt: this study has already recorded one lattice artefact from that generator
+(C1.3), and a `1e-5`-scale reading on a rank statistic is exactly where a weak generator would show
+up. **If the two generators disagree on the excess by more than the reported standard error, the
+finding is reported as generator-dependent and NEITHER number is quoted as the answer.**
+
+### C47.1.3 THE OUTCOME RULE — the number that separates (a) from (b), registered before the probe runs
+
+The registered validity bar for this card is its own frozen falsifier: **"healthy-arm per-point
+exceedance Wilson 95% lower bound > 0.05"** (`cards/point_tail_bet_e_value.json`). The registered
+run `run-20260808T133859Z` read, on arm 32's S2 row, **`k = 742`, `n_points = 400,000`,
+`exceedance = 0.001855`, `lower_95 = 0.0017464003916289452`**, and the stop condition did not fire.
+
+```
+distance from the reading to the bar  =  0.05 - 0.0017464003916289452  =  0.048253599608371056
+10% of that distance                  =                                  0.004825359960837106
+```
+
+**Registered, both outcomes, and the threshold between them is the number above:**
+
+- **(a) NEGLIGIBLE — `excess < 0.004825359960837106`.** The gap is **QUANTIFIED**. The card's
+  `regime.exchangeability_note` gains the measured number, **WORKLIST `C47` item (1) closes, and NO
+  restructure is registered or built.** The note keeps saying the identity is approximate and
+  anti-conservative; it stops saying so without a size.
+- **(b) MATERIAL — `excess >= 0.004825359960837106`.** The out-of-fold restructure is registered as a
+  **NAMED FUTURE CHANGE and is NOT built in this batch**, with the measured number as its
+  justification. **It is not built because it would re-open the K4 card:** the reference construction
+  is `detectors/point-tail-bet-e-value.ts`, which is card-pinned, and changing it invalidates the
+  card's S2 evidence, its guarantee sentence and its quantifier tag, and requires its own
+  registration and its own run. Under (b) this amendment's deliverable is the number and the named
+  change, nothing more.
+
+**PREDICTION, with its band and its own falsifier, registered before the probe runs.** Predicted:
+**`excess ∈ [0, 1e-4]`** — at most `3.7%` of the exchangeable-ideal exceedance level `0.0026997` and
+at most `0.21%` of the distance to the bar — and therefore **outcome (a)**. Registered falsifier on
+the prediction itself, separate from the outcome rule: **`|excess| > 1e-4` refutes this prediction,
+and is reported as refuted even if outcome (a) still fires.** A prediction that cannot fail without
+the disposition also failing is not a prediction.
+
+**SIGN, registered as falsifiable.** K4.1.10 registers the direction as anti-conservative, so:
+predicted **`excess > 0`**. **`excess <= 0` contradicts K4.1.10's direction claim and must be
+reported as a contradiction of it**, not as a smaller-than-expected confirmation. Both arms' `E[e]`
+readings are reported beside the exceedance for the same reason, and `E[e | H0] <= 1` is checked on
+both arms — a comparator that violated it would be a probe defect, since its own exchangeability is
+exact.
+
+### C47.1.4 WHAT THE PROBE DOES NOT MEASURE, and the numbers that show why it matters
+
+**The probe isolates the self-fit and NOTHING ELSE. It does not measure, and does not bound, the
+single-calibration-draw effect** — the one this study has already recorded twice (C1.7's shared
+reference, C45's `p_uniformity` KS residual, v2.K6A.6's `sd ≈ 0.151` on a sibling class). **The
+pairing CANCELS it by construction**, which is what buys the precision, and it is the reason a small
+excess here is not a claim that the card's S2 reading is precise.
+
+**And on this construction the single-draw effect is an order of magnitude larger than the thing being
+measured. The registered run's own two numbers, against the exchangeable ideal at `n = 10,000`
+computed in closed form here:**
+
+| | exchangeable ideal at `n = 10,000` | `run-20260808T133859Z` arm 32 S2 | departure |
+|---|---|---|---|
+| per-point exceedance | **`0.0026997300269973`** = `27/10001` | `0.001855` | **`-31.3%`** |
+| per-point `mean_e` | **`0.6245891523884999`** | `0.527556` | **`-15.5%`** |
+
+Both **conservative**, both from ONE calibration draw, both far larger than the `1e-4` scale this
+amendment predicts for the self-fit. **Registered reading: those two departures are NOT the self-fit
+and must not be quoted as it.** They are one draw's realization, and the direction on that draw is
+opposite to the self-fit's registered direction — which is itself worth stating, because it means the
+run's conservative reading gives no evidence either way about the gap this probe measures.
+
+`E[e] < 1` in the ideal column is not a defect and is registered as expected: `p` is discrete on
+`{j/(n+1)}`, so the grid truncates the `p → 0` divergence that makes the continuous integral exactly
+`1`. **A discrete conformal `p` at `n = 10,000` gives up `37.5%` of the calibrator's headroom before
+any construction detail enters**, and that is a property of `n`, not of the self-fit.
+
+### C47.1.5 What is NOT changed
+
+1. **No run is re-run, no committed row is edited, `results/` is untouched.** `run-20260808T133859Z`'s
+   arm-32 S2 row stays byte-for-byte as committed.
+2. **No endpoint, floor, threshold, falsifier, verdict, cell or class row moves.** The card's
+   falsifier stays *"healthy-arm per-point exceedance Wilson 95% lower bound > 0.05"* and its S2
+   reading stays `not-refuted`.
+3. **`detectors/point-tail-bet-e-value.ts` is NOT touched, under either outcome.** Under (a) there is
+   nothing to change; under (b) the change is named and deferred (C47.1.3).
+4. **`harness/run-battery.mjs` is NOT touched.** The probe writes no cell and feeds
+   `lib/collect.mjs` nothing.
+5. **K4.1.10's verdict stands.** What C47.1.1 corrects is its ATTRIBUTION (median, not median/MAD) and
+   its line citation. The approximation is still approximate and still anti-conservative in its
+   registered direction.
+6. **`family_E_conformal_heldout`, the other held-out K4 candidate, is out of scope.** Its
+   construction is a bounded-increment wealth process with its own card; whether it carries the same
+   self-fit is not asked and not answered here. **Named as not-done.**
+
+### C47.1.6 DISCLOSURES
+
+**(a) The card's `regime.exchangeability_note` will be edited, and it rides in the branch's dedicated
+re-freeze commit rather than in a commit of its own.** Under outcome (a) the note gains the measured
+number. That commit is a card-identity commit already required by Amendment v2.C51.1's harness change
+(C51.1.7a), and **the note edit is disclosed as riding in it** — one card text field, named here in
+advance, with the pins. This is the K6A.5.3 rule applied honestly rather than avoided: a text field
+changing inside a pins commit is disclosed, not silent. **`cert:expiry` reads only `source_files`
+sha256, so the note edit expires nothing by itself**; it is sequenced there so the branch has one
+card commit and not two.
+
+**(b) The probe's numbers land in three places and must agree in all three.** A results append to this
+amendment (the primary record), a dated append to `results/live/run-20260808T133859Z/REPORT.md` (so a
+reader of the run that carries the affected row finds it there), and the card note. **The append to
+the REPORT changes no reading of that run** and says so.
+
+**(c) The probe is a PROBE and is committed as one.** `validation/coverage/tools/` per that
+directory's README, which is added to with this probe's row. It writes no run directory, emits no
+cell, and feeds `validation/certification/lib/collect.mjs` nothing. **It may be re-run at any time**,
+unlike a harness.
+
+**(d) The exact-conditional endpoint is a DIFFERENT estimator from the battery's, and the difference
+is stated rather than glossed.** The battery estimates the exceedance by averaging an indicator over
+400,000 live points from one draw; the probe computes the same conditional expectation in closed form
+against the substrate CDF. **The probe's number is therefore not comparable to `0.001855` as a
+replication** — it is the noiseless version of the same quantity at a different (and much larger)
+set of draws. What IS compared is arm against arm, at the same draw, which is the only comparison the
+outcome rule reads.
+
+### C47.1.7 House rules, mapped
+
+(1) **Committed before the probe**, in its own commit, prereg text alone. (2) **A failed endpoint is a
+publishable result:** outcome (b) is registered as a real outcome with a named consequence, and the
+prediction carries its own falsifier so it can fail while the disposition holds (C47.1.3). (3) **No
+post-hoc analysis:** `R`, the seed base, the escalation rule, the outcome threshold, the prediction,
+the band and the sign are all fixed here, before the probe exists. The two figures quoted from
+`run-20260808T133859Z` are read off its committed REPORT and are used as the SCALE the outcome rule is
+stated against, not as an endpoint of this amendment. (4) §9's fallback and A3c are not engaged — no
+cell is emitted. (5) **Freeze:** `n = 10,000`, `kappa = 0.1`, `K = 26`, `THRESHOLD = 20`, the
+substrate, the split and the two constructions are frozen above and none may move after the probe
+runs. (6) `results/` untouched; **no run written, no committed row edited.** (7) **No rerun of any
+registered run, and none is authorized.** (8) Binding on the results append: it states the excess, its
+standard error, `R`, both generators' readings, which outcome fired, and whether the prediction and
+the sign held.
+
+### Amendment summary
+
+**Registers the measurement WORKLIST `C47` item (1) has been open for, with both dispositions and the
+number between them fixed before the probe runs.** The premise was verified from code first and comes
+out **narrower than the erratum that filed it**: the self-fit is exactly where K4.1.10 says
+(`point-tail-bet-e-value.ts:85-92`, not the `:69-77` it cites — the lines moved at C1.9), but **`MAD`
+cancels exactly** — `countGte` compares `|a_i − m|/mad` against `|x − m|/mad` and `mad > 0` is
+enforced, so `p` is invariant to it and the departure is driven by **the median alone**. K4.1.10's
+*"a median/MAD pulled slightly toward itself"* is corrected by quote-and-correct to **"a MEDIAN"**;
+its verdict stands unweakened. **The design:** two constructions differing only in which sample the
+reference is fitted on, both scored by the unmodified module, at the registered `n = 10,000` on the
+registered `phi = 0` normal substrate, **paired**, with both endpoints computed **exactly** in closed
+form against the substrate CDF rather than by live-point Monte Carlo — which is what makes a
+`1e-5`-scale reading possible. `R = 4,000`, seed base `6.3e8`, a registered escalation to `40,000` if
+the paired standard error exceeds `3e-5`, and a registered second-generator arm because this study has
+already recorded one lattice artefact from its own PRNG (C1.3). **The comparator's exchangeability is
+EXACT** and the derivation is given, so the measured difference is the price of not having built it.
+**The outcome rule: excess below `0.004825359960837106` — 10% of the distance from the run's
+`lower_95 = 0.0017464` to the `alpha = 0.05` bar — is outcome (a), QUANTIFIED, the card note gains the
+number and C47 item (1) closes with no restructure; at or above it, outcome (b), the out-of-fold
+restructure is a NAMED FUTURE change and is not built, because it would re-open the K4 card.**
+Predicted: `excess ∈ [0, 1e-4]`, sign positive, outcome (a) — with `|excess| > 1e-4` registered as
+refuting the prediction even if (a) fires, and `excess <= 0` registered as contradicting K4.1.10's
+direction. **What the probe does not measure, with the numbers that show why it matters:** the pairing
+cancels the single-draw effect, and on this construction that effect is far larger — the registered
+run read `0.001855` against the exchangeable ideal `0.0026997300269973` (`-31.3%`) and `mean_e`
+`0.527556` against `0.6245891523884999` (`-15.5%`), **both conservative, both from one draw, and both
+in the OPPOSITE direction to the self-fit**, so the run's reading is no evidence either way about the
+gap being measured. Registered with it: a discrete conformal `p` at `n = 10,000` gives up `37.5%` of
+the calibrator's `E[e] = 1` headroom before any construction detail enters, which is a property of `n`.

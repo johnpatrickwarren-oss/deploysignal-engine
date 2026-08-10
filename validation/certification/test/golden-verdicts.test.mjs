@@ -301,10 +301,77 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // reading 0.8515 sits above K6A.2.4(a)'s prediction band p95 of 0.848 and inside its consistency
 // interval [0.333, 0.958], which that section dispositions explicitly: CONSISTENT with the gate,
 // an upper-tail calibration draw, NOT a falsification. K6 stays NO; K1/K2/K3/K4/K5 unchanged.
+// Re-frozen 2026-08-09, h0-battery PREREGISTRATION.md Amendment A3 (cert run
+// run-20260810T064520Z, consuming h0-battery/results/live/inc-20260810T064226Z): ONE row moves.
+// `family_C_safe_hotelling` goes NOT_EXECUTABLE -> REFUSE, s2 MISSING -> REFUTED (s1 MISSING,
+// s3 PASS and s4 UNPRICED unchanged, tier null either way). This is the outcome A3.7's mapping table
+// registered as the PREDICTED one, before the run.
+//
+// WHAT PRODUCED IT. This card was the one h0-battery detector with no `increment_estimator`
+// measurement in any study, so its S2 had no candidate cells at all -- `perCell`, `excluded` and
+// `missing` were all three empty. The precise contrast is not "pooled, not missing" -- in a file
+// where `missing[]` is a scorer field that reads as a claim about the wrong thing. Its 36 P1 endpoint
+// rows are POOLED BUT NEVER RECOGNISED AS CANDIDATES: they sit in `loadEvidence`'s returned cells, and
+// `isValidityCell` (lib/score.mjs:11-12) recognises none of the fields a P1 row carries (`fires
+// fire_rate lower_95 verdict mean_logM`), so they are filtered out before `scoreS2` can exclude them
+// -- which is exactly why all three arrays were empty rather than just the first. That is Amendment
+// A1.3's second gap, which A1.8 left open by name. It bit this card alone because `detector-audit`'s SEQUENTIAL set
+// (run-sequential.mjs:31-35) supplies the other three test_martingale h0 detectors and omits
+// safe-Hotelling, following that study's registry-derived scope, from which it is absent because
+// `fleet/e-bh-guarded.ts`'s DETECTOR_ENVELOPES carries no Hotelling variant.
+//
+// A3 closed it by MEASURING the class's own instrument rather than by widening the vocabulary: 12
+// increment cells (arm A3-V) and 12 paired per-null 3-sigma power cells (arm A3-W). Nine of the 12
+// validity cells map, all in regime -- the card's `regime` is `{phi_max: null, m_min: null}` with no
+// `phi_known`, so `regimeCheck` (lib/score.mjs:61-76) has no branch that can fire, the same reading
+// the standing test at :383-390 already asserts for universal_inference's N4 cells. Seven map
+// REFUTED: N2-m30/m100/m500 (increment mean 1.3803 / 1.0888 / 1.0100, one-sided lower bounds
+// 1.2182 / 1.0425 / 1.0058, all above the card's own frozen falsifier bound of 1.0005),
+// N3-p03/p06/p09 (1.0430 / 1.2235 / 1.6027) and N4-p06-m100 (1.7767). Two map CLEARED: N1 and N7,
+// bit-identical at 0.996229 with upper bound 0.999304 -- a detector that reads no windows flag must
+// give the same number at both, which is A3.5(4)'s executability check, and it passed at gap 0. The
+// remaining three are named, not scored: N4-p09-m100 (2.23e5) and N5 (1.06e143) carry
+// 'inconclusive', a token outside VERDICT_MAP, so they land in `missing[]`; N6 overflowed and its
+// cell is a NON_FINITE exclusion (lib/guards.mjs:25-30). Hence `inconclusive x3` in the report row.
+//
+// TWO THINGS THIS ROW IS NOT. It is not valid-but-inert: S3 stayed PASS on 13 power cells (1 -> 13),
+// every rate above INERTNESS_FLOOR 0.10, lowest 0.4190 at N4-p09-m100. And it is not a reachable USE
+// turned REFUSE: `scoreS4` returns UNPRICED for this card (bootstrap threshold substitution, no
+// measured c-bound cited -- WORKLIST C38 item 6) and overallVerdict:581-584 caps an UNPRICED card at
+// ADVISORY, so USE was never in its reachable set. A3.7 registers that set as
+// {REFUSE, ADVISORY, NOT_EXECUTABLE} and records it as a correction to the commissioning brief.
+//
+// A3-W also closes the pairing gap this fix would otherwise have OPENED, and the size of that gap is
+// TWO, not twelve. The card's only prior power cell is the P2 record, which carries no `null_id`
+// (h0-battery/harness/run.mjs:118-133), so `pairingGaps` keyed it `family_C_safe_hotelling::` and it
+// paired no null at all. But `pairingGaps` generates a gap only for an in-regime CLEARED cell
+// (lib/score.mjs:479 `if (c.out_of_regime || c.mapped !== 'CLEARED') continue;`), and only two of the
+// nine mapped cells CLEARED -- N1 and N7. Measured, by re-scoring the committed corpus with every
+// A3-W cell filtered out: 2 gaps, N1 and N7, with S3 `perCell` falling 13 -> 1.
+//
+// THIS COMMENT SAID "twelve" AND IS CORRECTED IN PLACE, because the wrong number is impossible on the
+// arithmetic of its own two preceding sentences, which name only two CLEARED cells. h0-battery
+// PREREGISTRATION.md's review corrections append (C1) carries the same correction at the two pre-run
+// places that asserted it, where it was already self-contradictory: A3.6 predicted CLEARED at NO
+// null, so on A3's own registered predictions the counterfactual was 0. Arm A3-W is unaffected as a
+// registered arm -- 2 > 0, and its twelve cells are S3 evidence in their own right whose 0.4190-0.9735
+// spread is what exposed the first-fire censoring in A3's results append, correction 3. What is
+// withdrawn is the magnitude of the pairing argument, not the arm.
+//
+// The corpus-wide unpaired count is unchanged at 11, still all `sequential_ui_e_process` -- WORKLIST
+// C38 item 4, whose figure of 29 was already stale at 11 before this batch. README's
+// run-20260807T202419Z paragraph records that 29 -> 11 movement; the 18 it closed were `safe_t`'s 8
+// and `universal_inference`'s 10, from the per-null power arms of
+// 2026-08-terminal-evalue/run-20260807T215034Z and 2026-08-phi-identifiability/run-20260807T215105Z --
+// not one detector's arms alone.
+//
+// No other card's verdict, tier or stage status moves, and no COVERAGE.md class answer moves: the arm
+// emits no `fault_class` field, so `coverageFor` (lib/score.mjs:358-405) cannot see it. Both were
+// registered in A3.7 in advance, as falsifiers of the amendment rather than as hopes.
 const GOLDEN = {
   family_A_betting_e_process: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'UNPRICED' },
   family_A_mixture_supermartingale: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
-  family_C_safe_hotelling: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'MISSING', s2: 'MISSING', s3: 'PASS', s4: 'UNPRICED' },
+  family_C_safe_hotelling: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'UNPRICED' },
   family_D_spectral_e_detector: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'INERT', s4: 'PASS' },
   family_E_conformal: { verdict: 'NOT_EXECUTABLE', tier: null, s1: 'DECLARED', s2: 'VOID', s3: 'MISSING', s4: 'REFUSE' },
   safe_t_e_value: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },

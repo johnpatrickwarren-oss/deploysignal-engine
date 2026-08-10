@@ -775,3 +775,738 @@ fourteen (fifteen since C49 task 5) while its tally stands, that closing the col
 deviates from A1.1's own view that it belongs to a certification-protocol pre-registration that does
 not exist, and that `shape_ecdf_accumulator`'s notes sentence calling the gap open becomes false at
 this commit and is corrected in A2.6 rather than on the card.
+
+## Amendment A3 — 2026-08-09, the class-instrument arm for `family_C_safe_hotelling`: closing A1.3's second gap for the one card it leaves with no scoreable validity evidence anywhere
+
+Registered **before** the harness file it authorizes, before the run, and before the certification
+re-score that follows. Sections 1–12 stay intact; A1.1–A1.8, Erratum A1.1 and A2.1–A2.6 stand as
+written. **No endpoint, threshold, α, N, T, null, seed, registered expectation or verdict rule of
+§1–12 moves, no existing run of this battery is re-run, and no run directory already under
+`results/live/` is edited.** Authorized by the operator 2026-08-09 (WORKLIST `C38`, item 5).
+
+**Lead with the correction, and it is a correction to the WORKLIST row that commissioned this work.**
+`C38` item 5 reads, verbatim: "`family_C_safe_hotelling` has zero S2 audit cells: no scoreable
+in-regime validity evidence exists for that card at all." **The verdict consequence is true and the
+stated reason is incomplete in a way that changes what closing it requires.** Measured this session
+by running the real scorer (`node validation/certification/verdict.mjs` with `CERT_RESULTS_DIR`
+pointed at a scratch root, engine `3f556c1`):
+
+- `family_C_safe_hotelling.card.json`'s `s2` reads `status: MISSING` with `perCell: []`,
+  `excluded: []`, `missing: []` — **all three arrays empty**, and overall
+  `NOT_EXECUTABLE` on reasons `["S1 reachability not run-backed (v1 floor)", "S2 or S3 has no
+  scoreable evidence"]`. So the card really has no scoreable validity evidence.
+- But **36 h0-battery validity cells for this detector do exist and are pooled**, in the canonical
+  `run-20260801T064627Z` (12 nulls × 3 α). They are not *excluded* — they are never *candidates*.
+  `lib/score.mjs:11-12`'s `isValidityCell` tests for `increment_estimator`, `stopped_mean`,
+  `exceedance`, `crossing_rate` or `mean_e`, and a P1 endpoint row carries
+  `fires fire_rate lower_95 verdict mean_logM` and none of those five. This is exactly the gap
+  **A1.3** measured and **A1.8** left open by name.
+- The reason it bites **this card and no other of the four**: the three other h0-battery detectors
+  get their `increment_estimator` cells from `detector-audit-sequential`
+  (`seq-20260805T025650Z` — 11, 9 and 12 `s2.perCell` entries respectively, verified per card in
+  the same scorer run). `family_C_safe_hotelling` is absent from that study, because
+  `validation/detector-audit/harness/run-sequential.mjs:31-35` defines
+  `SEQUENTIAL = {family_A_betting_e_process, family_A_mixture_supermartingale,
+  family_D_spectral_e_detector}` and no more; that set follows detector-audit §2, whose scope table
+  is derived from `fleet/e-bh-guarded.ts`'s `DETECTOR_ENVELOPES`, and safe-Hotelling is **absent
+  from that map** (`fleet/e-bh-guarded.ts:35-49` — six keys, none of them a Hotelling variant),
+  which is the same fact the card's S4 reports as "no envelope wiring".
+
+So the gap is not missing measurement opportunity — the adapter has existed and run since
+2026-08-01 — it is a **missing instrument**: nothing has ever measured this detector on the
+instrument its own class carries. That is what this arm registers.
+
+### A3.1 Premises verified at HEAD, before anything was registered
+
+Each of these was read off code or off a committed artifact, not off prose, at `3f556c1`.
+
+1. **The card's class is `test_martingale` and that class's instrument is `increment_estimator`**
+   (`cards/family_C_safe_hotelling.json:9`; `lib/constants.mjs:9-13` `CLASS_INSTRUMENTS`). The
+   card's own frozen falsifier is written in that instrument's vocabulary: "increment lower95 >
+   1.0005 on the compiled-oracle null".
+2. **Every registered null is IN REGIME for this card, mechanically.** The card's
+   `guarantee.regime` is `{phi_max: null, m_min: null, baseline: "oracle-compiled", nulls:
+   "multivariate gaussian"}`. `lib/score.mjs:61-76` `regimeCheck` tests `regime.phi_max`,
+   `regime.phi_known` and `regime.m_min`; the first and third are `null` and the second is absent,
+   so no branch can fire and every cell returns `{in: true, refused: false}`. `baseline` and
+   `nulls` are free text the scorer never reads. **This arm therefore registers all 12 nulls as
+   in-regime validity cells, and that is a decision with precedent rather than a convenience**:
+   `safe_t_e_value` carries `regime.phi_known: true` precisely so its claim narrows mechanically
+   (README freeze row `45ce230`), and `universal_inference_e_value`'s N4 cells are asserted
+   **in regime** by a standing test on the ground that "its claim quantifies over any phi"
+   (`test/golden-verdicts.test.mjs:383-390`). A card that wants a narrower regime carries the
+   field. This one does not, so its AR(1) and estimated-baseline cells score.
+3. **The detector has no φ input at all**, which resolves A1.2's third measurement.
+   A1.2 recorded that all 36 `family_C_safe_hotelling` rows are byte-identical across all four
+   2026-08-01 runs while the φ fix moved family A's, and left open: "Either family C never read the
+   threaded φ, or it does not pre-whiten at all." **It is the second, and it is structural:**
+   `detectors/_hotelling-safe.ts` contains no identifier matching `phi`, `ar1`, `prewhiten` or
+   `pre-whiten` anywhere in its 143 lines, and `evaluateSafeHotelling` (`:54-143`) reads only
+   `cell.covariance`, `cell.safe_hotelling_params.{tau_squared, precompiled_log_det_shrink,
+   sliding_buffer_threshold}`, `alpha` and `x`. The harness adapter cannot thread what the function
+   does not accept (`validation/h0-battery/harness/detectors.mjs:113-140` builds `cell` from
+   `cfg.mu`/`cfg.sigma` only; `cfg.phi` is never read on this branch). Recorded as A1.2's third
+   measurement now RESOLVED, at the file and line, and it is not a defect in the 2026-08-01 runs.
+4. **`evaluateSafeHotelling` never reads `cell.mean` either.** The quadratic forms at `:104-109`
+   are taken on the raw `x`, not on `x − mean`. Harmless in this battery, whose nulls are all
+   mean-zero, and recorded because it means the N2/N4 `μ̂` estimate reaches the detector through
+   nothing: **only `σ̂` matters at those nulls**, which A3.4's derivation depends on.
+5. **The pairing state the WORKLIST also commissioned is stale, and its stale figure is not this
+   card's.** `C38` item 4 says "29 in-regime validity cells have no paired per-null power arm".
+   The real scorer at `3f556c1` reports **11**, every one `sequential_ui_e_process`
+   (`pairingGaps`, `lib/score.mjs:475-489`; `MISSING-CELLS.md` of the scratch run). The 29 → 11
+   movement is already recorded in `validation/certification/README.md`, at the
+   `run-20260807T202419Z` paragraph, and predates this batch. What this amendment owes item 4 is
+   therefore **not** those 11 (A3.7) but the 12 gaps item 5's own fix would otherwise **open**:
+   this card's only power cell is the P2 record, which carries `detection_rate` and **no
+   `null_id`** (`harness/run.mjs:118-133`), so `pairingGaps` keys it `family_C_safe_hotelling::`
+   and it pairs no null at all. Registering validity cells without power arms at the same nulls
+   would trade one named gap for twelve. **Both arms are registered here, together, for that
+   reason.**
+
+### A3.2 Registered scope: one detector, two arms, 24 cells, one run directory
+
+- **Detector set: `family_C_safe_hotelling` alone.** The other three h0-battery detectors already
+  carry `increment_estimator` evidence from `detector-audit-sequential` (A3.1 and the census in
+  A1.3); measuring them again here would double-count one draw across two studies for no gap.
+- **Nulls: all 12 of §3, unchanged and un-reordered** — `N1 N2-m30 N2-m100 N2-m500 N3-p03 N3-p06
+  N3-p09 N4-p06-m100 N4-p09-m100 N5 N6 N7` — imported from `harness/nulls.mjs`, which
+  `lib/nulls.mjs` already names as the grammar's source of truth, so the ids the certification
+  scorer derives φ from are the same objects that generated the data.
+- **Arm A3-V, validity.** One cell per null: the increment estimator `E[exp(Δ log M_t)]` over
+  `T = 300` ticks × `N = 2000` trajectories, summarised as
+  `{n, mean, sd, se, lower95_one_sided, upper95_one_sided}` — the `summarise` definition of
+  `validation/detector-audit/harness/run-sequential.mjs:37-44`, reproduced with that citation
+  rather than imported, because a cross-study import would make this arm's numbers move if that
+  file were ever amended.
+- **Arm A3-W, power and pairing.** One cell per null: §5's registered P2 construction — a 3σ step
+  at tick 100, detection counted iff the detector fires in ticks 100–300 — applied **at each of
+  the 12 nulls** rather than at N1 only, and emitted with `null_id` and `shift_sigma: 3` so
+  `pairingGaps` can pair it. This is §5's construction at §3's nulls; **no new fault construction
+  is invented**, and 3σ is `INERTNESS_SHIFT_SIGMA` (`lib/constants.mjs:21`), the shift the
+  certification protocol's inertness floor is defined at.
+- **α = 0.05 on both arms**, one level, not §4's three. The increment estimator is
+  α-independent by construction (`z_t` in `_hotelling-safe.ts:110-112` contains no α; the harness
+  steps all `T` ticks regardless of firing), so replicating it across α would emit three copies of
+  one measurement. α enters only the companion crossing rate and the P2 detection rate, and 0.05
+  is the level detector-audit's sequential arm used and the level §5's P2 already uses.
+- **Total: 24 cells** — 12 + 12 — in **one** new run directory.
+- **Directory name `inc-<UTC basic>Z`, not `run-<UTC>Z`, and the reason is a trap this amendment
+  refuses to lay.** `analysis/run_endpoints.mjs:6` selects the lexicographically greatest
+  directory matching `startsWith('run-')` and **rewrites that directory's `endpoints.json` and the
+  study's `REPORT.md`**. A `run-`-prefixed arm directory would become §10's analysis target and
+  crash on a missing `cells/`. `inc-` is invisible to that filter and fully visible to the
+  certification collector, which reads every directory under `results/live/`
+  (`lib/collect.mjs:377-398`). Same convention as `seq-`/`sui-`/`power-` in `detector-audit`.
+- **Study id `2026-08-h0-battery-class-instrument-arm`**, not `2026-07-h0-battery`. The arm sits in
+  this study's directory and under this study's pre-registration, but it is a different instrument
+  from §4's P1, and A1.6/A2.4's registered censuses fix `2026-07-h0-battery` at **148 pooled
+  cells** — a count `test/collect.test.mjs:494` asserts exactly. A distinct study id keeps both
+  registered expectations literally true. `tierOfStudy` (`lib/constants.mjs:34-43`) returns **T1**
+  for it, correctly: house synthetic.
+- **Cells are emitted in `summary.json` only, with no `cells/` directory.** Both layouts are
+  supported (`lib/collect.mjs:107-133`); `summary.json` is what `detector-audit` writes, and it
+  keeps this arm out of `tests/test_report_consistency.mjs`'s per-file `cells/` sweep, which is
+  written against P1's record shape. Every cell still carries `mode: 'live'` and
+  `engine_version`.
+
+### A3.3 Seeds, in the house pattern
+
+`SEED = 20260809`, recorded in the manifest. Per (null, trajectory) the stream is
+`rng(SEED + 7919*i + spec.id.length*104729 + det.id.length)` — the formula at
+`detector-audit/harness/run-sequential.mjs:72`, cited rather than re-derived. The estimated-parameter
+path (N2, N4) draws its calibration window from an independent stream,
+`rng(SEED + 31*i + spec.id.length)`, per the same file's `:76`.
+
+**Arm A3-W reuses arm A3-V's seeds per (null, trajectory), with the 3σ step applied.** That is §5's
+own P2 pattern (`harness/run.mjs:118-125` reuses P1's `SEED + i*7919`), and it pairs each shifted
+trajectory with its own null trajectory, which is the variance-reducing direction.
+
+### A3.4 The instrument's threshold rule, and a contradiction this amendment records rather than resolves
+
+`verdict` — the field `lib/score.mjs:39-43` reads and `VERDICT_MAP` maps — is set from **the card's
+own frozen falsifier**, on one threshold:
+
+```
+verdict = lower95_one_sided > 1.0005 ? 'REFUTED'
+        : upper95_one_sided < 1.0005 ? 'CLEARED'
+        : 'inconclusive'
+```
+
+**Why the card's threshold and not detector-audit's.** `cards/family_C_safe_hotelling.json:62`
+froze this card's falsifier as "increment lower95 > **1.0005** on the compiled-oracle null".
+detector-audit §3 registered the same instrument with a different split: REFUTED iff
+`lower95 > **1**`, CLEARED iff `upper95 < 1.0005`. **The two disagree on the interval
+`1 < lower95 ≤ 1.0005`**, and the three other cards' cells were scored under detector-audit's.
+The card is the frozen claim under test, and a mechanical protocol that tests a threshold other
+than the one the card froze is testing a different claim — so the card's threshold governs the
+scored token. `confidence: contested` is the right reading of the pair and **this amendment does
+not adjudicate which threshold the protocol should standardise on**; that is a certification-protocol
+question, named and owed.
+
+**Both readings are recorded on every cell.** `house_rule_verdict` carries the detector-audit
+reading verbatim. It has **no verdict authority by registration** — the K3.1.3/K6.7 REPORTED-field
+pattern — and it is deliberately not named `verdict`, `supermartingale_verdict` or
+`increment_verdict`, the three fields the scorer can read (`lib/score.mjs:39-43,182-190`), so the
+recording cannot become a second scoring path. Either reading is recomputable from the recorded
+`increment_estimator` bounds.
+
+`'inconclusive'` is outside `VERDICT_MAP` (`lib/score.mjs:31`) and lands the cell in `missing[]`
+with `suppressed_verdict: 'inconclusive'`, exactly as `family_A_mixture_supermartingale`'s three
+such cells already do. That is registered as an expected, non-defective outcome, and A3.6 maps it.
+
+### A3.5 Stop conditions, registered before the run
+
+The arm is **not executable**, and no cell of it is scored, if any of these holds:
+
+1. `git rev-parse HEAD` at run time is not `3f556c1`, or `package.json`'s version is not
+   `0.6.6-pre` (§8.1's pin rule, applied to this arm).
+2. `--mode live` is not passed. A sim run writes under `results/sim/` and is git-ignored (§10).
+3. The target directory already exists. The harness refuses rather than reusing it, mirroring
+   `harness/run.mjs:90-92`.
+4. **The N1/N7 identity check fails.** This detector is not windowed (`detectors.mjs:116`
+   `windowed: false`, no `calibrate`), so N1 and N7 differ only in a `windows` flag it never reads:
+   their two `increment_estimator.mean` values must agree to `< 1e-12`. All four committed 2026-08-01
+   runs already show N1 and N7 byte-identical on every P1 field, so a disagreement means the arm is
+   not driving the detector the P1 rows drove. **This is the analogue of §8.3's known-failure check
+   and it is a not-executable condition, not a result.**
+5. `increment_estimator.n < 1900` on any cell (more than 5% of trajectories lost to a `continue`
+   path), which would mean the arm is measuring a filtered subpopulation.
+
+A stop condition that fires is reported, in these words, and the run directory is not written.
+
+### A3.6 Registered predictions, derived in closed form from the detector's own update rule
+
+**Disclosure, in §7's terms and in A1.6's.** These are **derivations, not measurements**: no probe
+of this arm was run before this amendment was written, no `results/sim/` directory of it exists,
+and the only prior measurement of this detector on any instrument is the committed P1 record, which
+is quoted below where it is used. The derivations are checkable from `_hotelling-safe.ts` alone,
+which is why they are stated as arithmetic rather than as expectations.
+
+**The estimand, exactly.** At an oracle null the adapter (`detectors.mjs:118-131`) gives `p = 2`,
+`Σ = I₂`, `τ² = 1`, `precompiled_log_det_shrink = ½·2·log 2 = log 2`. Substituting into
+`_hotelling-safe.ts:110-112`:
+
+```
+z_t = −log 2 + ½ xᵀΣ⁻¹x − ½ xᵀ(Σ+τ²I)⁻¹x = −log 2 + ½|x|² − ¼|x|² = −log 2 + ¼|x|²
+```
+
+Under H₀, `|x|² ~ χ²₂ = 2·Exp(1)`, so with `Y ~ Exp(1)`, `z_t = −log 2 + Y/2` and
+
+```
+E[exp(z_t)] = ½ · E[exp(Y/2)] = ½ · (1 − ½)⁻¹ = 1     EXACTLY
+```
+
+`E[z_t] = −log 2 + ½ = −0.193147`, so `E[log M_300] = −57.944`. **The committed P1 record reads
+`mean_logM = −57.887` at N1, α = 1e-4** (the cell where no trajectory fires, so all 300 ticks
+accumulate) — 0.1% agreement, which is what makes the derivation an audit of the adapter and not
+just algebra.
+
+**The estimand is exactly 1 at every null whose marginal is N(0, I₂).** `z_t` is a fixed quadratic
+form of `x_t` alone, so `E[exp(z_t)]` depends on nothing but the marginal law. AR(1) with unit
+marginal variance (`nulls.mjs:23-28`) has exactly that marginal. Therefore **N1, N7, N3-p03,
+N3-p06 and N3-p09 all have estimand exactly 1**, and the instrument is blind to the AR(1) failure
+P1 measures at those same nulls (fire rates 0.0165 / 0.0625 / 0.3160 at α = 0.01, all `FAIL`).
+**Registered as the prediction most likely to be misread**: it is detector-audit §8's "the
+increment estimator bounds the marginal; the conditional implies it but is not implied by it",
+realised as a number. A reader who takes an inconclusive N3 cell as agreement with P1, or as
+evidence the detector is sound under AR(1), has been misled.
+
+**The estimand is +∞ at every estimated-parameter null.** At N2/N4 the harness estimates `σ̂`
+(`harness/run.mjs:44-52`, dividing by `cal.length`, so `σ̂²` is biased low) and the adapter sets
+`Σ = σ̂²I`, `τ² = σ̂²`, with the shrink term unchanged at `log 2` — correct, since
+`½(log det 4σ̂⁴ − log det σ̂⁴) = log 2` for any `σ̂`. So `z_t = −log 2 + ¼|x|²/σ̂²` and,
+conditionally on `σ̂²`,
+
+```
+E[exp(z_t) | σ̂²] = ½ · (1 − 1/(2σ̂²))⁻¹   for σ̂² > ½,   +∞ otherwise
+```
+
+`P(σ̂² ≤ ½) > 0` for every finite `m`, so the unconditional estimand is **+∞ at N2-m30, N2-m100,
+N2-m500, N4-p06-m100 and N4-p09-m100** — a genuine anti-conservatism of the shipped construction
+under an estimated baseline, not an artefact. To first order away from the divergence the excess is
+`≈ 1 + 1/m + 2·Var(σ̂²)`, i.e. worse as `m` falls, and worse again at N4-p09 where φ = 0.9 cuts the
+calibration window's effective size to `m(1−φ)/(1+φ) ≈ 5`. The committed P1 record agrees in sign
+and ordering (fire rate at α = 0.01: m=30 0.2080, m=100 0.0660, m=500 0.0095; N4-p09-m100 0.6280).
+
+**The estimand is +∞ at N5 and N6.** `E[exp(¼|x|²)]` is finite only for sub-exponential `|x|²`;
+moment-matched lognormal (`nulls.mjs:31-37`) and `t₃` (`:41-48`) both have polynomial tails on
+`|x|²`. At N6, `exp(z_t)` overflows to `Infinity` once `|x| > 53.3`, i.e. `|t₃| > 92.3`, which has
+probability `≈ 2.8e-6` per coordinate-draw against `1.2e6` draws — so **`increment_estimator.mean`
+is expected to be non-finite at N6 with probability ≈ 0.97**, and `applyGuards`
+(`lib/guards.mjs:25-30`) then returns `NON_FINITE` and the cell is **excluded and named, not
+scored**. At N5 the same overflow needs `g > 5.52` (`≈ 1.7e-8` per draw, `≈ 0.02` expected), so N5
+is expected finite, enormous and erratic — its value is set by its largest draw.
+
+**The bands, and why they are wide where they are wide.** No prior measurement of this detector on
+this instrument exists, so nothing empirical narrows these; what narrows the first row is that its
+estimand is known exactly.
+
+| null | estimand | registered band on `increment_estimator.mean` | predicted `verdict` |
+|---|---|---|---|
+| N1, N7 | exactly 1 | [0.95, 1.10] | inconclusive |
+| N3-p03, N3-p06, N3-p09 | exactly 1 | [0.90, 1.30] | inconclusive |
+| N2-m500 | +∞ (weakly) | [0.99, 1.30] | inconclusive |
+| N2-m100 | +∞ | [1.00, 1e2] | REFUTED |
+| N2-m30 | +∞ | [1.02, 1e6] | REFUTED |
+| N4-p06-m100 | +∞ | [1.00, 1e6] | REFUTED |
+| N4-p09-m100 | +∞ | [1.00, 1e12] | REFUTED |
+| N5 | +∞ | [1.00, 1e9] | REFUTED |
+| N6 | +∞ | non-finite expected | NON_FINITE exclusion |
+| every null, arm A3-W | — | detection_rate ∈ [0.90, 1.00] | pass |
+
+Arm A3-W's band is derived too: under a 3σ step on both coordinates, `|x|² ≈ 2·9 + 2 = 20`, so
+`z_t ≈ +4.3` per tick against a bar of `log(1/0.05) = 3.0` — one post-onset tick suffices, at every
+null, which is why the band is high and narrow and why **no inertness risk is predicted**
+(`INERTNESS_FLOOR = 0.10`). The existing P2 cell reads 0.9725 at N1.
+
+**A caveat on the instrument itself, derived and registered because it cuts against this
+amendment's own result.** `P(exp(z_t) > u) = P(Y > 2 log 2u) = 1/(4u²)`: the per-tick increment has
+tail index **exactly 2**, so its **variance is infinite** (logarithmically divergent), and so is the
+per-trajectory mean's. `summarise`'s `se = sd/√n` and its `mean ± 1.645·se` bound therefore do not
+attain their nominal one-sided level at this detector — sums of index-2 variables need `√(n log n)`
+normalisation, so the interval is **too narrow** and the false-REFUTED rate at the five nulls whose
+estimand is exactly 1 is **above** 5%, not below. **Consequence, registered in advance: a REFUTED
+at N1, N7 or any N3 cell is an instrument artefact and not a detector failure — and the mechanical
+protocol will score it as a refutation anyway**, because `lib/score.mjs:227-232` reads tokens and
+does not re-derive. If that happens, the verdict stands as scored, the artefact is reported in
+these words, and the cell is **not** re-run (one registered attempt per new cell). The card's
+frozen 1.0005 threshold, rather than detector-audit's 1, is what makes this risk small instead of
+routine — an unregistered benefit of A3.4's choice, disclosed here so it cannot be presented later
+as the reason for it.
+
+### A3.7 Outcome mapping: every S2 status this arm can produce, and the verdict it maps to
+
+Registered so the run decides and nothing is chosen after seeing it. Read off
+`lib/score.mjs:226-232` (S2 status) and `:505-587` (`overallVerdict`), with this card's fixed
+`s1 = MISSING` and `s4 = UNPRICED`.
+
+| S2 outcome | how it arises | overall verdict | tier |
+|---|---|---|---|
+| **REFUTED** | any in-regime cell maps REFUTED | **REFUSE** | — |
+| **PASS** | ≥1 in-regime CLEARED, none REFUTED | **ADVISORY** | T1 |
+| **MISSING** | every cell inconclusive, excluded or NON_FINITE | **NOT_EXECUTABLE** (unchanged) | — |
+| **VOID** | every in-regime candidate sits in a voided run | **NOT_EXECUTABLE** (unchanged) | — |
+
+**The predicted outcome is REFUTED → REFUSE**, on N2/N4/N5 (and N6 if it stays finite), per A3.6's
+derivation. That is a verdict move on a certified card and it is this arm's registered purpose.
+
+**Two corrections to the brief that commissioned this work, both read off the code.** (a) **USE is
+unreachable for this card whatever S2 does.** `scoreS4` returns `UNPRICED` for it — bootstrap
+threshold substitution with no measured c-bound cited (`lib/score.mjs:455-463`; `C38` item 6 is
+that gap) — and `overallVerdict:581-584` caps an UNPRICED card at **ADVISORY**. So the reachable
+set is {REFUSE, ADVISORY, NOT_EXECUTABLE}, not {USE, ADVISORY, REFUSE}. (b) A REFUTED N3 cell would
+be scored as an **in-regime** refutation, per A3.1(2), even though the guarantee *sentence* says
+"given the compiled (μ, Σ) as truth" and a reader may take that as iid-only. **The sentence and the
+machine-readable regime disagree, the scorer reads the machine-readable regime, and this amendment
+does not change the card to reconcile them** — that is a card content change and it needs its own
+registration. Named, owed, and recorded as contested.
+
+**S3 and the pairing endpoint.** Arm A3-W adds 12 power cells at the 12 nulls. Predicted S3
+**PASS** (unchanged), with `perCell` 1 → 13. Predicted `pairingGaps` for this card: **0** — every
+in-regime CLEARED or inconclusive-to-CLEARED null has an arm at the same `null_id`. The corpus-wide
+unpaired count is predicted to stay **11**, all `sequential_ui_e_process`, unchanged.
+
+**No other card is predicted to move, on any stage, and a move falsifies this amendment.**
+`cellsFor` (`lib/collect.mjs:435-438`) matches on `detector_id` and aliases, and no other card's
+id or alias set contains `family_C_safe_hotelling`. Class answers in `COVERAGE.md` are predicted
+unchanged: this arm emits **no `fault_class` field**, and `coverageFor`
+(`lib/score.mjs:358-405`) filters on it, so the arm is invisible to every class row by
+construction. Tagging a 3σ step as K1 evidence would be a coverage-battery registration, not this
+study's.
+
+**One committed test census moves, and it is arithmetic, not a scoring change.**
+`test/collect.test.mjs:657` asserts the pooled corpus at exactly **2266** cells, on A2.4's
+registered expectation that A2 added and dropped nothing. This arm appends 24 cells, so that
+assertion becomes **2290**, and the update is registered here with its arithmetic rather than
+discovered as a failure. `:494`'s `2026-07-h0-battery` census stays at **148** — the reason A3.2
+gives the arm its own study id. No other committed count is predicted to move.
+
+### A3.8 Explicitly out of scope
+
+- **`C38` item 4's 11 real unpaired cells, all `sequential_ui_e_process`. Named, not filled, and
+  the reason is the instruction not to invent a fault construction.** That detector has no shift
+  arm in any study: `harness/run-sequential-ui.mjs:52-92` runs nulls only and injects nothing;
+  h0-battery lists it OUT_OF_SCOPE for want of an adapter shape (`detectors.mjs:149-150`);
+  detector-audit §6 registers no power arm for it; and its card's own S3 route is the
+  `clustersynth-ui` study (`cards/sequential_ui_e_process.json` `prior_evidence[1]`, stage
+  `S2+S3`), which is blocked on the wide-format adapter `C38` item 3 tracks. Its S3 is
+  **MISSING** — not pooled-but-unpaired — so a power arm for it would move its verdict off
+  NOT_EXECUTABLE, which is a new registration and not a pairing fix. Owed, at `C38` item 4.
+- **A1.3's second gap for the other three cards.** Their 36 P1 rows each remain invisible to the
+  scorer's S2 vocabulary. All three are already REFUSE on `detector-audit-sequential` evidence, so
+  the gap costs no verdict today; closing it means changing `isValidityCell` or `CLASS_INSTRUMENTS`,
+  which is a certification-protocol change. Unchanged from A1.8.
+- **Any change to `lib/score.mjs`, `lib/collect.mjs`, `verdict.mjs`, `lib/constants.mjs`,
+  `lib/guards.mjs` or any detector source.** No scoring rule, instrument table, vocabulary,
+  threshold or constant is touched, so **no card expires and no re-freeze is authorized**: no card
+  pins any `validation/h0-battery/` file (audited across all fifteen `source_files` lists).
+  `npm run cert:expiry` must still print `all cards current` after this work, and if it does not,
+  something outside this registration was touched.
+- **Any card content change**, including the `prior_evidence[stage=S2].runs` glob
+  `h0-battery/results/live/run-*`, which does **not** match this arm's `inc-` directory. The glob
+  is documentation — `cellsFor` matches on detector id, not on the glob — so the arm scores
+  regardless; but the card's citation is now incomplete and that is named here, owed, not fixed.
+- **Any re-run, re-scoring or edit of the four 2026-08-01 P1 runs, of `SUPERSESSIONS.json`, or of
+  `REPORT.md`.** §1–12's endpoints are untouched and this arm supersedes nothing.
+- **A second attempt at any cell of this arm.** One registered attempt per cell. A stop condition
+  is reported; a surprising number is reported as measured.
+
+### Amendment summary
+
+Registers a class-instrument arm for `family_C_safe_hotelling`, the one h0-battery detector with no
+`increment_estimator` measurement in any study — because `detector-audit`'s `SEQUENTIAL` set
+(`run-sequential.mjs:31-35`) omits it, following that study's registry-derived scope, from which
+safe-Hotelling is absent because `fleet/e-bh-guarded.ts`'s `DETECTOR_ENVELOPES` does not carry it.
+Corrects `C38` item 5's stated reason: 36 validity cells for this detector are **pooled**, not
+missing, and reach no stage because `isValidityCell` (`lib/score.mjs:11-12`) recognises none of the
+fields a P1 endpoint row carries — A1.3's second gap, closed here for one card by measuring the
+instrument rather than by widening the vocabulary. Resolves A1.2's third measurement at the file
+and line: `_hotelling-safe.ts` has no φ input at all, so the adapter could not thread it and the
+byte-identical rows are structural, not defective. Registers 24 cells in one `inc-`-prefixed
+directory under study id `2026-08-h0-battery-class-instrument-arm` — arm A3-V, the increment
+estimator at all 12 nulls of §3, and arm A3-W, §5's own 3σ P2 construction applied per null so
+every validity cell has a paired power arm, which is what stops item 5's fix from opening twelve of
+item 4's gaps. Sets the scored token from the **card's** frozen falsifier (`lower95 > 1.0005`) and
+records detector-audit §3's (`lower95 > 1`) as an authority-free `house_rule_verdict`, with the
+disagreement registered **contested** and not adjudicated. Derives, in closed form from
+`_hotelling-safe.ts:110-112` and audited against the committed `mean_logM = −57.887`, that the
+estimand is **exactly 1** at N1/N7/N3 — so the instrument is blind to the AR(1) failure P1 measures
+there — and **+∞** at every estimated-baseline null and at N5/N6, predicting REFUTED at
+N2-m30/m100, N4-p06/p09, N5, a NON_FINITE exclusion at N6, and therefore **S2 REFUTED → overall
+REFUSE**, a verdict move on a certified card and this arm's registered purpose. Registers against
+itself that the increment's tail index is exactly 2, so the interval is too narrow and a REFUTED at
+N1/N7/N3 would be an instrument artefact the mechanical protocol would still score as a refutation,
+un-re-run. Corrects the commissioning brief twice: **USE is unreachable** for this card while S4 is
+UNPRICED (`score.mjs:581-584`), so the reachable set is {REFUSE, ADVISORY, NOT_EXECUTABLE}; and the
+card's guarantee *sentence* and its machine-readable `regime` disagree about whether AR(1) is in
+scope, with the scorer reading the regime and this amendment changing neither. Predicts no other
+card moves on any stage, no `COVERAGE.md` class answer moves (the arm emits no `fault_class`), the
+corpus-wide unpaired count stays **11**, and exactly one committed census moves by arithmetic —
+`collect.test.mjs:657` 2266 → **2290** — while `:494`'s 148 holds. Leaves item 4's 11 real gaps
+**named and unfilled**, because `sequential_ui_e_process` has no registered fault construction in
+any study and inventing one would move its verdict rather than pair its cells.
+
+### Correction append to A3.5, 2026-08-09 — stop condition 1 as registered is structurally unsatisfiable, and the replacement is stronger
+
+Registered **before** the harness that implements it and before the run. Everything else in A3 —
+scope, arms, nulls, seeds, threshold rule, predictions, bands, outcome mapping, out-of-scope list —
+stands exactly as written, and no endpoint, threshold, α, N, T, null or seed moves.
+
+**Quote, A3.5:**
+
+> 1. `git rev-parse HEAD` at run time is not `3f556c1`, or `package.json`'s version is not
+>    `0.6.6-pre` (§8.1's pin rule, applied to this arm).
+
+**The version half stands; the sha half cannot be satisfied by any run of this arm.** A3's own
+registration act is a commit, so HEAD is `754787e` the moment the amendment exists, and it can never
+again equal `3f556c1`. Measured: the first invocation of the harness printed
+`NOT EXECUTABLE — A3.5(1): HEAD is 754787e…, not the registered pin 3f556c1…`. **This is the same
+structural trap `validation/certification/README.md`'s freeze table names** — `freeze-cards.mjs`
+stamps `git rev-parse HEAD`, so a freeze commit cannot name its own sha — and it is recorded rather
+than silently patched because a stop condition edited without a registration is not a stop condition.
+
+**It also misread §8.1, which this study's own runs demonstrate.** §8.1 is "Engine version matches
+the §0 pin". The four committed 2026-08-01 runs carry `registration_sha: '17cc3f8'` while running at
+`git_sha` `17cc3f8`/`ff65feb` — so the study's convention is that the registration sha is **recorded**
+and the engine **version** is **required**.
+
+**Registered replacement, three checks, all fail-closed, and the second is stronger than what it
+replaces:**
+
+1. `package.json`'s version is `0.6.6-pre` (§8.1, unchanged).
+2. **`detectors/_hotelling-safe.ts` hashes to the sha256 the card pins**, i.e.
+   `c5cc555982e09fce449f06cc96e5cda57bf017ea6c7f48f2cc4f450ff964185e`
+   (`cards/family_C_safe_hotelling.json` `source_files[0].sha256`). This binds the arm to the exact
+   detector source the frozen claim is about, which a HEAD comparison only implies — the
+   certification protocol's own expiry surface, used as an executability gate. Verified equal at the
+   registration commit before this append was written.
+3. **A3's registration commit `754787e` is an ancestor of HEAD** (`git merge-base --is-ancestor`),
+   so the arm cannot run against a tree that predates its own registration, and the working tree
+   carries no modification to `detectors/_hotelling-safe.ts`, `harness/nulls.mjs` or
+   `harness/detectors.mjs`.
+
+The run manifest records `git_sha` (HEAD at run time), `registration_sha: 3f556c1` (A3's base) and
+`registration_commit: 754787e`, so the lineage is readable from the artifact. Stop conditions
+A3.5(2)–(5) are unchanged.
+
+### Results append to A3, 2026-08-09 — what the one registered run measured, and three corrections it forces on A3.6
+
+Written after the run, against `results/live/inc-20260810T064226Z` (`git_sha` `bc6a4f7`, seed
+20260809, N = 2000, T = 300, α = 0.05, 24 cells). **All five A3.5 stop conditions cleared**,
+including A3.5(4): N1's and N7's increment means are bit-identical, gap **0**. One attempt, no
+rerun, and the numbers below stand as measured.
+
+**Arm A3-V, in the registered table's order.** `verdict` is on the card's frozen 1.0005 falsifier
+(A3.4); `house_rule_verdict` agreed with it on every one of the 12 cells, so A3.4's contested pair
+did not separate on this data and stays contested on the argument, not on a number.
+
+| null | mean | one-sided [lower, upper] | verdict | in A3.6's band? | token predicted? |
+|---|---|---|---|---|---|
+| N1 | 0.996229 | [0.993155, 0.999304] | CLEARED | yes | no (predicted inconclusive) |
+| N7 | 0.996229 | [0.993155, 0.999304] | CLEARED | yes | no (predicted inconclusive) |
+| N2-m500 | 1.009998 | [1.005816, 1.014181] | REFUTED | yes | no (predicted inconclusive) |
+| N2-m100 | 1.088833 | [1.042489, 1.135178] | REFUTED | yes | **yes** |
+| N2-m30 | 1.380324 | [1.218159, 1.542489] | REFUTED | yes | **yes** |
+| N3-p03 | 1.042966 | [1.035568, 1.050364] | REFUTED | yes | no (predicted inconclusive) |
+| N3-p06 | 1.223540 | [1.194093, 1.252988] | REFUTED | yes | no (predicted inconclusive) |
+| N3-p09 | 1.602687 | [1.521725, 1.683648] | REFUTED | **no** (band [0.90, 1.30]) | no |
+| N4-p06-m100 | 1.776661 | [1.642059, 1.911262] | REFUTED | yes | **yes** |
+| N4-p09-m100 | 2.233611e+5 | [−1.384e+5, 5.851e+5] | inconclusive | yes | no (predicted REFUTED) |
+| N5 | 1.062039e+143 | [−6.850e+142, 2.809e+143] | inconclusive | **no** (band [1.00, 1e9]) | no |
+| N6 | non-finite | — | NON_FINITE exclusion | — | **yes** |
+
+**Arm A3-W, detection rate at 3σ:** N1 0.9725, N2-m30 0.7940, N2-m100 0.9035, N2-m500 0.9735,
+N3-p03 0.9515, N3-p06 0.8655, N3-p09 0.6545, N4-p06-m100 0.7280, N4-p09-m100 0.4190, N5 0.6625,
+N6 0.7400, N7 0.9725. **A3.6's band [0.90, 1.00] holds at 3 of 12 nulls and fails at 9.**
+
+**Scored outcome, from the real scorer (`run-20260810T064520Z`).** S2 **MISSING → REFUTED** on seven
+in-regime refutations; N1/N7 CLEARED; N4-p09-m100 and N5 in `missing[]` as unmapped `inconclusive`;
+N6 excluded NON_FINITE; suppressed tally `inconclusive x3`. Overall **NOT_EXECUTABLE → REFUSE**,
+tier null. S3 **PASS**, `perCell` 1 → 13. This card's `pairing` is **[]**. **A3.7's registered
+outcome — REFUTED → REFUSE — is what happened**, and every corpus-level prediction held: no other
+card's verdict, tier or stage status moved, no `COVERAGE.md` class answer moved, the corpus-wide
+unpaired count is unchanged at **11** (all `sequential_ui_e_process`), and the pooled corpus is
+**2290**, i.e. 2266 + 24, with `2026-07-h0-battery` still at 148.
+
+#### Correction 1 to A3.6 — the AR(1) estimand is `1/√(1−φ²)`, not 1, and the reason is a covariance the harness withholds
+
+**Quote, A3.6:** "**The estimand is exactly 1 at every null whose marginal is N(0, I₂).** … Therefore
+**N1, N7, N3-p03, N3-p06 and N3-p09 all have estimand exactly 1**".
+
+**Wrong for N3, and the error is in the words "N(0, I₂)".** `family_C_safe_hotelling` is a **vector**
+detector (`detectors.mjs:117` `vector: 2`) and the harness fills its two coordinates from
+**consecutive draws of one scalar stream** (`run.mjs:35`
+`Array.from({length: det.vector}, src)`). Under an AR(1) null those two draws are correlated at φ,
+so `x_t ~ N(0, [[1, φ], [φ, 1]])` — while the adapter configures the detector with `Σ = σ²I₂`
+(`detectors.mjs:121-122`). For a Gaussian quadratic form,
+`E[exp(½xᵀAx)] = det(I − ΣA)^{−1/2}` with `A = ½I`, so
+
+```
+E[exp(z_t)] = ½ · det(I − ½Σ)^{−1/2} = ½ · ((1−φ²)/4)^{−1/2} = 1/√(1−φ²)
+```
+
+which is 1 at φ = 0 and **1.0483 / 1.2500 / 2.2942** at φ = 0.3 / 0.6 / 0.9. The measured
+1.0430 / 1.2235 / 1.6027 track it (correction 2 explains the shortfall). **So the N3 refutations
+are real, and they are a Σ-misspecification finding rather than an AR(1)-pre-whitening one**: this
+detector has no φ input at all (A3.1(3)), but it does have a covariance input, and at N3/N4 the
+harness does not supply the oracle covariance the null actually has.
+
+**That makes A3's own N3/N4 cells not oracle-parameter cells, by this study's own standard, and it
+is recorded rather than fixed.** §3's N3 is "AR(1) … **oracle parameters**", and the defect that
+superseded `run-20260801T062824Z` and `run-20260801T064237Z` was stated as measuring "detectors
+unaware of phi, not the registered oracle-parameter cell". Withholding the oracle *covariance* from
+a vector detector is the same class of defect on a different input, and it affects **every**
+`family_C_safe_hotelling` N3/N4 row in this study, this arm's and the four committed P1 runs' alike.
+Registered consequences, in order:
+
+- **The cells stand as scored.** They are in regime under the card's machine-readable regime
+  (A3.1(2)), the run is not re-run, and nothing is retro-superseded on the strength of a finding
+  made after seeing the numbers.
+- **The verdict does not depend on them.** Dropping all five N3/N4 cells leaves N2-m30, N2-m100 and
+  N2-m500 REFUTED — nulls that are iid, where the induced cross-coordinate correlation is exactly 0
+  and the only error is `σ̂` — so S2 is REFUTED and the card is REFUSE on the estimated-moments
+  nulls alone. **Stated because a reader must be able to see that the correction does not rescue the
+  detector.**
+- **A vector-aware oracle covariance for N3/N4 is owed, and it is not this arm's to register**: it
+  changes what §3's N3 means for every vector detector, which is §3's business.
+
+#### Correction 2 to A3.6 — the instrument under-reads its own estimand, and cannot refute a catastrophic failure at all
+
+A3.6 registered that the increment's tail index is exactly 2, that the interval is therefore too
+narrow, and that the risk was a **spurious REFUTED**. Both halves of that need correcting.
+
+**The point estimate is biased low at feasible N, not just noisy.** The sample mean of an index-2
+variable is unbiased in expectation but its distribution is right-skewed with a median below the
+mean, so a single realisation typically under-reads. Measured three ways at once, all consistent:
+N1 reads **0.996229** with an upper bound of 0.999304 against a **derived exact 1** — the derived
+value sits *outside* the interval on the high side; the N3 cells read 0.5% / 2.1% / 30% below
+`1/√(1−φ²)`; and an independent 4,000,000-draw Monte Carlo of the estimand alone under-reads the
+closed form by 0.3% / 1.7% / 15.7% at the same three φ. **So the true anti-conservatism of this
+detector is worse than this arm measured, everywhere.**
+
+**The registered risk was the wrong sign.** A3.6 warned that a REFUTED at N1/N7/N3 would be an
+instrument artefact. What actually happened is the mirror image: **N1 and N7 CLEARED, on an interval
+whose upper bound excludes the estimand the same derivation gives**. That CLEARED is the reading in
+this arm not to trust, and it is the reading that keeps S2 at REFUTED rather than at REFUTED-with-no-
+cleared-cells. The asymmetry A3.6 asserted — that the artefact risk runs toward false refutation —
+is corrected: at an exactly-calibrated null this instrument's normal-approximation interval fails on
+the **low** side, so it manufactures clearances, not refusals.
+
+**And the three worst cells refute nothing.** N4-p09-m100 (2.23e5), N5 (1.06e143) and N6
+(non-finite) are the arm's three most extreme anti-conservatisms and all three are unscored: the
+one-sided lower bound goes **negative** once the sample sd outgrows the mean, so `inconclusive` is
+what a catastrophic failure produces. **Registered as a structural limit of the registered
+instrument, not of this detector**: `mean − 1.645·sd/√n` cannot refute a mean it cannot bound, so
+the increment estimator refutes only *mildly* invalid detectors and goes quiet on the badly invalid
+ones. That is the opposite of the property a validity instrument should have, it applies to every
+`increment_estimator` cell in the corpus, and closing it needs a heavy-tail-appropriate bound
+(median-of-means, or a bound on `log` increments), registered where the instrument is —
+detector-audit §3, not here.
+
+#### Correction 3 to A3.6 — A3-W's band was wrong because first-fire censoring removes pre-onset firers
+
+A3.6 derived `z_t ≈ +4.3` per tick under a 3σ step against a bar of 3.0 and registered
+`detection_rate ∈ [0.90, 1.00]` at every null. The arithmetic is right and the band is wrong at 9 of
+12 nulls, lowest **0.4190** at N4-p09-m100. **The cause is not power**: §5's construction counts a
+trajectory as detected only if its **first** fire lands in ticks 100–300 (`run.mjs:118-125`, which
+this arm reproduces), and at the nulls where the detector already fires *under H₀* — crossing rate
+0.652 at N4-p09-m100, 0.380 at N3-p09, 0.376 at N5 — a large share of trajectories have already
+fired before onset and are therefore counted as **not** detected. Measured, the two series are
+near-complementary: `detection_rate ≈ 1 − crossing_rate` across the 12 nulls.
+
+**So arm A3-W measures §5's construction faithfully and §5's construction conflates "did not
+respond to the shift" with "was already firing at the null".** Registered as a finding about the P2
+endpoint, which the certification protocol reads as power: the one cell below §5's own 0.50 bar
+carries `verdict: 'FAIL'`, and that token means "already invalid" here, not "inert". No stage status
+turns on it — every rate clears `INERTNESS_FLOOR` 0.10, S3 is PASS — and this arm does not
+re-register §5.
+
+#### What this run does not establish
+
+Restated because A3's headline is a REFUSE. **This is a refutation battery** (§2): seven refuted
+nulls are seven refutations, and the two cleared cells are "not refuted at these nulls" with
+correction 2's caveat on top — not evidence the construction is sound at N1/N7. The increment
+estimator bounds the **marginal**; the card's guarantee sentence is **conditional**
+(`E[e_t|F_{t-1}] ≤ 1`), which the marginal does not imply. Nothing here is real telemetry, and
+ADR 0012's `E[e|H₀] = 24/9/9` still attaches. And S4 stays **UNPRICED**: this card's c-bound is
+still unmeasured (`C38` item 6), so its shipped bootstrap threshold remains unpriced whatever S2
+says.
+
+### Review corrections append to A3, 2026-08-10 — five corrections an independent review found, each quote-and-correct
+
+The review reproduced the verdict movement, both instrument findings and the C38.4 premise
+independently, and registered A3's mapping as having fired exactly. It also found five things wrong
+in what A3 and its results append asserted. No endpoint, threshold, α, N, T, null or seed moves, no
+cell is re-run, no run directory is edited, and no verdict moves: **every correction below is to a
+claim about the evidence, never to the evidence.**
+
+#### C1 — the pairing counterfactual is wrong by 6×: dropping arm A3-W yields **2** gaps, not 12
+
+**Quotes. A3.1(5):**
+
+> What this amendment owes item 4 is therefore **not** those 11 (A3.7) but the 12 gaps item 5's own
+> fix would otherwise **open** … Registering validity cells without power arms at the same nulls
+> would trade one named gap for twelve.
+
+**And A3.2:** "registering A3-V without A3-W would trade one named gap for twelve." **And the
+Amendment summary:** "which is what stops item 5's fix from opening twelve of item 4's gaps."
+
+**All three are wrong, and the arithmetic that refutes them is in `pairingGaps` itself.**
+`lib/score.mjs:479` reads `if (c.out_of_regime || c.mapped !== 'CLEARED') continue;` — a gap is
+generated **only** for an in-regime **CLEARED** validity cell. A REFUTED, inconclusive or excluded
+cell can never produce one. So the ceiling on the counterfactual is the number of CLEARED cells, not
+the number of nulls.
+
+Measured, by re-scoring the committed corpus with every arm A3-W cell filtered out: **2** gaps,
+`N1` and `N7`, with S3 `perCell` falling 13 → 1. Those are exactly the two cells that mapped CLEARED.
+
+**The pre-run version of the claim was self-contradictory when written**, which is what makes it
+worth an append rather than a footnote: A3.6 predicted `inconclusive` at every null and CLEARED at
+none, so on A3's **own** registered predictions the counterfactual was **0** gaps, not 12. The
+post-run instance in `test/golden-verdicts.test.mjs` is sharper still — it says "nine newly-mapped
+validity cells with no per-null arm would have added twelve unpaired lines" while naming, two
+sentences earlier, that only two of those nine mapped CLEARED. Corrected in that file's comment in
+the same commit as this append.
+
+**Arm A3-W remains independently justified and is not retro-rationalised.** Two real gaps is more
+than zero, and the arm's twelve cells are S3 evidence in their own right: `perCell` 13 → 1 without
+them, and the per-null spread (0.4190 to 0.9735) is what exposed correction 3's first-fire censoring,
+which a single pooled cell could not have shown. What is withdrawn is the *magnitude* of the pairing
+argument, not the arm.
+
+#### C2 — stop-condition labels collided three ways, and sim-mode acceptance is a deviation A3.5 did not register
+
+**Two label collisions, both in the harness's refusal strings.** `A3.5(2)` labelled both the
+detector-source sha256 check and the `--mode` check; `A3.5(3)` labelled the ancestor check, the
+clean-working-tree check **and** the directory-reuse check. A stop condition whose label names two
+different tests cannot be cited. Registered numbering, applied to the harness in the same commit:
+
+| label | check |
+|---|---|
+| A3.5(1a) | `package.json` version is `0.6.6-pre` |
+| A3.5(1b) | `detectors/_hotelling-safe.ts` hashes to the card's pinned sha256 |
+| A3.5(1c) | A3's registration commit is an ancestor of HEAD |
+| A3.5(1d) | no guarded source modified in the working tree |
+| A3.5(2) | mode |
+| A3.5(3) | the target run directory does not already exist |
+| A3.5(4) | the N1/N7 identity check |
+| A3.5(5) | `increment_estimator.n >= 1900` |
+
+(1a)–(1d) are the four checks the A3.5 correction append registered as the replacement for the
+original condition 1; it stated them as three and the clean-tree check was folded into the ancestor
+sentence, which is why the harness had two strings under one label.
+
+**And the deviation A3.5(2) needs.** As registered it says the arm "is **not executable** … if
+`--mode live` is not passed". The harness accepts `--mode sim`, writing under the git-ignored
+`results/sim/` per §10. **That is a deviation, and it was used: a sim invocation at `--n 20 --t 30`
+was run before the live run to verify the harness's mechanics.** Disclosed rather than left to be
+found: those are **not** the registered parameters, so the smoke run produced none of the registered
+cells and could not preview the registered endpoint — at `T = 30` no tick reaches §5's onset at 100,
+so its power arm read 0.0000 at every null by construction. It also exercised the A3.5(5) refusal
+path. The registered reading of A3.5(2) is therefore: **`--mode live` is required for a scored run,
+`--mode sim` is permitted for mechanics and writes only where §10 sends it.**
+
+#### C3 — Correction 2 over-read its own percentages: only φ = 0.9 is signal
+
+**Quote, Correction 2:** "the N3 cells read 0.5% / 2.1% / 30% below closed form".
+
+The percentages are right and **treating the first two as measurements of a systematic bias is
+not.** Against each cell's own recorded `se`:
+
+| null | measured | closed form | deviation | z |
+|---|---|---|---|---|
+| N1 / N7 | 0.996229 | 1 | −0.377% | **−2.02** |
+| N3-p03 | 1.042966 | 1.048285 | −0.507% | **−1.18** |
+| N3-p06 | 1.223540 | 1.250000 | −2.117% | **−1.48** |
+| N3-p09 | 1.602687 | 2.294157 | −30.141% | **−14.05** |
+
+φ = 0.3 and φ = 0.6 are within noise. **Only φ = 0.9 is signal**, and N1/N7 at −2.02 σ is
+suggestive at best — and it is **one** observation, not two: the two cells are bit-identical by
+A3.5(4), which is the check that guarantees it.
+
+**The systematic component, measured rather than asserted.** 400 replicates of the arm-size
+estimator at φ = 0, where the estimand is exactly 1: median **0.999601**, i.e. a median bias of
+**−0.040%**, with 57.0% of replicates below 1. That is an order of magnitude smaller than N1's
+observed −0.377%, so the median-below-mean effect is real, directional and **small** — it does not
+account for what N1 read.
+
+**What survives, and it is the part that matters.** At an exactly-calibrated null the registered
+instrument returns **CLEARED 13.5%** of the time, **REFUTED 2.0%**, inconclusive 84.5% (same 400
+replicates, same rule: REFUTED iff `lower95 > 1.0005`, CLEARED iff `upper95 < 1.0005`). So the
+interval fails toward **clearance** about seven times as often as toward refutation, against a
+nominal 5% each way. **Correction 2's direction stands and its magnitude does not**: N1/N7's CLEARED
+is a 1-in-7 draw at a perfectly calibrated null, not proof of a large downward bias — and either way
+it is a clearance this arm cannot stand behind.
+
+The 4,000,000-draw Monte Carlo Correction 2 also cites (under-reading closed form by
+0.3% / 1.7% / 15.7% at φ = 0.3/0.6/0.9) carries no interval in that append and none is claimed here:
+it agrees in **direction** at all three and is decisive only at φ = 0.9, exactly as the table above.
+
+#### C4 — N6's exclusion and the negative-bound failure are two mechanisms, and Correction 2 bundled them
+
+**Quote, Correction 2:** "the three worst cells refute nothing: N4-p09-m100 (2.23e5), N5 (1.06e143)
+and N6 (non-finite) are the arm's three most extreme anti-conservatisms and all three are unscored:
+the one-sided lower bound goes **negative** once the sample sd outgrows the mean".
+
+**True of two cells, not three.** N4-p09-m100 and N5 fail by the negative-bound mechanism: their
+bounds are finite, `lower95` is below 1.0005, the recorded token is `inconclusive`, and the scorer
+files them in `missing[]` as an unmapped token. **N6 fails earlier and elsewhere:** `exp(z_t)`
+overflowed, so `increment_estimator.mean`/`sd`/`se` are non-finite, and `applyGuards`
+(`lib/guards.mjs:25-30`) returns `NON_FINITE` and the cell is **excluded** before any token is read —
+its `inconclusive` survives only as a `suppressed_verdict` annotation on the exclusion. Two
+mechanisms, two different scorer paths (`missing[]` vs `excluded[]`), one shared consequence: neither
+refutes. The generalisation Correction 2 draws — that this instrument goes quiet on badly invalid
+detectors — holds under both, and needs both stated to be checkable.
+
+#### C5 — "pooled, not missing" is the wrong contrast
+
+**Quote, the Amendment summary:** "36 validity cells for this detector are **pooled**, not missing,
+and reach no stage".
+
+"Not missing" is loose in a document where `missing[]` is a scorer field: the cells **are** missing
+from every stage, which is the whole problem. The precise contrast, and the wording that should be
+cited: they are **pooled but never recognised as candidates** — present in `loadEvidence`'s returned
+`cells`, filtered out by `isValidityCell` before `scoreS2` can exclude them, which is why all three
+of `perCell`, `excluded` and `missing` were empty rather than just the first. A1.3 made this same
+distinction for the word "scored"; this append makes it for "missing".

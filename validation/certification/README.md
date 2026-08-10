@@ -45,10 +45,36 @@ written is ever edited or deleted by a later run.
 
 ### Which run is current
 
-**Current: `results/run-20260808T014809Z`.** Run directories are named `run-<UTC basic>`, so
+**Current: `results/run-20260810T064520Z`.** Run directories are named `run-<UTC basic>`, so
 lexicographic order is chronological and the greatest name is the current run — there is no
 pointer file, because a pointer would be the one file in an append-only tree that every run
 rewrote.
+
+**The line above used to name `run-20260808T014809Z`, and by the time this batch touched it that
+was stale by NINE runs**, not by one: `064214Z`, `091718Z`, `122216Z`, `133943Z`, `180653Z`,
+`201836Z`, `20260809T040659Z`, `080049Z` and this batch's own. The staleness is named rather than
+quietly overwritten, because the rule two sentences up — greatest name wins — means this line is
+redundant with the directory listing and therefore drifts silently; that it drifted nine times is
+the argument for reading the listing, not this sentence. Reconstructing which of those nine moved
+what is archaeology outside this batch's scope; each is described in the golden table's own
+chronological notes (`test/golden-verdicts.test.mjs`).
+
+`run-20260810T064520Z` is the **C38.5/C38.4 re-score**, consuming
+`validation/h0-battery/results/live/inc-20260810T064226Z` — the class-instrument arm h0-battery
+`PREREGISTRATION.md` **Amendment A3** registered. **One row moves:**
+`family_C_safe_hotelling` NOT_EXECUTABLE → **REFUSE**, S2 MISSING → REFUTED, with S1 MISSING,
+S3 PASS and S4 UNPRICED unchanged. Its S2 had been empty in all three of `perCell`/`excluded`/
+`missing` — the card's 36 pooled P1 endpoint rows carry none of `isValidityCell`'s five instrument
+fields (Amendment A1.3's second gap), and it was the only h0-battery detector with no
+`increment_estimator` cells from `detector-audit-sequential`. A3 measured that instrument instead
+of widening the vocabulary: seven of twelve nulls refute on the card's own frozen 1.0005 falsifier,
+N1/N7 clear at 0.996229, and three are named-not-scored. S3 grew 1 → 13 power cells because the
+arm's second half emits a per-null 3σ arm, which also keeps this card's `pairing` empty — the
+corpus-wide unpaired count stays 11, all `sequential_ui_e_process`. No other card and no
+`COVERAGE.md` class answer moves. **No card was re-frozen for this run and none needed to be**: no
+card pins any `validation/h0-battery/` file, and `lib/score.mjs`, `verdict.mjs`, `lib/collect.mjs`,
+`lib/constants.mjs`, `lib/guards.mjs` and every detector source are untouched — `cert:expiry`
+prints `all cards current`, which is why the freeze table below gains no row.
 
 `results/run-20260807T215155Z` is **preserved and superseded**. It is the last run scored
 against the pre-fix scorer, which had two verdict-integrity defects the live power study

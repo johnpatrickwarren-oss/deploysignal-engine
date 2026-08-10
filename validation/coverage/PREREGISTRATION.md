@@ -11892,3 +11892,168 @@ from a measured slope. **Naming an `n`-sweep as not-done rather than implying th
 **Nothing else moves.** No endpoint, floor, threshold, seed, grid, falsifier, verdict, cell or class
 row; no run re-run; no committed row edited; `detectors/point-tail-bet-e-value.ts` untouched;
 `harness/run-battery.mjs` untouched.
+
+### Correcting append to the results append of Amendment v2.C47.1, dated 2026-08-09 (appended not edited): an independent review derived the estimand in CLOSED FORM and measured it at ~100x this probe's precision — the registered headline was the WRONG PAIR OF NUMBERS, and this author's own rule defect is why
+
+**Quote-and-correct. The originals stand.** Review verdict: **APPROVED with corrections.** The
+disposition does not move — **outcome (a) still fires, by a wider margin than reported** — and
+K4.1.10's direction claim is now confirmed at a strength this probe could not reach. **What was wrong
+was the number quoted as the reading, and the reason it was wrong is the rule defect this document
+already named as its own concern.**
+
+#### The true value, and it is derivable rather than only measurable
+
+The reviewer derived the estimand in closed form. The self-fit shifts the effective exceedance
+boundary by the sample median's own influence-function scale, `1/(2 n phi(0))`, and a two-tailed
+exceedance responds to a boundary shift at rate `2 phi(T)`, so
+
+```
+excess  =  2*phi(T) / (2*n*phi(0))          T = the exceedance boundary, P(|x| > T) = 27/10001
+        =  1.110875e-6                      at n = 10,000   (T = 3.0000074502774847, so the
+                                            boundary sits essentially at 3 sigma)
+```
+
+**Re-derived independently at this commit and reproduced to seven significant figures**
+(`1.110875e-6`), so it is quoted here as verified arithmetic and not transcribed.
+
+**And measured, by the reviewer, at roughly 100x this probe's precision:**
+
+| | value | se | provenance |
+|---|---|---|---|
+| **pooled-median estimator, 3 PRNGs** | **`1.095594e-6`** | **`4.68e-9`** | independent review |
+| closed form | `1.110875e-6` | — | analytic, verified here |
+| agreement | **`1.39%`** | | |
+| **`z` on the direction** | **`+234`** | | `1.095594e-6 / 4.68e-9` |
+
+**REGISTERED CORRECTION: the reading of the self-fit excess is `≈ 1.0956e-6`, not the
+`[2.58e-6, 4.55e-6]` range this document's results append quoted as the registered headline.**
+
+#### THE CAUSE, named: this document's own broken rule promoted the noisy pair
+
+The results append quoted `[2.58e-6, 4.55e-6]` as the registered reading and `[1.03e-6, 1.36e-6]` as
+a *disclosed post-measurement* sensitivity. **The true value `1.0956e-6` lies inside the
+post-measurement range and OUTSIDE the registered headline.** The `R = 40,000` pair — the one labelled
+as not deciding anything — was right, and the `R = 4,000` pair that carried the label "registered
+reading" was noise.
+
+**That inversion is a direct consequence of the rule defect this document already corrected in the
+same append**, and it is worth stating as a measured cost rather than as a hypothetical: C47.1.2's
+generator-agreement rule compared two independent arm means against ONE arm's standard error, fired at
+`z = 0.92`, and the registered consequence of a firing was *"NEITHER number is quoted as the answer"* —
+which converted a `z = 0.92` non-event into a registered RANGE and left the far more precise pair
+carrying a label that said it decided nothing. **A rule that fires at `z ≈ 0.7` did not merely add
+noise to the record; it promoted the wrong pair of numbers to the headline.** The correction already
+registered — the comparison is `|d| > 2*sqrt(se1^2 + se2^2)` — stands, and this append is the
+measurement of what the defect cost.
+
+**What was NOT wrong, and is worth separating:** the probe's machinery. Its exactly-exchangeable
+out-of-fold arm landed on the closed-form ideal `27/10001` on all four (generator, `R`) combinations
+within `1.1` se, and its `R = 40,000` readings bracket the reviewer's value. **The probe was
+under-replicated and its headline was mislabelled by a bad rule; it was not measuring the wrong
+thing.**
+
+#### The disposition, restated at the corrected number
+
+```
+measured excess                          1.095594e-6
+outcome (a) threshold                    0.004825359960837106
+margin                                   4,404x  inside the threshold
+as a fraction of the ideal exceedance     0.0406%
+as a fraction of the distance to alpha     0.00227%
+```
+
+**Outcome (a), NEGLIGIBLE, fires — by `4,404x` rather than the `~1,000x` implied by the overstated
+headline.** WORKLIST `C47` item (1) stays CLOSED as QUANTIFIED. No restructure is registered, and the
+case for not building one is stronger, not weaker. **The direction claim of K4.1.10 is CONFIRMED at
+`z = +234`**, against the `t ≈ 2.2` to `2.9` this probe could muster.
+
+#### THE `O(1/n)` CONSTANT IS CLOSED — the concern this document named as open is answered
+
+The results append named an `n`-sweep as **not-done** and said the `O(1/n)` rate *"rests on derivation
+and the constant's size, not on a measured slope"*. **The reviewer ran the sweep.** Measured
+`n × excess`:
+
+| `n` | `n × excess` |
+|---|---|
+| `2,500` | `0.0098` |
+| `10,000` | `0.0110` |
+| `40,000` | `0.0113` |
+
+**Flat across a 16-fold range of `n` — so the departure is `1/n` and not some other rate — with
+constant `4.06`** in the `n × (excess / level)` form this document reported at `3.8` to `16.8`, and
+agreeing with the closed form to **`0.7%`–`2%`**. **Registered: the `O(1/n)` rate is now MEASURED, the
+constant is `4.06`, and the not-done item is discharged.** The `16.8` this document reported at
+`R = 4,000` was the same noise that produced the wrong headline.
+
+#### Two corrections to this document's own reporting of its verification
+
+**(1) The mutation-kill counts were double, on all four, and the cause is the test reporter.** The
+code-commit append to v2.C51.1 reports `2 / 6 / 2 / 10` failing C51.1 tests. **Node's spec reporter
+lists each failing test TWICE — once inline and once in its trailing `failing tests:` summary — and
+the count was taken with `grep -c`.** Re-measured at this commit, deduplicated:
+
+| mutation | reported | **true** |
+|---|---|---|
+| `(i + 1) * W` → `i * W` | `2` | **`1`** |
+| Kaplan–Meier quantile → `median()` over the crossed subsample | `6` | **`3`** |
+| the `crossed === (crossingIndex >= 0)` assertion removed | `2` | **`1`** |
+| the `spec.crossingTimes` gate ignored | `10` | **`5`** |
+
+**Every mutation is still killed and the finding is unchanged — but a kill count is a claim about test
+coverage and this one was inflated 2x on every row.** The `(i+1)*W` off-by-one and the threshold
+assertion are each killed by exactly ONE test, which is thinner cover than `2` suggested.
+
+**(2) "15 cards, ONE field moved" was scoped to the comparison key, and was reported as though it
+covered the card.** The re-freeze commit's verification says the `cert:verdict` re-run moved *"ONE
+field — the note text itself"*. **The emitted `.card.json` files embed the WHOLE card object under
+`card`, `engine_pin` and `source_files` included** (verified at this commit against
+`results/run-20260809T080049Z`, where `card.engine_pin.sha` reads `4a48450`). The comparison key was
+`{verdict, tier, stages}` plus the regime object, and it **excluded the pins by construction**, so a
+fresh verdict run also carries **15 inherited `card.engine_pin.sha` moves and one inherited
+`card.source_files[].sha256` move** (`shape_ecdf_accumulator`'s `run-battery.mjs` pin). **Corrected
+statement: no verdict, tier, stage status or class answer moved on any of the 15 cards; the only
+non-pin field to move anywhere was `point_tail_bet_e_value`'s `exchangeability_note`; the inherited
+pin moves are the re-freeze's own, and were outside the key rather than absent from the output.**
+
+#### `family_E_conformal_heldout` — the concern-4 answer, and the self-fit class does NOT apply
+
+The results append named `family_E_conformal_heldout` as unprobed and asked whether the analogous
+asymmetry exists. **The review answers it: no.** The finding as relayed:
+
+> the self-fit class does NOT apply (no location/scale estimated from ranked rows); the shared
+> single-draw realization effect remains the larger exposure on both detectors, already registered
+> unbounded in C47.1.4.
+
+**Disclosed: that is the coordinator's relay, not the reviewer's paragraph verbatim** — the full text
+did not reach this author, and if it exists it should replace this block by a further append rather
+than be reconstructed here.
+
+**Verified from code rather than accepted on relay**, because it is a claim about what a detector does:
+`tools/stamp-heldout-family-e.mjs:73` scores each calibration row as
+`calibrationRows.map((v) => Math.abs(v))` — **an absolute value about a FIXED zero**, with
+`Sigma = [[1]]` frozen by Amendment A2, and `:74-76` sorts those scores. **Nothing is estimated from
+the rows that are then ranked**: there is no median, no MAD, no location and no scale. The asymmetry
+that drives the `point_tail_bet_e_value` gap has no analogue here, and the two constructions are not
+the same case. **`C47` concern 4 is discharged.**
+
+**And the part that is NOT discharged, on BOTH detectors:** the shared single-calibration-draw
+realization effect, which C47.1.4 already registers as unbounded by this work and which the pairing
+cancels by design. It remains the larger exposure on this card's S2 reading — the registered run's
+`-31.3%` exceedance and `-15.5%` `mean_e` departures from the exchangeable ideal are that effect, not
+the self-fit, and no amount of precision on `1.0956e-6` touches it.
+
+#### What this append changes and does not change
+
+**Changes:** the quoted value of the self-fit excess (`≈ 1.0956e-6`, with the closed form
+`1.110875e-6` beside it), the outcome-(a) margin (`4,404x`), the `O(1/n)` rate from derived to
+**measured** with constant `4.06`, the four mutation-kill counts (halved), the scope of the
+"one field moved" verdict-diff claim, and the disposition of concerns 3 and 4 (both discharged).
+**The card's `regime.exchangeability_note` is corrected to `≈ 1.1e-6` in the dedicated re-freeze
+commit that follows this one, one field plus pins, on the C47.1.6(a) disclosure.**
+
+**Does not change:** the registered outcome (still **(a)**), the registered prediction's disposition
+(still **HELD** — `1.0956e-6` is `91x` inside the `1e-4` band), the sign (still positive, now at
+`z = +234`), the C47.1.1 MAD-inertness correction to K4.1.10, the closure of `C47` item (1), and
+`C51`'s status in every respect. **No endpoint, floor, threshold, seed, grid, falsifier, verdict, cell
+or class row moves. No run is re-run and no committed row is edited.
+`detectors/point-tail-bet-e-value.ts` is untouched and no restructure is built.**

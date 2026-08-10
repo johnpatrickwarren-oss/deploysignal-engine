@@ -1,0 +1,49 @@
+{
+  "study": "2026-08-bootstrap-overshoot",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "88616e1f35a46d505722847a10cc776895a197ae",
+  "node": "v25.9.0",
+  "generated_at": "20260810T074653Z",
+  "prereg": [
+    "PREREGISTRATION.md"
+  ],
+  "amendments": [
+    "Amendment A1 — 2026-08-10"
+  ],
+  "base_seed": 20260801,
+  "batch_stride": 40000000,
+  "traj_stride": 7919,
+  "n_per_replicate": 4000,
+  "replicates": 5,
+  "horizons": [
+    300,
+    900,
+    2000
+  ],
+  "alpha": 0.05,
+  "shipped_threshold_ratio": {
+    "family_A_betting_e_process": 24100,
+    "family_C_safe_hotelling": 3.6e+76,
+    "family_D_spectral_e_detector": null
+  },
+  "instruments": [
+    "c_markov = max(1, E[M_T])",
+    "c_ville_emp = alpha * q_{1-alpha}(sup_{t<=T} M_t)"
+  ],
+  "criteria": [
+    "D1 top1_share >= 0.5",
+    "D2 across-replicate log10 E[M] range >= 1",
+    "D3 replicates straddle E[M] = 1",
+    "D4 across-replicate log10 c_ville range >= 1"
+  ],
+  "cells": 24,
+  "argv": [
+    "--mode",
+    "live",
+    "--n",
+    "4000",
+    "--b",
+    "5"
+  ]
+}

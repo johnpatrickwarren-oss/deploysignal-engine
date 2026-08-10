@@ -1,0 +1,13 @@
+{
+  "control": "power_per_cell",
+  "detector": "safe_t",
+  "null_id": "N3-p09",
+  "m": 100,
+  "shift_sigma": 3,
+  "n": 2000,
+  "rate_e_ge_20": 0.896,
+  "power_verdict": "powered",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "3da2ff0904d45f55c5737d09b50740fab20c3c02"
+}

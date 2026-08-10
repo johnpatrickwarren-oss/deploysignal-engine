@@ -168,3 +168,116 @@ suppressed-verdict counts.
 5. **A protocol-page calibration-draw clause** — C51.4 lands entirely in the coverage prereg because
    the protocol names no card note.
 6. **`family_A_betting_e_process` has no `S4` `prior_evidence` entry at all** — a card edit, not done.
+
+---
+
+# Correction append after review, 2026-08-10 (appended not edited)
+
+Review NOT-APPROVED on prose. Measurements sound and reproduced; nothing re-ran. Six corrections, all
+against my own text, each landed as its own scoped commit.
+
+## C1 — the Family D "contradiction" is WITHDRAWN (`e173f86`)
+
+**Neither number was wrong.** The reviewer reimplemented the control four ways and swept the
+calibration size `K`: `E[M_900]` reads `16.6 / 4.71 / 2.27 / 1.25 / 1.18 / 1.17` at
+`K = 25 / 50 / 100 / 200 / 400 / exact`. **This harness is condition A** (`K = 100`, per-trajectory
+calibration) and the sweep's ranges contain my readings at every horizon; **the committed `1.1076` is
+condition D** (exact moments). The excess is `exp(n² r² / 2K)` — quadratic in updates, inverse in `K` —
+so `400 → 100` explains the whole factor of ten. **And
+`knowledge/stats/h0-battery-2026-08-01.md:166` already records this mechanism** in the provenance box
+for the numbers I quoted. I quoted that page's table and not its explanation. **Owed-upward item 4 of
+the original report is withdrawn.**
+
+P-C9's stop condition still fired and no `c` is still reported — a registered stop condition does not
+unfire because its cause is benign. The diagnosis changes: the band should have banded `K`.
+
+**Three real findings replace it, all for the wiki write-back; the code fixes belong to
+`deploysignal`/engine follow-ups, not this branch:**
+
+- **(a) A compiler/runtime statistic mismatch.** `null_mean` / `null_std` are moments of a
+  per-trajectory **MAX** over ~80 windows (`../deploysignal/tools/calibrators/family-d.ts:247`,
+  `peaks[b] = trajectoryMaxPeak`) while `detectors/spectral.ts:367-368` standardizes **one**
+  evaluation. Shipped configs: `null_mean` median **0.5742** against a single-window marginal of
+  **0.276–0.420**, so `E[z] ≈ −0.94` per update and wealth decays **`e^−27`** over 29 updates.
+  **Neither `1.1076` nor `1.70` describes the shipped path.**
+- **(b) `SpectralInflationBound` is not well-formed without `K` beside `T`** —
+  `c(T, K) ≈ exp(skew·n + n² r² / 2K)`. The type documents the horizon rule and not the
+  calibration-size rule.
+- **(c) The shipped constant has no reproducible artifact.** `validation/family-d-emean/` holds
+  `PREREGISTRATION.md` and nothing else, verified at HEAD.
+
+## C2 — two wrong numbers inside the MANDATORY caveat text (`b5dfc08`)
+
+They would have propagated into every future branch-(b) report. `13.0×` → **`14.02×`**
+(`0.151398 / 0.0108`, the across-draw sd against this run's own binomial noise at the across-draw mean
+rate `0.62514`, `N = 2000`); `[0.333, 0.848]` → **`[0.364, 0.872]`** — the quoted band was
+K6A.2.4(a)'s 280-draw **prediction** where the sentence promises a measurement. The block is re-issued
+corrected in full and the original superseded by name.
+
+## C3 — five numbers in the c-bound report (`e173f86`)
+
+`c_ville_emp` estimable on **13 of 18** primary cells, not 10. `c_markov` NOT MEASURABLE on **4 of 6
+routes at every horizon** and **5 of 6 as routes** (betting N3-p09 is MEASURED at `T = 2000`);
+cell-wise 4 of 18 MEASURED. P-C2's replicate max is **`1.1443`**, not 1.146. **"D1 first fires at
+`log10 E[M] = 0.871`" gains its missing qualifier — among cells with `log10 E[M] > 0`** — because
+safe-Hotelling N1 fires D1 at `log10 E[M] = −14.56`. **That weakens §4's hypothesis and the report now
+says so**: degeneracy is not a function of the mean's size, and the surviving statement is only that
+among cells whose mean exceeds 1, the two lowest are the only non-degenerate ones.
+
+## C4 — the MEASURED tokens carry no control-failed marker (`90dfbf9`)
+
+Registered as Amendment A2 to the bootstrap-overshoot pre-registration. The 24 committed cells carry
+`MEASURED` status tokens with no record that the run's control failed, inside a pool `collect.mjs`
+globs with **no cross-run dedup** (`collect.mjs:138-140`). **Any future S4 citation of these cells
+must carry the fired-control state.** A schema marker (`control_state` emitted by every harness, read
+by `collect.mjs`) is named-not-done: `collect.mjs` is a pinned `source_file` on **all fifteen** cards.
+
+## C5 — the re-score summary and the provenance finding (`24844a6`)
+
+**Re-score footprint, corrected.** I reported "two lines differ, both suppressed-verdict counts". In
+fact: `REPORT.md` differs on **two** lines of which **one is the sha header**, so one substantive line;
+and **five card JSONs changed** — `safe_t_e_value` and `universal_inference_e_value` **absorb
+evidence** (882 and 896 changed lines, the new cells), while `family_A_betting_e_process`,
+`family_C_safe_hotelling` and `family_D_spectral_e_detector` differ by **one `generated_from.runs`
+line each**. The claim that held is the one that mattered: **all 15 verdicts, tiers and S1–S4 tokens
+identical.**
+
+**Provenance, corrected.** "Uncommitted working-tree code" is wrong. **The producing code is committed
+at `f02a12b`; the manifest and all 58 cells stamp `4b31a12`, a sha not in HEAD's history** — it exists
+as *"prereg + patch: un-pool the terminal study's power control"* but was rebased away. `f02a12b` is
+pinned three ways: the write site sets `power_this_cell` inside the alpha loop (which `4b31a12`'s
+post-loop assignment cannot), the manifest key set is exactly the run's ten keys with no
+`prereg`/`addenda`, and the cell field set has no `mean_e_sd` / `mean_e_lower_95` — both arriving at
+`fc74a61`. **The sim run is reproducible from committed code; the defect is a wrong stamp, not missing
+provenance.** Owed-upward item 2 of the original report stands; this replaces the harsher reading.
+
+## C6 — minors (`24844a6`, `b5dfc08`)
+
+- **The 827-field rule stated:** the **intersection** of the two cells' key sets over the 61 shared
+  keys, minus `mode` / `git_sha` / `engine_version`. Live-only keys are scored under PR2/PR3; no key
+  present in the sim run is missing from the live run.
+- **`0.0338` → `0.0339`** for the `D = 20` se of the across-draw mean.
+- **Amendment v2.C39.4's caveat is STANDING, not artifact-scoped.** Two of the three prior instances
+  were artifact-scoped, one already standing. The C51 gap survives: C39.4 binds a *field*, not a
+  *registration*.
+- **The card-note premise was wrong in both halves.** `shipped_path.notes` is a populated card field
+  and `STANDING_CAVEATS` (`validation/certification/verdict.mjs:111-114`) is exactly a standing-caveat
+  mechanism carried verbatim into every report. What survives is narrower: neither is a
+  calibration-draw requirement, and `STANDING_CAVEATS` is a hard-coded array in a file pinned by five
+  cards. **Owed-upward item 5 is now specific: a calibration-draw entry in `STANDING_CAVEATS`, costing
+  a five-card re-freeze.**
+
+## Owed upward, after the corrections
+
+1. `WORKLIST` C38 item (2) is **stale, not open**.
+2. `stats/power-per-cell-2026-08-05`'s banner over-claims; and the sim run it rests on stamps a
+   rebased-out sha (producing code `f02a12b`).
+3. The C51 row contradicts itself — items (4)+(5) marked DONE and item (4) then listed as remaining.
+4. ~~A committed-artifact contradiction on Family D's `c`.~~ **WITHDRAWN — C1.** Replaced by the three
+   findings: the compiler/runtime statistic mismatch, `SpectralInflationBound`'s missing `K`, and
+   `family-d-emean` having no artifact behind a shipped constant.
+5. A calibration-draw entry in `STANDING_CAVEATS` (five-card re-freeze), replacing "the protocol names
+   no card note".
+6. `family_A_betting_e_process` has no `S4` `prior_evidence` entry at all.
+7. **New:** a `control_state` cell field read by `collect.mjs`, so a control-failed run cannot be
+   silently pooled (C4).

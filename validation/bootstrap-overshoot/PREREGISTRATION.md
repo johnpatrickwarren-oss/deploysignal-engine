@@ -307,3 +307,49 @@ relaxed. (5) No new substrate: the H0 battery's own generators and adapters, unm
 registered attempt; `results/` is created and appended to, never overwritten. (7) No rerun of any
 study. (8) Binding on this run's report: every cell reports both instruments, all five replicates,
 the `top1_share`, and each of D1–D4 as fired or not — including where nothing fired.
+
+---
+
+## Amendment A2 — 2026-08-10, post-run, registers a citation obligation the committed cells cannot carry themselves
+
+Registered **after** `run-20260810T074653Z` and changing nothing about it: no endpoint, threshold,
+seed, horizon, criterion or reading moves, no cell is edited, and the run is not re-run. It registers
+one obligation on **future readers** of those cells, plus the schema fix it does not make.
+
+### A2.1 The defect, stated exactly
+
+`run-20260810T074653Z`'s cells carry `c_markov_status` and `c_ville_emp_status` tokens with the
+literal value `MEASURED` on 4 and 13 of the 18 primary cells. **They carry no marker that the run's
+control failed.** The control state lives in the run's `REPORT.md` §1 and nowhere in the cell JSON or
+the manifest.
+
+**Why that is a live risk rather than a tidiness point.** `validation/certification/lib/collect.mjs`
+globs every `validation/*/results/live/*/cells/` directory with **no cross-run dedup** (its own
+comment, `collect.mjs:138-140`), and these cells are already in the pooled corpus — 24 of the 2,404
+cells, visible on three cards under `generated_from.runs`. A `MEASURED` token inside a no-dedup pool,
+beside a `c` value, is exactly the shape a future S4 citation would read as a measured c-bound. The
+whole point of Amendment A1's P-C9 is that these readings are **not** citable, and the artifact does
+not say so.
+
+### A2.2 The obligation, registered
+
+> **STANDING RULE (registered, A2.2 — binding on any future citation of this study's cells).** Any
+> citation of a cell from `validation/bootstrap-overshoot/results/` — in a card's
+> `prior_evidence[stage=S4]`, in a report, or on the wiki — **MUST state the fired-control state of
+> the run that produced it.** For `run-20260810T074653Z` that state is: **P-C9 FAILED; no `c` is
+> reported; the `MEASURED` tokens on this run's cells record that D1–D4 did not fire on those cells
+> and record nothing about whether the run's control held.** A citation omitting it is
+> mis-citing the run, and the reader may treat the citation as withdrawn.
+
+### A2.3 Named-not-done
+
+1. **No schema marker.** The right fix is a field — `control_state` or equivalent — emitted on every
+   cell by every harness whose registration has a control, and read by `collect.mjs` so a
+   control-failed run cannot be silently pooled. That is a scorer and cross-study change:
+   `collect.mjs` is a pinned `source_file` on **all fifteen** cards, so touching it expires the
+   portfolio. **It is named here and not attempted**, and until it exists this rule is honoured by
+   the citing author or not at all.
+2. **No cell is edited and no run superseded.** `results/` is append-only.
+3. **The cells are not withdrawn from the corpus.** They decide nothing today — no verdict, stage
+   token or tier moved when they entered (`run-20260810T075659Z` against `run-20260810T064520Z`) —
+   and removing them would be a deletion from an append-only tree.

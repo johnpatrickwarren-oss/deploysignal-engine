@@ -309,10 +309,13 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 //
 // WHAT PRODUCED IT. This card was the one h0-battery detector with no `increment_estimator`
 // measurement in any study, so its S2 had no candidate cells at all -- `perCell`, `excluded` and
-// `missing` were all three empty. Not because its evidence was absent: 36 P1 endpoint rows for it
-// sit in the pool, and `isValidityCell` (lib/score.mjs:11-12) recognises none of the fields a P1 row
-// carries (`fires fire_rate lower_95 verdict mean_logM`). That is Amendment A1.3's second gap, which
-// A1.8 left open by name. It bit this card alone because `detector-audit`'s SEQUENTIAL set
+// `missing` were all three empty. The precise contrast is not "pooled, not missing" -- in a file
+// where `missing[]` is a scorer field that reads as a claim about the wrong thing. Its 36 P1 endpoint
+// rows are POOLED BUT NEVER RECOGNISED AS CANDIDATES: they sit in `loadEvidence`'s returned cells, and
+// `isValidityCell` (lib/score.mjs:11-12) recognises none of the fields a P1 row carries (`fires
+// fire_rate lower_95 verdict mean_logM`), so they are filtered out before `scoreS2` can exclude them
+// -- which is exactly why all three arrays were empty rather than just the first. That is Amendment
+// A1.3's second gap, which A1.8 left open by name. It bit this card alone because `detector-audit`'s SEQUENTIAL set
 // (run-sequential.mjs:31-35) supplies the other three test_martingale h0 detectors and omits
 // safe-Hotelling, following that study's registry-derived scope, from which it is absent because
 // `fleet/e-bh-guarded.ts`'s DETECTOR_ENVELOPES carries no Hotelling variant.
@@ -338,13 +341,29 @@ const certDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 // ADVISORY, so USE was never in its reachable set. A3.7 registers that set as
 // {REFUSE, ADVISORY, NOT_EXECUTABLE} and records it as a correction to the commissioning brief.
 //
-// A3-W also closes the pairing gap this fix would otherwise have OPENED. The card's only prior power
-// cell is the P2 record, which carries no `null_id` (h0-battery/harness/run.mjs:118-133), so
-// `pairingGaps` keyed it `family_C_safe_hotelling::` and it paired no null at all; nine newly-mapped
-// validity cells with no per-null arm would have added twelve unpaired lines. Measured after: this
-// card's `pairing` is `[]`, and the corpus-wide unpaired count is unchanged at 11, still all
-// `sequential_ui_e_process` -- WORKLIST C38 item 4, whose figure of 29 was already stale at 11 before
-// this batch (README's run-20260807T202419Z paragraph records the 29 -> 11 movement).
+// A3-W also closes the pairing gap this fix would otherwise have OPENED, and the size of that gap is
+// TWO, not twelve. The card's only prior power cell is the P2 record, which carries no `null_id`
+// (h0-battery/harness/run.mjs:118-133), so `pairingGaps` keyed it `family_C_safe_hotelling::` and it
+// paired no null at all. But `pairingGaps` generates a gap only for an in-regime CLEARED cell
+// (lib/score.mjs:479 `if (c.out_of_regime || c.mapped !== 'CLEARED') continue;`), and only two of the
+// nine mapped cells CLEARED -- N1 and N7. Measured, by re-scoring the committed corpus with every
+// A3-W cell filtered out: 2 gaps, N1 and N7, with S3 `perCell` falling 13 -> 1.
+//
+// THIS COMMENT SAID "twelve" AND IS CORRECTED IN PLACE, because the wrong number is impossible on the
+// arithmetic of its own two preceding sentences, which name only two CLEARED cells. h0-battery
+// PREREGISTRATION.md's review corrections append (C1) carries the same correction at the two pre-run
+// places that asserted it, where it was already self-contradictory: A3.6 predicted CLEARED at NO
+// null, so on A3's own registered predictions the counterfactual was 0. Arm A3-W is unaffected as a
+// registered arm -- 2 > 0, and its twelve cells are S3 evidence in their own right whose 0.4190-0.9735
+// spread is what exposed the first-fire censoring in A3's results append, correction 3. What is
+// withdrawn is the magnitude of the pairing argument, not the arm.
+//
+// The corpus-wide unpaired count is unchanged at 11, still all `sequential_ui_e_process` -- WORKLIST
+// C38 item 4, whose figure of 29 was already stale at 11 before this batch. README's
+// run-20260807T202419Z paragraph records that 29 -> 11 movement; the 18 it closed were `safe_t`'s 8
+// and `universal_inference`'s 10, from the per-null power arms of
+// 2026-08-terminal-evalue/run-20260807T215034Z and 2026-08-phi-identifiability/run-20260807T215105Z --
+// not one detector's arms alone.
 //
 // No other card's verdict, tier or stage status moves, and no COVERAGE.md class answer moves: the arm
 // emits no `fault_class` field, so `coverageFor` (lib/score.mjs:358-405) cannot see it. Both were

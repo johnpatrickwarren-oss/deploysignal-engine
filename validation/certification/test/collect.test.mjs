@@ -663,7 +663,22 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
   // because the regression this catches is a cell silently VANISHING and a floor cannot see that.
   // `:494`'s `2026-07-h0-battery` census stays at 148: the arm carries a study id of its own
   // precisely so A1.6/A2.4's registered censuses stay literally true.
-  assert.equal(ev.cells.length, 2290, "the pooled corpus is 2266 + Amendment A3's 24-cell arm; no cell is dropped");
+  //
+  // 2290 -> 2404, 2026-08-10, two registered appends and their arithmetic:
+  //   +90  terminal-evalue/results/live/run-20260810T073954Z — the like-for-like live replication at
+  //        N=2000 (POWER-PER-CELL-ADDENDUM-2026-08-10.md): 58 validity + 3 pooled controls + 29
+  //        POWER__ arms. Its 61 shared keys are digit-identical to the sim run it replicates (827
+  //        fields, 0 deviations), so the corpus grows because a live run is a new directory, not
+  //        because a number moved.
+  //   +24  bootstrap-overshoot/results/live/run-20260810T074653Z — the c-bound measurement
+  //        (that study's PREREGISTRATION.md Amendment A1). These cells carry no `exceedance`,
+  //        `mean_e`, `detection_rate`, `rate_e_ge_20` or `fault_class`, so no stage reads them: no
+  //        verdict, stage token or tier moved on any of the 15 cards (run-20260810T075659Z against
+  //        run-20260810T064520Z — two lines differ, both suppressed-verdict counts). They appear only
+  //        under `generated_from.runs`. They are counted here because `loadEvidence` globs every
+  //        validation/*/results/live/*/cells/ directory in the tree.
+  assert.equal(ev.cells.length, 2404,
+    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24); no cell is dropped');
   const drops = ev.runs.filter((r) => r.superseded)
     .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);
   assert.deepEqual(Object.fromEntries(drops), {

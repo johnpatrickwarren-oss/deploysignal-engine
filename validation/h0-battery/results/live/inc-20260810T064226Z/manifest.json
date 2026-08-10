@@ -1,0 +1,47 @@
+{
+ "study": "2026-08-h0-battery-class-instrument-arm",
+ "prereg": "../PREREGISTRATION.md Amendment A3",
+ "arms": {
+  "A3-V": "increment estimator, 12 nulls",
+  "A3-W": "section 5 3-sigma power, per null"
+ },
+ "detectors": [
+  "family_C_safe_hotelling"
+ ],
+ "nulls": [
+  "N1",
+  "N2-m30",
+  "N2-m100",
+  "N2-m500",
+  "N3-p03",
+  "N3-p06",
+  "N3-p09",
+  "N4-p06-m100",
+  "N4-p09-m100",
+  "N5",
+  "N6",
+  "N7"
+ ],
+ "mode": "live",
+ "engine_version": "0.6.6-pre",
+ "git_sha": "bc6a4f70aaafa7d3a510c1abd7c7108351ece347",
+ "registration_sha": "3f556c196b4d47004e4cf755fa47bec1483336f8",
+ "registration_commit": "754787e42bfe8168262b45c035c53a2c6814725f",
+ "detector_source_sha256": "c5cc555982e09fce449f06cc96e5cda57bf017ea6c7f48f2cc4f450ff964185e",
+ "node": "v25.9.0",
+ "seed": 20260809,
+ "n": 2000,
+ "ticks": 300,
+ "alpha": 0.05,
+ "shift_sigma": 3,
+ "onset_tick": 100,
+ "card_falsifier_bound": 1.0005,
+ "house_rule_bound": 1,
+ "supersedes": null,
+ "elapsed_s": 11.943,
+ "argv": [
+  "--mode",
+  "live"
+ ],
+ "generated_at": "20260810T064226Z"
+}

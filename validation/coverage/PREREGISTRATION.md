@@ -12057,3 +12057,77 @@ commit that follows this one, one field plus pins, on the C47.1.6(a) disclosure.
 `C51`'s status in every respect. **No endpoint, floor, threshold, seed, grid, falsifier, verdict, cell
 or class row moves. No run is re-run and no committed row is edited.
 `detectors/point-tail-bet-e-value.ts` is untouched and no restructure is built.**
+
+### Replacement append, dated 2026-08-09 (appended not edited): the batch-A reviewer's `family_E_conformal_heldout` paragraph, VERBATIM — superseding the relayed summary in the correcting append above
+
+The correcting append recorded the `family_E` finding in the coordinator's compressed relay and flagged
+it as **not** the reviewer's verbatim text, with the instruction that the full paragraph should replace
+it by a further append rather than be reconstructed. **The verbatim paragraph has since been supplied
+and is recorded here in full. It SUPERSEDES the relay block, which stands unedited above.**
+
+**Quoted verbatim, attributed to the batch-A reviewer:**
+
+> family_E — the defect class does NOT apply. stampHeldoutFamilyE scores Math.abs(v)
+> (tools/stamp-heldout-family-e.mjs:73) and the evaluator scores mahalanobisDistance(x_t, [[1]]) with
+> the covariance passed fixed by the harness — the same fixed map about the origin for calibration and
+> live rows, with no location or scale estimated from the rows that are then ranked. That absence is
+> the whole mechanism of the K4 excess, so there is no analogous asymmetry: given the calibration
+> draw, live and calibration scores are i.i.d., hence exactly exchangeable. Two adjacent
+> observations, neither the self-fit class: the indicator rule is #{s_cal >= s_t} < alpha*n on the n
+> denominator rather than the (1+rank)/(n+1) conformal form, giving P(indicator)=500/10001=0.049995 —
+> marginally conservative, opposite in sign; and family_E does share the single-calibration-draw
+> realization effect that C47.1.4 explicitly left unbounded, which is the larger exposure on both
+> detectors.
+
+#### Verified from code at this commit, claim by claim — not accepted on the reviewer's authority
+
+A paragraph about what a detector does is checked against the detector, per this document's own rule.
+**All four checkable claims hold, at the lines below.**
+
+| the claim | verified at | reading |
+|---|---|---|
+| calibration scores are `Math.abs(v)` | `tools/stamp-heldout-family-e.mjs:73` | `calibrationRows.map((v) => Math.abs(v))`, sorted at `:74-76` |
+| the evaluator scores `mahalanobisDistance(x_t, [[1]])` | `detectors/conformal.ts` (`evaluateConformalWeightedEValue`) | `const s_t = mahalanobisDistance(x_t, input.covariance);` |
+| **the covariance is passed FIXED by the harness** | `harness/run-battery.mjs:648` | `{ params: ctx.heldout, covariance: [[1]], alpha: ALPHA }` — a literal, not derived from any draw |
+| the map is the same about the origin on both sides | `detectors/_conformal-math.ts:13-20` | `cholesky([[1]]) = [[1]]`, `forwardSolve` is the identity, so `s_t = sqrt(v^2) = |v|`. **No mean vector is subtracted** — the function takes `r` directly and the harness passes `[data.series[t]]`, not a `relativeDeviation` |
+
+**So the reviewer's mechanism claim is exact: nothing is estimated from the rows that are then
+ranked.** Both sides of the comparison pass through one fixed map about a fixed origin. That is the
+whole difference from `point_tail_bet_e_value`, whose `m` IS the sample median of the ranked rows
+(`point-tail-bet-e-value.ts:85-92`), and it is why the K4 excess has no analogue here.
+
+**The indicator arithmetic, verified against the code rather than its docstring** (docstrings drift):
+`findFirstGE(scores, s_t)` (`detectors/_linalg.ts:71-79`) returns the first index with
+`scores[i] >= s_t`; `cumulative_weights_above[k]` is the reverse cumulative weight sum
+(`stamp-heldout-family-e.mjs:81-88`), which at uniform weights `1` is exactly `#{s_cal >= s_t}`; and
+the fire test is `den_raw < input.alpha * total_weight` with `total_weight = n = 10,000` and
+`alpha = 0.05`, i.e. **`#{s_cal >= s_t} < 500`**. Under exchangeability the count is uniform on
+`{0, …, n}` — `10,001` outcomes — and the indicator fires on `500` of them:
+
+```
+P(indicator = 1)  =  500 / 10001  =  0.0499950005     against alpha = 0.05
+conservative by      4.9995e-6                        and OPPOSITE in sign to the K4 excess
+```
+
+**Confirmed to ten digits.** The reviewer's second adjacent observation is therefore not merely a
+different form — it is a departure in the opposite direction from the one this amendment measured, and
+recording it beside the K4 number keeps a reader from generalizing "conformal calibration is
+anti-conservative" across the two candidates. **Note what it is NOT: the `n`-denominator rule's
+`0.049995` is a property of the RULE at `alpha = 0.05` and `n = 10,000`, not a self-fit and not
+`O(1/n)`-vanishing in the K4 sense.**
+
+#### Dispositions
+
+**`C47` concern 4 is CLOSED**, on the verbatim finding rather than on a relay:
+`family_E_conformal_heldout` is not in the self-fit class, and no probe of it is registered or needed.
+
+**What stays open, and the reviewer's own last clause is the record of it:** *"family_E does share the
+single-calibration-draw realization effect that C47.1.4 explicitly left unbounded, which is the larger
+exposure on both detectors."* **Registered as unchanged: C47.1.4's exclusion stands, on BOTH
+detectors, and nothing in this batch bounds it.** The `1.0956e-6` self-fit figure is the smaller of
+the two exposures on the K4 card by a wide margin, and no precision on it touches the other.
+
+**This append changes nothing else.** No endpoint, floor, threshold, seed, grid, falsifier, verdict,
+cell or class row moves; no run is re-run; no committed row is edited; no card field changes and no
+pinned file is touched, so `cert:expiry` is unaffected. The relay block in the correcting append above
+is left standing, superseded and labelled, rather than edited away.

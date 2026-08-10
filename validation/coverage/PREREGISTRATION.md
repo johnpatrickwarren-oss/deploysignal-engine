@@ -11147,3 +11147,267 @@ The verdict of Erratum v1.5 stands and is unweakened: WORKLIST `C43`'s premise i
 coverage cell is out of regime, the coverage layer reads no regime, and `safe_t_e_value` holds
 `USE`/T1 under both readings. F1 sharpens the price of the reading the protocol rejected; it does not
 revive the row's claim. No card regime is narrowed, no endpoint moves, and no run is re-scored.
+
+---
+
+## Amendment v2.C51.1 — 2026-08-09, before the emission exists: the crossing-time field on the shape-accumulator cells, so K6A.1.12's median falsifier becomes evaluable on a FUTURE run
+
+WORKLIST `C51` item (1). Sections §1–14 and every prior Amendment, Erratum and append stay intact.
+This amendment **registers one NEW object-valued field on rows this battery already emits** and moves
+no endpoint, floor, threshold, seed, grid, falsifier, verdict, cell or class row. Registered
+**before** the harness change it authorizes.
+
+**Scope, stated first because it is the whole point of the registration: FUTURE runs only. The
+registered K6-slow run `run-20260809T035934Z` keeps its unevaluated falsifier unevaluated.** No
+rerun is authorized, none is performed, and the one-attempt rule (§0 rule 7, the same rule
+C39 and v2.K6A.6's results append are held to) is why: re-running the registered draw to read a field
+that did not exist at registration time would be a second attempt at an endpoint whose first attempt
+is already on the record. **The median time-to-cross on cell 44 of that run is, and stays,
+UNEVALUATED — not unfalsified, not held, not refuted.**
+
+### C51.1.1 The debt, quoted from the row that could not discharge it
+
+K6A.1.12's endpoint table, row 2, verbatim:
+
+> | cell 44 median time-to-cross | `4,950` ticks | `[3,300, 5,700]`; `23.2%` of draws censored at `> H` | a median `< 3,000` or a censored median with detection `> 0.50` |
+
+And the run that was supposed to read it could not. **The reason is mechanical and is in the adapter,
+not in the module:** `detectors/shape-ecdf-accumulator.ts:451-472` returns
+`{ wealth, log, crossingIndex }` and `crossingIndex` is documented there as *"0-based index of the
+first window whose cumulative log-wealth reaches `LOG_WEALTH_THRESHOLD_K6SLOW`, or -1 if none"*;
+`harness/run-battery.mjs`'s adapter destructures **`const { wealth, log } = ...`** and discards it,
+then re-derives only the boolean `crossed = log.some(l => l >= Math.log(THRESHOLD))`. **No field
+carrying a crossing TIME was ever registered, on any row, for either shape detector.** A prediction
+with a band and a falsifier was registered against a quantity the run had no field to write. That is
+the defect this amendment closes, and it is a registration defect, not a code defect.
+
+### C51.1.2 The registered field: name, units, shape, and the quantile convention in full
+
+**Registered field name: `crossing_time`.** Object-valued, on the model of `increment_estimator`
+(K3.1.1) and `p_uniformity` (K3.1.7) — this battery's established shape for a per-cell DISTRIBUTION,
+`n` first, as against the flat scalars (`final_wealth_mean`, `final_wealth_median`,
+`degenerate_windows`) it sits beside. **A summary distribution on the cell row, NOT per-trajectory
+emission:** every existing aggregate on these rows is a per-cell summary over the cell's `N`
+trajectories and the run directory holds no per-trajectory record for any detector, so a
+per-trajectory array would be the only such field in the study and would grow the row by `N` entries
+to no registered purpose.
+
+```
+crossing_time: {
+  n:                 <int>     trajectories scored for this cell (= the row's own `n`)
+  n_crossed:         <int>     trajectories whose wealth reached 20 at some window checkpoint
+  n_censored:        <int>     n - n_crossed
+  censored_fraction: <float>   n_censored / n
+  median:            <int|null>   the 0.50 quantile, in ticks; null iff censored
+  p25:               <int|null>   the 0.25 quantile, in ticks; null iff censored
+  p75:               <int|null>   the 0.75 quantile, in ticks; null iff censored
+  min:               <int|null>   earliest crossing observed; null iff n_crossed === 0
+  units:             'ticks-post-onset'
+  window_len:        <int>     W, the checkpoint spacing (150 for this class)
+  horizon:           <int>     windows * W, the largest representable crossing time (6,000)
+}
+```
+
+**UNITS, registered exactly: ticks measured from the post-onset start of the scored span, and a
+crossing is only observable at a window checkpoint.** A trajectory whose `crossingIndex` is `i`
+(0-based) is recorded at
+
+```
+crossing_tick = (i + 1) * W
+```
+
+which is the tick at the END of the window that carried the wealth over the threshold — the earliest
+tick at which the accumulator could have announced it, because the wealth advances once per window
+and not once per tick (`ecdfAccumulatorWealth`, and the unit test *"the wealth advances once per
+window, not once per tick"*). For this class `W = 150`, `windows = 40`, span `[300, 6300)`, so
+`crossing_tick` takes values in `{150, 300, ..., 6000}` and **absolute** tick is
+`ONSET_K6SLOW + crossing_tick = 300 + crossing_tick`. **The registered convention is post-onset, not
+absolute**, because that is the convention K6A.1.12's own `4,950`/`[3,300, 5,700]` and K6A.1.5's
+*"`crossingIndex === 1` is the 300-tick crossing"* are already written in, and a field whose units
+disagreed with the prediction it exists to test would be worse than no field.
+
+**THE QUANTILE CONVENTION, registered in full, because censoring makes it a choice and not a
+detail.** A trajectory that never crosses within the 40 windows has no crossing time — it is
+right-censored at `horizon`, not equal to it and not missing. Registered:
+
+```
+the q-quantile is the smallest observed crossing_tick t with #{crossed at or before t} / n >= q,
+and is null iff n_crossed / n < q
+```
+
+This is the Kaplan–Meier/empirical-CDF quantile, it is monotone in `q`, it never invents a value
+beyond the horizon, and **`median === null` is exactly the "censored median" K6A.1.12's falsifier
+names.** Registered with it, the arithmetic identity that makes the falsifier's second clause a
+consistency check rather than an independent event: `median === null` ⟺ `n_crossed/n < 0.50` ⟺
+`detection_rate < 0.50` on the same row. **"A censored median with detection `> 0.50`" is therefore
+arithmetically impossible, and if it is ever emitted it is a harness defect and not a measurement**
+— registered here as such, and registered as a test.
+
+**Deliberately NOT the harness's `median()` helper**, whose even-`n` convention averages the two
+middle order statistics: with one of them censored the average is undefined, and the two conventions
+disagree by up to one window even when neither is censored. The departure is named here rather than
+discovered later, and `final_wealth_median` on the same row keeps `median()` untouched.
+
+### C51.1.3 Where the field lands, and the two places it deliberately does not
+
+**Registered: `crossing_time` is emitted on every row this battery writes for
+`shape_ecdf_accumulator` — the four K6-slow fault cells `43`–`46`, and arm `47`'s S2 healthy row and
+S3 power row.** All six, not only cell 44: the falsifier is cell 44's, but a crossing-time
+distribution read on the canonical cell alone is uninterpretable without the `mix-d1.0` and
+`mix-d2.0` cells beside it (the `1.0000` boundary artifact of K6A.1.8 should show as a crossing time
+near `min`, and cell 43's `0.0220` as `median: null`), and the S2 healthy row's crossing times are
+the false-alarm arrival times of the `0.0181` `crossing_rate` K6A.1.12 already registers.
+
+**NOT on `shape_block_conformal_bet`'s rows, and the reason is the module interface rather than
+parity.** `detectors/shape-block-conformal-bet.ts:321-330` `shapeBetWealth` returns `{ wealth, log }`
+and exposes **no `crossingIndex`**. Deriving one in the harness from `log` is possible in one line and
+is refused: it would put a threshold rule the module owns for the accumulator into harness-local code
+for the sibling, which is the shape of the defect K6A.2.1 item 12 was filed against. **Registered as
+named-not-done: extending `crossing_time` to `shape_block_conformal_bet` requires exporting a
+`crossingIndex` from its module, which is a change to a card-pinned detector source and needs its own
+amendment.** K6's class answer is settled and no K6 prediction names a crossing time, so nothing is
+blocked by leaving it.
+
+**NOT on any other detector's rows.** `crossing_time` presupposes a per-window wealth checkpoint
+trajectory. The terminal, point and process kinds have none.
+
+### C51.1.4 The field carries NO verdict authority — registered, in the K3.1.3/K6.7/C39 wording
+
+**`crossing_time` is a REPORTED descriptive secondary. No verdict, no floor, no stop condition and no
+class answer reads it, on any row.** Every row's `verdict` stays exactly the expression it is today:
+`detection_rate >= COVERAGE_FLOOR` on the fault and S3 rows, `lower_95 > ALPHA` on the S2 row. The
+`K6-slow` class row stays `detection_rate`-derived through `coverageFor`/`verdict.mjs:249`. **This is
+the same discipline C39 registered for the increment estimator and K3.1.3/K6.7 for
+`crossing_rate`-derived verdicts, applied at registration time rather than after a reader has
+inferred authority from an emitted number.**
+
+And its own limitation, disclosed rather than left for a reader: **`crossing_time` is a
+single-calibration-draw reading like every other endpoint on these rows, and the across-draw spread
+is the dominant uncertainty on it — v2.K6A.6 measured `sd ≈ 0.151` on the detection rate itself.
+K6A.1.12's `[3,300, 5,700]` is a per-draw band and must be read as one.** No within-draw interval is
+registered for the quantiles and none may be computed from this field.
+
+### C51.1.5 Which future run makes the falsifier evaluable — and NONE is scheduled
+
+**Registered plainly, so the debt is not recorded as discharged when it is only made dischargeable.**
+`crossing_time` becomes readable on the first registered run of this battery that emits
+`shape_ecdf_accumulator` rows at the registered `N = 2,000` into `results/live/`. That is any of:
+
+| registration that would trigger one | status |
+|---|---|
+| a `--classes K6-slow` (or full-battery) live run of `harness/run-battery.mjs` | **not scheduled** |
+| `C51` item (4), the single-draw-per-cell protocol amendment | **open, unregistered, unscheduled** |
+| a rerun of `run-20260809T035934Z` for a named code defect (§0 rule 7's only rerun door) | **no defect named; this amendment names none** |
+| `harness/run-acrossdraw.mjs` (v2.K6A.6's across-draw study) | **would NOT trigger one** — it writes `results/live/run-acrossdraw-*` through its own emission path and does not emit cell rows |
+
+**NOTHING IS CURRENTLY SCHEDULED.** At the commit that closes this amendment's code items, the
+median falsifier of K6A.1.12 is **evaluable but unevaluated**, and it stays unevaluated until a run
+above is registered and executed. C51 item (1) is discharged as *the field exists*; it is not
+discharged as *the falsifier was tested*.
+
+### C51.1.6 What is NOT changed
+
+1. **No historical row moves and no run is re-run.** `results/` is append-only and this amendment
+   does not touch it. `run-20260809T035934Z`'s cell-44 row carries no crossing time and never will.
+2. **No endpoint, band, falsifier or prediction of K6A.1.12 moves** — including the `4,950`,
+   the `[3,300, 5,700]`, the `23.2%` and the falsifier's own text. They are read by a future run, at
+   the values registered on 2026-08-08.
+3. **No verdict, floor, threshold, seed, grid, cell or class row moves** (C51.1.4).
+4. **`shape_block_conformal_bet` gains nothing** (C51.1.3).
+5. **The module `detectors/shape-ecdf-accumulator.ts` is NOT touched.** `crossingIndex` already
+   exists, is already unit-tested (`test/shape-ecdf-accumulator.test.ts:228-259`), and the fix is
+   entirely in the adapter that was throwing it away. **No card-pinned detector source changes.**
+6. **C51 items (2) and (3) are DONE** (v2.K6A.6, v2.K6A.7); **item (4) stays open** and is untouched
+   here.
+
+### C51.1.7 DISCLOSURES
+
+**(a) The card expiry re-fires with the code commit, and the LAST commit on this branch closes it.**
+`cards/shape_ecdf_accumulator.json` pins `validation/coverage/harness/run-battery.mjs` (C38.1.7), so
+the adapter change moves that pin's sha256 and `cert:expiry` reports `EXPIRED` at that commit.
+**Sequenced deliberately, C47.2.5(b)'s pattern: the dedicated card re-freeze is the LAST commit on
+this branch, so `cert:expiry` is current at branch HEAD and the re-freeze rides in no other change.**
+
+**(b) A paired smoke is required before the code commit lands**, and its result is stated at that
+commit: `--n 20`, all seven classes, same seeds, `COVERAGE_RESULTS_DIR` redirected, before and after.
+**Registered acceptance: `103` rows compared (the count corrected by the 2026-08-09 append to
+C38.1.7), `0` pre-existing fields changed on any row, `1` new field (`crossing_time`) on exactly `6`
+rows.** A pre-existing field changing anywhere is a defect and blocks the commit — the adapter's
+return object gains a member and `record()` gains a counter, both on the path every shape row takes,
+so bit-identity of the existing fields is the thing that has to be proved rather than assumed.
+
+**(c) The adapter's `crossed` boolean and the module's `crossingIndex` are checked to agree, and
+they are not the same expression.** `crossed` is the harness's own
+`log.some(l => l >= Math.log(THRESHOLD))` at `THRESHOLD = 1/ALPHA = 20`
+(`run-battery.mjs:82`); `crossingIndex >= 0` is the module's
+`logM >= LOG_WEALTH_THRESHOLD_K6SLOW` at `ALPHA_K6SLOW = 0.05`
+(`shape-ecdf-accumulator.ts:124-128`). The two literals agree today at `0.05` and the two rules are
+therefore the same rule computed twice in two files. **Registered as an assertion in the adapter:
+`crossed === (crossingIndex >= 0)`, throwing on disagreement** — so a future divergence of the two
+alphas surfaces as an adapter failure on the run that introduces it, instead of as a
+`crossing_time` silently inconsistent with the `detection_rate` on the same row. This is a NEW guard
+and the reason it is registered rather than added quietly.
+
+**(d) `n_crossed` and the row's `fires` are the same count by construction, and that is stated so a
+reader can check the row against itself.** `fires` accumulates `out.crossed`; `n_crossed`
+accumulates `out.crossingIndex >= 0`; by (c) they are equal on every row, so
+`crossing_time.n_crossed === c.fires` and `crossing_time.censored_fraction === 1 - detection_rate`
+whenever `detection_rate` is non-null. Registered as a test over every emitted row. **Redundancy is
+the point:** it is what lets a reader of the run directory falsify the crossing-time distribution
+against a field that already carried a verdict.
+
+### C51.1.8 Registered code and test items
+
+| # | item | site |
+|---|---|---|
+| 1 | the accumulator adapter stops discarding `crossingIndex` and returns it beside `crossed` | `harness/run-battery.mjs` (the `shape_ecdf_accumulator` adapter) |
+| 2 | the adapter asserts `crossed === (crossingIndex >= 0)` and throws on disagreement (C51.1.7c) | same |
+| 3 | `record()` accumulates crossing indices for `kind: 'shapeblock'` reads that supply one, into a per-detector array beside `shapeEAvgMeans` — never pooled with the sibling's | `harness/run-battery.mjs` `freshAcc`/`record` |
+| 4 | `crossingTimeSummary()` — the C51.1.2 field, quantiles by the registered censored convention | `harness/run-battery.mjs` |
+| 5 | the field is emitted on the four K6-slow fault cells and on arm 47's S2 and S3 rows, and on no other row | `harness/run-battery.mjs` |
+| 6 | test: all six `shape_ecdf_accumulator` rows carry `crossing_time`; **no `shape_block_conformal_bet` row does, and no other detector's row does** | `test/run-battery.test.mjs` |
+| 7 | test: `crossing_time.n_crossed === fires` and `censored_fraction === 1 - detection_rate` on every row that carries the field (C51.1.7d) | `test/run-battery.test.mjs` |
+| 8 | test: the quantile convention — `p25 <= median <= p75` where all three are non-null; a null quantile implies `n_crossed/n <` its `q`; every non-null quantile is a positive multiple of `window_len` and `<= horizon` | `test/run-battery.test.mjs` |
+| 9 | test: **`median === null` implies `detection_rate < 0.50`** — K6A.1.12's second falsifier clause as an arithmetic invariant (C51.1.2) | `test/run-battery.test.mjs` |
+| 10 | **MUTATION KILL**, registered as the one test that must fail under an off-by-one: recomputing `crossing_time.median` from the module directly at a fixture, and asserting the harness's tick arithmetic is `(i+1)*W` and not `i*W` | `test/run-battery.test.mjs` |
+
+### C51.1.9 House rules, mapped
+
+(1) **Committed before the code**, in its own commit, prereg text alone. (2) A failed endpoint is a
+publishable result — and the endpoint this amendment serves is on the record as UNEVALUATED, which is
+published here rather than quietly converted into a future PASS (C51.1.5). (3) **No post-hoc
+analysis:** this amendment reads no cell and no endpoint of any committed run, and it does not
+re-read `run-20260809T035934Z`. (4) §9's fallback and A3c untouched — a cell with no finite read
+emits `detection_rate: null` and `crossing_time` is emitted with `n_crossed: 0` and every quantile
+`null`, which is a statement that nothing crossed and not a statement that nothing was measured;
+`not_executable_reason` remains the field that says the latter. (5) No new substrate, seed, draw or
+row count — the field is computed from wealth paths the run already produces. (6) `results/`
+untouched; **no run written, no committed row edited.** (7) **No rerun, and none is authorized** —
+this is the one-attempt rule doing exactly what it is for (C51.1.5). (8) Binding on the next run that
+emits these rows: its report states the crossing-time distribution on all six rows and reads
+K6A.1.12's median falsifier against the `4,950`/`[3,300, 5,700]` band registered on 2026-08-08.
+
+### Amendment summary
+
+**Closes WORKLIST `C51` item (1) as a REGISTRATION, and says plainly what that does and does not
+buy.** K6A.1.12 registered a prediction (`4,950` ticks), a per-draw band (`[3,300, 5,700]`), a
+censoring rate (`23.2%`) and a falsifier (*"a median `< 3,000` or a censored median with detection
+`> 0.50`"*) **against a quantity no emitted field carried** — the module returns `crossingIndex` and
+the adapter destructured `{ wealth, log }` and threw it away. Registered here: **`crossing_time`**, an
+object-valued per-cell summary on the model of `increment_estimator`/`p_uniformity`, in **ticks from
+the post-onset start** at `crossing_tick = (crossingIndex + 1) * W`, with the **Kaplan–Meier quantile
+convention stated in full** so that `median === null` IS the falsifier's "censored median", and with
+the arithmetic identity that makes the falsifier's second clause a **consistency check**: a censored
+median with detection `> 0.50` is impossible, and if emitted is a harness defect. Emitted on all six
+`shape_ecdf_accumulator` rows; **not** on `shape_block_conformal_bet`, because its module exposes no
+`crossingIndex` and re-deriving one in the harness is the K6A.2.1-item-12 defect shape — named
+not-done. **It carries no verdict authority** (C39/K3.1.3's wording) and its across-draw caveat
+travels with it. **Scope is FUTURE runs and the registered run's falsifier stays UNEVALUATED:** no
+rerun is authorized, the one-attempt rule is why, and `run-20260809T035934Z`'s cell-44 median is not
+unfalsified but unread. **No run that would read it is currently scheduled** — the four routes that
+could are tabled with their status, and three of the four are unregistered or would not trigger one.
+Disclosed: this re-expires `shape_ecdf_accumulator` and the **dedicated re-freeze is the last commit
+on this branch**; a paired smoke at `--n 20` must show **103 rows, 0 pre-existing fields changed, 1
+new field on exactly 6 rows** before the code lands; and a **new adapter assertion**
+`crossed === (crossingIndex >= 0)` pins two threshold literals in two files to each other so a future
+divergence throws instead of emitting a crossing time inconsistent with its own detection rate.

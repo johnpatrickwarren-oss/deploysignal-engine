@@ -9,3 +9,10 @@
 #   median falsifier stays UNEVALUATED (one-attempt rule) and no run that would read it is scheduled.
 # suites at HEAD: test 351/0, test:cert 181/0, coverage-battery 151 (150 pass/1 skip/0 fail),
 #   validate-cards 15 OK, cert:expiry all cards current.
+# review corrections landed 2026-08-09: ab918b2 (prereg correcting append) + 6128ef0 (card re-freeze).
+#   APPROVED with corrections. True excess ~1.0956e-6 (closed form 1.110875e-6, 1.39% agreement);
+#   my registered headline [2.58e-6,4.55e-6] did NOT contain it, my post-measurement range did —
+#   cause was my own C47.1.2 rule defect promoting the R=4,000 pair. Outcome (a) margin 4,404x;
+#   direction z=+234. Concerns 3 (O(1/n) constant 4.06, measured) and 4 (family_E not in the
+#   self-fit class, verified at stamp-heldout-family-e.mjs:73) both CLOSED. Mutation counts
+#   corrected 2x -> 1/3/1/5. Concern 1 (falsifier evaluable-but-unread) still open by design.

@@ -189,3 +189,49 @@ certification run was not in scope for this batch, and it was executed as a veri
 4. **`family_E_conformal_heldout` may carry the same self-fit and was not examined.** It is the other
    held-out K4 candidate on the same runs. Whether its bounded-increment construction has the
    analogous asymmetry is an open question this batch did not open.
+
+---
+
+## Review-correction append, 2026-08-09 — APPROVED with corrections, landed in `ab918b2` + `6128ef0`
+
+**The disposition did not move; the number quoted as the reading did.** An independent review derived
+the estimand in closed form and measured it at ~100x this probe's precision.
+
+**The corrected reading: `≈ 1.0956e-6`** (pooled-median estimator `1.095594e-6 ± 4.68e-9` across 3
+PRNGs; closed form `2*phi(T)/(2*n*phi(0)) = 1.110875e-6` at `T = 3.0000074`, agreement `1.39%`).
+Re-derived independently at this commit and reproduced to seven significant figures.
+
+**My registered headline `[2.58e-6, 4.55e-6]` does NOT contain the true value; my
+disclosed-post-measurement range `[1.03e-6, 1.36e-6]` does.** The cause is the rule defect I filed as
+my own concern 2: C47.1.2's generator-agreement rule compared two independent arm means against ONE
+arm's se, fired at `z = 0.92`, and its registered consequence promoted the under-replicated `R = 4,000`
+pair to the headline while labelling the precise `R = 40,000` pair as deciding nothing. **The defect
+did not merely add noise to the record — it promoted the wrong pair of numbers.** Now measured rather
+than hypothetical.
+
+**Outcome (a) margin restated: `4,404x` inside the threshold.** Prediction still HELD (`91x` inside
+the `1e-4` band). Direction **confirmed at `z = +234`**, against the `t ≈ 2.2`–`2.9` this probe reached.
+
+**My concern 3 is CLOSED.** The reviewer ran the `n`-sweep: `n × excess` is `0.0098` / `0.0110` /
+`0.0113` at `n = 2,500` / `10,000` / `40,000` — flat across a 16-fold range — constant `4.06`, agreeing
+with the closed form to `0.7%`–`2%`. **The `O(1/n)` rate is measured, not derived.**
+
+**My concern 4 is CLOSED.** `family_E_conformal_heldout` is not in the self-fit class. Verified from
+code rather than accepted on relay: `tools/stamp-heldout-family-e.mjs:73` scores rows as
+`Math.abs(v)` — an absolute value about a FIXED zero, `Sigma = [[1]]` frozen by A2 — so nothing is
+estimated from the rows then ranked. The relayed wording is recorded as the coordinator's relay, and
+flagged as NOT the reviewer's verbatim paragraph, which did not reach me.
+
+**Two corrections to my own verification reporting:**
+- **Mutation-kill counts were 2x inflated on all four rows.** Node's spec reporter lists each failure
+  twice and I counted with `grep -c`. Re-measured deduplicated: **`1 / 3 / 1 / 5`**, not `2 / 6 / 2 / 10`.
+  The `(i+1)*W` off-by-one and the threshold assertion are each killed by exactly **one** test — thinner
+  cover than I reported.
+- **"15 cards, ONE field moved" was scoped to my comparison key**, which excluded pins by construction.
+  The emitted `.card.json` embeds the whole card, so a fresh verdict run also carries 15 inherited
+  `card.engine_pin.sha` moves and one inherited `card.source_files[].sha256` move. **Corrected: no
+  verdict, tier, stage status or class answer moved on any of the 15 cards, and the only non-pin field
+  to move was the note.**
+
+**Still open on both detectors:** the shared single-calibration-draw realization effect, registered
+unbounded at C47.1.4. No precision on `1.1e-6` touches it.

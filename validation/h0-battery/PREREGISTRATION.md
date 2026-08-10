@@ -1229,3 +1229,146 @@ replaces:**
 The run manifest records `git_sha` (HEAD at run time), `registration_sha: 3f556c1` (A3's base) and
 `registration_commit: 754787e`, so the lineage is readable from the artifact. Stop conditions
 A3.5(2)–(5) are unchanged.
+
+### Results append to A3, 2026-08-09 — what the one registered run measured, and three corrections it forces on A3.6
+
+Written after the run, against `results/live/inc-20260810T064226Z` (`git_sha` `bc6a4f7`, seed
+20260809, N = 2000, T = 300, α = 0.05, 24 cells). **All five A3.5 stop conditions cleared**,
+including A3.5(4): N1's and N7's increment means are bit-identical, gap **0**. One attempt, no
+rerun, and the numbers below stand as measured.
+
+**Arm A3-V, in the registered table's order.** `verdict` is on the card's frozen 1.0005 falsifier
+(A3.4); `house_rule_verdict` agreed with it on every one of the 12 cells, so A3.4's contested pair
+did not separate on this data and stays contested on the argument, not on a number.
+
+| null | mean | one-sided [lower, upper] | verdict | in A3.6's band? | token predicted? |
+|---|---|---|---|---|---|
+| N1 | 0.996229 | [0.993155, 0.999304] | CLEARED | yes | no (predicted inconclusive) |
+| N7 | 0.996229 | [0.993155, 0.999304] | CLEARED | yes | no (predicted inconclusive) |
+| N2-m500 | 1.009998 | [1.005816, 1.014181] | REFUTED | yes | no (predicted inconclusive) |
+| N2-m100 | 1.088833 | [1.042489, 1.135178] | REFUTED | yes | **yes** |
+| N2-m30 | 1.380324 | [1.218159, 1.542489] | REFUTED | yes | **yes** |
+| N3-p03 | 1.042966 | [1.035568, 1.050364] | REFUTED | yes | no (predicted inconclusive) |
+| N3-p06 | 1.223540 | [1.194093, 1.252988] | REFUTED | yes | no (predicted inconclusive) |
+| N3-p09 | 1.602687 | [1.521725, 1.683648] | REFUTED | **no** (band [0.90, 1.30]) | no |
+| N4-p06-m100 | 1.776661 | [1.642059, 1.911262] | REFUTED | yes | **yes** |
+| N4-p09-m100 | 2.233611e+5 | [−1.384e+5, 5.851e+5] | inconclusive | yes | no (predicted REFUTED) |
+| N5 | 1.062039e+143 | [−6.850e+142, 2.809e+143] | inconclusive | **no** (band [1.00, 1e9]) | no |
+| N6 | non-finite | — | NON_FINITE exclusion | — | **yes** |
+
+**Arm A3-W, detection rate at 3σ:** N1 0.9725, N2-m30 0.7940, N2-m100 0.9035, N2-m500 0.9735,
+N3-p03 0.9515, N3-p06 0.8655, N3-p09 0.6545, N4-p06-m100 0.7280, N4-p09-m100 0.4190, N5 0.6625,
+N6 0.7400, N7 0.9725. **A3.6's band [0.90, 1.00] holds at 3 of 12 nulls and fails at 9.**
+
+**Scored outcome, from the real scorer (`run-20260810T064520Z`).** S2 **MISSING → REFUTED** on seven
+in-regime refutations; N1/N7 CLEARED; N4-p09-m100 and N5 in `missing[]` as unmapped `inconclusive`;
+N6 excluded NON_FINITE; suppressed tally `inconclusive x3`. Overall **NOT_EXECUTABLE → REFUSE**,
+tier null. S3 **PASS**, `perCell` 1 → 13. This card's `pairing` is **[]**. **A3.7's registered
+outcome — REFUTED → REFUSE — is what happened**, and every corpus-level prediction held: no other
+card's verdict, tier or stage status moved, no `COVERAGE.md` class answer moved, the corpus-wide
+unpaired count is unchanged at **11** (all `sequential_ui_e_process`), and the pooled corpus is
+**2290**, i.e. 2266 + 24, with `2026-07-h0-battery` still at 148.
+
+#### Correction 1 to A3.6 — the AR(1) estimand is `1/√(1−φ²)`, not 1, and the reason is a covariance the harness withholds
+
+**Quote, A3.6:** "**The estimand is exactly 1 at every null whose marginal is N(0, I₂).** … Therefore
+**N1, N7, N3-p03, N3-p06 and N3-p09 all have estimand exactly 1**".
+
+**Wrong for N3, and the error is in the words "N(0, I₂)".** `family_C_safe_hotelling` is a **vector**
+detector (`detectors.mjs:117` `vector: 2`) and the harness fills its two coordinates from
+**consecutive draws of one scalar stream** (`run.mjs:35`
+`Array.from({length: det.vector}, src)`). Under an AR(1) null those two draws are correlated at φ,
+so `x_t ~ N(0, [[1, φ], [φ, 1]])` — while the adapter configures the detector with `Σ = σ²I₂`
+(`detectors.mjs:121-122`). For a Gaussian quadratic form,
+`E[exp(½xᵀAx)] = det(I − ΣA)^{−1/2}` with `A = ½I`, so
+
+```
+E[exp(z_t)] = ½ · det(I − ½Σ)^{−1/2} = ½ · ((1−φ²)/4)^{−1/2} = 1/√(1−φ²)
+```
+
+which is 1 at φ = 0 and **1.0483 / 1.2500 / 2.2942** at φ = 0.3 / 0.6 / 0.9. The measured
+1.0430 / 1.2235 / 1.6027 track it (correction 2 explains the shortfall). **So the N3 refutations
+are real, and they are a Σ-misspecification finding rather than an AR(1)-pre-whitening one**: this
+detector has no φ input at all (A3.1(3)), but it does have a covariance input, and at N3/N4 the
+harness does not supply the oracle covariance the null actually has.
+
+**That makes A3's own N3/N4 cells not oracle-parameter cells, by this study's own standard, and it
+is recorded rather than fixed.** §3's N3 is "AR(1) … **oracle parameters**", and the defect that
+superseded `run-20260801T062824Z` and `run-20260801T064237Z` was stated as measuring "detectors
+unaware of phi, not the registered oracle-parameter cell". Withholding the oracle *covariance* from
+a vector detector is the same class of defect on a different input, and it affects **every**
+`family_C_safe_hotelling` N3/N4 row in this study, this arm's and the four committed P1 runs' alike.
+Registered consequences, in order:
+
+- **The cells stand as scored.** They are in regime under the card's machine-readable regime
+  (A3.1(2)), the run is not re-run, and nothing is retro-superseded on the strength of a finding
+  made after seeing the numbers.
+- **The verdict does not depend on them.** Dropping all five N3/N4 cells leaves N2-m30, N2-m100 and
+  N2-m500 REFUTED — nulls that are iid, where the induced cross-coordinate correlation is exactly 0
+  and the only error is `σ̂` — so S2 is REFUTED and the card is REFUSE on the estimated-moments
+  nulls alone. **Stated because a reader must be able to see that the correction does not rescue the
+  detector.**
+- **A vector-aware oracle covariance for N3/N4 is owed, and it is not this arm's to register**: it
+  changes what §3's N3 means for every vector detector, which is §3's business.
+
+#### Correction 2 to A3.6 — the instrument under-reads its own estimand, and cannot refute a catastrophic failure at all
+
+A3.6 registered that the increment's tail index is exactly 2, that the interval is therefore too
+narrow, and that the risk was a **spurious REFUTED**. Both halves of that need correcting.
+
+**The point estimate is biased low at feasible N, not just noisy.** The sample mean of an index-2
+variable is unbiased in expectation but its distribution is right-skewed with a median below the
+mean, so a single realisation typically under-reads. Measured three ways at once, all consistent:
+N1 reads **0.996229** with an upper bound of 0.999304 against a **derived exact 1** — the derived
+value sits *outside* the interval on the high side; the N3 cells read 0.5% / 2.1% / 30% below
+`1/√(1−φ²)`; and an independent 4,000,000-draw Monte Carlo of the estimand alone under-reads the
+closed form by 0.3% / 1.7% / 15.7% at the same three φ. **So the true anti-conservatism of this
+detector is worse than this arm measured, everywhere.**
+
+**The registered risk was the wrong sign.** A3.6 warned that a REFUTED at N1/N7/N3 would be an
+instrument artefact. What actually happened is the mirror image: **N1 and N7 CLEARED, on an interval
+whose upper bound excludes the estimand the same derivation gives**. That CLEARED is the reading in
+this arm not to trust, and it is the reading that keeps S2 at REFUTED rather than at REFUTED-with-no-
+cleared-cells. The asymmetry A3.6 asserted — that the artefact risk runs toward false refutation —
+is corrected: at an exactly-calibrated null this instrument's normal-approximation interval fails on
+the **low** side, so it manufactures clearances, not refusals.
+
+**And the three worst cells refute nothing.** N4-p09-m100 (2.23e5), N5 (1.06e143) and N6
+(non-finite) are the arm's three most extreme anti-conservatisms and all three are unscored: the
+one-sided lower bound goes **negative** once the sample sd outgrows the mean, so `inconclusive` is
+what a catastrophic failure produces. **Registered as a structural limit of the registered
+instrument, not of this detector**: `mean − 1.645·sd/√n` cannot refute a mean it cannot bound, so
+the increment estimator refutes only *mildly* invalid detectors and goes quiet on the badly invalid
+ones. That is the opposite of the property a validity instrument should have, it applies to every
+`increment_estimator` cell in the corpus, and closing it needs a heavy-tail-appropriate bound
+(median-of-means, or a bound on `log` increments), registered where the instrument is —
+detector-audit §3, not here.
+
+#### Correction 3 to A3.6 — A3-W's band was wrong because first-fire censoring removes pre-onset firers
+
+A3.6 derived `z_t ≈ +4.3` per tick under a 3σ step against a bar of 3.0 and registered
+`detection_rate ∈ [0.90, 1.00]` at every null. The arithmetic is right and the band is wrong at 9 of
+12 nulls, lowest **0.4190** at N4-p09-m100. **The cause is not power**: §5's construction counts a
+trajectory as detected only if its **first** fire lands in ticks 100–300 (`run.mjs:118-125`, which
+this arm reproduces), and at the nulls where the detector already fires *under H₀* — crossing rate
+0.652 at N4-p09-m100, 0.380 at N3-p09, 0.376 at N5 — a large share of trajectories have already
+fired before onset and are therefore counted as **not** detected. Measured, the two series are
+near-complementary: `detection_rate ≈ 1 − crossing_rate` across the 12 nulls.
+
+**So arm A3-W measures §5's construction faithfully and §5's construction conflates "did not
+respond to the shift" with "was already firing at the null".** Registered as a finding about the P2
+endpoint, which the certification protocol reads as power: the one cell below §5's own 0.50 bar
+carries `verdict: 'FAIL'`, and that token means "already invalid" here, not "inert". No stage status
+turns on it — every rate clears `INERTNESS_FLOOR` 0.10, S3 is PASS — and this arm does not
+re-register §5.
+
+#### What this run does not establish
+
+Restated because A3's headline is a REFUSE. **This is a refutation battery** (§2): seven refuted
+nulls are seven refutations, and the two cleared cells are "not refuted at these nulls" with
+correction 2's caveat on top — not evidence the construction is sound at N1/N7. The increment
+estimator bounds the **marginal**; the card's guarantee sentence is **conditional**
+(`E[e_t|F_{t-1}] ≤ 1`), which the marginal does not imply. Nothing here is real telemetry, and
+ADR 0012's `E[e|H₀] = 24/9/9` still attaches. And S4 stays **UNPRICED**: this card's c-bound is
+still unmeasured (`C38` item 6), so its shipped bootstrap threshold remains unpriced whatever S2
+says.

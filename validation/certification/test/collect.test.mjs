@@ -654,7 +654,16 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
   // committed SUPERSESSIONS.json and every committed manifest still validate. loadEvidence throws
   // if any named detector is unmatched, so reaching the census at all is the assertion.
   const ev = loadEvidence(join(HERE, '..', '..'));
-  assert.equal(ev.cells.length, 2266, 'the pooled corpus is unchanged by A2 — no cell is added or dropped');
+  // 2266 -> 2290, registered in advance at h0-battery PREREGISTRATION.md Amendment A3 (A3.7's last
+  // paragraph) with its arithmetic: that amendment's class-instrument arm appends 24 cells (12
+  // validity + 12 power) in one `inc-` directory. A2's own claim — that A2 added and dropped nothing
+  // — is what this line was written to guard, and it still holds; the count moved because `results/`
+  // is append-only and a later registered run appended to it, the same reason
+  // golden-verdicts.test.mjs's FIX 3 turned two counts into floors. Kept EXACT rather than floored,
+  // because the regression this catches is a cell silently VANISHING and a floor cannot see that.
+  // `:494`'s `2026-07-h0-battery` census stays at 148: the arm carries a study id of its own
+  // precisely so A1.6/A2.4's registered censuses stay literally true.
+  assert.equal(ev.cells.length, 2290, "the pooled corpus is 2266 + Amendment A3's 24-cell arm; no cell is dropped");
   const drops = ev.runs.filter((r) => r.superseded)
     .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);
   assert.deepEqual(Object.fromEntries(drops), {

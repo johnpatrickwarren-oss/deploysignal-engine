@@ -81,32 +81,45 @@ const gitSha = execSync('git rev-parse HEAD', { cwd: ENGINE_ROOT }).toString().t
  *  trajectory runs. A stop condition that fires is reported in the words the amendment
  *  registered and NO run directory is written.
  *
- *  Check 1 is §8.1's version pin. Check 2 hashes the detector source against the sha256 the
- *  frozen card pins, which binds the arm to the exact source the claim is about — stronger than
- *  the HEAD comparison it replaces, and satisfiable, which that comparison was not. Check 3
- *  refuses a tree predating A3's own registration, or one with the detector or either harness
- *  module modified in the working tree. */
+ *  LABELS ARE UNIQUE PER CHECK, which they were not: A3.5(2) named both the sha256 check and the
+ *  mode check, and A3.5(3) named the ancestor check, the clean-tree check and the directory-reuse
+ *  check. Renumbered in the review corrections append, C2:
+ *    (1a) §8.1's engine-version pin.
+ *    (1b) the detector source hashes to the sha256 the frozen card pins — this binds the arm to
+ *         the exact source the claim is about, stronger than the HEAD comparison it replaces and
+ *         satisfiable, which that comparison was not.
+ *    (1c) A3's registration commit is an ancestor of HEAD, so the arm cannot run against a tree
+ *         predating its own registration.
+ *    (1d) no guarded source is modified in the working tree.
+ *    (2) mode. `--mode live` is required for a SCORED run; `--mode sim` is permitted for
+ *        mechanics and writes only under the git-ignored results/sim/ (§10). A3.5(2) as first
+ *        registered forbade anything but live; the sim allowance is the disclosed deviation C2
+ *        registers, together with the smoke invocation that used it.
+ *    (3) the target run directory does not already exist (below, at the write site).
+ *    (4) the N1/N7 identity check (below, after both arms).
+ *    (5) increment_estimator.n >= 1900 (below, per cell). */
 function assertExecutable() {
   const stops = [];
   if (engineVersion !== PIN_VERSION) {
-    stops.push(`A3.5(1): engine version is ${engineVersion}, not ${PIN_VERSION}`);
+    stops.push(`A3.5(1a): engine version is ${engineVersion}, not ${PIN_VERSION}`);
   }
   const got = createHash('sha256')
     .update(fs.readFileSync(path.join(ENGINE_ROOT, DETECTOR_SOURCE))).digest('hex');
   if (got !== DETECTOR_SHA256) {
-    stops.push(`A3.5(2): ${DETECTOR_SOURCE} hashes to ${got}, not the card's pinned `
+    stops.push(`A3.5(1b): ${DETECTOR_SOURCE} hashes to ${got}, not the card's pinned `
       + `${DETECTOR_SHA256} — the arm would measure a detector the frozen claim is not about`);
   }
   try {
     execSync(`git merge-base --is-ancestor ${REGISTRATION_COMMIT} HEAD`, { cwd: ENGINE_ROOT, stdio: 'ignore' });
   } catch {
-    stops.push(`A3.5(3): A3's registration commit ${REGISTRATION_COMMIT.slice(0, 7)} is not an `
+    stops.push(`A3.5(1c): A3's registration commit ${REGISTRATION_COMMIT.slice(0, 7)} is not an `
       + `ancestor of HEAD ${gitSha.slice(0, 7)}`);
   }
   const dirty = execSync(`git status --porcelain -- ${GUARDED_SOURCES.join(' ')}`,
     { cwd: ENGINE_ROOT }).toString().trim();
-  if (dirty) stops.push(`A3.5(3): guarded source modified in the working tree:\n${dirty}`);
+  if (dirty) stops.push(`A3.5(1d): guarded source modified in the working tree:\n${dirty}`);
   if (MODE !== 'live' && MODE !== 'sim') stops.push(`A3.5(2): --mode must be live or sim, got ${MODE}`);
+  // (2) permits sim by the disclosed deviation above; only `live` writes a scored run.
   if (stops.length) {
     for (const s of stops) process.stderr.write(`NOT EXECUTABLE — ${s}\n`);
     process.exit(1);
@@ -125,10 +138,21 @@ function summarise(xs) {
     lower95_one_sided: mean - 1.645 * se, upper95_one_sided: mean + 1.645 * se };
 }
 
-/** §3's estimated-parameter path, as run.mjs:44-52 runs it: μ̂/σ̂ (and φ̂ where the null is
- *  AR(1)) from a calibration window of length m, drawn from an INDEPENDENT stream
- *  (A3.3, mirroring run-sequential.mjs:76). σ̂² divides by m, not m-1 — run.mjs's own
- *  convention, and the low bias A3.6's derivation depends on. */
+/** §3's estimated-parameter path: μ̂/σ̂ (and φ̂ where the null is AR(1)) from a calibration
+ *  window of length m.
+ *
+ *  THE STREAM IS INDEPENDENT OF THE TRAJECTORY'S, AND THAT IS A DEVIATION FROM run.mjs.
+ *  The comment here used to say "as run.mjs:44-52 runs it" AND "drawn from an INDEPENDENT
+ *  stream" in one breath; the two cannot both be true. `run.mjs:44` draws its calibration
+ *  window from `src` — the SAME generator the trajectory then consumes, so cal and data are
+ *  consecutive draws of one stream. This arm draws it from a separate `rng(SEED + 31*i +
+ *  spec.id.length)`, which is what A3.3 registered, citing
+ *  detector-audit/harness/run-sequential.mjs:76 — the file this pattern actually comes from.
+ *  Registered as this arm's convention, named as a deviation from §4's harness rather than
+ *  passed off as agreement with it (review corrections append, C3's sibling finding).
+ *
+ *  σ̂² divides by m, not m−1. THAT half does follow run.mjs:44-52, and it is the low bias
+ *  A3.6's estimated-null derivation depends on. */
 function calibrate(spec, r) {
   const m = spec.m ?? 100;
   const draw = spec.gen(r);
@@ -150,7 +174,8 @@ function calibrate(spec, r) {
  *  paired with its own null trajectory (§5's P2 pattern, run.mjs:118-125). */
 const trajSeed = (spec, det, i) => SEED + 7919 * i + spec.id.length * 104729 + det.id.length;
 
-/** cfg for one trajectory, exactly as run.mjs:38-53 builds it. */
+/** cfg for one trajectory. The FIELDS are run.mjs:38-53's, and the calibration SOURCE is not —
+ *  see `calibrate` above for the deviation and where it was registered. */
 function configFor(spec, i) {
   if (spec.params === 'estimated') {
     const c = calibrate(spec, rng(SEED + 31 * i + spec.id.length));

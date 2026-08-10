@@ -1,0 +1,27 @@
+{
+  "study": "2026-08-terminal-evalue",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "3da2ff0904d45f55c5737d09b50740fab20c3c02",
+  "node": "v25.9.0",
+  "seed": 20260801,
+  "n": 2000,
+  "n_test": 100,
+  "alphas": [
+    0.05,
+    0.01
+  ],
+  "generated_at": "20260810T073954Z",
+  "prereg": [
+    "PREREGISTRATION.md",
+    "POWER-PER-CELL-PREREG.md"
+  ],
+  "addenda": [
+    "POWER-PER-CELL-ADDENDUM-2026-08-07.md"
+  ],
+  "recorded_additions": [
+    "mean_e_sd",
+    "mean_e_lower_95",
+    "POWER__* per-cell power arms (rate_e_ge_20)"
+  ]
+}

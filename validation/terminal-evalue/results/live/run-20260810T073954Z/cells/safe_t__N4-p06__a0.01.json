@@ -1,0 +1,21 @@
+{
+  "detector": "safe_t",
+  "null_id": "N4-p06",
+  "m": 100,
+  "alpha": 0.01,
+  "n": 2000,
+  "exceedance": 0.001,
+  "lower_95": 0.0003309487392272439,
+  "verdict": "not-refuted",
+  "mean_e": 0.3701061971053298,
+  "mean_e_sd": 6.027369264660435,
+  "mean_e_lower_95": 0.14839955535437824,
+  "p_e_ge_10": 0.004,
+  "p99_e": 2.296073436488501,
+  "nan_count": 0,
+  "power_this_cell": 1,
+  "power_verdict": "powered",
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "3da2ff0904d45f55c5737d09b50740fab20c3c02"
+}

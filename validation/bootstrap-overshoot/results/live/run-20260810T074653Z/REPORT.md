@@ -123,3 +123,86 @@ separate registration and is named-not-done.
 - **T1, synthetic nulls, and `family_C_safe_hotelling` receives an identity covariance on the AR(1)
   cells** — the instrument finding batch B registered, inherited unchanged from the H0 battery's
   adapter and not repaired here.
+
+---
+
+# Correction append, 2026-08-10 (appended not edited): §1's causal claim is REFUTED, the filed contradiction is withdrawn, and five numbers were wrong
+
+From an independent review. Every correction below runs against this report's own text. **No number
+in the run changed and nothing was re-run**; the cells are byte-identical.
+
+## X1. §1's central claim was wrong, and the mechanism was already on the page I cited
+
+§1 says, of the Family D control:
+
+> A 100-window calibration against the committed 400-window one plausibly explains a percent; it does
+> not explain a factor of ten in the growth rate.
+
+**REFUTED. The 400 → 100 window change explains the whole factor of ten.** Two independent grounds:
+
+1. **The reviewer reimplemented the control four ways and swept `K`, the number of calibration
+   windows.** `E[M_900]` reads **16.6 / 4.71 / 2.27 / 1.25 / 1.18 / 1.17** at `K = 25, 50, 100, 200,
+   400, exact`. **This harness is condition A** — `K = 100`, per-trajectory calibration — and the
+   sweep's ranges contain my readings at every horizon. **The committed `1.1076` is condition D**,
+   exact moments. The two numbers measure two different estimators of the same quantity, and neither
+   is wrong. The excess is `exp(n² r² / 2K)` in the calibration-error term, which is **quadratic in
+   the update count `n` and inverse in `K`**, so quartering `K` moves the exponent by 4×.
+2. **`knowledge/stats/h0-battery-2026-08-01.md:166` already records this mechanism**, in the
+   provenance box for the very numbers I quoted: *"The gap is that the 1.0023 per-draw figure was
+   measured at exact null moments while this study estimates `μ̂₀`/`σ̂₀` from 400 windows."*
+   **I quoted that page's table and not its explanation.** The failure was mine and it was a reading
+   failure, not a measurement one.
+
+**The "contradiction between this harness and a committed artifact" filed upward in §1 is
+WITHDRAWN.** There was no contradiction. `run-20260810T074653Z`'s Family D readings and
+`types/families/d.ts:91-93` are the same quantity at two calibration sizes.
+
+**§1's stop-condition ruling stands unchanged.** P-C9's band was `[1.02, 1.12]`, the primary replicate
+read `1.1200381826911874`, and the band is missed whatever the reason — a registered stop condition
+does not become unfired because its cause turns out to be benign. No `c` is reported. What changes is
+the *diagnosis*: the band was too narrow **for a `K = 100` estimator**, and the registration should
+have banded `K` rather than assuming the committed number's `K` transferred.
+
+## X2. What the adjudication actually surfaced — three findings, none of them mine
+
+The reviewer's reimplementation found three things that survive the withdrawal. All three are for the
+wiki write-back; the code fixes belong to `deploysignal`/engine follow-ups and **not** to this branch,
+which changes no detector.
+
+**(a) A compiler/runtime statistic mismatch, and it is the serious one.** The calibrator computes
+`null_mean` / `null_std` as moments of a **per-trajectory MAX** statistic —
+`../deploysignal/tools/calibrators/family-d.ts:247`, `peaks[b] = trajectoryMaxPeak`, a max over
+roughly 80 windows — while `detectors/spectral.ts:367-368` standardizes **one** evaluation:
+`u = (peak_t - mu0) / sigma0`. A max-of-~80 location is being used to centre a single draw. In shipped
+configs `null_mean` has median **0.5742** against a single-window marginal of **0.276–0.420**, giving
+`E[z] ≈ −0.94` per update and a wealth that decays by **`e^−27`** over 29 updates. **So neither
+`1.1076` nor `1.70` describes the shipped path**: both were measured with the statistic the runtime
+standardizes, and the compiler supplies moments of a different one.
+
+**(b) `SpectralInflationBound` is not well-formed without `K` beside `T`.** `c(T, K) ≈
+exp(skew·n + n² r² / 2K)`, so a single scalar `c` pinned to a horizon is under-specified: the same
+detector at the same `T` prices differently at a different calibration size. The type's doc comment
+(`types/families/d.ts:85-107`) states the horizon rule and not the calibration-size rule.
+
+**(c) The shipped constant has no reproducible artifact.** `validation/family-d-emean/` contains
+`PREREGISTRATION.md` and nothing else — no harness, no `results/` — verified at HEAD. `1.0636` and
+`1.1076` are quoted in a type comment and a unit test with no run behind either.
+
+## X3. Five numbers in this report were wrong
+
+| where | printed | correct | why |
+|---|---|---|---|
+| §2 | `c_ville_emp` estimable on **10 of 18** primary cells | **13 of 18** | recount of `c_ville_emp_status === 'MEASURED'` over the 18 primary cells |
+| §2 table intro | `c_markov` NOT MEASURABLE on **5 of the 6** primary cells **at every horizon** | **4 of 6 routes at every horizon**; **5 of 6 routes** have at least one NOT MEASURABLE horizon | betting N3-p09 is MEASURED at `T = 2000`, so it is not an every-horizon failure. The four every-horizon routes are betting N4-p09-m100 and all three safe-Hotelling routes. Cell-wise: 4 of 18 cells MEASURED. |
+| §3 P-C2 | replicates span `0.863`–**`1.146`** | `0.8628`–**`1.1443`** | the five readings are `0.8953, 0.8938, 1.1443, 0.8933, 0.8628` |
+| §4 | "D1 first fires at `log10 E[M] = 0.871`" | **among cells with `log10 E[M] > 0`**, D1 first fires at `0.871` | unqualified it is false: safe-Hotelling N1 fires D1 at `log10 E[M] = −14.56` (`top1 = 0.7383`) |
+| §1 | see X1 | see X1 | the causal claim |
+
+**X3's fourth row weakens §4's hypothesis and I state that rather than leaving the section standing.**
+§4 argued that estimability fails only well above `c = 1`. D1 firing at `log10 E[M] = −14.56` shows
+degeneracy is **not** a function of the mean's size: safe-Hotelling's terminal wealth is
+one-trajectory-dominated in a regime where the mean is fourteen orders *below* 1. The surviving
+statement is narrower and is the only one this run supports: **among the cells whose mean exceeds 1,
+the two lowest (`0.049`, `0.231`) are the only ones where the estimator is not degenerate.** Whether
+that is a threshold in the mean or a property of the wealth distribution's shape is untested here, and
+the safe-Hotelling N1 cells are evidence for the second reading.

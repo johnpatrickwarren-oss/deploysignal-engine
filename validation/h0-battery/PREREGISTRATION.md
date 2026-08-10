@@ -1186,3 +1186,46 @@ corpus-wide unpaired count stays **11**, and exactly one committed census moves 
 `collect.test.mjs:657` 2266 → **2290** — while `:494`'s 148 holds. Leaves item 4's 11 real gaps
 **named and unfilled**, because `sequential_ui_e_process` has no registered fault construction in
 any study and inventing one would move its verdict rather than pair its cells.
+
+### Correction append to A3.5, 2026-08-09 — stop condition 1 as registered is structurally unsatisfiable, and the replacement is stronger
+
+Registered **before** the harness that implements it and before the run. Everything else in A3 —
+scope, arms, nulls, seeds, threshold rule, predictions, bands, outcome mapping, out-of-scope list —
+stands exactly as written, and no endpoint, threshold, α, N, T, null or seed moves.
+
+**Quote, A3.5:**
+
+> 1. `git rev-parse HEAD` at run time is not `3f556c1`, or `package.json`'s version is not
+>    `0.6.6-pre` (§8.1's pin rule, applied to this arm).
+
+**The version half stands; the sha half cannot be satisfied by any run of this arm.** A3's own
+registration act is a commit, so HEAD is `754787e` the moment the amendment exists, and it can never
+again equal `3f556c1`. Measured: the first invocation of the harness printed
+`NOT EXECUTABLE — A3.5(1): HEAD is 754787e…, not the registered pin 3f556c1…`. **This is the same
+structural trap `validation/certification/README.md`'s freeze table names** — `freeze-cards.mjs`
+stamps `git rev-parse HEAD`, so a freeze commit cannot name its own sha — and it is recorded rather
+than silently patched because a stop condition edited without a registration is not a stop condition.
+
+**It also misread §8.1, which this study's own runs demonstrate.** §8.1 is "Engine version matches
+the §0 pin". The four committed 2026-08-01 runs carry `registration_sha: '17cc3f8'` while running at
+`git_sha` `17cc3f8`/`ff65feb` — so the study's convention is that the registration sha is **recorded**
+and the engine **version** is **required**.
+
+**Registered replacement, three checks, all fail-closed, and the second is stronger than what it
+replaces:**
+
+1. `package.json`'s version is `0.6.6-pre` (§8.1, unchanged).
+2. **`detectors/_hotelling-safe.ts` hashes to the sha256 the card pins**, i.e.
+   `c5cc555982e09fce449f06cc96e5cda57bf017ea6c7f48f2cc4f450ff964185e`
+   (`cards/family_C_safe_hotelling.json` `source_files[0].sha256`). This binds the arm to the exact
+   detector source the frozen claim is about, which a HEAD comparison only implies — the
+   certification protocol's own expiry surface, used as an executability gate. Verified equal at the
+   registration commit before this append was written.
+3. **A3's registration commit `754787e` is an ancestor of HEAD** (`git merge-base --is-ancestor`),
+   so the arm cannot run against a tree that predates its own registration, and the working tree
+   carries no modification to `detectors/_hotelling-safe.ts`, `harness/nulls.mjs` or
+   `harness/detectors.mjs`.
+
+The run manifest records `git_sha` (HEAD at run time), `registration_sha: 3f556c1` (A3's base) and
+`registration_commit: 754787e`, so the lineage is readable from the artifact. Stop conditions
+A3.5(2)–(5) are unchanged.

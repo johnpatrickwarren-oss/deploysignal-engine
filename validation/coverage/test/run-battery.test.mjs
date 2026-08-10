@@ -2285,3 +2285,210 @@ test('C43.1: the null_id dispatch is a per-detector table, and unregistered phi 
   assert.match(src, /if \(phi !== 0 && phi !== AR1_PHI\) \{\s*\n\s*throw new Error/,
     'nullIdFor must throw on a phi outside the registered {0, 0.6}');
 });
+
+// ── Amendment v2.C51.1 — the crossing_time field (WORKLIST C51 item 1) ────────────────────────
+// C51.1.8's ten registered items. The field exists because K6A.1.12 registered a median
+// time-to-cross prediction, a per-draw band, a censoring rate and a falsifier against a quantity
+// the adapter was discarding; these tests pin its scope, its arithmetic identities against the
+// rate fields that already carry verdicts, and its tick convention.
+
+const CROSSING_TIME_ROWS = [
+  // [cell_index, arm] — C51.1.3's registered scope, by value: the four K6-slow fault cells and
+  // arm 47's two rows. Six rows, and the paired smoke at this commit read exactly six.
+  [43, null], [44, null], [45, null], [46, null], [47, 'healthy'], [47, 'power'],
+];
+
+test('C51.1.3 scope: exactly the six shape_ecdf_accumulator rows carry crossing_time, and no other row does', () => {
+  const { summary } = smoke();
+  const carrying = summary.cells.filter((c) => 'crossing_time' in c)
+    .map((c) => [c.cell_index, c.arm ?? null]);
+  assert.deepEqual(carrying.sort((a, b) => a[0] - b[0] || String(a[1]).localeCompare(String(b[1]))),
+    CROSSING_TIME_ROWS,
+    'crossing_time must be on the accumulator\'s four fault cells and arm 47\'s two rows, and nowhere else');
+  for (const c of summary.cells) {
+    if ('crossing_time' in c) {
+      assert.equal(c.detector, 'shape_ecdf_accumulator', 'crossing_time on a foreign detector');
+    }
+  }
+  // The named-not-done boundary, pinned so a later parity edit has to move this assertion:
+  // shape_block_conformal_bet's module exposes no crossingIndex (C51.1.3).
+  const sibling = summary.cells.filter((c) => c.detector === 'shape_block_conformal_bet');
+  assert.ok(sibling.length >= 6, 'the sibling shape detector must be present to be excluded');
+  for (const c of sibling) {
+    assert.equal('crossing_time' in c, false,
+      'shape_block_conformal_bet must NOT carry crossing_time — its module exposes no crossingIndex');
+  }
+});
+
+test('C51.1.2: the crossing_time field shape, units and horizon are the registered ones on every row that carries it', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => 'crossing_time' in c);
+  assert.equal(rows.length, 6);
+  for (const c of rows) {
+    const ct = c.crossing_time;
+    assert.deepEqual(Object.keys(ct), [
+      'n', 'n_crossed', 'n_censored', 'censored_fraction',
+      'median', 'p25', 'p75', 'min', 'units', 'window_len', 'horizon',
+    ], `${c.cell_index}/${c.arm ?? 'cell'}: the registered field order`);
+    assert.equal(ct.units, 'ticks-post-onset', 'C51.1.2 registers post-onset ticks, not absolute');
+    assert.equal(ct.window_len, K6SLOW_GEOMETRY.window_len);
+    assert.equal(ct.horizon, K6SLOW_GEOMETRY.windows * K6SLOW_GEOMETRY.window_len);
+    assert.equal(ct.horizon, 6000, 'the horizon is the 6,000-tick post-onset span H (K6A.1.1)');
+    assert.equal(ct.n_crossed + ct.n_censored, ct.n, 'crossed + censored = n');
+    assert.ok(Number.isInteger(ct.n_crossed) && ct.n_crossed >= 0);
+  }
+});
+
+test('C51.1.7(d): n_crossed IS the row\'s own crossing count, and censored_fraction IS 1 - the row\'s own rate', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => 'crossing_time' in c);
+  assert.equal(rows.length, 6);
+  for (const c of rows) {
+    const ct = c.crossing_time;
+    // The fault cells and the S3 row count `fires` at the N denominator; the S2 row counts the
+    // same crossings at `n` = finite reads, which is `crossing_rate`'s own denominator.
+    if (c.arm === 'healthy') {
+      assert.equal(ct.n, c.n, 'S2: the denominator is the row\'s own n (healthy.finite)');
+      assert.ok(Math.abs((1 - ct.censored_fraction) - c.crossing_rate) < 1e-12,
+        `arm 47 S2: 1 - censored_fraction ${1 - ct.censored_fraction} != crossing_rate ${c.crossing_rate}`);
+    } else {
+      assert.equal(ct.n, c.n, 'fault/S3: the denominator stays N (A3c)');
+      assert.equal(ct.n_crossed, c.fires, 'n_crossed must be the same count as fires');
+      assert.ok(Math.abs((1 - ct.censored_fraction) - c.detection_rate) < 1e-12,
+        `${c.cell_index}: 1 - censored_fraction ${1 - ct.censored_fraction} != detection_rate ${c.detection_rate}`);
+    }
+  }
+});
+
+test('C51.1.2 quantile convention: monotone, a multiple of window_len, within the horizon, null exactly when censored', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => 'crossing_time' in c);
+  let sawNull = 0;
+  let sawValue = 0;
+  for (const c of rows) {
+    const ct = c.crossing_time;
+    const frac = ct.n_crossed / ct.n;
+    for (const [q, v] of [[0.25, ct.p25], [0.5, ct.median], [0.75, ct.p75]]) {
+      if (v === null) {
+        sawNull += 1;
+        assert.ok(frac < q, `${c.cell_index}/${c.arm ?? 'cell'}: q=${q} is null but ${ct.n_crossed}/${ct.n} >= ${q}`);
+      } else {
+        sawValue += 1;
+        assert.ok(frac >= q, `${c.cell_index}/${c.arm ?? 'cell'}: q=${q} = ${v} but only ${ct.n_crossed}/${ct.n} crossed`);
+        assert.ok(Number.isInteger(v) && v > 0 && v % ct.window_len === 0,
+          `q=${q} = ${v} must be a positive multiple of ${ct.window_len} — a crossing is only observable at a checkpoint`);
+        assert.ok(v <= ct.horizon, `q=${q} = ${v} exceeds the horizon ${ct.horizon}`);
+      }
+    }
+    if (ct.p25 !== null && ct.median !== null) assert.ok(ct.p25 <= ct.median, 'p25 <= median');
+    if (ct.median !== null && ct.p75 !== null) assert.ok(ct.median <= ct.p75, 'median <= p75');
+    if (ct.min === null) assert.equal(ct.n_crossed, 0, 'min is null only when nothing crossed');
+    else assert.ok(ct.p25 === null || ct.min <= ct.p25, 'min <= p25');
+  }
+  // Both sides of the convention must actually be exercised at the smoke seeds, or the test is
+  // vacuous: cells 43/46 are fully censored and 44/45/47 are not.
+  assert.ok(sawNull > 0 && sawValue > 0, `the convention was not exercised both ways (${sawNull} null, ${sawValue} valued)`);
+});
+
+test('C51.1.2: median === null implies the row\'s rate < 0.50 — K6A.1.12\'s second falsifier clause is arithmetically impossible', () => {
+  const { summary } = smoke();
+  const rows = summary.cells.filter((c) => 'crossing_time' in c);
+  assert.equal(rows.length, 6);
+  for (const c of rows) {
+    const rate = c.arm === 'healthy' ? c.crossing_rate : c.detection_rate;
+    if (rate === null) continue;                       // A3c: no finite read, nothing to check
+    if (c.crossing_time.median === null) {
+      assert.ok(rate < 0.5,
+        `${c.cell_index}/${c.arm ?? 'cell'}: a CENSORED median with rate ${rate} >= 0.50 is arithmetically `
+        + 'impossible and is a harness defect, not a measurement (K6A.1.12 / C51.1.2)');
+    } else {
+      assert.ok(rate >= 0.5, `${c.cell_index}: a non-null median with rate ${rate} < 0.50`);
+    }
+  }
+});
+
+// C51.1.8 item 10 — THE MUTATION KILL. The whole crossing_time distribution on the canonical cell
+// 44, recomputed from the module at the registered CELL_SEED/HELDOUT_SEED with the tick arithmetic
+// written out longhand. Three mutations die here and nowhere else:
+//   (i)  `i * W` instead of `(i + 1) * W` — the off-by-one-window the 0-based crossingIndex invites,
+//        which would put cell 45's boundary artifact at tick 150 and shift every quantile down one
+//        window. Asserted directly by the `plusOne`/`offByOne` pair below.
+//   (ii) `median()`'s even-n averaging in place of the registered Kaplan-Meier convention — at
+//        n = 20 with 17 crossings the two disagree, so the expected value pins the convention.
+//   (iii) reading the wrong end of the sorted ticks (a `p25`/`p75` swap), which the independent
+//        recomputation of all three quantiles kills.
+test('C51.1.8 item 10 (MUTATION KILL): cell 44\'s whole crossing_time recomputes from the module, and (i+1)*W is not i*W', () => {
+  const { summary } = smoke();
+  const mod = ecdfDist();
+  const c = summary.cells.find((x) => x.cell_index === 44);
+  assert.ok(c && c.crossing_time, 'no cell 44 crossing_time');
+
+  const cal = mod.calibrateEcdfAccumulator(regenK6slowHeldout(20760851), { W: 150, nA: 25000, m: 500 });
+  const indices = [];
+  for (let i = 0; i < c.n; i++) {
+    indices.push(mod.ecdfAccumulatorWealth(
+      k6slowWindows(regenK6slowTrajectory(20260851, i, 1.5)), cal).crossingIndex);
+  }
+  const W = K6SLOW_GEOMETRY.window_len;
+  const plusOne = indices.filter((i) => i >= 0).map((i) => (i + 1) * W).sort((a, b) => a - b);
+  const offByOne = indices.filter((i) => i >= 0).map((i) => i * W).sort((a, b) => a - b);
+  const n = c.n;
+  const q = (ticks, p) => (ticks.length / n >= p ? ticks[Math.ceil(p * n) - 1] : null);
+
+  assert.equal(c.crossing_time.n_crossed, plusOne.length, 'cell 44 n_crossed recomputes');
+  assert.equal(c.crossing_time.median, q(plusOne, 0.5), 'cell 44 median recomputes at (i+1)*W');
+  assert.equal(c.crossing_time.p25, q(plusOne, 0.25), 'cell 44 p25 recomputes');
+  assert.equal(c.crossing_time.p75, q(plusOne, 0.75), 'cell 44 p75 recomputes');
+  assert.equal(c.crossing_time.min, plusOne[0], 'cell 44 min recomputes');
+
+  // The off-by-one must be DISTINGUISHABLE, not merely different in principle.
+  assert.notEqual(q(offByOne, 0.5), q(plusOne, 0.5),
+    'i*W and (i+1)*W must give different medians at these seeds, or this test cannot kill the mutation');
+  assert.equal(c.crossing_time.median - q(offByOne, 0.5), W,
+    'the registered convention is exactly one window later than the 0-based index');
+
+  // (ii): the convention the harness's own `median()` helper would have applied — the middle of the
+  // CROSSED subsample, which silently drops the censored trajectories from the denominator. It
+  // disagrees with the registered convention at these seeds, which is what makes this a kill.
+  const mid = plusOne.length >> 1;
+  const helperConvention = plusOne.length % 2
+    ? plusOne[mid] : (plusOne[mid - 1] + plusOne[mid]) / 2;
+  assert.notEqual(helperConvention, c.crossing_time.median,
+    'median() over the crossed subsample must disagree with the registered Kaplan-Meier convention '
+    + 'at these seeds, or this test cannot kill that mutation');
+});
+
+test('C51.1.7(c): the adapter pins its own THRESHOLD to the module\'s LOG_WEALTH_THRESHOLD_K6SLOW and throws on disagreement', () => {
+  const src = fs.readFileSync(HARNESS, 'utf8');
+  assert.match(src, /const \{ wealth, log, crossingIndex \} = shapeEcdfAcc\.ecdfAccumulatorWealth/,
+    'the adapter must READ crossingIndex, not destructure { wealth, log } and discard it');
+  assert.match(src, /if \(crossed !== \(crossingIndex >= 0\)\) \{\s*\n\s*throw new Error/,
+    'the two threshold literals must be pinned to each other by a throwing assertion');
+  // The gate is a capability flag in SHAPE_DETECTORS, never a detector-id literal at an emission
+  // site (K6A.2.1 item 12 / C47.2's enumeration finding).
+  assert.match(src, /crossingTimes: true/, 'the accumulator must carry the capability flag');
+  assert.match(src, /crossingTimes: false/, 'the sibling must carry it explicitly, not by absence');
+  // All three emission sites must gate on the flag off `spec`, never on a detector id. Counted, so
+  // adding a fourth site without the flag fails here.
+  const gated = src.match(/spec\.crossingTimes\s*\?[^\n]*crossingTimeSummary|if \(spec\.crossingTimes\) c\.crossing_time = crossingTimeSummary/g) ?? [];
+  assert.equal(gated.length, 3, `three emission sites gated on spec.crossingTimes, found ${gated.length}`);
+  assert.equal(/crossing_time/.test(src.replace(/spec\.crossingTimes[\s\S]{0,220}?crossingTimeSummary\([^)]*\)/g, '')
+    .split('\n').filter((l) => !l.trimStart().startsWith('//')).join('\n')), false,
+    'crossing_time may be emitted only through a spec.crossingTimes-gated call to crossingTimeSummary');
+  // The per-row denominators, pinned AT THE SOURCE because they are not observable in the emitted
+  // rows: all three coincide whenever `adapter_failures` and `non_finite_wealth` are 0, and
+  // K6A.1.12 registers both as STRUCTURAL zeros for this class. A source assertion is the only
+  // instrument available (the C43.1 `NULL_ID_BY_DETECTOR` test's precedent), and the limitation is
+  // disclosed in the code-commit append to Amendment v2.C51.1 rather than papered over.
+  assert.match(src, /if \(spec\.crossingTimes\) c\.crossing_time = crossingTimeSummary\(a\.shapeCrossings, spec, N\)/,
+    'the fault-cell site must use the N denominator (A3c)');
+  assert.match(src, /crossing_time: crossingTimeSummary\(healthy\.shapeCrossings, spec, s2n\)/,
+    'the S2 site must use s2n — crossing_rate\'s own denominator (C51.1.7d)');
+  assert.match(src, /crossing_time: crossingTimeSummary\(power\.shapeCrossings, spec, N\)/,
+    'the S3 site must use the N denominator');
+  // And the module's own alphas, so a divergence is a code change and not a silent drift.
+  const mod = ecdfDist();
+  assert.equal(mod.ALPHA_K6SLOW, 0.05);
+  assert.ok(Math.abs(mod.LOG_WEALTH_THRESHOLD_K6SLOW - Math.log(20)) < 1e-15,
+    'the module threshold is log(1/0.05) = log(20), the same bar the harness THRESHOLD sets');
+});

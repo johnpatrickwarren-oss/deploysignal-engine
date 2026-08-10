@@ -11411,3 +11411,45 @@ on this branch**; a paired smoke at `--n 20` must show **103 rows, 0 pre-existin
 new field on exactly 6 rows** before the code lands; and a **new adapter assertion**
 `crossed === (crossingIndex >= 0)` pins two threshold literals in two files to each other so a future
 divergence throws instead of emitting a crossing time inconsistent with its own detection rate.
+
+### Code-commit append to Amendment v2.C51.1, dated 2026-08-09 (appended not edited): the paired smoke, the mutations killed, and the one registered claim that is NOT mutation-observable
+
+Stated at the commit that lands C51.1.8's ten items, discharging C51.1.7(b).
+
+**The paired smoke, at the registered acceptance and matching it exactly.** `--n 20`, all seven
+classes, same seeds, `COVERAGE_RESULTS_DIR` redirected, before and after the adapter change:
+
+```
+paired smoke diff, --n 20, same seeds, COVERAGE_RESULTS_DIR redirected
+  rows compared                    103
+  pre-existing fields changed        0
+  new fields                         1   crossing_time, on exactly 6 rows
+```
+
+**Four mutations, each verified to fail at least one C51.1 test** — run by reverting the harness
+after each, so the count is a measurement and not an intention:
+
+| mutation | C51.1 tests failing |
+|---|---|
+| `(i + 1) * W` → `i * W` (the 0-based off-by-one) | 2 |
+| the Kaplan–Meier quantile → `median()` over the crossed subsample | 6 |
+| the `crossed === (crossingIndex >= 0)` assertion removed | 2 |
+| the `spec.crossingTimes` gate ignored (emit on the sibling too) | 10 |
+
+**AND THE ONE REGISTERED CLAIM THAT NO MUTATION CAN KILL, stated because C51.1.7(d) reads as though
+it could.** The per-row denominator — `N` on the fault and S3 rows, `s2n = healthy.finite` on the S2
+row — **is not observable in any emitted row.** All three coincide with `indices.length` whenever
+`adapter_failures` and `non_finite_wealth` are both `0`, and K6A.1.12 registers **both as structural
+zeros for this class** (`p ∈ [1/501, 1]` bounds `e`, so no non-finite wealth pathway exists, and the
+module's only failure mode is a throw on a non-finite input, which is a defect). Replacing the passed
+denominator with `indices.length` therefore fails **no test**, measured, not assumed. **What is done
+instead:** the three denominators are pinned AT THE SOURCE by regex, the C43.1
+`NULL_ID_BY_DETECTOR` test's precedent for a module-local contract in a CLI harness. **What is not
+done:** no positive control forces an adapter throw on this class, so the branch where the
+denominators diverge is untested. It is named here rather than left for a later reader to find, and
+it is the honest boundary of C51.1.7(d): the identity `censored_fraction === 1 - rate` is verified on
+every emitted row, and the denominator *choice* that would matter if the structural zeros ever moved
+is verified only against the source text.
+
+**Nothing else in Amendment v2.C51.1 moves**, and in particular the registered run's median
+falsifier stays UNEVALUATED (C51.1.5) — this append records a code commit, not a reading.

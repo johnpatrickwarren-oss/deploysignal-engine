@@ -13,7 +13,8 @@ with `perCell`, `excluded` **and** `missing` all three empty, and overall `NOT_E
 `["S1 reachability not run-backed (v1 floor)", "S2 or S3 has no scoreable evidence"]`.
 
 The row's stated reason — "no scoreable in-regime validity evidence exists for that card at all" —
-reads as absent measurement. **36 validity cells for this detector are pooled**, in canonical
+reads as absent measurement. **36 validity cells for this detector are pooled but never recognised as
+candidates**, in canonical
 `h0-battery/results/live/run-20260801T064627Z` (12 nulls × 3 α). They are not excluded; they are
 never candidates. `validation/certification/lib/score.mjs:11-12`:
 
@@ -38,8 +39,16 @@ reports as "no envelope wiring".
 validity cells have no paired per-null power arm. The real scorer at HEAD reports **11**, every one
 `sequential_ui_e_process` (`pairingGaps`, `lib/score.mjs:475-489`). The 29 → 11 movement predates
 this batch and is already recorded in `validation/certification/README.md` at the
-`run-20260807T202419Z` paragraph: `universal_inference_e_value`'s per-null arms landed on
-2026-08-07 and dropped 18 of them.
+`run-20260807T202419Z` paragraph. **The 18 gaps it closed were `safe_t`'s 8 and
+`universal_inference`'s 10**, from the per-null power arms of
+`2026-08-terminal-evalue/run-20260807T215034Z` and
+`2026-08-phi-identifiability/run-20260807T215105Z` — ten `null_id`-carrying `shift_sigma: 3` cells
+per detector in the first run, seven more in the second. An earlier draft of this report attributed
+all 18 to `universal_inference` alone; that was wrong, and `safe_t` carries 8 of them. Reconstructed
+by filtering those runs' per-null power cells out of the committed corpus and re-running
+`pairingGaps` over all fifteen cards, which yields `safe_t_e_value` 8, `sequential_ui_e_process` 11,
+`universal_inference_e_value` 14 — 33 rather than 29 because the corpus has moved since 2026-08-07,
+and `safe_t`'s 8 reproduces exactly.
 
 Two further premise findings, both read off code:
 
@@ -135,18 +144,31 @@ more than a lossless field. Owed.
    finding, and **the verdict does not depend on them**: N2-m30/m100/m500 are iid nulls where the
    induced correlation is exactly 0, they refute on `σ̂` alone, and S2 is REFUTED without a single
    N3/N4 cell.
-2. **The instrument under-reads its own estimand, and cannot refute a catastrophic failure.** Three
-   independent readings agree: N1 measures 0.996229 with an upper bound of 0.999304 against a derived
-   exact 1 (the estimand sits *outside* the interval); the N3 cells read 0.5% / 2.1% / 30% below
-   closed form; and a 4,000,000-draw Monte Carlo of the estimand alone under-reads it by
-   0.3% / 1.7% / 15.7% at the same φ. So the true anti-conservatism is worse than measured
-   everywhere. A3.6 registered the artefact risk as **spurious REFUTED**; the sign is corrected — at
-   an exactly-calibrated null the normal-approximation interval fails on the **low** side, so it
-   manufactures **clearances**, and N1/N7's CLEARED is the reading in this arm not to trust. And the
-   three worst cells refute nothing: once the sample sd outgrows the mean the one-sided lower bound
-   goes negative, so `increment_estimator` refutes **mildly** invalid detectors and goes quiet on
-   badly invalid ones. That applies to every such cell in the corpus and needs a heavy-tail bound
-   registered where the instrument lives (detector-audit §3).
+2. **The instrument fails toward clearance, and cannot refute a catastrophic failure.** *This item
+   is itself corrected below (review correction C3): the version first filed read the per-cell
+   percentages as measurements of a systematic bias, and only φ = 0.9 is signal.* Against each
+   cell's own recorded `se`: N1/N7 −0.377% is **z = −2.02** and is **one** observation, not two (the
+   two cells are bit-identical by A3.5(4)); N3-p03 −0.507% is z = −1.18 and N3-p06 −2.117% is
+   z = −1.48, both within noise; only N3-p09's −30.141% at **z = −14.05** is signal. The systematic
+   component is small and measured: 400 replicates of the arm-size estimator at φ = 0, where the
+   estimand is exactly 1, give a median of 0.999601 — a **−0.040%** median bias with 57.0% of
+   replicates below 1 — an order of magnitude under what N1 read. **What survives is the
+   direction, and it is enough**: at an exactly-calibrated null the registered rule returns
+   **CLEARED 13.5%** of the time against **REFUTED 2.0%** (same 400 replicates), so the interval
+   fails toward clearance about seven times as often as toward refutation, against a nominal 5% each
+   way. A3.6 registered the artefact risk as **spurious REFUTED**; that sign is corrected. N1/N7's
+   CLEARED is a 1-in-7 draw at a perfectly calibrated null rather than proof of a large downward
+   bias, and either way it is not a clearance this arm can stand behind. The 4,000,000-draw Monte
+   Carlo of the estimand alone (under-reading closed form by 0.3% / 1.7% / 15.7%) carries no interval
+   and agrees only in direction, decisively at φ = 0.9. **Separately, and by two different
+   mechanisms, the arm's worst cells refute nothing** (review correction C4): N4-p09-m100 (2.23e5)
+   and N5 (1.06e143) have finite bounds whose one-sided `lower95` goes **negative** once the sample
+   sd outgrows the mean, so their token is `inconclusive` and the scorer files them in `missing[]`;
+   N6 **overflowed**, so `applyGuards` (`lib/guards.mjs:25-30`) returns `NON_FINITE` and the cell is
+   **excluded** before any token is read. Two scorer paths, one consequence: `increment_estimator`
+   refutes **mildly** invalid detectors and goes quiet on badly invalid ones. That applies to every
+   such cell in the corpus and needs a heavy-tail bound registered where the instrument lives
+   (detector-audit §3).
 3. **Arm A3-W's band held at 3 of 12 nulls.** §5 counts only a **first** fire in ticks 100–300
    (`run.mjs:118-125`, reproduced faithfully), so trajectories already firing under H₀ count as
    undetected; measured, `detection_rate ≈ 1 − crossing_rate` across the 12 nulls. §5's construction
@@ -197,3 +219,38 @@ back to C38 item 4.
   each remain invisible to the S2 vocabulary; all three are already REFUSE, so it costs no verdict
   today.
 - Nothing was done about C38 items 2, 3 or 6.
+
+## Review corrections, 2026-08-10
+
+An independent review reproduced the verdict movement, both instrument findings and the C38.4
+premise, and found five things wrong in what this batch asserted. Full text at h0-battery
+`PREREGISTRATION.md`, "Review corrections append to A3". Every correction is to a claim about the
+evidence; none is to the evidence, and no verdict moves.
+
+- **C1 — the pairing counterfactual was wrong by 6×.** `pairingGaps` generates a gap only for an
+  in-regime **CLEARED** cell (`lib/score.mjs:479`), so the ceiling is the number of CLEARED cells,
+  not of nulls. Measured, re-scoring the committed corpus with every arm A3-W cell filtered out:
+  **2** gaps (N1, N7), with S3 `perCell` falling 13 → 1 — not 12. The pre-run claim contradicted
+  A3.6's own prediction of CLEARED at *no* null, on which the counterfactual was 0; the post-run
+  instance in the golden comment contradicted its own two preceding sentences. Arm A3-W stays
+  justified on 2 > 0 plus twelve S3 cells whose 0.4190–0.9735 spread is what exposed correction 3's
+  first-fire censoring. Withdrawn: the magnitude of the pairing argument, not the arm.
+- **C2 — stop-condition labels collided and sim mode was an unregistered allowance.** `A3.5(2)`
+  named two checks and `A3.5(3)` three; renumbered 1a/1b/1c/1d, 2, 3, 4, 5. And A3.5(2) as
+  registered forbade anything but `--mode live`, while the harness accepts `sim`: **a sim invocation
+  at `--n 20 --t 30` was run before the live run to verify mechanics**, disclosed with why it could
+  not preview the endpoint (not the registered parameters; at `T = 30` no tick reaches §5's onset at
+  100, so its power arm read 0.0000 at every null by construction).
+- **C3 and C4** are folded into item 2 of the corrections list above, at the point the over-read
+  occurred, rather than only appended here.
+- **C5 / finding 7 — "pooled, not missing" was the wrong contrast** in documents where `missing[]`
+  is a scorer field. The cells are **pooled but never recognised as candidates**: filtered by
+  `isValidityCell` before `scoreS2` can exclude them, which is why all three of `perCell`,
+  `excluded` and `missing` were empty rather than just the first. Corrected here and in the golden
+  comment.
+- **Finding 3 — a harness comment contradicted the code it cited.** `calibrate`'s doc claimed both
+  "as `run.mjs:44-52` runs it" and "drawn from an INDEPENDENT stream"; `run.mjs:44` draws the
+  calibration window from the trajectory's own generator. The code follows A3.3's registration
+  (a separate stream, per `run-sequential.mjs:76`) and the comment now names the deviation.
+  Verified to change no number: a `--mode sim` re-run at the registered N and T reproduces all 24
+  committed cells field for field, modulo `mode` and `git_sha`.

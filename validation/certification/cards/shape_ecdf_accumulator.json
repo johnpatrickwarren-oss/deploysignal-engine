@@ -9,7 +9,7 @@
   "class": "test_martingale",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "d8e60ebd5aa86378b7fa4799b0c84c2c61411b77"
+    "sha": "46eb7ab87416b0455533530c7109602355590260"
   },
   "source_files": [
     {
@@ -18,7 +18,7 @@
     },
     {
       "path": "validation/coverage/harness/run-battery.mjs",
-      "sha256": "ad48332645aee9d20d0c5824ff81fa341cc0df63f4c6beefb80b36f1b9b255cb"
+      "sha256": "8e914508a228dde1f3fbc76e282144349634c742d6fd25f3ae62a835dc1fff54"
     },
     {
       "path": "validation/certification/lib/collect.mjs",

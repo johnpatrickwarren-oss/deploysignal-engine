@@ -16,3 +16,8 @@
 #   direction z=+234. Concerns 3 (O(1/n) constant 4.06, measured) and 4 (family_E not in the
 #   self-fit class, verified at stamp-heldout-family-e.mjs:73) both CLOSED. Mutation counts
 #   corrected 2x -> 1/3/1/5. Concern 1 (falsifier evaluable-but-unread) still open by design.
+# 5d19980: reviewer's family_E paragraph landed VERBATIM, superseding the relay block (which stands,
+#   labelled). All four checkable claims verified from code: covariance is the literal [[1]] passed by
+#   run-battery.mjs:648, cholesky([[1]])=[[1]] so s_t=|v| with no mean subtracted, and the indicator
+#   rule #{s_cal>=s_t} < alpha*n gives 500/10001 = 0.0499950005 — conservative, opposite in sign to
+#   the K4 excess. Concern 4 CLOSED. No card field or pinned file touched; expiry unaffected.

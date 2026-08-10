@@ -1372,3 +1372,141 @@ estimator bounds the **marginal**; the card's guarantee sentence is **conditiona
 ADR 0012's `E[e|H₀] = 24/9/9` still attaches. And S4 stays **UNPRICED**: this card's c-bound is
 still unmeasured (`C38` item 6), so its shipped bootstrap threshold remains unpriced whatever S2
 says.
+
+### Review corrections append to A3, 2026-08-10 — five corrections an independent review found, each quote-and-correct
+
+The review reproduced the verdict movement, both instrument findings and the C38.4 premise
+independently, and registered A3's mapping as having fired exactly. It also found five things wrong
+in what A3 and its results append asserted. No endpoint, threshold, α, N, T, null or seed moves, no
+cell is re-run, no run directory is edited, and no verdict moves: **every correction below is to a
+claim about the evidence, never to the evidence.**
+
+#### C1 — the pairing counterfactual is wrong by 6×: dropping arm A3-W yields **2** gaps, not 12
+
+**Quotes. A3.1(5):**
+
+> What this amendment owes item 4 is therefore **not** those 11 (A3.7) but the 12 gaps item 5's own
+> fix would otherwise **open** … Registering validity cells without power arms at the same nulls
+> would trade one named gap for twelve.
+
+**And A3.2:** "registering A3-V without A3-W would trade one named gap for twelve." **And the
+Amendment summary:** "which is what stops item 5's fix from opening twelve of item 4's gaps."
+
+**All three are wrong, and the arithmetic that refutes them is in `pairingGaps` itself.**
+`lib/score.mjs:479` reads `if (c.out_of_regime || c.mapped !== 'CLEARED') continue;` — a gap is
+generated **only** for an in-regime **CLEARED** validity cell. A REFUTED, inconclusive or excluded
+cell can never produce one. So the ceiling on the counterfactual is the number of CLEARED cells, not
+the number of nulls.
+
+Measured, by re-scoring the committed corpus with every arm A3-W cell filtered out: **2** gaps,
+`N1` and `N7`, with S3 `perCell` falling 13 → 1. Those are exactly the two cells that mapped CLEARED.
+
+**The pre-run version of the claim was self-contradictory when written**, which is what makes it
+worth an append rather than a footnote: A3.6 predicted `inconclusive` at every null and CLEARED at
+none, so on A3's **own** registered predictions the counterfactual was **0** gaps, not 12. The
+post-run instance in `test/golden-verdicts.test.mjs` is sharper still — it says "nine newly-mapped
+validity cells with no per-null arm would have added twelve unpaired lines" while naming, two
+sentences earlier, that only two of those nine mapped CLEARED. Corrected in that file's comment in
+the same commit as this append.
+
+**Arm A3-W remains independently justified and is not retro-rationalised.** Two real gaps is more
+than zero, and the arm's twelve cells are S3 evidence in their own right: `perCell` 13 → 1 without
+them, and the per-null spread (0.4190 to 0.9735) is what exposed correction 3's first-fire censoring,
+which a single pooled cell could not have shown. What is withdrawn is the *magnitude* of the pairing
+argument, not the arm.
+
+#### C2 — stop-condition labels collided three ways, and sim-mode acceptance is a deviation A3.5 did not register
+
+**Two label collisions, both in the harness's refusal strings.** `A3.5(2)` labelled both the
+detector-source sha256 check and the `--mode` check; `A3.5(3)` labelled the ancestor check, the
+clean-working-tree check **and** the directory-reuse check. A stop condition whose label names two
+different tests cannot be cited. Registered numbering, applied to the harness in the same commit:
+
+| label | check |
+|---|---|
+| A3.5(1a) | `package.json` version is `0.6.6-pre` |
+| A3.5(1b) | `detectors/_hotelling-safe.ts` hashes to the card's pinned sha256 |
+| A3.5(1c) | A3's registration commit is an ancestor of HEAD |
+| A3.5(1d) | no guarded source modified in the working tree |
+| A3.5(2) | mode |
+| A3.5(3) | the target run directory does not already exist |
+| A3.5(4) | the N1/N7 identity check |
+| A3.5(5) | `increment_estimator.n >= 1900` |
+
+(1a)–(1d) are the four checks the A3.5 correction append registered as the replacement for the
+original condition 1; it stated them as three and the clean-tree check was folded into the ancestor
+sentence, which is why the harness had two strings under one label.
+
+**And the deviation A3.5(2) needs.** As registered it says the arm "is **not executable** … if
+`--mode live` is not passed". The harness accepts `--mode sim`, writing under the git-ignored
+`results/sim/` per §10. **That is a deviation, and it was used: a sim invocation at `--n 20 --t 30`
+was run before the live run to verify the harness's mechanics.** Disclosed rather than left to be
+found: those are **not** the registered parameters, so the smoke run produced none of the registered
+cells and could not preview the registered endpoint — at `T = 30` no tick reaches §5's onset at 100,
+so its power arm read 0.0000 at every null by construction. It also exercised the A3.5(5) refusal
+path. The registered reading of A3.5(2) is therefore: **`--mode live` is required for a scored run,
+`--mode sim` is permitted for mechanics and writes only where §10 sends it.**
+
+#### C3 — Correction 2 over-read its own percentages: only φ = 0.9 is signal
+
+**Quote, Correction 2:** "the N3 cells read 0.5% / 2.1% / 30% below closed form".
+
+The percentages are right and **treating the first two as measurements of a systematic bias is
+not.** Against each cell's own recorded `se`:
+
+| null | measured | closed form | deviation | z |
+|---|---|---|---|---|
+| N1 / N7 | 0.996229 | 1 | −0.377% | **−2.02** |
+| N3-p03 | 1.042966 | 1.048285 | −0.507% | **−1.18** |
+| N3-p06 | 1.223540 | 1.250000 | −2.117% | **−1.48** |
+| N3-p09 | 1.602687 | 2.294157 | −30.141% | **−14.05** |
+
+φ = 0.3 and φ = 0.6 are within noise. **Only φ = 0.9 is signal**, and N1/N7 at −2.02 σ is
+suggestive at best — and it is **one** observation, not two: the two cells are bit-identical by
+A3.5(4), which is the check that guarantees it.
+
+**The systematic component, measured rather than asserted.** 400 replicates of the arm-size
+estimator at φ = 0, where the estimand is exactly 1: median **0.999601**, i.e. a median bias of
+**−0.040%**, with 57.0% of replicates below 1. That is an order of magnitude smaller than N1's
+observed −0.377%, so the median-below-mean effect is real, directional and **small** — it does not
+account for what N1 read.
+
+**What survives, and it is the part that matters.** At an exactly-calibrated null the registered
+instrument returns **CLEARED 13.5%** of the time, **REFUTED 2.0%**, inconclusive 84.5% (same 400
+replicates, same rule: REFUTED iff `lower95 > 1.0005`, CLEARED iff `upper95 < 1.0005`). So the
+interval fails toward **clearance** about seven times as often as toward refutation, against a
+nominal 5% each way. **Correction 2's direction stands and its magnitude does not**: N1/N7's CLEARED
+is a 1-in-7 draw at a perfectly calibrated null, not proof of a large downward bias — and either way
+it is a clearance this arm cannot stand behind.
+
+The 4,000,000-draw Monte Carlo Correction 2 also cites (under-reading closed form by
+0.3% / 1.7% / 15.7% at φ = 0.3/0.6/0.9) carries no interval in that append and none is claimed here:
+it agrees in **direction** at all three and is decisive only at φ = 0.9, exactly as the table above.
+
+#### C4 — N6's exclusion and the negative-bound failure are two mechanisms, and Correction 2 bundled them
+
+**Quote, Correction 2:** "the three worst cells refute nothing: N4-p09-m100 (2.23e5), N5 (1.06e143)
+and N6 (non-finite) are the arm's three most extreme anti-conservatisms and all three are unscored:
+the one-sided lower bound goes **negative** once the sample sd outgrows the mean".
+
+**True of two cells, not three.** N4-p09-m100 and N5 fail by the negative-bound mechanism: their
+bounds are finite, `lower95` is below 1.0005, the recorded token is `inconclusive`, and the scorer
+files them in `missing[]` as an unmapped token. **N6 fails earlier and elsewhere:** `exp(z_t)`
+overflowed, so `increment_estimator.mean`/`sd`/`se` are non-finite, and `applyGuards`
+(`lib/guards.mjs:25-30`) returns `NON_FINITE` and the cell is **excluded** before any token is read —
+its `inconclusive` survives only as a `suppressed_verdict` annotation on the exclusion. Two
+mechanisms, two different scorer paths (`missing[]` vs `excluded[]`), one shared consequence: neither
+refutes. The generalisation Correction 2 draws — that this instrument goes quiet on badly invalid
+detectors — holds under both, and needs both stated to be checkable.
+
+#### C5 — "pooled, not missing" is the wrong contrast
+
+**Quote, the Amendment summary:** "36 validity cells for this detector are **pooled**, not missing,
+and reach no stage".
+
+"Not missing" is loose in a document where `missing[]` is a scorer field: the cells **are** missing
+from every stage, which is the whole problem. The precise contrast, and the wording that should be
+cited: they are **pooled but never recognised as candidates** — present in `loadEvidence`'s returned
+`cells`, filtered out by `isValidityCell` before `scoreS2` can exclude them, which is why all three
+of `perCell`, `excluded` and `missing` were empty rather than just the first. A1.3 made this same
+distinction for the word "scored"; this append makes it for "missing".

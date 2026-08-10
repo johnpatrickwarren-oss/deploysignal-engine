@@ -50,3 +50,42 @@ append-only sim run as the record of it.
   `mode: live` with `n: 2000`, a combination no other run in the tree carries. Owed as a one-line
   recording fix on the next registration that touches this harness.
 - One fault shape (+3σ mean shift) and synthetic nulls only.
+
+---
+
+## Correction append, 2026-08-10 (appended not edited): the provenance finding overstated, and the field-count rule stated
+
+From an independent review. **No number in the comparison changed**: 61 shared keys, 827 fields, 0
+deviations, all five predictions held.
+
+**X1. "Uncommitted working-tree code" is wrong. The manifest stamps a sha that was rebased out.** The
+addendum's §3 and this file's "what this closes" section concluded from the `ReferenceError` at
+`4b31a12` that the sim run's numbers came from uncommitted code. The correct conclusion is narrower:
+**the producing code is committed at `f02a12b`, and `run-20260805T230306Z`'s manifest and all 58 of
+its cells stamp `4b31a12`, which is not in HEAD's history at all** (`git merge-base --is-ancestor
+4b31a12 HEAD` exits non-zero; the commit exists as *"prereg + patch: un-pool the terminal study's
+power control"* but was rebased away, and `f02a12b` is the surviving commit carrying that work with
+the scoping defect already fixed).
+
+`f02a12b` is pinned three ways, each an independent structural match against the run's own artifacts:
+
+1. **The write site.** `f02a12b`'s `harness/run.mjs` sets `power_this_cell` and `power_verdict`
+   **inside** the alpha loop and writes each cell once — which is why all 58 validity cells carry the
+   field, and is exactly what `4b31a12`'s post-loop `c.power_this_cell` cannot do.
+2. **The manifest key set.** `f02a12b` writes `{study, mode, engine_version, git_sha, node, seed, n,
+   n_test, alphas, generated_at}` and no `prereg` / `addenda` keys. `run-20260805T230306Z`'s manifest
+   has exactly those ten keys — the `prereg`/`addenda` keys arrive with `fc74a61`.
+3. **The cell field set.** `f02a12b` emits no `mean_e_sd` and no `mean_e_lower_95`; the run's cells
+   carry neither, and both arrive with `fc74a61`.
+
+**So the sim run is reproducible from committed code and the defect is a wrong provenance stamp, not
+missing provenance.** That is a smaller finding than the one filed and it is the one that is true. The
+append-only run keeps its wrong stamp; this file is the record of which commit produced it.
+
+**X2. The 827-field rule, stated so the count is checkable.** "827 fields" is the count over the
+**intersection** of the two cells' key sets on the 61 shared keys — every key present in **both**
+runs' cells — minus `mode`, `git_sha` and `engine_version`. Keys present in only one run are not
+compared and are reported separately: 3 new fields on the live side (`mean_e_sd`,
+`mean_e_lower_95`, and `power_verdict` where absent), and 29 live-only `POWER__*` cells, scored under
+PR2 and PR3 rather than PR1. **No key present in the sim run is missing from the live run**, which is
+the direction that would matter.

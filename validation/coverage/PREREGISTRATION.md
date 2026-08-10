@@ -11759,3 +11759,136 @@ run read `0.001855` against the exchangeable ideal `0.0026997300269973` (`-31.3%
 in the OPPOSITE direction to the self-fit**, so the run's reading is no evidence either way about the
 gap being measured. Registered with it: a discrete conformal `p` at `n = 10,000` gives up `37.5%` of
 the calibrator's `E[e] = 1` headroom before any construction detail enters, which is a property of `n`.
+
+### Results append to Amendment v2.C47.1, dated 2026-08-09 (appended not edited): outcome (a) fires — the self-fit excess is `≈ 1e-6` on a `2.7e-3` exceedance, and the registered generator-agreement rule FIRED at `R = 4,000`
+
+The probe of C47.1.2 is committed at `validation/coverage/tools/self-fit-exchangeability.mjs` and run.
+**Every wiring check passed before any measurement:** `erfc` at relative accuracy against three
+published values, the firing rank `K = 26` derived from the module's own `kappa`, the
+MAD-cancellation identity against the real module at four rescalings, the exact endpoints against a
+360,000-point deterministic quadrature of the real module, and the out-of-fold reference differing
+from the self-fit one.
+
+#### The registered reading, `R = 4,000`, seed base `6.3e8`
+
+| | as-built (self-fit) | out-of-fold | **paired excess** | se |
+|---|---|---|---|---|
+| exceedance, study PRNG | `0.0027105957` | `0.0027060489` | **`4.546721e-6`** | `1.527037e-6` |
+| exceedance, splitmix64 | `0.0027007318` | `0.0026981471` | **`2.584698e-6`** | `1.497497e-6` |
+| `E[e]`, study PRNG | `0.6248961825` | `0.6247071684` | **`1.89014e-4`** | `3.91242e-5` |
+| `E[e]`, splitmix64 | `0.6236867632` | `0.6235119453` | **`1.74818e-4`** | `4.15398e-5` |
+
+Per-replicate paired sd `9.6578e-5`. **C47.1.2's escalation did NOT fire** — the paired se
+`1.527e-6` is well inside the `3e-5` trigger.
+
+#### THE REGISTERED GENERATOR-AGREEMENT RULE FIRED, and it is reported as fired
+
+C47.1.2, quoted: *"If the two generators disagree on the excess by more than the reported standard
+error, the finding is reported as generator-dependent and NEITHER number is quoted as the answer."*
+
+```
+|4.546721e-6 - 2.584698e-6| = 1.962023e-6   >   max(se) = 1.527037e-6      -> FIRED
+```
+
+**So, as registered: neither `4.546721e-6` nor `2.584698e-6` is quoted as the answer, and the
+registered reading of the excess is the RANGE `[2.58e-6, 4.55e-6]`.**
+
+**AND THE DISPOSITION DOES NOT DEPEND ON WHICH IS RIGHT.** Outcome (a)'s threshold is
+`0.004825359960837106`. Both ends of the range, and everything between them, are **three orders of
+magnitude below it**:
+
+| reading | excess | as % of the ideal `0.0026997300` exceedance | as % of the distance to the `alpha = 0.05` bar |
+|---|---|---|---|
+| study PRNG | `4.5467e-6` | `0.168%` | **`0.0094%`** |
+| splitmix64 | `2.5847e-6` | `0.096%` | **`0.0054%`** |
+
+**REGISTERED OUTCOME (a) — NEGLIGIBLE — FIRES**, at both ends of the range and unambiguously. The
+prediction `|excess| <= 1e-4` **HELD** (the reading is 22–39× inside it). The sign prediction
+**HELD**: the excess is positive on both generators, so **K4.1.10's anti-conservative direction claim
+is CONFIRMED, measured, for the first time**. `E[e] <= 1` on both arms with enormous margin
+(`≈ 0.625` against `1`).
+
+#### The probe's own positive control, unregistered and worth more than the headline
+
+**The out-of-fold arm, whose exchangeability is EXACT by the derivation at C47.1.2, reproduces the
+closed-form exchangeable ideal `0.0026997300269973` — on all four (generator, `R`) combinations, all
+within `1.1` standard errors:** `+0.77 se`, `-0.19 se` at `R = 4,000` and `+0.60 se`, `+1.06 se` at
+`R = 40,000`. **A probe whose exactly-exchangeable arm did not land on the closed form would be
+measuring its own defect**, and this is the check that says it is not. Nothing was tuned to make it
+land there; the ideal is `27/10001` and was computed before the probe ran (C47.1.4).
+
+#### DISCLOSED POST-MEASUREMENT, not registered, and NOT the basis of the disposition: `R = 40,000` on both generators
+
+Run **after** reading the `R = 4,000` result, because the registered agreement rule had fired and the
+obvious question was whether the disagreement was precision or substance. **Labelled
+post-measurement, and the registered disposition above stands on the `R = 4,000` reading alone.**
+
+| | as-built | out-of-fold | **paired excess** | se | t |
+|---|---|---|---|---|---|
+| exceedance, study PRNG | `0.0027026320` | `0.0027012765` | **`1.355543e-6`** | `4.71553e-7` | `2.87` |
+| exceedance, splitmix64 | `0.0027035200` | `0.0027024879` | **`1.032108e-6`** | `4.72877e-7` | `2.18` |
+| `E[e]`, study PRNG | `0.6248805689` | `0.6247153660` | **`1.65203e-4`** | `1.29892e-5` | `12.7` |
+| `E[e]`, splitmix64 | `0.6251615951` | `0.6250060468` | **`1.55548e-4`** | `1.32061e-5` | `11.8` |
+
+```
+|1.355543e-6 - 1.032108e-6| = 3.234358e-7   <=   max(se) = 4.728767e-7   -> the generators AGREE
+```
+
+**At the tenfold replicate count the generators agree, so the fired rule at `R = 4,000` was a
+precision artefact and not generator dependence.** The `R = 40,000` excess is `0.0028%` and `0.0021%`
+of the distance to the bar — outcome (a) again, by a further factor of three.
+
+#### A CORRECTION TO THIS AMENDMENT'S OWN RULE, and it is not the reason the disposition holds
+
+C47.1.2's agreement rule is **scaled wrong, and this author wrote it.** It compares the difference of
+two INDEPENDENT arm means against **one arm's** standard error. The standard error of that difference
+is `sqrt(se1^2 + se2^2)`:
+
+| | gap | correctly-scaled se | z |
+|---|---|---|---|
+| `R = 4,000` | `1.962023e-6` | `2.1388e-6` | **`0.92`** |
+| `R = 40,000` | `3.234358e-7` | `6.6781e-7` | **`0.48`** |
+
+**At `z = 0.92` the two generators never disagreed at all.** The rule as written fires at roughly
+`z ≈ 0.7` — it is a coin-flip trigger, not a test.
+
+**This correction is NOT used to un-fire the rule, and the disposition above does not rest on it.**
+The rule fired as registered, the consequence registered for it was applied as registered (no single
+number is quoted; the range is), and outcome (a) fires at both ends regardless. **What the correction
+buys is that a future amendment does not reuse a broken rule**, so: **registered for any future
+generator-robustness arm in this document — the comparison is `|d| > 2*sqrt(se1^2 + se2^2)`, the
+difference against its own standard error at two sigma, not against one arm's se.** The narrower
+reading of the fired rule that a reader might reach for — *"the R = 4,000 arms disagreed, therefore
+the probe is unreliable"* — is refuted by the positive control above, which both generators pass at
+both replicate counts.
+
+#### The number, stated at the precision it was measured to
+
+**The self-fit excess on `point_tail_bet_e_value`'s healthy per-point exceedance is `≈ 1e-6` to
+`5e-6` absolute, on an exceedance level of `≈ 2.7e-3`.** In relative terms, `n × (excess / level)` is
+`16.8` and `9.6` at `R = 4,000` and `5.0` and `3.8` at `R = 40,000` — **so the departure is `O(1/n)`
+with a single-digit-to-low-double-digit constant, which is what K4.1.10 predicted qualitatively and
+what nobody had measured.** On `E[e]` the excess is `≈ 1.6e-4` on `≈ 0.625`, which is `0.044%` of the
+`0.3754` of the calibrator's headroom that discretization at `n = 10,000` already gives up before any
+construction detail enters (C47.1.4). **Registered as the reading, with its se, and not rounded into
+a cleaner-looking figure.**
+
+#### Disposition, and what closes
+
+**WORKLIST `C47` item (1) CLOSES as QUANTIFIED.** No restructure is registered and none is built. The
+out-of-fold construction exists in committed probe code and its price is measured at `≈ 1e-6`; that
+is the whole content of the closure. **The card's `regime.exchangeability_note` gains the measured
+number** (C47.1.6a) and keeps saying the identity is approximate and anti-conservative — it stops
+saying so without a size.
+
+**What is NOT closed, named:** (1) `family_E_conformal_heldout`, the other held-out K4 candidate, was
+not probed and its construction was not examined (C47.1.5 item 6). (2) The **single-calibration-draw**
+effect is untouched and remains the dominant uncertainty on this card's S2 reading — the pairing
+cancels it by design, and the registered run's `-31.3%` / `-15.5%` departures from the ideal are that
+effect, not this one (C47.1.4). (3) The excess was measured at `n = 10,000` **only**; no `n`-sweep was
+run, so the `O(1/n)` rate is inferred from the amendment's derivation and the constant's size, not
+from a measured slope. **Naming an `n`-sweep as not-done rather than implying the rate was verified.**
+
+**Nothing else moves.** No endpoint, floor, threshold, seed, grid, falsifier, verdict, cell or class
+row; no run re-run; no committed row edited; `detectors/point-tail-bet-e-value.ts` untouched;
+`harness/run-battery.mjs` untouched.

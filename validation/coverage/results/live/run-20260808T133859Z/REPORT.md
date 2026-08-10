@@ -195,3 +195,72 @@ the mechanical verdict.
 **Named-not-done.** The harness stamp is **not** changed by this erratum: the forward fix changes
 a registered field's value and needs its own amendment, so future runs will still emit `'oracle'`
 until one exists.
+
+---
+
+## Append, dated 2026-08-09 — Amendment v2.C47.1: the self-fit exchangeability gap behind this run's arm-32 S2 row is now MEASURED, and it is `≈ 1e-6`
+
+**This append changes no reading of this run.** Arm 32's S2 row stays exactly as committed —
+`k = 742`, `n_points = 400000`, `exceedance = 0.001855`, `mean_e = 0.527556`,
+`lower_95 = 0.0017464003916289452`, verdict `not-refuted` — and no cell, endpoint, verdict or class
+row moves. It is here because a reader of the row should find the number that qualifies it beside the
+row, not only in the prereg.
+
+**What was unquantified when this run was reported.** §7 of this report carries K4.1.10's erratum: the
+`point_tail_bet_e_value` construction fits `median_ref`/`MAD_ref` on the same 10,000 held-out rows
+whose deviations it then ranks against, so (calibration, live) exchangeability is
+`O(1/n)`-approximate and anti-conservative rather than exact. **Approximate with no size attached.**
+
+**Measured, at Amendment v2.C47.1 and its results append.** A committed probe
+(`validation/coverage/tools/self-fit-exchangeability.mjs`) compares the AS-BUILT self-fit reference
+against an out-of-fold reference fitted on a disjoint split — exactly exchangeable by construction —
+paired, at this run's own `n = 10,000`, with both endpoints computed in closed form against the
+substrate CDF rather than by live-point Monte Carlo:
+
+```
+registered reading, R = 4,000, seed base 6.3e8, both generators
+  self-fit excess on the per-point exceedance    2.58e-6 .. 4.55e-6   (range: the registered
+                                                                       generator-agreement rule
+                                                                       fired, so no single number)
+  the same, as a fraction of the distance from
+  this row's lower_95 = 0.0017464 to alpha=0.05  0.0054% .. 0.0094%
+  self-fit excess on E[e]                        1.7e-4 .. 1.9e-4  on E[e] ~ 0.625
+  sign                                           POSITIVE on both generators
+disclosed post-measurement, R = 40,000           1.03e-6 .. 1.36e-6, generators agree
+```
+
+**Registered outcome (a) fired: the gap is NEGLIGIBLE at `n = 10,000` and is now quantified.** It is
+three orders of magnitude below the 10%-of-the-distance-to-the-bar threshold registered in advance,
+and **K4.1.10's anti-conservative DIRECTION is confirmed for the first time** — the excess is positive
+on both generators. **This row's `not-refuted` verdict is unaffected in every direction:** correcting
+for the entire measured self-fit would move `lower_95` from `0.0017464` by at most `5e-6`, against a
+bar of `0.05`.
+
+**And two corrections that touch how this row should be read, both from that amendment.**
+
+**(1) `MAD_ref`'s self-fit is INERT.** `countGte` compares `|a_i − m|/mad` against `|x − m|/mad` with
+`mad > 0` enforced, so `p` is invariant to `mad` and the departure is driven by **the median alone**.
+K4.1.10's *"a median/MAD pulled slightly toward itself"* is corrected to *"a MEDIAN"* by
+quote-and-correct at C47.1.1. This run's committed `cal_median` / `cal_mad` provenance fields are
+unaffected — `cal_mad` is still the right thing to record, it just does not move `p`.
+
+**(2) THIS ROW'S TWO READINGS ARE CONSERVATIVE, AND NOT BECAUSE OF THE SELF-FIT.** Against the
+exchangeable ideal at `n = 10,000`, computed in closed form at C47.1.4:
+
+| | exchangeable ideal | this row | departure |
+|---|---|---|---|
+| per-point exceedance | `0.0026997300269973` = `27/10001` | `0.001855` | **`-31.3%`** |
+| per-point `mean_e` | `0.6245891523884999` | `0.527556` | **`-15.5%`** |
+
+Both departures are **conservative**, both are one calibration draw's realization (C1.7's
+single-reference effect, which the probe's pairing cancels by design), and **both are in the OPPOSITE
+direction to the self-fit.** **Registered reading: these two numbers are NOT the self-fit and must not
+be quoted as it.** They are also why this row's conservative reading was never evidence either way
+about the gap. And `E[e] < 1` in the ideal column is a property of `n`, not a defect: a discrete
+conformal `p` at `n = 10,000` gives up `37.5%` of the calibrator's headroom before any construction
+detail enters, so `mean_e = 0.527556` should never have been read against `1`.
+
+**What stays open, named.** The single-draw effect above is unbounded by this work. No `n`-sweep was
+run, so the `O(1/n)` RATE rests on derivation and the constant's size, not on a measured slope.
+`family_E_conformal_heldout`, the other held-out K4 candidate on this run (cells 18–21, arm 31), was
+not probed and is not covered by this append.

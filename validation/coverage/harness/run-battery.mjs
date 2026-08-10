@@ -808,9 +808,25 @@ const ADAPTERS = {
         eAvgs[w] = e;
         ps.push(p);
       }
-      const { wealth, log } = shapeEcdfAcc.ecdfAccumulatorWealth(windows, ctx.shapeCal);
+      // Amendment v2.C51.1, C51.1.1: `crossingIndex` is READ rather than discarded. It was the
+      // whole reason K6A.1.12's median time-to-cross falsifier was unevaluable on the registered
+      // run — the module returned it, this line destructured `{ wealth, log }`, and no field
+      // carrying a crossing TIME was ever registered on any row.
+      const { wealth, log, crossingIndex } = shapeEcdfAcc.ecdfAccumulatorWealth(windows, ctx.shapeCal);
       const crossed = log.some((l) => l >= Math.log(THRESHOLD));
-      return { crossed, wealth, eAvgs, ps, degenerateWindows };
+      // Amendment v2.C51.1, C51.1.7(c): two threshold literals in two files, pinned to each other.
+      // `crossed` is this harness's own rule at `THRESHOLD = 1/ALPHA` (:82); `crossingIndex >= 0` is
+      // the module's at `LOG_WEALTH_THRESHOLD_K6SLOW = log(1/ALPHA_K6SLOW)`
+      // (shape-ecdf-accumulator.ts:124-128). They agree today at 0.05, so this is one rule computed
+      // twice in two files — and a future divergence must THROW here (surfacing as
+      // adapter_failures on the run that introduces it) rather than emit a `crossing_time` silently
+      // inconsistent with the `detection_rate` on its own row.
+      if (crossed !== (crossingIndex >= 0)) {
+        throw new Error(
+          `shape_ecdf_accumulator adapter: crossed=${crossed} but crossingIndex=${crossingIndex} — the harness `
+          + `THRESHOLD (${THRESHOLD}) and the module's LOG_WEALTH_THRESHOLD_K6SLOW disagree (C51.1.7c)`);
+      }
+      return { crossed, wealth, eAvgs, ps, degenerateWindows, crossingIndex };
     },
   },
 };
@@ -829,6 +845,14 @@ const SHAPE_DETECTORS = Object.freeze({
     armNullId: 'K6-arm-heldout',                                   // K6.7's out-of-grammar literal
     calibrate: (rows) => shapeBlockBet.calibrateShapeBlocks(rows, K6_WINDOW_LEN),
     fingerprint: (cal) => shapeCalFingerprint(cal),                // C1.8, derived by this harness
+    // Amendment v2.C51.1, C51.1.3: FALSE, and the reason is the module interface rather than
+    // parity. `shapeBetWealth` (shape-block-conformal-bet.ts:321-330) returns `{ wealth, log }`
+    // and exposes no `crossingIndex`. Re-deriving one here from `log` is a one-liner and is
+    // REFUSED: it would put a threshold rule the module owns for the sibling into harness-local
+    // code, which is the defect shape K6A.2.1 item 12 was filed against. Extending the field to
+    // this detector is named-not-done and needs its own amendment (its module source is
+    // card-pinned).
+    crossingTimes: false,
   }),
   shape_ecdf_accumulator: Object.freeze({
     windows: K6SLOW_WINDOWS,
@@ -841,6 +865,12 @@ const SHAPE_DETECTORS = Object.freeze({
       return cal;
     },
     fingerprint: (cal) => cal.cal_fingerprint,                     // C1.8, exported by the module
+    // Amendment v2.C51.1, C51.1.3: TRUE — the capability flag the `crossing_time` emission is
+    // gated on. A FLAG in this table, not a `detId === 'shape_ecdf_accumulator'` literal at the
+    // emission sites: K6A.2.1 item 12's whole finding is that a per-detector difference belongs in
+    // this one table, and C47.2's was that an enumeration at three sites is three chances to
+    // forget a candidate.
+    crossingTimes: true,
   }),
 });
 const shapeSpecOf = (detId) => SHAPE_DETECTORS[detId] ?? null;
@@ -1064,6 +1094,14 @@ const freshAcc = () => ({
   // silently pool into K3's arrays (each is a per-detId accumulator, so this is belt-and-
   // suspenders, not load-bearing on its own).
   shapeEAvgMeans: [], shapePs: [],
+  // Amendment v2.C51.1, C51.1.8 item 3: the module's own 0-based `crossingIndex` per trajectory
+  // (-1 = never crossed within the span), for the `crossing_time` summary. A SEPARATE array from
+  // the two above and from K3's, for the reason their own comments give — a per-detId accumulator
+  // makes cross-pooling impossible already, and the separation is belt-and-suspenders. Only the
+  // adapters that SUPPLY a crossingIndex push into it (record(), below), so the array being empty
+  // and the detector having no crossing concept are not the same state: the emission is gated on
+  // the SHAPE_DETECTORS `crossingTimes` flag, never on this array's length.
+  shapeCrossings: [],
 });
 
 /** One adapter call, counted. The record() step is deliberately OUTSIDE the catch (see the
@@ -1132,6 +1170,12 @@ function record(acc, detId, out) {
       acc.shapeEAvgMeans.push(meanEAvg);
       for (const p of out.ps) acc.shapePs.push(p);
     }
+    // Amendment v2.C51.1, C51.1.8 item 3: recorded only when the adapter supplied one, so a
+    // sibling that exposes no crossingIndex contributes nothing rather than contributing a
+    // fabricated -1. Recorded for EVERY successful read (a non-finite wealth is structurally
+    // impossible for this class, K6A.1.12, and would be counted as censored here if it happened,
+    // which is what keeps `censored_fraction === 1 - rate` on the row true by arithmetic).
+    if (out.crossingIndex !== undefined) acc.shapeCrossings.push(out.crossingIndex);
     return;
   }
   // A3a's registered field name is `non_finite_wealth` for every cell this battery emits,
@@ -1229,6 +1273,50 @@ function computePUniformity(rawPs) {
   let d = 0;
   for (let i = 0; i < n; i++) d = Math.max(d, (i + 1) / n - sorted[i], sorted[i] - i / n);
   return { n, decile_counts, ks_statistic: n > 0 ? d : NaN, ks_critical_at_alpha: n > 0 ? 1.36 / Math.sqrt(n) : NaN };
+}
+
+// Amendment v2.C51.1, C51.1.2: the crossing-time distribution — the field K6A.1.12's median
+// time-to-cross falsifier had no row to be read off. `indices` are the module's own 0-based
+// `crossingIndex` values, `-1` meaning the trajectory never crossed within the span.
+//
+// UNITS, registered: ticks from the POST-ONSET start, at `crossing_tick = (i + 1) * W`. That is the
+// tick at the END of the window whose cumulative wealth carried it over 20 — the earliest tick at
+// which the accumulator could have announced it, because the wealth advances once per window and
+// not once per tick. Absolute tick is `ONSET + crossing_tick`; the registered convention is
+// post-onset because that is the convention K6A.1.12's own 4,950 / [3,300, 5,700] and K6A.1.5's
+// "crossingIndex === 1 is the 300-tick crossing" are already written in.
+//
+// `n` is the ROW's own denominator, passed in rather than taken from `indices.length`: N on the
+// fault and S3 rows (A3c — the denominator stays N), `healthy.finite` on the S2 row, which is what
+// makes `1 - censored_fraction` the row's own rate field exactly (C51.1.7d) and lets a reader
+// falsify this distribution against a field that already carried a verdict.
+//
+// THE QUANTILE CONVENTION, deliberately NOT `median()`'s: the q-quantile is the smallest observed
+// crossing tick `t` with `#{crossed at or before t} / n >= q`, and is `null` iff `n_crossed/n < q`.
+// Kaplan-Meier / empirical-CDF, monotone in q, never invents a value beyond the horizon. A censored
+// trajectory has NO crossing time — it is right-censored at `horizon`, not equal to it — so
+// `median()`'s even-n averaging of the two middle order statistics is undefined the moment one of
+// them is censored. `median === null` IS the "censored median" K6A.1.12's falsifier names, and
+// `median === null <=> n_crossed/n < 0.50 <=> the row's rate < 0.50`, which is why that falsifier's
+// second clause ("a censored median with detection > 0.50") is an arithmetic IMPOSSIBILITY and a
+// consistency check on this harness rather than an independent event.
+function crossingTimeSummary(indices, spec, n) {
+  const ticks = indices.filter((i) => i >= 0).map((i) => (i + 1) * spec.windowLen).sort((a, b) => a - b);
+  const nCrossed = ticks.length;
+  const q = (p) => (n > 0 && nCrossed / n >= p ? ticks[Math.ceil(p * n) - 1] : null);
+  return {
+    n,
+    n_crossed: nCrossed,
+    n_censored: n - nCrossed,
+    censored_fraction: n > 0 ? (n - nCrossed) / n : NaN,
+    median: q(0.5),
+    p25: q(0.25),
+    p75: q(0.75),
+    min: nCrossed ? ticks[0] : null,
+    units: 'ticks-post-onset',
+    window_len: spec.windowLen,
+    horizon: spec.windows * spec.windowLen,
+  };
 }
 
 // ── run identity ─────────────────────────────────────────────────────────────
@@ -1552,6 +1640,13 @@ for (const cell of REGISTERED_CELLS.filter((c) => CLASSES_RUN.includes(c.fault_c
       c.cal_fingerprint = spec.fingerprint(ctx.shapeCal);
       c.heldout_seed = ctx.heldoutSeed;
       c.heldout_rows = ctx.heldoutRowCount;
+      // Amendment v2.C51.1, C51.1.3: the crossing-time distribution, on the accumulator's four
+      // K6-slow fault cells (43-46). All four, not only the canonical 44 whose falsifier it
+      // serves: cell 44's distribution is uninterpretable without cell 45's `1.0000` boundary
+      // artifact showing as a crossing near `min` and cell 43's `0.0220` showing as
+      // `median: null` beside it. NO verdict authority (C51.1.4) — the row's `verdict` stays the
+      // `detection_rate >= COVERAGE_FLOOR` expression it already is.
+      if (spec.crossingTimes) c.crossing_time = crossingTimeSummary(a.shapeCrossings, spec, N);
     }
     cells.push(c);
     process.stderr.write(
@@ -1757,6 +1852,11 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       final_wealth_mean: healthy.es && healthy.es.length ? mean(healthy.es) : NaN,
       final_wealth_median: healthy.es && healthy.es.length ? median(healthy.es) : NaN,
       degenerate_windows: healthy.degenerateWindows,                     // K6.7, structurally 0
+      // Amendment v2.C51.1, C51.1.3: the healthy arm's crossing times ARE the arrival times of
+      // the false alarms `crossing_rate` counts (K6A.1.12 predicts 0.0181 of them), so the
+      // denominator here is `s2n` = `healthy.finite`, the same one `crossing_rate` uses — which
+      // makes `1 - censored_fraction === crossing_rate` on this row (C51.1.7d).
+      ...(spec.crossingTimes ? { crossing_time: crossingTimeSummary(healthy.shapeCrossings, spec, s2n) } : {}),
     } : {}),
     non_finite_wealth: healthy.nonFinite,
     adapter_failures: healthy.throws,
@@ -1804,6 +1904,12 @@ for (const arm of ARM_CELLS.filter((a) => CLASSES_RUN.includes(a.hint))) {
       final_wealth_mean: power.es && power.es.length ? mean(power.es) : NaN,
       final_wealth_median: power.es && power.es.length ? median(power.es) : NaN,
       degenerate_windows: power.degenerateWindows,
+      // Amendment v2.C51.1, C51.1.3: the S3 row's own crossing times, at the N denominator its
+      // `detection_rate` uses. K3.1.4/K6.7's binding exclusion is unaffected — `crossing_time` is
+      // not one of the five instrument-named fields and carries no verdict (C51.1.4).
+      ...(shapeKind && spec.crossingTimes
+        ? { crossing_time: crossingTimeSummary(power.shapeCrossings, spec, N) }
+        : {}),
     } : {}),
     adapter_failures: power.throws,
     non_finite_wealth: power.nonFinite,

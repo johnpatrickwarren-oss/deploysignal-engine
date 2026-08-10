@@ -11147,3 +11147,987 @@ The verdict of Erratum v1.5 stands and is unweakened: WORKLIST `C43`'s premise i
 coverage cell is out of regime, the coverage layer reads no regime, and `safe_t_e_value` holds
 `USE`/T1 under both readings. F1 sharpens the price of the reading the protocol rejected; it does not
 revive the row's claim. No card regime is narrowed, no endpoint moves, and no run is re-scored.
+
+---
+
+## Amendment v2.C51.1 — 2026-08-09, before the emission exists: the crossing-time field on the shape-accumulator cells, so K6A.1.12's median falsifier becomes evaluable on a FUTURE run
+
+WORKLIST `C51` item (1). Sections §1–14 and every prior Amendment, Erratum and append stay intact.
+This amendment **registers one NEW object-valued field on rows this battery already emits** and moves
+no endpoint, floor, threshold, seed, grid, falsifier, verdict, cell or class row. Registered
+**before** the harness change it authorizes.
+
+**Scope, stated first because it is the whole point of the registration: FUTURE runs only. The
+registered K6-slow run `run-20260809T035934Z` keeps its unevaluated falsifier unevaluated.** No
+rerun is authorized, none is performed, and the one-attempt rule (§0 rule 7, the same rule
+C39 and v2.K6A.6's results append are held to) is why: re-running the registered draw to read a field
+that did not exist at registration time would be a second attempt at an endpoint whose first attempt
+is already on the record. **The median time-to-cross on cell 44 of that run is, and stays,
+UNEVALUATED — not unfalsified, not held, not refuted.**
+
+### C51.1.1 The debt, quoted from the row that could not discharge it
+
+K6A.1.12's endpoint table, row 2, verbatim:
+
+> | cell 44 median time-to-cross | `4,950` ticks | `[3,300, 5,700]`; `23.2%` of draws censored at `> H` | a median `< 3,000` or a censored median with detection `> 0.50` |
+
+And the run that was supposed to read it could not. **The reason is mechanical and is in the adapter,
+not in the module:** `detectors/shape-ecdf-accumulator.ts:451-472` returns
+`{ wealth, log, crossingIndex }` and `crossingIndex` is documented there as *"0-based index of the
+first window whose cumulative log-wealth reaches `LOG_WEALTH_THRESHOLD_K6SLOW`, or -1 if none"*;
+`harness/run-battery.mjs`'s adapter destructures **`const { wealth, log } = ...`** and discards it,
+then re-derives only the boolean `crossed = log.some(l => l >= Math.log(THRESHOLD))`. **No field
+carrying a crossing TIME was ever registered, on any row, for either shape detector.** A prediction
+with a band and a falsifier was registered against a quantity the run had no field to write. That is
+the defect this amendment closes, and it is a registration defect, not a code defect.
+
+### C51.1.2 The registered field: name, units, shape, and the quantile convention in full
+
+**Registered field name: `crossing_time`.** Object-valued, on the model of `increment_estimator`
+(K3.1.1) and `p_uniformity` (K3.1.7) — this battery's established shape for a per-cell DISTRIBUTION,
+`n` first, as against the flat scalars (`final_wealth_mean`, `final_wealth_median`,
+`degenerate_windows`) it sits beside. **A summary distribution on the cell row, NOT per-trajectory
+emission:** every existing aggregate on these rows is a per-cell summary over the cell's `N`
+trajectories and the run directory holds no per-trajectory record for any detector, so a
+per-trajectory array would be the only such field in the study and would grow the row by `N` entries
+to no registered purpose.
+
+```
+crossing_time: {
+  n:                 <int>     trajectories scored for this cell (= the row's own `n`)
+  n_crossed:         <int>     trajectories whose wealth reached 20 at some window checkpoint
+  n_censored:        <int>     n - n_crossed
+  censored_fraction: <float>   n_censored / n
+  median:            <int|null>   the 0.50 quantile, in ticks; null iff censored
+  p25:               <int|null>   the 0.25 quantile, in ticks; null iff censored
+  p75:               <int|null>   the 0.75 quantile, in ticks; null iff censored
+  min:               <int|null>   earliest crossing observed; null iff n_crossed === 0
+  units:             'ticks-post-onset'
+  window_len:        <int>     W, the checkpoint spacing (150 for this class)
+  horizon:           <int>     windows * W, the largest representable crossing time (6,000)
+}
+```
+
+**UNITS, registered exactly: ticks measured from the post-onset start of the scored span, and a
+crossing is only observable at a window checkpoint.** A trajectory whose `crossingIndex` is `i`
+(0-based) is recorded at
+
+```
+crossing_tick = (i + 1) * W
+```
+
+which is the tick at the END of the window that carried the wealth over the threshold — the earliest
+tick at which the accumulator could have announced it, because the wealth advances once per window
+and not once per tick (`ecdfAccumulatorWealth`, and the unit test *"the wealth advances once per
+window, not once per tick"*). For this class `W = 150`, `windows = 40`, span `[300, 6300)`, so
+`crossing_tick` takes values in `{150, 300, ..., 6000}` and **absolute** tick is
+`ONSET_K6SLOW + crossing_tick = 300 + crossing_tick`. **The registered convention is post-onset, not
+absolute**, because that is the convention K6A.1.12's own `4,950`/`[3,300, 5,700]` and K6A.1.5's
+*"`crossingIndex === 1` is the 300-tick crossing"* are already written in, and a field whose units
+disagreed with the prediction it exists to test would be worse than no field.
+
+**THE QUANTILE CONVENTION, registered in full, because censoring makes it a choice and not a
+detail.** A trajectory that never crosses within the 40 windows has no crossing time — it is
+right-censored at `horizon`, not equal to it and not missing. Registered:
+
+```
+the q-quantile is the smallest observed crossing_tick t with #{crossed at or before t} / n >= q,
+and is null iff n_crossed / n < q
+```
+
+This is the Kaplan–Meier/empirical-CDF quantile, it is monotone in `q`, it never invents a value
+beyond the horizon, and **`median === null` is exactly the "censored median" K6A.1.12's falsifier
+names.** Registered with it, the arithmetic identity that makes the falsifier's second clause a
+consistency check rather than an independent event: `median === null` ⟺ `n_crossed/n < 0.50` ⟺
+`detection_rate < 0.50` on the same row. **"A censored median with detection `> 0.50`" is therefore
+arithmetically impossible, and if it is ever emitted it is a harness defect and not a measurement**
+— registered here as such, and registered as a test.
+
+**Deliberately NOT the harness's `median()` helper**, whose even-`n` convention averages the two
+middle order statistics: with one of them censored the average is undefined, and the two conventions
+disagree by up to one window even when neither is censored. The departure is named here rather than
+discovered later, and `final_wealth_median` on the same row keeps `median()` untouched.
+
+### C51.1.3 Where the field lands, and the two places it deliberately does not
+
+**Registered: `crossing_time` is emitted on every row this battery writes for
+`shape_ecdf_accumulator` — the four K6-slow fault cells `43`–`46`, and arm `47`'s S2 healthy row and
+S3 power row.** All six, not only cell 44: the falsifier is cell 44's, but a crossing-time
+distribution read on the canonical cell alone is uninterpretable without the `mix-d1.0` and
+`mix-d2.0` cells beside it (the `1.0000` boundary artifact of K6A.1.8 should show as a crossing time
+near `min`, and cell 43's `0.0220` as `median: null`), and the S2 healthy row's crossing times are
+the false-alarm arrival times of the `0.0181` `crossing_rate` K6A.1.12 already registers.
+
+**NOT on `shape_block_conformal_bet`'s rows, and the reason is the module interface rather than
+parity.** `detectors/shape-block-conformal-bet.ts:321-330` `shapeBetWealth` returns `{ wealth, log }`
+and exposes **no `crossingIndex`**. Deriving one in the harness from `log` is possible in one line and
+is refused: it would put a threshold rule the module owns for the accumulator into harness-local code
+for the sibling, which is the shape of the defect K6A.2.1 item 12 was filed against. **Registered as
+named-not-done: extending `crossing_time` to `shape_block_conformal_bet` requires exporting a
+`crossingIndex` from its module, which is a change to a card-pinned detector source and needs its own
+amendment.** K6's class answer is settled and no K6 prediction names a crossing time, so nothing is
+blocked by leaving it.
+
+**NOT on any other detector's rows.** `crossing_time` presupposes a per-window wealth checkpoint
+trajectory. The terminal, point and process kinds have none.
+
+### C51.1.4 The field carries NO verdict authority — registered, in the K3.1.3/K6.7/C39 wording
+
+**`crossing_time` is a REPORTED descriptive secondary. No verdict, no floor, no stop condition and no
+class answer reads it, on any row.** Every row's `verdict` stays exactly the expression it is today:
+`detection_rate >= COVERAGE_FLOOR` on the fault and S3 rows, `lower_95 > ALPHA` on the S2 row. The
+`K6-slow` class row stays `detection_rate`-derived through `coverageFor`/`verdict.mjs:249`. **This is
+the same discipline C39 registered for the increment estimator and K3.1.3/K6.7 for
+`crossing_rate`-derived verdicts, applied at registration time rather than after a reader has
+inferred authority from an emitted number.**
+
+And its own limitation, disclosed rather than left for a reader: **`crossing_time` is a
+single-calibration-draw reading like every other endpoint on these rows, and the across-draw spread
+is the dominant uncertainty on it — v2.K6A.6 measured `sd ≈ 0.151` on the detection rate itself.
+K6A.1.12's `[3,300, 5,700]` is a per-draw band and must be read as one.** No within-draw interval is
+registered for the quantiles and none may be computed from this field.
+
+### C51.1.5 Which future run makes the falsifier evaluable — and NONE is scheduled
+
+**Registered plainly, so the debt is not recorded as discharged when it is only made dischargeable.**
+`crossing_time` becomes readable on the first registered run of this battery that emits
+`shape_ecdf_accumulator` rows at the registered `N = 2,000` into `results/live/`. That is any of:
+
+| registration that would trigger one | status |
+|---|---|
+| a `--classes K6-slow` (or full-battery) live run of `harness/run-battery.mjs` | **not scheduled** |
+| `C51` item (4), the single-draw-per-cell protocol amendment | **open, unregistered, unscheduled** |
+| a rerun of `run-20260809T035934Z` for a named code defect (§0 rule 7's only rerun door) | **no defect named; this amendment names none** |
+| `harness/run-acrossdraw.mjs` (v2.K6A.6's across-draw study) | **would NOT trigger one** — it writes `results/live/run-acrossdraw-*` through its own emission path and does not emit cell rows |
+
+**NOTHING IS CURRENTLY SCHEDULED.** At the commit that closes this amendment's code items, the
+median falsifier of K6A.1.12 is **evaluable but unevaluated**, and it stays unevaluated until a run
+above is registered and executed. C51 item (1) is discharged as *the field exists*; it is not
+discharged as *the falsifier was tested*.
+
+### C51.1.6 What is NOT changed
+
+1. **No historical row moves and no run is re-run.** `results/` is append-only and this amendment
+   does not touch it. `run-20260809T035934Z`'s cell-44 row carries no crossing time and never will.
+2. **No endpoint, band, falsifier or prediction of K6A.1.12 moves** — including the `4,950`,
+   the `[3,300, 5,700]`, the `23.2%` and the falsifier's own text. They are read by a future run, at
+   the values registered on 2026-08-08.
+3. **No verdict, floor, threshold, seed, grid, cell or class row moves** (C51.1.4).
+4. **`shape_block_conformal_bet` gains nothing** (C51.1.3).
+5. **The module `detectors/shape-ecdf-accumulator.ts` is NOT touched.** `crossingIndex` already
+   exists, is already unit-tested (`test/shape-ecdf-accumulator.test.ts:228-259`), and the fix is
+   entirely in the adapter that was throwing it away. **No card-pinned detector source changes.**
+6. **C51 items (2) and (3) are DONE** (v2.K6A.6, v2.K6A.7); **item (4) stays open** and is untouched
+   here.
+
+### C51.1.7 DISCLOSURES
+
+**(a) The card expiry re-fires with the code commit, and the LAST commit on this branch closes it.**
+`cards/shape_ecdf_accumulator.json` pins `validation/coverage/harness/run-battery.mjs` (C38.1.7), so
+the adapter change moves that pin's sha256 and `cert:expiry` reports `EXPIRED` at that commit.
+**Sequenced deliberately, C47.2.5(b)'s pattern: the dedicated card re-freeze is the LAST commit on
+this branch, so `cert:expiry` is current at branch HEAD and the re-freeze rides in no other change.**
+
+**(b) A paired smoke is required before the code commit lands**, and its result is stated at that
+commit: `--n 20`, all seven classes, same seeds, `COVERAGE_RESULTS_DIR` redirected, before and after.
+**Registered acceptance: `103` rows compared (the count corrected by the 2026-08-09 append to
+C38.1.7), `0` pre-existing fields changed on any row, `1` new field (`crossing_time`) on exactly `6`
+rows.** A pre-existing field changing anywhere is a defect and blocks the commit — the adapter's
+return object gains a member and `record()` gains a counter, both on the path every shape row takes,
+so bit-identity of the existing fields is the thing that has to be proved rather than assumed.
+
+**(c) The adapter's `crossed` boolean and the module's `crossingIndex` are checked to agree, and
+they are not the same expression.** `crossed` is the harness's own
+`log.some(l => l >= Math.log(THRESHOLD))` at `THRESHOLD = 1/ALPHA = 20`
+(`run-battery.mjs:82`); `crossingIndex >= 0` is the module's
+`logM >= LOG_WEALTH_THRESHOLD_K6SLOW` at `ALPHA_K6SLOW = 0.05`
+(`shape-ecdf-accumulator.ts:124-128`). The two literals agree today at `0.05` and the two rules are
+therefore the same rule computed twice in two files. **Registered as an assertion in the adapter:
+`crossed === (crossingIndex >= 0)`, throwing on disagreement** — so a future divergence of the two
+alphas surfaces as an adapter failure on the run that introduces it, instead of as a
+`crossing_time` silently inconsistent with the `detection_rate` on the same row. This is a NEW guard
+and the reason it is registered rather than added quietly.
+
+**(d) `n_crossed` and the row's `fires` are the same count by construction, and that is stated so a
+reader can check the row against itself.** `fires` accumulates `out.crossed`; `n_crossed`
+accumulates `out.crossingIndex >= 0`; by (c) they are equal on every row, so
+`crossing_time.n_crossed === c.fires` and `crossing_time.censored_fraction === 1 - detection_rate`
+whenever `detection_rate` is non-null. Registered as a test over every emitted row. **Redundancy is
+the point:** it is what lets a reader of the run directory falsify the crossing-time distribution
+against a field that already carried a verdict.
+
+### C51.1.8 Registered code and test items
+
+| # | item | site |
+|---|---|---|
+| 1 | the accumulator adapter stops discarding `crossingIndex` and returns it beside `crossed` | `harness/run-battery.mjs` (the `shape_ecdf_accumulator` adapter) |
+| 2 | the adapter asserts `crossed === (crossingIndex >= 0)` and throws on disagreement (C51.1.7c) | same |
+| 3 | `record()` accumulates crossing indices for `kind: 'shapeblock'` reads that supply one, into a per-detector array beside `shapeEAvgMeans` — never pooled with the sibling's | `harness/run-battery.mjs` `freshAcc`/`record` |
+| 4 | `crossingTimeSummary()` — the C51.1.2 field, quantiles by the registered censored convention | `harness/run-battery.mjs` |
+| 5 | the field is emitted on the four K6-slow fault cells and on arm 47's S2 and S3 rows, and on no other row | `harness/run-battery.mjs` |
+| 6 | test: all six `shape_ecdf_accumulator` rows carry `crossing_time`; **no `shape_block_conformal_bet` row does, and no other detector's row does** | `test/run-battery.test.mjs` |
+| 7 | test: `crossing_time.n_crossed === fires` and `censored_fraction === 1 - detection_rate` on every row that carries the field (C51.1.7d) | `test/run-battery.test.mjs` |
+| 8 | test: the quantile convention — `p25 <= median <= p75` where all three are non-null; a null quantile implies `n_crossed/n <` its `q`; every non-null quantile is a positive multiple of `window_len` and `<= horizon` | `test/run-battery.test.mjs` |
+| 9 | test: **`median === null` implies `detection_rate < 0.50`** — K6A.1.12's second falsifier clause as an arithmetic invariant (C51.1.2) | `test/run-battery.test.mjs` |
+| 10 | **MUTATION KILL**, registered as the one test that must fail under an off-by-one: recomputing `crossing_time.median` from the module directly at a fixture, and asserting the harness's tick arithmetic is `(i+1)*W` and not `i*W` | `test/run-battery.test.mjs` |
+
+### C51.1.9 House rules, mapped
+
+(1) **Committed before the code**, in its own commit, prereg text alone. (2) A failed endpoint is a
+publishable result — and the endpoint this amendment serves is on the record as UNEVALUATED, which is
+published here rather than quietly converted into a future PASS (C51.1.5). (3) **No post-hoc
+analysis:** this amendment reads no cell and no endpoint of any committed run, and it does not
+re-read `run-20260809T035934Z`. (4) §9's fallback and A3c untouched — a cell with no finite read
+emits `detection_rate: null` and `crossing_time` is emitted with `n_crossed: 0` and every quantile
+`null`, which is a statement that nothing crossed and not a statement that nothing was measured;
+`not_executable_reason` remains the field that says the latter. (5) No new substrate, seed, draw or
+row count — the field is computed from wealth paths the run already produces. (6) `results/`
+untouched; **no run written, no committed row edited.** (7) **No rerun, and none is authorized** —
+this is the one-attempt rule doing exactly what it is for (C51.1.5). (8) Binding on the next run that
+emits these rows: its report states the crossing-time distribution on all six rows and reads
+K6A.1.12's median falsifier against the `4,950`/`[3,300, 5,700]` band registered on 2026-08-08.
+
+### Amendment summary
+
+**Closes WORKLIST `C51` item (1) as a REGISTRATION, and says plainly what that does and does not
+buy.** K6A.1.12 registered a prediction (`4,950` ticks), a per-draw band (`[3,300, 5,700]`), a
+censoring rate (`23.2%`) and a falsifier (*"a median `< 3,000` or a censored median with detection
+`> 0.50`"*) **against a quantity no emitted field carried** — the module returns `crossingIndex` and
+the adapter destructured `{ wealth, log }` and threw it away. Registered here: **`crossing_time`**, an
+object-valued per-cell summary on the model of `increment_estimator`/`p_uniformity`, in **ticks from
+the post-onset start** at `crossing_tick = (crossingIndex + 1) * W`, with the **Kaplan–Meier quantile
+convention stated in full** so that `median === null` IS the falsifier's "censored median", and with
+the arithmetic identity that makes the falsifier's second clause a **consistency check**: a censored
+median with detection `> 0.50` is impossible, and if emitted is a harness defect. Emitted on all six
+`shape_ecdf_accumulator` rows; **not** on `shape_block_conformal_bet`, because its module exposes no
+`crossingIndex` and re-deriving one in the harness is the K6A.2.1-item-12 defect shape — named
+not-done. **It carries no verdict authority** (C39/K3.1.3's wording) and its across-draw caveat
+travels with it. **Scope is FUTURE runs and the registered run's falsifier stays UNEVALUATED:** no
+rerun is authorized, the one-attempt rule is why, and `run-20260809T035934Z`'s cell-44 median is not
+unfalsified but unread. **No run that would read it is currently scheduled** — the four routes that
+could are tabled with their status, and three of the four are unregistered or would not trigger one.
+Disclosed: this re-expires `shape_ecdf_accumulator` and the **dedicated re-freeze is the last commit
+on this branch**; a paired smoke at `--n 20` must show **103 rows, 0 pre-existing fields changed, 1
+new field on exactly 6 rows** before the code lands; and a **new adapter assertion**
+`crossed === (crossingIndex >= 0)` pins two threshold literals in two files to each other so a future
+divergence throws instead of emitting a crossing time inconsistent with its own detection rate.
+
+### Code-commit append to Amendment v2.C51.1, dated 2026-08-09 (appended not edited): the paired smoke, the mutations killed, and the one registered claim that is NOT mutation-observable
+
+Stated at the commit that lands C51.1.8's ten items, discharging C51.1.7(b).
+
+**The paired smoke, at the registered acceptance and matching it exactly.** `--n 20`, all seven
+classes, same seeds, `COVERAGE_RESULTS_DIR` redirected, before and after the adapter change:
+
+```
+paired smoke diff, --n 20, same seeds, COVERAGE_RESULTS_DIR redirected
+  rows compared                    103
+  pre-existing fields changed        0
+  new fields                         1   crossing_time, on exactly 6 rows
+```
+
+**Four mutations, each verified to fail at least one C51.1 test** — run by reverting the harness
+after each, so the count is a measurement and not an intention:
+
+| mutation | C51.1 tests failing |
+|---|---|
+| `(i + 1) * W` → `i * W` (the 0-based off-by-one) | 2 |
+| the Kaplan–Meier quantile → `median()` over the crossed subsample | 6 |
+| the `crossed === (crossingIndex >= 0)` assertion removed | 2 |
+| the `spec.crossingTimes` gate ignored (emit on the sibling too) | 10 |
+
+**AND THE ONE REGISTERED CLAIM THAT NO MUTATION CAN KILL, stated because C51.1.7(d) reads as though
+it could.** The per-row denominator — `N` on the fault and S3 rows, `s2n = healthy.finite` on the S2
+row — **is not observable in any emitted row.** All three coincide with `indices.length` whenever
+`adapter_failures` and `non_finite_wealth` are both `0`, and K6A.1.12 registers **both as structural
+zeros for this class** (`p ∈ [1/501, 1]` bounds `e`, so no non-finite wealth pathway exists, and the
+module's only failure mode is a throw on a non-finite input, which is a defect). Replacing the passed
+denominator with `indices.length` therefore fails **no test**, measured, not assumed. **What is done
+instead:** the three denominators are pinned AT THE SOURCE by regex, the C43.1
+`NULL_ID_BY_DETECTOR` test's precedent for a module-local contract in a CLI harness. **What is not
+done:** no positive control forces an adapter throw on this class, so the branch where the
+denominators diverge is untested. It is named here rather than left for a later reader to find, and
+it is the honest boundary of C51.1.7(d): the identity `censored_fraction === 1 - rate` is verified on
+every emitted row, and the denominator *choice* that would matter if the structural zeros ever moved
+is verified only against the source text.
+
+**Nothing else in Amendment v2.C51.1 moves**, and in particular the registered run's median
+falsifier stays UNEVALUATED (C51.1.5) — this append records a code commit, not a reading.
+
+---
+
+## Amendment v2.C47.1 — 2026-08-09, before the probe exists: the K4 self-fit exchangeability gap gets a measurement design, with both outcomes and the number that separates them registered in advance
+
+WORKLIST `C47` item (1), the last one open. Sections §1–14 and every prior Amendment, Erratum and
+append stay intact. **This amendment registers a DERIVATION PROBE and its two disposition outcomes.
+It moves no endpoint, floor, threshold, seed, grid, falsifier, verdict, cell or class row, it writes
+no run directory, and it re-reads no committed cell.** Registered **before** the probe it authorizes.
+
+**What it is not.** It is not a rerun, not a registered measurement of any card's endpoint, and not a
+restructure of the K4 detector. The probe is a `validation/coverage/tools/` probe under that
+directory's own README discipline — non-registered seeds, run at any time, quoted in this document,
+resting on committed code.
+
+### C47.1.1 THE PREMISE, VERIFIED FROM CODE FIRST — and it is narrower than K4.1.10 says
+
+K4.1.10 records the debt and cites `point-tail-bet-e-value.ts:69-77`. **Two corrections to that
+citation, both from reading the file at HEAD.**
+
+**(a) The line numbers moved.** `calibrateTailBet` is at **`detectors/point-tail-bet-e-value.ts:81-94`**
+at HEAD; `:69-77` is now `countGte`. K4.1.10 was written before Amendment v2.C1 C1.9 inserted
+`assertKappaInUnitInterval` and the corrected docstring. Cited correctly at registration, stale now,
+corrected here.
+
+**(b) THE SUBSTANCE, and it sharpens the claim rather than restating it. The premise HOLDS, and the
+MAD half of it does not.** Quoted, K4.1.10:
+
+> each calibration row's score is computed against a reference that included that row itself, while a
+> live point's score is computed against a reference it never contributed to … (calibration scores
+> run systematically slightly smaller than a same-sized fresh-split reference would produce, since
+> each is measured against a median/MAD **pulled slightly toward itself**)
+
+The self-fit is real and is exactly where the erratum says it is — `:85-92`, verbatim:
+
+```
+const sortedRows = [...rows].sort((a, b) => a - b);
+const m = median(sortedRows);
+const absDevs = rows.map((x) => Math.abs(x - m));
+const mad = median([...absDevs].sort((a, b) => a - b));
+...
+const sortedScores = absDevs.map((d) => d / mad).sort((a, b) => a - b);
+```
+
+`m` and `mad` are computed from `rows`, and `sortedScores` is those same `rows`' deviations. A live
+point enters at `:116-118`:
+
+```
+const score = Math.abs(x - cal.median) / cal.mad;
+const p = (1 + countGte(cal.sortedScores, score)) / (n + 1);
+```
+
+**But `mad` CANCELS EXACTLY, and the departure is driven by the median ALONE.** Derivation, not a
+measurement: `countGte(sortedScores, score)` counts `#{ |a_i - m|/mad >= |x - m|/mad }`, and `mad > 0`
+is enforced at `:89-91`, so that set is identically `#{ |a_i - m| >= |x - m| }`. **`p` is invariant to
+`mad` — to any positive rescaling of it — and the module's own docstring already says why in general
+terms** (*"the score is rank-based through the conformal p-value below, so any monotone rescaling of
+the score, including a fixed consistency constant on MAD, leaves every rank and therefore every
+p-value unchanged"*). What the docstring states for a FIXED constant holds for the self-fit `mad` too,
+because `mad` is one number applied to every score on both sides of the comparison.
+
+**Registered correction to K4.1.10, by quote-and-correct:** *"a median/MAD pulled slightly toward
+itself"* should read **"a MEDIAN pulled slightly toward itself"**. The self-fit of `MAD_ref` is inert
+to `p`, therefore inert to `e`, therefore inert to every endpoint this card carries. K4.1.10's
+verdict — the exchangeability is approximate and not exact — **stands unweakened**; its attribution
+was one term too wide. **In floating point** the cancellation is exact in the sense that matters:
+IEEE-754 division by a positive constant is monotone non-decreasing, so it can create a tie but can
+never invert an order, and `p` can differ from the real-arithmetic value only on a tie boundary.
+
+**What this does NOT do:** it does not make the gap zero, and it does not make it small. `m` is the
+sample median of the same rows whose deviations are then ranked, and `sum_i |a_i - m|` is *minimised*
+at `m = m_A`, so the calibration deviations are shrunk relative to what an independent reference would
+give while the live point's deviation is not. The direction K4.1.10 registers is unchanged. **The size
+is what nobody has measured, and that is what this probe is for.**
+
+### C47.1.2 THE PROBE, frozen exactly: what varies is the reference, and nothing else
+
+Two constructions, identical in every respect except which sample the reference is fitted on. **Both
+call the REAL module** (`dist/detectors/point-tail-bet-e-value.js`) for `p` and `e` — the calibrator,
+`kappa`, `countGte` and the `(1 + rank)/(n + 1)` form are shared code, not re-implementations, so the
+comparison cannot be an artefact of a second implementation of the thing under test.
+
+| | AS-BUILT (self-fit) | OUT-OF-FOLD (comparator) |
+|---|---|---|
+| reference `(m, MAD)` | fitted on **A** | fitted on **B**, disjoint from A |
+| the `n` ranked calibration scores | `\|A_i − m_A\| / MAD_A` | `\|A_i − m_B\| / MAD_B` |
+| live point's score | `\|x − m_A\| / MAD_A` | `\|x − m_B\| / MAD_B` |
+| built by | `calibrateTailBet(A)`, unmodified | a `TailBetCalibration` object assembled in the probe |
+| scored by | `pointTailBetEValue`, unmodified | `pointTailBetEValue`, unmodified |
+| exchangeability of (calibration, live) scores | `O(1/n)`-approximate (C47.1.1) | **EXACT** |
+
+**Why the comparator is exactly exchangeable, registered as the derivation it rests on.** Condition on
+B. Then `m_B`, `MAD_B` are constants, and `A_1..A_n, x` are i.i.d. and independent of B, so their
+scores `|·− m_B|/MAD_B` are i.i.d., hence exchangeable, hence `p` is exactly super-uniform and
+`E[e | H0] <= 1` holds with the calibrator identity and nothing else. **It is the construction the
+restructure of outcome (b) would build**, so the measured difference is exactly the price of not
+having built it.
+
+**Substrate: the registered one.** i.i.d. standard normal — `drawFor(r, 0) = gaussFrom(r)`
+(`lib/inject.mjs:19-24`), which is the law cells 18–21 and arm 32's held-out draws come from at
+`phi = 0`. **`n = 10,000` on both arms**, §6's registered row count and the module's own floor at
+`:82`. **Per replicate `2n = 20,000` CONSECUTIVE values from one continuously-advanced stream**
+(C1.2's corrected form, so the probe cannot reproduce the rank-1 lattice C1.3 recorded), split
+`A = ` first 10,000, `B = ` second 10,000.
+
+**THE ENDPOINTS ARE COMPUTED EXACTLY, NOT BY LIVE-POINT MONTE CARLO — registered, because it is the
+design decision that makes a `1e-5`-scale reading possible at all.** For a reference `(m, mad)` with
+ascending calibration scores `s[0..n-1]`, `p(x)` is a step function of `|x − m|`, so both endpoints
+are closed-form integrals against the substrate's own CDF:
+
+```
+F(t)        = Phi(m + mad*t) - Phi(m - mad*t)              = P(|x - m| <= mad*t)
+P(rank = j) = F(s[n-j]) - F(s[n-j-1]),   s[n] := +inf,  F(s[-1]) := 0
+exceedance  = sum over j with e_j >= 20  of P(rank = j)    = 1 - F(s[n-K-1])
+E[e]        = sum over j = 0..n  of  e_j * P(rank = j),     e_j = kappa*((1+j)/(n+1))^(kappa-1)
+```
+
+`K = 26` is the largest rank with `e_j >= 20` at `kappa = 0.1`, `n = 10,000` (`p* = 0.0027752`,
+`(1+K)/(n+1) = 0.0026997 <= p* < 28/10001`). **This is the exact conditional value of the same
+quantity the battery's 400,000-point average estimates, with the live-point sampling noise removed** —
+so the probe's remaining variance is the calibration draw's alone, and the pairing removes most of
+that too. `Phi` is a **relative-accuracy** implementation (regularised-incomplete-gamma continued
+fraction for `erfc`, not a polynomial with `1.5e-7` ABSOLUTE error, which would be worthless at
+`P ≈ 1e-3` in the tail), asserted in the probe against three published `erfc` values.
+
+**Replicates and seeds, registered.** **`R = 4,000` replicates**, seed base **`6.3e8`**, one
+continuously-advanced stream across all replicates. The probe README's seed discipline is met: probe
+bases are `>= 6e8` (in use: `7.1e8`, `8.4e8`/`8.5e8`) and every registered seed in this study is
+`<= 1e8`. **No registered scenario seed is touched, and the endpoint being probed is not a registered
+endpoint of any run.**
+
+**Registered escalation, in advance:** the paired excess must be resolvable against the `1e-4` scale
+this amendment's prediction is stated at. **If the paired standard error on the excess exceeds
+`3e-5`** — the precision needed to separate `1e-4` from `0` at three standard errors — **`R` is raised
+to `40,000` and BOTH readings are reported, the `4,000` one included.** No other extension is
+authorized, and `R` is not chosen after seeing the answer.
+
+**Registered substrate-robustness arm, in advance.** The whole probe is repeated under a **second,
+independent generator** (a counter-based stream, not `lib/inject.mjs`'s 32-bit LCG with consecutive
+Box-Muller outputs). **Reported as a disclosed sensitivity, never as the headline**, and its purpose
+is one specific doubt: this study has already recorded one lattice artefact from that generator
+(C1.3), and a `1e-5`-scale reading on a rank statistic is exactly where a weak generator would show
+up. **If the two generators disagree on the excess by more than the reported standard error, the
+finding is reported as generator-dependent and NEITHER number is quoted as the answer.**
+
+### C47.1.3 THE OUTCOME RULE — the number that separates (a) from (b), registered before the probe runs
+
+The registered validity bar for this card is its own frozen falsifier: **"healthy-arm per-point
+exceedance Wilson 95% lower bound > 0.05"** (`cards/point_tail_bet_e_value.json`). The registered
+run `run-20260808T133859Z` read, on arm 32's S2 row, **`k = 742`, `n_points = 400,000`,
+`exceedance = 0.001855`, `lower_95 = 0.0017464003916289452`**, and the stop condition did not fire.
+
+```
+distance from the reading to the bar  =  0.05 - 0.0017464003916289452  =  0.048253599608371056
+10% of that distance                  =                                  0.004825359960837106
+```
+
+**Registered, both outcomes, and the threshold between them is the number above:**
+
+- **(a) NEGLIGIBLE — `excess < 0.004825359960837106`.** The gap is **QUANTIFIED**. The card's
+  `regime.exchangeability_note` gains the measured number, **WORKLIST `C47` item (1) closes, and NO
+  restructure is registered or built.** The note keeps saying the identity is approximate and
+  anti-conservative; it stops saying so without a size.
+- **(b) MATERIAL — `excess >= 0.004825359960837106`.** The out-of-fold restructure is registered as a
+  **NAMED FUTURE CHANGE and is NOT built in this batch**, with the measured number as its
+  justification. **It is not built because it would re-open the K4 card:** the reference construction
+  is `detectors/point-tail-bet-e-value.ts`, which is card-pinned, and changing it invalidates the
+  card's S2 evidence, its guarantee sentence and its quantifier tag, and requires its own
+  registration and its own run. Under (b) this amendment's deliverable is the number and the named
+  change, nothing more.
+
+**PREDICTION, with its band and its own falsifier, registered before the probe runs.** Predicted:
+**`excess ∈ [0, 1e-4]`** — at most `3.7%` of the exchangeable-ideal exceedance level `0.0026997` and
+at most `0.21%` of the distance to the bar — and therefore **outcome (a)**. Registered falsifier on
+the prediction itself, separate from the outcome rule: **`|excess| > 1e-4` refutes this prediction,
+and is reported as refuted even if outcome (a) still fires.** A prediction that cannot fail without
+the disposition also failing is not a prediction.
+
+**SIGN, registered as falsifiable.** K4.1.10 registers the direction as anti-conservative, so:
+predicted **`excess > 0`**. **`excess <= 0` contradicts K4.1.10's direction claim and must be
+reported as a contradiction of it**, not as a smaller-than-expected confirmation. Both arms' `E[e]`
+readings are reported beside the exceedance for the same reason, and `E[e | H0] <= 1` is checked on
+both arms — a comparator that violated it would be a probe defect, since its own exchangeability is
+exact.
+
+### C47.1.4 WHAT THE PROBE DOES NOT MEASURE, and the numbers that show why it matters
+
+**The probe isolates the self-fit and NOTHING ELSE. It does not measure, and does not bound, the
+single-calibration-draw effect** — the one this study has already recorded twice (C1.7's shared
+reference, C45's `p_uniformity` KS residual, v2.K6A.6's `sd ≈ 0.151` on a sibling class). **The
+pairing CANCELS it by construction**, which is what buys the precision, and it is the reason a small
+excess here is not a claim that the card's S2 reading is precise.
+
+**And on this construction the single-draw effect is an order of magnitude larger than the thing being
+measured. The registered run's own two numbers, against the exchangeable ideal at `n = 10,000`
+computed in closed form here:**
+
+| | exchangeable ideal at `n = 10,000` | `run-20260808T133859Z` arm 32 S2 | departure |
+|---|---|---|---|
+| per-point exceedance | **`0.0026997300269973`** = `27/10001` | `0.001855` | **`-31.3%`** |
+| per-point `mean_e` | **`0.6245891523884999`** | `0.527556` | **`-15.5%`** |
+
+Both **conservative**, both from ONE calibration draw, both far larger than the `1e-4` scale this
+amendment predicts for the self-fit. **Registered reading: those two departures are NOT the self-fit
+and must not be quoted as it.** They are one draw's realization, and the direction on that draw is
+opposite to the self-fit's registered direction — which is itself worth stating, because it means the
+run's conservative reading gives no evidence either way about the gap this probe measures.
+
+`E[e] < 1` in the ideal column is not a defect and is registered as expected: `p` is discrete on
+`{j/(n+1)}`, so the grid truncates the `p → 0` divergence that makes the continuous integral exactly
+`1`. **A discrete conformal `p` at `n = 10,000` gives up `37.5%` of the calibrator's headroom before
+any construction detail enters**, and that is a property of `n`, not of the self-fit.
+
+### C47.1.5 What is NOT changed
+
+1. **No run is re-run, no committed row is edited, `results/` is untouched.** `run-20260808T133859Z`'s
+   arm-32 S2 row stays byte-for-byte as committed.
+2. **No endpoint, floor, threshold, falsifier, verdict, cell or class row moves.** The card's
+   falsifier stays *"healthy-arm per-point exceedance Wilson 95% lower bound > 0.05"* and its S2
+   reading stays `not-refuted`.
+3. **`detectors/point-tail-bet-e-value.ts` is NOT touched, under either outcome.** Under (a) there is
+   nothing to change; under (b) the change is named and deferred (C47.1.3).
+4. **`harness/run-battery.mjs` is NOT touched.** The probe writes no cell and feeds
+   `lib/collect.mjs` nothing.
+5. **K4.1.10's verdict stands.** What C47.1.1 corrects is its ATTRIBUTION (median, not median/MAD) and
+   its line citation. The approximation is still approximate and still anti-conservative in its
+   registered direction.
+6. **`family_E_conformal_heldout`, the other held-out K4 candidate, is out of scope.** Its
+   construction is a bounded-increment wealth process with its own card; whether it carries the same
+   self-fit is not asked and not answered here. **Named as not-done.**
+
+### C47.1.6 DISCLOSURES
+
+**(a) The card's `regime.exchangeability_note` will be edited, and it rides in the branch's dedicated
+re-freeze commit rather than in a commit of its own.** Under outcome (a) the note gains the measured
+number. That commit is a card-identity commit already required by Amendment v2.C51.1's harness change
+(C51.1.7a), and **the note edit is disclosed as riding in it** — one card text field, named here in
+advance, with the pins. This is the K6A.5.3 rule applied honestly rather than avoided: a text field
+changing inside a pins commit is disclosed, not silent. **`cert:expiry` reads only `source_files`
+sha256, so the note edit expires nothing by itself**; it is sequenced there so the branch has one
+card commit and not two.
+
+**(b) The probe's numbers land in three places and must agree in all three.** A results append to this
+amendment (the primary record), a dated append to `results/live/run-20260808T133859Z/REPORT.md` (so a
+reader of the run that carries the affected row finds it there), and the card note. **The append to
+the REPORT changes no reading of that run** and says so.
+
+**(c) The probe is a PROBE and is committed as one.** `validation/coverage/tools/` per that
+directory's README, which is added to with this probe's row. It writes no run directory, emits no
+cell, and feeds `validation/certification/lib/collect.mjs` nothing. **It may be re-run at any time**,
+unlike a harness.
+
+**(d) The exact-conditional endpoint is a DIFFERENT estimator from the battery's, and the difference
+is stated rather than glossed.** The battery estimates the exceedance by averaging an indicator over
+400,000 live points from one draw; the probe computes the same conditional expectation in closed form
+against the substrate CDF. **The probe's number is therefore not comparable to `0.001855` as a
+replication** — it is the noiseless version of the same quantity at a different (and much larger)
+set of draws. What IS compared is arm against arm, at the same draw, which is the only comparison the
+outcome rule reads.
+
+### C47.1.7 House rules, mapped
+
+(1) **Committed before the probe**, in its own commit, prereg text alone. (2) **A failed endpoint is a
+publishable result:** outcome (b) is registered as a real outcome with a named consequence, and the
+prediction carries its own falsifier so it can fail while the disposition holds (C47.1.3). (3) **No
+post-hoc analysis:** `R`, the seed base, the escalation rule, the outcome threshold, the prediction,
+the band and the sign are all fixed here, before the probe exists. The two figures quoted from
+`run-20260808T133859Z` are read off its committed REPORT and are used as the SCALE the outcome rule is
+stated against, not as an endpoint of this amendment. (4) §9's fallback and A3c are not engaged — no
+cell is emitted. (5) **Freeze:** `n = 10,000`, `kappa = 0.1`, `K = 26`, `THRESHOLD = 20`, the
+substrate, the split and the two constructions are frozen above and none may move after the probe
+runs. (6) `results/` untouched; **no run written, no committed row edited.** (7) **No rerun of any
+registered run, and none is authorized.** (8) Binding on the results append: it states the excess, its
+standard error, `R`, both generators' readings, which outcome fired, and whether the prediction and
+the sign held.
+
+### Amendment summary
+
+**Registers the measurement WORKLIST `C47` item (1) has been open for, with both dispositions and the
+number between them fixed before the probe runs.** The premise was verified from code first and comes
+out **narrower than the erratum that filed it**: the self-fit is exactly where K4.1.10 says
+(`point-tail-bet-e-value.ts:85-92`, not the `:69-77` it cites — the lines moved at C1.9), but **`MAD`
+cancels exactly** — `countGte` compares `|a_i − m|/mad` against `|x − m|/mad` and `mad > 0` is
+enforced, so `p` is invariant to it and the departure is driven by **the median alone**. K4.1.10's
+*"a median/MAD pulled slightly toward itself"* is corrected by quote-and-correct to **"a MEDIAN"**;
+its verdict stands unweakened. **The design:** two constructions differing only in which sample the
+reference is fitted on, both scored by the unmodified module, at the registered `n = 10,000` on the
+registered `phi = 0` normal substrate, **paired**, with both endpoints computed **exactly** in closed
+form against the substrate CDF rather than by live-point Monte Carlo — which is what makes a
+`1e-5`-scale reading possible. `R = 4,000`, seed base `6.3e8`, a registered escalation to `40,000` if
+the paired standard error exceeds `3e-5`, and a registered second-generator arm because this study has
+already recorded one lattice artefact from its own PRNG (C1.3). **The comparator's exchangeability is
+EXACT** and the derivation is given, so the measured difference is the price of not having built it.
+**The outcome rule: excess below `0.004825359960837106` — 10% of the distance from the run's
+`lower_95 = 0.0017464` to the `alpha = 0.05` bar — is outcome (a), QUANTIFIED, the card note gains the
+number and C47 item (1) closes with no restructure; at or above it, outcome (b), the out-of-fold
+restructure is a NAMED FUTURE change and is not built, because it would re-open the K4 card.**
+Predicted: `excess ∈ [0, 1e-4]`, sign positive, outcome (a) — with `|excess| > 1e-4` registered as
+refuting the prediction even if (a) fires, and `excess <= 0` registered as contradicting K4.1.10's
+direction. **What the probe does not measure, with the numbers that show why it matters:** the pairing
+cancels the single-draw effect, and on this construction that effect is far larger — the registered
+run read `0.001855` against the exchangeable ideal `0.0026997300269973` (`-31.3%`) and `mean_e`
+`0.527556` against `0.6245891523884999` (`-15.5%`), **both conservative, both from one draw, and both
+in the OPPOSITE direction to the self-fit**, so the run's reading is no evidence either way about the
+gap being measured. Registered with it: a discrete conformal `p` at `n = 10,000` gives up `37.5%` of
+the calibrator's `E[e] = 1` headroom before any construction detail enters, which is a property of `n`.
+
+### Results append to Amendment v2.C47.1, dated 2026-08-09 (appended not edited): outcome (a) fires — the self-fit excess is `≈ 1e-6` on a `2.7e-3` exceedance, and the registered generator-agreement rule FIRED at `R = 4,000`
+
+The probe of C47.1.2 is committed at `validation/coverage/tools/self-fit-exchangeability.mjs` and run.
+**Every wiring check passed before any measurement:** `erfc` at relative accuracy against three
+published values, the firing rank `K = 26` derived from the module's own `kappa`, the
+MAD-cancellation identity against the real module at four rescalings, the exact endpoints against a
+360,000-point deterministic quadrature of the real module, and the out-of-fold reference differing
+from the self-fit one.
+
+#### The registered reading, `R = 4,000`, seed base `6.3e8`
+
+| | as-built (self-fit) | out-of-fold | **paired excess** | se |
+|---|---|---|---|---|
+| exceedance, study PRNG | `0.0027105957` | `0.0027060489` | **`4.546721e-6`** | `1.527037e-6` |
+| exceedance, splitmix64 | `0.0027007318` | `0.0026981471` | **`2.584698e-6`** | `1.497497e-6` |
+| `E[e]`, study PRNG | `0.6248961825` | `0.6247071684` | **`1.89014e-4`** | `3.91242e-5` |
+| `E[e]`, splitmix64 | `0.6236867632` | `0.6235119453` | **`1.74818e-4`** | `4.15398e-5` |
+
+Per-replicate paired sd `9.6578e-5`. **C47.1.2's escalation did NOT fire** — the paired se
+`1.527e-6` is well inside the `3e-5` trigger.
+
+#### THE REGISTERED GENERATOR-AGREEMENT RULE FIRED, and it is reported as fired
+
+C47.1.2, quoted: *"If the two generators disagree on the excess by more than the reported standard
+error, the finding is reported as generator-dependent and NEITHER number is quoted as the answer."*
+
+```
+|4.546721e-6 - 2.584698e-6| = 1.962023e-6   >   max(se) = 1.527037e-6      -> FIRED
+```
+
+**So, as registered: neither `4.546721e-6` nor `2.584698e-6` is quoted as the answer, and the
+registered reading of the excess is the RANGE `[2.58e-6, 4.55e-6]`.**
+
+**AND THE DISPOSITION DOES NOT DEPEND ON WHICH IS RIGHT.** Outcome (a)'s threshold is
+`0.004825359960837106`. Both ends of the range, and everything between them, are **three orders of
+magnitude below it**:
+
+| reading | excess | as % of the ideal `0.0026997300` exceedance | as % of the distance to the `alpha = 0.05` bar |
+|---|---|---|---|
+| study PRNG | `4.5467e-6` | `0.168%` | **`0.0094%`** |
+| splitmix64 | `2.5847e-6` | `0.096%` | **`0.0054%`** |
+
+**REGISTERED OUTCOME (a) — NEGLIGIBLE — FIRES**, at both ends of the range and unambiguously. The
+prediction `|excess| <= 1e-4` **HELD** (the reading is 22–39× inside it). The sign prediction
+**HELD**: the excess is positive on both generators, so **K4.1.10's anti-conservative direction claim
+is CONFIRMED, measured, for the first time**. `E[e] <= 1` on both arms with enormous margin
+(`≈ 0.625` against `1`).
+
+#### The probe's own positive control, unregistered and worth more than the headline
+
+**The out-of-fold arm, whose exchangeability is EXACT by the derivation at C47.1.2, reproduces the
+closed-form exchangeable ideal `0.0026997300269973` — on all four (generator, `R`) combinations, all
+within `1.1` standard errors:** `+0.77 se`, `-0.19 se` at `R = 4,000` and `+0.60 se`, `+1.06 se` at
+`R = 40,000`. **A probe whose exactly-exchangeable arm did not land on the closed form would be
+measuring its own defect**, and this is the check that says it is not. Nothing was tuned to make it
+land there; the ideal is `27/10001` and was computed before the probe ran (C47.1.4).
+
+#### DISCLOSED POST-MEASUREMENT, not registered, and NOT the basis of the disposition: `R = 40,000` on both generators
+
+Run **after** reading the `R = 4,000` result, because the registered agreement rule had fired and the
+obvious question was whether the disagreement was precision or substance. **Labelled
+post-measurement, and the registered disposition above stands on the `R = 4,000` reading alone.**
+
+| | as-built | out-of-fold | **paired excess** | se | t |
+|---|---|---|---|---|---|
+| exceedance, study PRNG | `0.0027026320` | `0.0027012765` | **`1.355543e-6`** | `4.71553e-7` | `2.87` |
+| exceedance, splitmix64 | `0.0027035200` | `0.0027024879` | **`1.032108e-6`** | `4.72877e-7` | `2.18` |
+| `E[e]`, study PRNG | `0.6248805689` | `0.6247153660` | **`1.65203e-4`** | `1.29892e-5` | `12.7` |
+| `E[e]`, splitmix64 | `0.6251615951` | `0.6250060468` | **`1.55548e-4`** | `1.32061e-5` | `11.8` |
+
+```
+|1.355543e-6 - 1.032108e-6| = 3.234358e-7   <=   max(se) = 4.728767e-7   -> the generators AGREE
+```
+
+**At the tenfold replicate count the generators agree, so the fired rule at `R = 4,000` was a
+precision artefact and not generator dependence.** The `R = 40,000` excess is `0.0028%` and `0.0021%`
+of the distance to the bar — outcome (a) again, by a further factor of three.
+
+#### A CORRECTION TO THIS AMENDMENT'S OWN RULE, and it is not the reason the disposition holds
+
+C47.1.2's agreement rule is **scaled wrong, and this author wrote it.** It compares the difference of
+two INDEPENDENT arm means against **one arm's** standard error. The standard error of that difference
+is `sqrt(se1^2 + se2^2)`:
+
+| | gap | correctly-scaled se | z |
+|---|---|---|---|
+| `R = 4,000` | `1.962023e-6` | `2.1388e-6` | **`0.92`** |
+| `R = 40,000` | `3.234358e-7` | `6.6781e-7` | **`0.48`** |
+
+**At `z = 0.92` the two generators never disagreed at all.** The rule as written fires at roughly
+`z ≈ 0.7` — it is a coin-flip trigger, not a test.
+
+**This correction is NOT used to un-fire the rule, and the disposition above does not rest on it.**
+The rule fired as registered, the consequence registered for it was applied as registered (no single
+number is quoted; the range is), and outcome (a) fires at both ends regardless. **What the correction
+buys is that a future amendment does not reuse a broken rule**, so: **registered for any future
+generator-robustness arm in this document — the comparison is `|d| > 2*sqrt(se1^2 + se2^2)`, the
+difference against its own standard error at two sigma, not against one arm's se.** The narrower
+reading of the fired rule that a reader might reach for — *"the R = 4,000 arms disagreed, therefore
+the probe is unreliable"* — is refuted by the positive control above, which both generators pass at
+both replicate counts.
+
+#### The number, stated at the precision it was measured to
+
+**The self-fit excess on `point_tail_bet_e_value`'s healthy per-point exceedance is `≈ 1e-6` to
+`5e-6` absolute, on an exceedance level of `≈ 2.7e-3`.** In relative terms, `n × (excess / level)` is
+`16.8` and `9.6` at `R = 4,000` and `5.0` and `3.8` at `R = 40,000` — **so the departure is `O(1/n)`
+with a single-digit-to-low-double-digit constant, which is what K4.1.10 predicted qualitatively and
+what nobody had measured.** On `E[e]` the excess is `≈ 1.6e-4` on `≈ 0.625`, which is `0.044%` of the
+`0.3754` of the calibrator's headroom that discretization at `n = 10,000` already gives up before any
+construction detail enters (C47.1.4). **Registered as the reading, with its se, and not rounded into
+a cleaner-looking figure.**
+
+#### Disposition, and what closes
+
+**WORKLIST `C47` item (1) CLOSES as QUANTIFIED.** No restructure is registered and none is built. The
+out-of-fold construction exists in committed probe code and its price is measured at `≈ 1e-6`; that
+is the whole content of the closure. **The card's `regime.exchangeability_note` gains the measured
+number** (C47.1.6a) and keeps saying the identity is approximate and anti-conservative — it stops
+saying so without a size.
+
+**What is NOT closed, named:** (1) `family_E_conformal_heldout`, the other held-out K4 candidate, was
+not probed and its construction was not examined (C47.1.5 item 6). (2) The **single-calibration-draw**
+effect is untouched and remains the dominant uncertainty on this card's S2 reading — the pairing
+cancels it by design, and the registered run's `-31.3%` / `-15.5%` departures from the ideal are that
+effect, not this one (C47.1.4). (3) The excess was measured at `n = 10,000` **only**; no `n`-sweep was
+run, so the `O(1/n)` rate is inferred from the amendment's derivation and the constant's size, not
+from a measured slope. **Naming an `n`-sweep as not-done rather than implying the rate was verified.**
+
+**Nothing else moves.** No endpoint, floor, threshold, seed, grid, falsifier, verdict, cell or class
+row; no run re-run; no committed row edited; `detectors/point-tail-bet-e-value.ts` untouched;
+`harness/run-battery.mjs` untouched.
+
+### Correcting append to the results append of Amendment v2.C47.1, dated 2026-08-09 (appended not edited): an independent review derived the estimand in CLOSED FORM and measured it at ~100x this probe's precision — the registered headline was the WRONG PAIR OF NUMBERS, and this author's own rule defect is why
+
+**Quote-and-correct. The originals stand.** Review verdict: **APPROVED with corrections.** The
+disposition does not move — **outcome (a) still fires, by a wider margin than reported** — and
+K4.1.10's direction claim is now confirmed at a strength this probe could not reach. **What was wrong
+was the number quoted as the reading, and the reason it was wrong is the rule defect this document
+already named as its own concern.**
+
+#### The true value, and it is derivable rather than only measurable
+
+The reviewer derived the estimand in closed form. The self-fit shifts the effective exceedance
+boundary by the sample median's own influence-function scale, `1/(2 n phi(0))`, and a two-tailed
+exceedance responds to a boundary shift at rate `2 phi(T)`, so
+
+```
+excess  =  2*phi(T) / (2*n*phi(0))          T = the exceedance boundary, P(|x| > T) = 27/10001
+        =  1.110875e-6                      at n = 10,000   (T = 3.0000074502774847, so the
+                                            boundary sits essentially at 3 sigma)
+```
+
+**Re-derived independently at this commit and reproduced to seven significant figures**
+(`1.110875e-6`), so it is quoted here as verified arithmetic and not transcribed.
+
+**And measured, by the reviewer, at roughly 100x this probe's precision:**
+
+| | value | se | provenance |
+|---|---|---|---|
+| **pooled-median estimator, 3 PRNGs** | **`1.095594e-6`** | **`4.68e-9`** | independent review |
+| closed form | `1.110875e-6` | — | analytic, verified here |
+| agreement | **`1.39%`** | | |
+| **`z` on the direction** | **`+234`** | | `1.095594e-6 / 4.68e-9` |
+
+**REGISTERED CORRECTION: the reading of the self-fit excess is `≈ 1.0956e-6`, not the
+`[2.58e-6, 4.55e-6]` range this document's results append quoted as the registered headline.**
+
+#### THE CAUSE, named: this document's own broken rule promoted the noisy pair
+
+The results append quoted `[2.58e-6, 4.55e-6]` as the registered reading and `[1.03e-6, 1.36e-6]` as
+a *disclosed post-measurement* sensitivity. **The true value `1.0956e-6` lies inside the
+post-measurement range and OUTSIDE the registered headline.** The `R = 40,000` pair — the one labelled
+as not deciding anything — was right, and the `R = 4,000` pair that carried the label "registered
+reading" was noise.
+
+**That inversion is a direct consequence of the rule defect this document already corrected in the
+same append**, and it is worth stating as a measured cost rather than as a hypothetical: C47.1.2's
+generator-agreement rule compared two independent arm means against ONE arm's standard error, fired at
+`z = 0.92`, and the registered consequence of a firing was *"NEITHER number is quoted as the answer"* —
+which converted a `z = 0.92` non-event into a registered RANGE and left the far more precise pair
+carrying a label that said it decided nothing. **A rule that fires at `z ≈ 0.7` did not merely add
+noise to the record; it promoted the wrong pair of numbers to the headline.** The correction already
+registered — the comparison is `|d| > 2*sqrt(se1^2 + se2^2)` — stands, and this append is the
+measurement of what the defect cost.
+
+**What was NOT wrong, and is worth separating:** the probe's machinery. Its exactly-exchangeable
+out-of-fold arm landed on the closed-form ideal `27/10001` on all four (generator, `R`) combinations
+within `1.1` se, and its `R = 40,000` readings bracket the reviewer's value. **The probe was
+under-replicated and its headline was mislabelled by a bad rule; it was not measuring the wrong
+thing.**
+
+#### The disposition, restated at the corrected number
+
+```
+measured excess                          1.095594e-6
+outcome (a) threshold                    0.004825359960837106
+margin                                   4,404x  inside the threshold
+as a fraction of the ideal exceedance     0.0406%
+as a fraction of the distance to alpha     0.00227%
+```
+
+**Outcome (a), NEGLIGIBLE, fires — by `4,404x` rather than the `~1,000x` implied by the overstated
+headline.** WORKLIST `C47` item (1) stays CLOSED as QUANTIFIED. No restructure is registered, and the
+case for not building one is stronger, not weaker. **The direction claim of K4.1.10 is CONFIRMED at
+`z = +234`**, against the `t ≈ 2.2` to `2.9` this probe could muster.
+
+#### THE `O(1/n)` CONSTANT IS CLOSED — the concern this document named as open is answered
+
+The results append named an `n`-sweep as **not-done** and said the `O(1/n)` rate *"rests on derivation
+and the constant's size, not on a measured slope"*. **The reviewer ran the sweep.** Measured
+`n × excess`:
+
+| `n` | `n × excess` |
+|---|---|
+| `2,500` | `0.0098` |
+| `10,000` | `0.0110` |
+| `40,000` | `0.0113` |
+
+**Flat across a 16-fold range of `n` — so the departure is `1/n` and not some other rate — with
+constant `4.06`** in the `n × (excess / level)` form this document reported at `3.8` to `16.8`, and
+agreeing with the closed form to **`0.7%`–`2%`**. **Registered: the `O(1/n)` rate is now MEASURED, the
+constant is `4.06`, and the not-done item is discharged.** The `16.8` this document reported at
+`R = 4,000` was the same noise that produced the wrong headline.
+
+#### Two corrections to this document's own reporting of its verification
+
+**(1) The mutation-kill counts were double, on all four, and the cause is the test reporter.** The
+code-commit append to v2.C51.1 reports `2 / 6 / 2 / 10` failing C51.1 tests. **Node's spec reporter
+lists each failing test TWICE — once inline and once in its trailing `failing tests:` summary — and
+the count was taken with `grep -c`.** Re-measured at this commit, deduplicated:
+
+| mutation | reported | **true** |
+|---|---|---|
+| `(i + 1) * W` → `i * W` | `2` | **`1`** |
+| Kaplan–Meier quantile → `median()` over the crossed subsample | `6` | **`3`** |
+| the `crossed === (crossingIndex >= 0)` assertion removed | `2` | **`1`** |
+| the `spec.crossingTimes` gate ignored | `10` | **`5`** |
+
+**Every mutation is still killed and the finding is unchanged — but a kill count is a claim about test
+coverage and this one was inflated 2x on every row.** The `(i+1)*W` off-by-one and the threshold
+assertion are each killed by exactly ONE test, which is thinner cover than `2` suggested.
+
+**(2) "15 cards, ONE field moved" was scoped to the comparison key, and was reported as though it
+covered the card.** The re-freeze commit's verification says the `cert:verdict` re-run moved *"ONE
+field — the note text itself"*. **The emitted `.card.json` files embed the WHOLE card object under
+`card`, `engine_pin` and `source_files` included** (verified at this commit against
+`results/run-20260809T080049Z`, where `card.engine_pin.sha` reads `4a48450`). The comparison key was
+`{verdict, tier, stages}` plus the regime object, and it **excluded the pins by construction**, so a
+fresh verdict run also carries **15 inherited `card.engine_pin.sha` moves and one inherited
+`card.source_files[].sha256` move** (`shape_ecdf_accumulator`'s `run-battery.mjs` pin). **Corrected
+statement: no verdict, tier, stage status or class answer moved on any of the 15 cards; the only
+non-pin field to move anywhere was `point_tail_bet_e_value`'s `exchangeability_note`; the inherited
+pin moves are the re-freeze's own, and were outside the key rather than absent from the output.**
+
+#### `family_E_conformal_heldout` — the concern-4 answer, and the self-fit class does NOT apply
+
+The results append named `family_E_conformal_heldout` as unprobed and asked whether the analogous
+asymmetry exists. **The review answers it: no.** The finding as relayed:
+
+> the self-fit class does NOT apply (no location/scale estimated from ranked rows); the shared
+> single-draw realization effect remains the larger exposure on both detectors, already registered
+> unbounded in C47.1.4.
+
+**Disclosed: that is the coordinator's relay, not the reviewer's paragraph verbatim** — the full text
+did not reach this author, and if it exists it should replace this block by a further append rather
+than be reconstructed here.
+
+**Verified from code rather than accepted on relay**, because it is a claim about what a detector does:
+`tools/stamp-heldout-family-e.mjs:73` scores each calibration row as
+`calibrationRows.map((v) => Math.abs(v))` — **an absolute value about a FIXED zero**, with
+`Sigma = [[1]]` frozen by Amendment A2, and `:74-76` sorts those scores. **Nothing is estimated from
+the rows that are then ranked**: there is no median, no MAD, no location and no scale. The asymmetry
+that drives the `point_tail_bet_e_value` gap has no analogue here, and the two constructions are not
+the same case. **`C47` concern 4 is discharged.**
+
+**And the part that is NOT discharged, on BOTH detectors:** the shared single-calibration-draw
+realization effect, which C47.1.4 already registers as unbounded by this work and which the pairing
+cancels by design. It remains the larger exposure on this card's S2 reading — the registered run's
+`-31.3%` exceedance and `-15.5%` `mean_e` departures from the exchangeable ideal are that effect, not
+the self-fit, and no amount of precision on `1.0956e-6` touches it.
+
+#### What this append changes and does not change
+
+**Changes:** the quoted value of the self-fit excess (`≈ 1.0956e-6`, with the closed form
+`1.110875e-6` beside it), the outcome-(a) margin (`4,404x`), the `O(1/n)` rate from derived to
+**measured** with constant `4.06`, the four mutation-kill counts (halved), the scope of the
+"one field moved" verdict-diff claim, and the disposition of concerns 3 and 4 (both discharged).
+**The card's `regime.exchangeability_note` is corrected to `≈ 1.1e-6` in the dedicated re-freeze
+commit that follows this one, one field plus pins, on the C47.1.6(a) disclosure.**
+
+**Does not change:** the registered outcome (still **(a)**), the registered prediction's disposition
+(still **HELD** — `1.0956e-6` is `91x` inside the `1e-4` band), the sign (still positive, now at
+`z = +234`), the C47.1.1 MAD-inertness correction to K4.1.10, the closure of `C47` item (1), and
+`C51`'s status in every respect. **No endpoint, floor, threshold, seed, grid, falsifier, verdict, cell
+or class row moves. No run is re-run and no committed row is edited.
+`detectors/point-tail-bet-e-value.ts` is untouched and no restructure is built.**
+
+### Replacement append, dated 2026-08-09 (appended not edited): the batch-A reviewer's `family_E_conformal_heldout` paragraph, VERBATIM — superseding the relayed summary in the correcting append above
+
+The correcting append recorded the `family_E` finding in the coordinator's compressed relay and flagged
+it as **not** the reviewer's verbatim text, with the instruction that the full paragraph should replace
+it by a further append rather than be reconstructed. **The verbatim paragraph has since been supplied
+and is recorded here in full. It SUPERSEDES the relay block, which stands unedited above.**
+
+**Quoted verbatim, attributed to the batch-A reviewer:**
+
+> family_E — the defect class does NOT apply. stampHeldoutFamilyE scores Math.abs(v)
+> (tools/stamp-heldout-family-e.mjs:73) and the evaluator scores mahalanobisDistance(x_t, [[1]]) with
+> the covariance passed fixed by the harness — the same fixed map about the origin for calibration and
+> live rows, with no location or scale estimated from the rows that are then ranked. That absence is
+> the whole mechanism of the K4 excess, so there is no analogous asymmetry: given the calibration
+> draw, live and calibration scores are i.i.d., hence exactly exchangeable. Two adjacent
+> observations, neither the self-fit class: the indicator rule is #{s_cal >= s_t} < alpha*n on the n
+> denominator rather than the (1+rank)/(n+1) conformal form, giving P(indicator)=500/10001=0.049995 —
+> marginally conservative, opposite in sign; and family_E does share the single-calibration-draw
+> realization effect that C47.1.4 explicitly left unbounded, which is the larger exposure on both
+> detectors.
+
+#### Verified from code at this commit, claim by claim — not accepted on the reviewer's authority
+
+A paragraph about what a detector does is checked against the detector, per this document's own rule.
+**All four checkable claims hold, at the lines below.**
+
+| the claim | verified at | reading |
+|---|---|---|
+| calibration scores are `Math.abs(v)` | `tools/stamp-heldout-family-e.mjs:73` | `calibrationRows.map((v) => Math.abs(v))`, sorted at `:74-76` |
+| the evaluator scores `mahalanobisDistance(x_t, [[1]])` | `detectors/conformal.ts` (`evaluateConformalWeightedEValue`) | `const s_t = mahalanobisDistance(x_t, input.covariance);` |
+| **the covariance is passed FIXED by the harness** | `harness/run-battery.mjs:648` | `{ params: ctx.heldout, covariance: [[1]], alpha: ALPHA }` — a literal, not derived from any draw |
+| the map is the same about the origin on both sides | `detectors/_conformal-math.ts:13-20` | `cholesky([[1]]) = [[1]]`, `forwardSolve` is the identity, so `s_t = sqrt(v^2) = |v|`. **No mean vector is subtracted** — the function takes `r` directly and the harness passes `[data.series[t]]`, not a `relativeDeviation` |
+
+**So the reviewer's mechanism claim is exact: nothing is estimated from the rows that are then
+ranked.** Both sides of the comparison pass through one fixed map about a fixed origin. That is the
+whole difference from `point_tail_bet_e_value`, whose `m` IS the sample median of the ranked rows
+(`point-tail-bet-e-value.ts:85-92`), and it is why the K4 excess has no analogue here.
+
+**The indicator arithmetic, verified against the code rather than its docstring** (docstrings drift):
+`findFirstGE(scores, s_t)` (`detectors/_linalg.ts:71-79`) returns the first index with
+`scores[i] >= s_t`; `cumulative_weights_above[k]` is the reverse cumulative weight sum
+(`stamp-heldout-family-e.mjs:81-88`), which at uniform weights `1` is exactly `#{s_cal >= s_t}`; and
+the fire test is `den_raw < input.alpha * total_weight` with `total_weight = n = 10,000` and
+`alpha = 0.05`, i.e. **`#{s_cal >= s_t} < 500`**. Under exchangeability the count is uniform on
+`{0, …, n}` — `10,001` outcomes — and the indicator fires on `500` of them:
+
+```
+P(indicator = 1)  =  500 / 10001  =  0.0499950005     against alpha = 0.05
+conservative by      4.9995e-6                        and OPPOSITE in sign to the K4 excess
+```
+
+**Confirmed to ten digits.** The reviewer's second adjacent observation is therefore not merely a
+different form — it is a departure in the opposite direction from the one this amendment measured, and
+recording it beside the K4 number keeps a reader from generalizing "conformal calibration is
+anti-conservative" across the two candidates. **Note what it is NOT: the `n`-denominator rule's
+`0.049995` is a property of the RULE at `alpha = 0.05` and `n = 10,000`, not a self-fit and not
+`O(1/n)`-vanishing in the K4 sense.**
+
+#### Dispositions
+
+**`C47` concern 4 is CLOSED**, on the verbatim finding rather than on a relay:
+`family_E_conformal_heldout` is not in the self-fit class, and no probe of it is registered or needed.
+
+**What stays open, and the reviewer's own last clause is the record of it:** *"family_E does share the
+single-calibration-draw realization effect that C47.1.4 explicitly left unbounded, which is the larger
+exposure on both detectors."* **Registered as unchanged: C47.1.4's exclusion stands, on BOTH
+detectors, and nothing in this batch bounds it.** The `1.0956e-6` self-fit figure is the smaller of
+the two exposures on the K4 card by a wide margin, and no precision on it touches the other.
+
+**This append changes nothing else.** No endpoint, floor, threshold, seed, grid, falsifier, verdict,
+cell or class row moves; no run is re-run; no committed row is edited; no card field changes and no
+pinned file is touched, so `cert:expiry` is unaffected. The relay block in the correcting append above
+is left standing, superseded and labelled, rather than edited away.

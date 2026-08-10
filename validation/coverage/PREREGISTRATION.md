@@ -12305,3 +12305,72 @@ size, the one measured across-draw sd is a `D = 100` reading, and it puts the se
 mean an order of magnitude below the sd — and it is a floor, not a sufficiency claim, because the
 across-draw law is not demonstrated Gaussian. Nothing is re-run, no historical caveat is replaced,
 and the rule is **not machine-checked**, which is stated rather than implied.
+
+---
+
+## Correction append to Amendment v2.C51.4, dated 2026-08-10 (appended not edited): two wrong numbers inside the MANDATORY caveat text, and three premise corrections against my own §C51.4.1
+
+From an independent review. **The caveat block registered at C51.4.3 branch (b) is verbatim and
+mandatory, so a wrong number in it propagates into every future branch-(b) report.** Two of its
+numbers were wrong. The corrected block is re-issued below in full and the original is superseded by
+name. Nothing else in v2.C51.4 moves: the rule, the two branches, the scope predicate and the `D = 100`
+floor all stand.
+
+### X1. The two wrong numbers
+
+| in the caveat text | printed | correct | why |
+|---|---|---|---|
+| the within-draw ratio on canonical detection | **`13.0×`** | **`14.02×`** | `0.151398 / 0.0108`. The `13.0` was K6A.2.4c's figure against a different denominator; the ratio the caveat asserts is the across-draw sd against **this run's own binomial noise at the across-draw mean rate**, `sqrt(0.62514 × 0.37486 / 2000) = 0.0108`. |
+| the across-draw p05–p95 of canonical detection | **`[0.333, 0.848]`** | **`[0.364, 0.872]`** | `[0.333, 0.848]` is K6A.2.4(a)'s **280-draw prediction band**. The caveat cites a measured spread, and the measured p05–p95 of `run-acrossdraw-20260809T065107Z` is `[0.364, 0.872]` (that run's `REPORT.md:29`). Quoting a prediction where the sentence promises a measurement is the error. |
+
+### X2. THE CAVEAT BLOCK, RE-ISSUED CORRECTED
+
+**The block published at C51.4.3 under the label "SINGLE-DRAW CAVEAT (registered, v2.C51.4(b) —
+mandatory)" is SUPERSEDED BY THIS ONE and must not be used.** It is left standing there, labelled,
+rather than edited away. Branch (b) of the standing rule now requires this text:
+
+> **SINGLE-DRAW CAVEAT (registered, v2.C51.4(b) as corrected 2026-08-10 — mandatory).** This endpoint
+> rests on **one** held-out calibration draw per cell. Every reading in this run shares that draw as
+> its reference, so the run's own interval is a **within-draw** interval and is not the uncertainty on
+> the class answer. The uncertainty that governs a class answer is the **across-draw** spread, and
+> where both have been measured on this battery it dominates: the across-draw sd of canonical
+> detection is **`0.151398`** (`results/live/run-acrossdraw-20260809T065107Z`, 100 fresh draws,
+> Amendment v2.K6A.6), which is **`14.02×`** this run's own binomial noise on the same endpoint
+> (`0.0108` at the across-draw mean rate `0.62514`, `N = 2000`), and on `increment_estimator.mean` the
+> across-draw sd is **`9.3×`** the within-draw Wald SE (v2.C39.4). The measured across-draw p05–p95 of
+> canonical detection is **`[0.364, 0.872]`**. **So this reading is reported as "<endpoint> at this
+> calibration draw" and never as a settled class answer**, and an apparent departure of many
+> within-draw SEs is the expected appearance of a single draw. The across-draw spread of THIS endpoint
+> is **unmeasured**; the `0.151398`, the `[0.364, 0.872]` and the two ratios are measured on
+> `shape_ecdf_accumulator` at `κ = 0.682`, `m = 500`, `W = 150` only, and what transfers is the
+> **category**, not the number.
+
+### X3. Three premise corrections against §C51.4.1 and §C51.4.4, all against my own text
+
+1. **`0.0338` → `0.0339`.** §C51.4.4's table gives the se of the across-draw mean at `D = 20` as
+   `0.0338`; `0.151398 / sqrt(20) = 0.033844`, which rounds to `0.0339`. The `D = 30` and `D = 100`
+   entries (`0.0276`, `0.0151`) are correct, and the floor's justification does not turn on the digit.
+2. **Amendment v2.C39.4's caveat is a STANDING rule, not an artifact-scoped one, and I mis-filed it.**
+   §C51.4.1 listed it as the third of three "artifact-scoped instances", scoped to one field. Its own
+   registered text binds *"any `increment_estimator` reading"* on any row this battery emits — that is
+   a standing obligation on a field, of the same kind C51.4.3 creates for held-out draws. **So the
+   count was wrong: two of the three prior instances were artifact-scoped (§C1.7 I2, K6A.2.4(b)) and
+   one was already standing.** The gap C51 item (4) names survives the correction unchanged, because
+   v2.C39.4 binds a *field* and not a *registration*: a new candidate on a new class that emits no
+   `increment_estimator` still inherits nothing.
+3. **The card-note premise was wrong in both halves.** §C51.4.1 says the protocol *"names no
+   card-note requirement"* and that `schema.mjs` *"has no `notes` or `caveat` field"*. Two mechanisms
+   do exist:
+   - **`shipped_path.notes`** is a real card field, populated on cards today (`family_E_conformal`'s
+     carries the S4.1 budget note; `family_A_betting_e_process` and `family_C_safe_hotelling` carry
+     `""`).
+   - **`STANDING_CAVEATS`** (`validation/certification/verdict.mjs:111-114`) is exactly a
+     standing-caveat mechanism, carried verbatim into every emitted report so *"no reader can quote a
+     row without them"* — its own comment. It holds the ADR-0012 anomaly and the P1 gate-wiring
+     caveat.
+   **What survives:** neither mechanism is a *calibration-draw* requirement, and neither is reachable
+   from a study registration — `STANDING_CAVEATS` is a hard-coded array in the verdict script, which
+   is a pinned `source_file` on five cards, so adding to it expires them. So C51.4.3 still lands in
+   this document. **But the honest statement is "the existing mechanism is a pinned code array I may
+   not touch", not "no mechanism exists"**, and the write-back owed upward is now specific: a
+   calibration-draw entry in `STANDING_CAVEATS`, costing a five-card re-freeze.

@@ -14,8 +14,9 @@
 //      2026-08-01 H0 battery (FAR 0.576 at oracle parameters, rolling windows), repaired to
 //      disjoint windows (FAR 0.0005), measured NOT an e-process there under finite-K calibration
 //      (E[M_T|H0] = 1.0636 at T=300, 1.1076 at T=900, K = 400 windows; exact-moment cells read
-//      1.0229 / 1.0336, not-refuted — family-d-emean run-20260818T220621Z, C54: a c without its
-//      calibration-window count K is under-specified), and priced by the optional c-bound: firing
+//      1.0257 not-refuted / 1.1184 FAIL-marginal — family-d-emean run-20260818T222835Z, C54: a c
+//      without its calibration-window count K is under-specified), and priced by the optional
+//      c-bound: firing
 //      at c/alpha restores FDR <= alpha because E[M/c] <= 1. Absent bound == real, unpriced
 //      inflation.
 import { DETECTOR_REGISTRY, type DetectorId } from './types/audit';
@@ -160,10 +161,10 @@ export const GUARANTEE_TABLE: readonly GuaranteeRow[] = Object.freeze([
       + 'parameters (increments share 29/30 samples; martingale-difference fails) -> reclassified '
       + 'heuristic. Disjoint windows (d3d6d06): FAR 0.0005, but E[M_T|H0] = 1.0636 (T=300), '
       + '1.1076 (T=900) at K=400-window calibration — refuted as an e-process under finite-K '
-      + 'calibration; exact-moment cells not-refuted at 1.0229/1.0336 (family-d-emean '
-      + 'run-20260818T220621Z; C54: state K beside T). Violation bounded. Priced c-bound '
-      + '(bb56070): firing at c/alpha restores FDR <= alpha. e_value_inflation_bound ABSENT '
-      + 'means unpriced inflation.',
+      + 'calibration at every K measured; exact-moment cells 1.0257 not-refuted / 1.1184 '
+      + 'FAIL-marginal (family-d-emean run-20260818T222835Z; C54: state K beside T). Violation '
+      + 'bounded. Priced c-bound (bb56070): firing at c/alpha restores FDR <= alpha. '
+      + 'e_value_inflation_bound ABSENT means unpriced inflation.',
   },
   {
     idPrefixes: ['mahalanobis_conformal_baseline'],

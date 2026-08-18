@@ -79,15 +79,18 @@ export interface FamilyDPerSignal {
  *    E[M_300] = 1.0636 (95% lower 1.0257, 9 wealth updates)
  *    E[M_900] = 1.1076 (95% lower 1.0244, 29 updates)
  *
- *  That measurement's harness was never committed; the first committed execution is
- *  `validation/family-d-emean` `run-20260818T220621Z` (2026-08-18), which reads, at EXACT null
- *  moments (`K = 66,666` shared, residual `n²r²/2K ≈ 5.7e-4` in log c):
+ *  That measurement's harness was never committed; the canonical committed execution is
+ *  `validation/family-d-emean` `run-20260818T222835Z` (2026-08-18, superseding the same day's
+ *  first run for a seed-scheme defect), which reads, at EXACT null moments (`K = 66,666` shared,
+ *  residual `n²r²/2K ≈ 5.7e-4` in log c):
  *
- *    E[M_300] = 1.0229 (95% lower 0.9877)   E[M_900] = 1.0336 (95% lower 0.9502)
+ *    E[M_300] = 1.0257 (95% lower 0.9915, not-refuted)
+ *    E[M_900] = 1.1184 (95% lower 1.0078 — E1 FAIL, marginal; the superseded run read 1.0336
+ *               not-refuted, so the verdict is seed-sensitive at N = 4,000)
  *
- *  and, per-trajectory: `E[M_900]` = 1.9738 at `K = 100`, 1.3695 at `K = 400`. The committed
- *  2026-08-03 values are statistically CONSISTENT with the exact-moment cells (two-sided 95%) and
- *  sit on the conservative side of their point estimates, so pricing with them stays valid.
+ *  and, per-trajectory: `E[M_900]` = 2.4934 at `K = 100`, 1.1765 at `K = 400`. The committed
+ *  2026-08-03 values are statistically CONSISTENT with the exact-moment cells (two-sided 95%) in
+ *  both runs; any tighter claim about their bias direction is inside seed noise at this N.
  *
  *  C54 (2026-08-18): `c` is NOT WELL-FORMED without the calibration-window count `K` beside the
  *  horizon `T` — `c(T, K) ≈ exp(skew·n + n²r²/2K)` (batch-C review), quadratic in the update count

@@ -266,6 +266,20 @@ function evaluateSpectralEDetector(input, peak_t, state) {
     // the inflation is real but unpriced, which is the pre-2026-08-03 behaviour. `c` grows with
     // horizon AND shrinks with calibration size; see SpectralInflationBound (C54: state K beside T).
     const rawBound = input.params.e_value_inflation_bound;
+    // Review 2026-08-18 — configs are JSON.parse-cast unvalidated, so the measurement form must be
+    // guarded at the point of use: a missing/non-numeric `c` would make the threshold NaN (detector
+    // silently dead), and c < 1 would loosen the threshold below 1/α (c <= 0: fires on the first
+    // evaluation). Fail closed, like the missing-null-moments path below. The legacy bare-number
+    // path is left as shipped for replay fidelity.
+    if (rawBound !== undefined && typeof rawBound !== 'number'
+        && !(Number.isFinite(rawBound.c) && rawBound.c >= 1)) {
+        return {
+            verdict: 'suppressed', statistic: state.M, threshold: null,
+            alpha_consumed: 0, alpha_spent: 0,
+            reason_code: 'spectral_inflation_bound_malformed',
+            family: 'D', signal: input.signal,
+        };
+    }
     const inflationBound = rawBound === undefined ? 1
         : typeof rawBound === 'number' ? rawBound : rawBound.c;
     const threshold = inflationBound / input.alpha;

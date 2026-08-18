@@ -63,4 +63,22 @@ const thresholdWith = (bound) => {
     // Pre-C54 configs carry a bare number; they stay legal, and the doc marks them under-specified.
     strict_1.default.ok(Math.abs(thresholdWith(1.0636) - 21.272) < 1e-9);
 });
+// Review 2026-08-18: configs are JSON.parse-cast unvalidated, so the object shape reaches the
+// runtime unchecked. A malformed measurement form must fail CLOSED (suppressed, like missing
+// null moments) — not silently disable (c undefined -> NaN threshold -> 'clean' forever) and
+// not fire unconditionally (c <= 0 -> threshold <= 0).
+const verdictWith = (bound) => {
+    const params = { ...base, e_value_inflation_bound: bound };
+    return (0, spectral_1.evaluateSpectralEDetector)({ params, alpha: 0.05, signal: 't' }, base.null_mean, (0, spectral_1.freshSpectralEDetectorState)());
+};
+(0, node_test_1.test)('a measurement form without a finite c is suppressed, not silently dead', () => {
+    const v = verdictWith({ measured_at_ticks: 900, calibration_window_count: 400 });
+    strict_1.default.equal(v.verdict, 'suppressed');
+    strict_1.default.equal(v.reason_code, 'spectral_inflation_bound_malformed');
+});
+(0, node_test_1.test)('a measurement form with c < 1 is suppressed, not an instant fire', () => {
+    const v = verdictWith({ c: 0, measured_at_ticks: 900, calibration_window_count: 400 });
+    strict_1.default.equal(v.verdict, 'suppressed');
+    strict_1.default.equal(v.reason_code, 'spectral_inflation_bound_malformed');
+});
 //# sourceMappingURL=spectral-inflation-bound.test.js.map

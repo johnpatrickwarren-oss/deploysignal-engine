@@ -1,0 +1,43 @@
+{
+  "study": "family-d-emean",
+  "amendment": "A1 (2026-08-18)",
+  "mode": "live",
+  "command": "/Users/johnwarren/concord/deploysignal-engine/validation/family-d-emean/harness/run.mjs --mode live --supersedes run-20260818T220621Z",
+  "git_sha": "bd4893e82befcf1aeeeeac087603fb0037e8241a",
+  "engine_version": "0.6.6-pre",
+  "node": "v25.9.0",
+  "supersedes": [
+    {
+      "study": "family-d-emean",
+      "run": "run-20260818T220621Z",
+      "detectors": [
+        "family_D_spectral_e_detector"
+      ],
+      "reason": "seed-scheme defect (review 2026-08-18): avalanche-hashed offsets into one shared 2^32 LCG cycle gave overlapping trajectory substreams, violating Amendment A1.3 disjointness; superseded by per-stream splitmix64 (harness/seed.mjs), full re-run under A1.5.4"
+    }
+  ],
+  "seed_scheme": "per-stream splitmix64 over bit-disjoint (cellIdx, draw, traj) keys (harness/seed.mjs); exact cal streams (255,0,0)/(255,1,0); full-cell trajectories draw=0, shared-draw cells draw=d+2, trajectory index traj=i+1",
+  "sizes": {
+    "N_FULL": 4000,
+    "D_SHARED": 100,
+    "N_SHARED": 1000,
+    "HORIZONS": [
+      300,
+      900
+    ],
+    "K_EXACT": 66666
+  },
+  "exact_calibration": {
+    "A": {
+      "mu": 0.27590980836670365,
+      "sigma": 0.08018075146293921
+    },
+    "B": {
+      "mu": 0.27594656601959927,
+      "sigma": 0.0802144279237834
+    },
+    "dMu": 0.000036757652895624826,
+    "relDSigma": 0.00042000680000808295
+  },
+  "billing": "no model calls; pure simulation"
+}

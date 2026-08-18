@@ -1,0 +1,62 @@
+{
+  "executable": true,
+  "guard": {
+    "dMu": 0.00015761192639113242,
+    "relDSigma": 0.0024663658397624942,
+    "pass": true
+  },
+  "control": {
+    "cell": "N7-rolling-T300",
+    "log10_e_mean": 20.392753577168037,
+    "crossing_rate_shipped_threshold": 0.28625,
+    "bar": "log10 E[M_300] > 1 AND shipped-threshold crossing rate > 0.2 (A1.4 as corrected 2026-08-18)",
+    "pass": true
+  },
+  "analytic_residual_log_c": 0.0005676806768067681,
+  "e1": [
+    {
+      "endpoint": "E1",
+      "cell": "N1-exact-T300",
+      "horizon_ticks": 300,
+      "wealth_updates": 9,
+      "K": 66666,
+      "cal_mode": "exact-shared",
+      "e_mean": 1.0228886607397887,
+      "e_mean_lower_95": 0.987713828053481,
+      "verdict": "not-refuted"
+    },
+    {
+      "endpoint": "E1",
+      "cell": "N1-exact-T900",
+      "horizon_ticks": 900,
+      "wealth_updates": 29,
+      "K": 66666,
+      "cal_mode": "exact-shared",
+      "e_mean": 1.0336023297520485,
+      "e_mean_lower_95": 0.9501918917937987,
+      "verdict": "not-refuted"
+    }
+  ],
+  "committed_comparison": [
+    {
+      "horizon_ticks": 300,
+      "committed": 1.0636,
+      "measured": 1.0228886607397887,
+      "ci95": [
+        0.9809752624302019,
+        1.0648020590493754
+      ],
+      "consistent": true
+    },
+    {
+      "horizon_ticks": 900,
+      "committed": 1.1076,
+      "measured": 1.0336023297520485,
+      "ci95": [
+        0.9342126626995009,
+        1.132991996804596
+      ],
+      "consistent": true
+    }
+  ]
+}

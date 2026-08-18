@@ -1,0 +1,34 @@
+{
+  "study": "family-d-emean",
+  "amendment": "A1 (2026-08-18)",
+  "mode": "live",
+  "command": "/Users/johnwarren/concord/deploysignal-engine/validation/family-d-emean/harness/run.mjs --mode live",
+  "git_sha": "80ba65179c93d160ba8ff3ce561106aeee2462f7",
+  "engine_version": "0.6.6-pre",
+  "node": "v25.9.0",
+  "base_seed": 20260818,
+  "seed_scheme": "seedFor(cellIdx, draw, traj): BASE_SEED xor avalanche-mixed indices (see harness/run.mjs); exact cal seeds seedFor(999,0,0)/(999,1,0); full-cell trajectories draw=0, shared-draw cells draw=d+2",
+  "sizes": {
+    "N_FULL": 4000,
+    "D_SHARED": 100,
+    "N_SHARED": 1000,
+    "HORIZONS": [
+      300,
+      900
+    ],
+    "K_EXACT": 66666
+  },
+  "exact_calibration": {
+    "A": {
+      "mu": 0.2758942430922818,
+      "sigma": 0.08017472914503898
+    },
+    "B": {
+      "mu": 0.2760518550186729,
+      "sigma": 0.08037246935821452
+    },
+    "dMu": 0.00015761192639113242,
+    "relDSigma": 0.0024663658397624942
+  },
+  "billing": "no model calls; pure simulation"
+}

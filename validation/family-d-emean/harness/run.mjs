@@ -20,17 +20,26 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
-import { rng, gaussFrom } from '../../h0-battery/harness/nulls.mjs';
+import { gaussFrom } from '../../h0-battery/harness/nulls.mjs';
 import { DETECTORS } from '../../h0-battery/harness/detectors.mjs';
+import { streamRng } from './seed.mjs';
 
 const STUDY = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const ENG = path.join(STUDY, '..', '..');
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 
 const MODE = arg('--mode', 'sim');
+// --supersedes <runId>: the C1.6 manifest declaration (certification collect.mjs) naming the
+// prior run this execution supersedes for a fixed, named defect. Operational provenance only;
+// no generator, detector call, seed, horizon or endpoint reads it.
+const SUPERSEDED_RUN = arg('--supersedes', null);
+const SUPERSEDES = SUPERSEDED_RUN === null ? null : [{
+  study: 'family-d-emean', run: SUPERSEDED_RUN,
+  detectors: ['family_D_spectral_e_detector'],
+  reason: 'seed-scheme defect (review 2026-08-18): avalanche-hashed offsets into one shared 2^32 LCG cycle gave overlapping trajectory substreams, violating Amendment A1.3 disjointness; superseded by per-stream splitmix64 (harness/seed.mjs), full re-run under A1.5.4',
+}];
 
 // ── A1.3 constants. None is a flag: sizes are registered. ─────────────────────────────
-const BASE_SEED = 20260818;
 const N_FULL = 4000;              // exact / per-trajectory / control cells
 const D_SHARED = 100;             // shared-draw cells: draws (C51.4 floor)
 const N_SHARED = 1000;            // shared-draw cells: trajectories per draw
@@ -44,24 +53,17 @@ const Z95 = 1.6448536269514722;   // one-sided 95%
 const famD = DETECTORS.find((d) => d.id === 'family_D_spectral_e_detector');
 if (!famD) throw new Error('family_D adapter not found in h0-battery detectors.mjs');
 
-// ── Seeds. One documented mixing function; recorded in the manifest. ──────────────────
-// Distinct (cell, draw, trajectory) triples map to distinct-with-overwhelming-probability
-// uint32 seeds; the constants are the usual 32-bit avalanche multipliers.
-function seedFor(cellIdx, draw, traj) {
-  let h = BASE_SEED >>> 0;
-  h = (h ^ Math.imul(cellIdx + 1, 0x9E3779B9)) >>> 0;
-  h = (h ^ Math.imul(draw + 1, 0x85EBCA6B)) >>> 0;
-  h = (h ^ Math.imul(traj + 1, 0xC2B2AE35)) >>> 0;
-  h = Math.imul(h ^ (h >>> 16), 0x45D9F3B) >>> 0;
-  return (h ^ (h >>> 16)) >>> 0;
-}
-const CAL_SEED_A = seedFor(999, 0, 0);   // exact-shared calibration, primary draw
-const CAL_SEED_B = seedFor(999, 1, 0);   // exact-shared replication guard (A1.2 guard 2)
+// ── Seeds. Per-stream splitmix64 (harness/seed.mjs) — the superseding scheme after the
+// review finding on run-20260818T220621Z: the first run's avalanche-hashed offsets into one
+// shared 2^32 LCG cycle gave overlapping substreams. Stream identity is the structural
+// (cellIdx, draw, traj) key; cellIdx 255 is reserved for the exact-shared calibrations.
+const CAL_STREAM_A = [255, 0, 0];   // exact-shared calibration, primary draw
+const CAL_STREAM_B = [255, 1, 0];   // exact-shared replication guard (A1.2 guard 2)
 
 // ── Calibration: moments of peak|ACF| over disjoint windows, via the adapter's own
 //    calibrate() so the statistic is computed by the identical committed code path. ────
-function calibrate(K, seed) {
-  const r = rng(seed);
+function calibrate(K, [c, d, t]) {
+  const r = streamRng(c, d, t);
   const g = gaussFrom(r);
   const sample = Array.from({ length: K * W }, g);
   const m = famD.calibrate(sample, {});
@@ -116,7 +118,9 @@ function meanStats(logMs) {
   let mx = -Infinity;
   for (const x of logMs) if (x > mx) mx = x;
   const sorted = [...logMs].sort((a, b) => a - b);
-  const q = (p) => sorted[Math.min(n - 1, Math.floor(p * n))];
+  // nearest-rank: the p-quantile of n sorted values is the ceil(p*n)-th order statistic
+  // (review 2026-08-18 — Math.floor(p*n) indexed one rank high).
+  const q = (p) => sorted[Math.max(0, Math.ceil(p * n) - 1)];
   return {
     log_e_mean: logE1,
     e_mean: logE1 < 700 ? Math.exp(logE1) : null,
@@ -137,8 +141,8 @@ if (fs.existsSync(runDir)) { console.error(`refusing to reuse ${runDir}`); proce
 fs.mkdirSync(path.join(runDir, 'cells'), { recursive: true });
 
 // ── A1.2 exact-shared calibration, with the replication guard ─────────────────────────
-const calA = calibrate(K_EXACT, CAL_SEED_A);
-const calB = calibrate(K_EXACT, CAL_SEED_B);
+const calA = calibrate(K_EXACT, CAL_STREAM_A);
+const calB = calibrate(K_EXACT, CAL_STREAM_B);
 const dMu = Math.abs(calA.mu - calB.mu);
 const relDSigma = Math.abs(calA.sigma - calB.sigma) / calA.sigma;
 const guardPass = dMu < 2e-3 && relDSigma < 0.02;
@@ -180,10 +184,10 @@ for (const spec of GRID) {
     // D draws; per draw one K-window calibration and N_SHARED trajectories.
     const perHorizonDrawMeans = HORIZONS.map(() => []);
     for (let d = 0; d < D_SHARED; d++) {
-      const cal = calibrate(spec.K, seedFor(spec.idx, d + 2, 0));
+      const cal = calibrate(spec.K, [spec.idx, d + 2, 0]);
       const perHorizon = HORIZONS.map(() => []);
       for (let i = 0; i < N_SHARED; i++) {
-        const snaps = trajectory(spec.windows, cal.mu, cal.sigma, rng(seedFor(spec.idx, d + 2, i + 1)));
+        const snaps = trajectory(spec.windows, cal.mu, cal.sigma, streamRng(spec.idx, d + 2, i + 1));
         snaps.forEach((s, h) => perHorizon[h].push(s.logM));
       }
       HORIZONS.forEach((T, h) => {
@@ -213,7 +217,7 @@ for (const spec of GRID) {
     const isPT = spec.mode === 'per-trajectory';
     const perHorizon = HORIZONS.map(() => ({ logMs: [], crossings: 0 }));
     for (let i = 0; i < N_FULL; i++) {
-      const r = rng(seedFor(spec.idx, 0, i + 1));
+      const r = streamRng(spec.idx, 0, i + 1);
       let mu = calA.mu, sigma = calA.sigma;
       if (isPT) {
         // Condition-A shape: the calibration sample precedes the trajectory on the SAME stream.
@@ -314,8 +318,8 @@ const manifest = {
   git_sha: execSync('git rev-parse HEAD', { cwd: ENG }).toString().trim(),
   engine_version: JSON.parse(fs.readFileSync(path.join(ENG, 'package.json'), 'utf8')).version,
   node: process.version,
-  base_seed: BASE_SEED,
-  seed_scheme: 'seedFor(cellIdx, draw, traj): BASE_SEED xor avalanche-mixed indices (see harness/run.mjs); exact cal seeds seedFor(999,0,0)/(999,1,0); full-cell trajectories draw=0, shared-draw cells draw=d+2',
+  supersedes: SUPERSEDES,
+  seed_scheme: 'per-stream splitmix64 over bit-disjoint (cellIdx, draw, traj) keys (harness/seed.mjs); exact cal streams (255,0,0)/(255,1,0); full-cell trajectories draw=0, shared-draw cells draw=d+2, trajectory index traj=i+1',
   sizes: { N_FULL, D_SHARED, N_SHARED, HORIZONS, K_EXACT },
   exact_calibration: { A: calA, B: calB, dMu, relDSigma },
   billing: 'no model calls; pure simulation',

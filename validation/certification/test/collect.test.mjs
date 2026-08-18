@@ -699,10 +699,16 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
     // The corpus census is UNCHANGED at 2266 because the replacement emits the same 600 + 5 + 1
     // rows the superseded run did — registered as that arithmetic in K6A.7.7, not discovered here.
     'run-t2-20260809T040552Z': 606,
+    // family-d-emean Amendment A1 correction append item 2 (2026-08-18): the first run's seed
+    // scheme put every stream on one shared 2^32 LCG cycle with overlapping substreams; the
+    // splitmix64 re-run declares the supersession in its manifest, detector-scoped. The corpus
+    // census is UNCHANGED at 2416 because the superseding run emits the same 12 cell ids the
+    // superseded run did.
+    'run-20260818T220621Z': 12,
     'run-20260801T062612Z': 144,
     'run-20260801T062824Z': 148,
     'run-20260801T064237Z': 148,
-  }, 'seven runs — four manifest-declared, three registry');
+  }, 'eight runs — five manifest-declared, three registry');
 });
 
 // C44's reviewer's fixture, verbatim in structure: run-old measures detector d, run-empty measures

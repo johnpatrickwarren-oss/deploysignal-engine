@@ -160,3 +160,42 @@ through `dist/detectors/spectral.js`, never a reimplementation.
    `validation/*/results/live/` cell.
 4. **One attempt.** A mid-run instrument defect: preserve the run unscored, fix test-first,
    re-run in full under this unchanged amendment, defect named in the superseding manifest.
+
+---
+
+# Amendment A1 — correction append, 2026-08-18 (post-run, pre-supersession; appended not edited)
+
+Six corrections from the independent review of PR #67, recorded before the superseding run
+executes. `run-20260818T220621Z` is preserved byte-for-byte and is superseded by the next live
+run under A1.5.4 (mid-run instrument defect: preserve unscored where affected, fix test-first,
+full re-run under this unchanged amendment).
+
+1. **A1.3's seed-scheme sentence never described the implementation.** It registered
+   "per-trajectory stride 7919, disjoint ranges"; the harness as first committed used
+   avalanche-hashed offsets and the manifest recorded that scheme. The registration text was
+   stale against its own instrument — the drift class this study exists to eliminate.
+2. **The hashed scheme is itself the defect** (review finding): every stream was an offset on
+   one shared 2^32 LCG cycle, the run consumed ~5.1×10⁸ uniforms (~12% of the cycle) across
+   ~232k streams, so substreams overlapped — trajectories were not independent, violating the
+   registered disjointness and thinning the effective N behind every confidence bound. Direction:
+   correlation widens true uncertainty, so it cannot manufacture the run's not-refuted E1
+   verdicts, but the finite-K refutations' lower bounds inherit it. **Fix, test-first**
+   (`tests/seed-scheme.test.mjs`): per-stream splitmix64 over bit-disjoint (cell, draw, traj)
+   keys (`harness/seed.mjs`), expected overlapping stream pairs ~10⁻⁴ run-wide against ~2.8×10⁴
+   under the defective scheme. The superseding run declares the supersession in its manifest
+   (certification C1.6 shape, detector-scoped).
+3. **Percentile convention corrected to nearest-rank** (`ceil(p·n)−1`): the first run's
+   `floor(p·n)` indexed one rank high at both ends, so its shared-draw p05–p95 bands are the
+   [6th, 96th]/100 order statistics, biased high on the heavy right tail.
+4. **A1.1's "executed at current main" was wrong as written**: the run manifest records the
+   study-branch sha (`80ba651`), which is not reachable from `main`. The accurate statement,
+   which this correction substitutes: executed on `open/family-d-emean` at a commit whose engine
+   sources are byte-identical to `main@4c8953d` (the intervening commits touch only this study's
+   prereg and harness); the manifest records the branch sha. The behaviour-identity claim stands.
+5. **The runtime gained the fail-closed guard the type change was missing**: a measurement-form
+   bound whose `c` is missing, non-finite, or < 1 now returns `suppressed`
+   (`spectral_inflation_bound_malformed`) instead of a NaN threshold (silently dead) or an
+   instant fire (engine change on this branch, test-first).
+6. **`analysis/check_report.mjs` is bound to the canonical run by constant, not parameter** —
+   its pinned strings include run-specific measured values, so pointing it at a different run
+   reports drift when nothing drifted. The superseding run becomes the bound run.

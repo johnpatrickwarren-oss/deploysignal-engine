@@ -4,3 +4,4 @@ node_modules/
 *.tsbuildinfo
 validation/h0-battery/results/sim/
 validation/family-ce-nulls/results/sim/
+validation/family-d-emean/results/sim/

@@ -1,10 +1,13 @@
 "use strict";
 // test/spectral-inflation-bound.test.ts — the c-deflation.
 //
-// The spectral e-detector is not an e-process: E[M_T|H0] measured 1.0636 at T=300 and 1.1076 at
-// T=900 under disjoint evaluation. The violation is BOUNDED, and a bounded violation is priceable —
-// firing at c/α is identical to running at α on M/c, and E[M/c] ≤ 1. See
-// knowledge/stats/h0-battery-2026-08-01.
+// The spectral e-detector's E[M_T|H0] was measured 1.0636 at T=300 and 1.1076 at T=900 under
+// disjoint evaluation with ESTIMATED (K = 400 windows) null moments; the first committed
+// execution (validation/family-d-emean run-20260818T220621Z) reads 1.0229 / 1.0336 at exact
+// moments — consistent with the committed values, which sit on the conservative side. The
+// violation is K-dependent (c(T, K) ≈ exp(skew·n + n²r²/2K)) but BOUNDED at every measured K,
+// and a bounded violation is priceable — firing at c/α is identical to running at α on M/c,
+// and E[M/c] ≤ 1. See knowledge/stats/h0-battery-2026-08-01.
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -37,5 +40,27 @@ const thresholdWith = (bound) => {
     // under-corrects a long one, which is why the type says to measure the longest.
     strict_1.default.ok(1.1076 > 1.0636);
     strict_1.default.ok(thresholdWith(1.1076) > thresholdWith(1.0636));
+});
+// C54 (2026-08-18): a bare c without its calibration-window count is under-specified —
+// c(T, K) ≈ exp(skew·n + n²r²/2K), so the same detector at the same T prices differently at a
+// different K (measured at run-20260818T220621Z: E[M_900] = 1.03 exact / 1.37 K=400 / 1.97 K=100,
+// per-trajectory). The measurement form carries K beside T.
+(0, node_test_1.test)('the measurement form prices the threshold identically to its bare c', () => {
+    const measured = {
+        c: 1.1076, measured_at_ticks: 900, wealth_updates: 29,
+        calibration_window_count: 400,
+    };
+    strict_1.default.ok(Math.abs(thresholdWith(measured) - thresholdWith(1.1076)) < 1e-12);
+});
+(0, node_test_1.test)("calibration_window_count: 'exact' is expressible — the oracle-moment condition", () => {
+    const measured = {
+        c: 1.0336, measured_at_ticks: 900, wealth_updates: 29,
+        calibration_window_count: 'exact', run: 'family-d-emean/run-20260818T220621Z',
+    };
+    strict_1.default.ok(Math.abs(thresholdWith(measured) - 1.0336 / 0.05) < 1e-9);
+});
+(0, node_test_1.test)('the legacy bare-number form still replays', () => {
+    // Pre-C54 configs carry a bare number; they stay legal, and the doc marks them under-specified.
+    strict_1.default.ok(Math.abs(thresholdWith(1.0636) - 21.272) < 1e-9);
 });
 //# sourceMappingURL=spectral-inflation-bound.test.js.map

@@ -9,12 +9,12 @@
   "class": "test_martingale",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "da0fe0d655d564c9efaafc4a4a83f94393a3a46e"
+    "sha": "798a545fe7b2c273e203d1dcdb7f84cec87f952d"
   },
   "source_files": [
     {
       "path": "detectors/spectral.ts",
-      "sha256": "3d2e5f2711e7e4269e369620d2a66360e721a5bd05632d4ae1b4cf6e2f230c50"
+      "sha256": "95ca789e6599d9ec4ce1f970c33e517cec74957c3f96a7786a524e8384967db6"
     },
     {
       "path": "detectors/validity-envelope.ts",

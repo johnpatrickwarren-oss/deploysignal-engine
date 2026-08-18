@@ -72,17 +72,28 @@ export interface FamilyDPerSignal {
  *  rather than runtime-adaptive ones. */
 /** Measured null-mean inflation `c` for the spectral e-detector, `E[M_T|H0] ≤ c`.
  *
- *  The detector is NOT an e-process: `peak|ACF|` is bounded in [0,1] and right-skewed where the
- *  increment `z_t = r·u − ½r²` is exact only for `u ~ N(0,1)`. Measured 2026-08-03 under disjoint
- *  evaluation on iid Gaussian H0 with `(μ̂₀, σ̂₀)` estimated from 400 windows:
+ *  `peak|ACF|` is bounded in [0,1] and right-skewed where the increment `z_t = r·u − ½r²` is exact
+ *  only for `u ~ N(0,1)`. Measured 2026-08-03 under disjoint evaluation on iid Gaussian H0 with
+ *  `(μ̂₀, σ̂₀)` estimated from `K = 400` windows:
  *
  *    E[M_300] = 1.0636 (95% lower 1.0257, 9 wealth updates)
  *    E[M_900] = 1.1076 (95% lower 1.0244, 29 updates)
  *
- *  Decomposing as `c(n) = a·bⁿ` over those two points gives `a ≈ 1.0444` (a fixed calibration-error
- *  overhead) and `b ≈ 1.00203` per wealth update. The per-update term corroborates an independent
- *  measurement of ~1.0023 per draw taken at EXACT null moments, which is why the decomposition is
- *  quoted at all — two points fitting two parameters is otherwise exact rather than evidence.
+ *  That measurement's harness was never committed; the first committed execution is
+ *  `validation/family-d-emean` `run-20260818T220621Z` (2026-08-18), which reads, at EXACT null
+ *  moments (`K = 66,666` shared, residual `n²r²/2K ≈ 5.7e-4` in log c):
+ *
+ *    E[M_300] = 1.0229 (95% lower 0.9877)   E[M_900] = 1.0336 (95% lower 0.9502)
+ *
+ *  and, per-trajectory: `E[M_900]` = 1.9738 at `K = 100`, 1.3695 at `K = 400`. The committed
+ *  2026-08-03 values are statistically CONSISTENT with the exact-moment cells (two-sided 95%) and
+ *  sit on the conservative side of their point estimates, so pricing with them stays valid.
+ *
+ *  C54 (2026-08-18): `c` is NOT WELL-FORMED without the calibration-window count `K` beside the
+ *  horizon `T` — `c(T, K) ≈ exp(skew·n + n²r²/2K)` (batch-C review), quadratic in the update count
+ *  and inverse in `K`, confirmed by the run above. A bare number is therefore under-specified;
+ *  prefer {@link SpectralInflationBoundMeasurement}, which states both. Bare numbers stay legal so
+ *  pre-C54 configs replay.
  *
  *  Supplying this bound raises the firing threshold to `c/α`, which is identical to running the
  *  procedure at α on `M/c`. Since `E[M/c] ≤ 1`, that recovers exact control: `FDR ≤ α` rather than
@@ -90,8 +101,23 @@ export interface FamilyDPerSignal {
  *
  *  ABSENT means no deflation, which is the pre-2026-08-03 behaviour and leaves the inflation
  *  unpriced. `c` GROWS with horizon, so a value supplied here must be measured for the longest
- *  horizon the detector runs over, not a typical one. */
-export type SpectralInflationBound = number;
+ *  horizon the detector runs over, not a typical one — and at the `K` the deployed calibration
+ *  actually has, not a larger one. */
+export type SpectralInflationBound = number | SpectralInflationBoundMeasurement;
+/** The well-formed inflation bound: the price `c` with the two axes it is measured on. */
+export interface SpectralInflationBoundMeasurement {
+    /** The measured bound: `E[M_T|H0] ≤ c` at the stated `(T, K)`. */
+    c: number;
+    /** Horizon (ticks) the bound is measured for — the longest the detector runs over. */
+    measured_at_ticks: number;
+    /** Wealth updates at that horizon under the measuring cadence (disjoint: `⌊T/W⌋ − 1`). */
+    wealth_updates?: number;
+    /** Calibration-window count `K` behind `(μ̂₀, σ̂₀)`; `'exact'` for oracle / large-sample
+     *  moments. The same detector at the same `T` prices differently at a different `K`. */
+    calibration_window_count: number | 'exact';
+    /** Producing artifact, e.g. `family-d-emean/run-20260818T220621Z`. */
+    run?: string;
+}
 export interface SpectralEDetectorState {
     M: number;
     n: number;

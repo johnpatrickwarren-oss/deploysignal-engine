@@ -677,8 +677,16 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
   //        run-20260810T064520Z — two lines differ, both suppressed-verdict counts). They appear only
   //        under `generated_from.runs`. They are counted here because `loadEvidence` globs every
   //        validation/*/results/live/*/cells/ directory in the tree.
-  assert.equal(ev.cells.length, 2404,
-    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24); no cell is dropped');
+  //
+  // 2404 -> 2416, 2026-08-18, one registered append and its arithmetic:
+  //   +12  family-d-emean/results/live/run-20260818T220621Z — the first committed execution of that
+  //        study's PREREGISTRATION.md (Amendment A1): 2 exact-shared E1 cells, 4 per-trajectory and
+  //        4 shared-draw calibration-grid cells, 2 rolling controls. Like the c-bound run's cells,
+  //        they carry none of the fields any stage reads (no `exceedance`, `mean_e`,
+  //        `detection_rate`, `rate_e_ge_20`, `fault_class`), so no verdict, stage token or tier
+  //        moves; they appear only under `generated_from.runs`.
+  assert.equal(ev.cells.length, 2416,
+    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12); no cell is dropped');
   const drops = ev.runs.filter((r) => r.superseded)
     .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);
   assert.deepEqual(Object.fromEntries(drops), {

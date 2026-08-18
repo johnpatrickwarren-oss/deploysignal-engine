@@ -259,12 +259,15 @@ function freshSpectralEDetectorState() {
  *    - 3σ₀ strong (peak_t = 0.57): z_t = +0.855; fire ~11 ticks.
  *  All within sufficiency-gate canary window. */
 function evaluateSpectralEDetector(input, peak_t, state) {
-    // c-deflation (2026-08-03). The detector is not an e-process — E[M_T|H0] measured at 1.064 (T=300)
-    // and 1.108 (T=900) under disjoint evaluation — but the violation is BOUNDED, and a bounded
-    // violation is priceable: firing at `c/α` is identical to running at α on `M/c`, and `E[M/c] ≤ 1`.
-    // Absent bound ⇒ threshold `1/α` ⇒ the inflation is real but unpriced, which is the pre-2026-08-03
-    // behaviour. `c` grows with horizon; see SpectralInflationBound.
-    const inflationBound = input.params.e_value_inflation_bound ?? 1;
+    // c-deflation (2026-08-03). E[M_T|H0] measured at 1.064 (T=300) and 1.108 (T=900) under disjoint
+    // evaluation with K=400-window calibration (exact-moment cells read 1.023/1.034 — family-d-emean
+    // run-20260818T220621Z); the violation is BOUNDED, and a bounded violation is priceable: firing at
+    // `c/α` is identical to running at α on `M/c`, and `E[M/c] ≤ 1`. Absent bound ⇒ threshold `1/α` ⇒
+    // the inflation is real but unpriced, which is the pre-2026-08-03 behaviour. `c` grows with
+    // horizon AND shrinks with calibration size; see SpectralInflationBound (C54: state K beside T).
+    const rawBound = input.params.e_value_inflation_bound;
+    const inflationBound = rawBound === undefined ? 1
+        : typeof rawBound === 'number' ? rawBound : rawBound.c;
     const threshold = inflationBound / input.alpha;
     const { null_mean: mu0, null_std: sigma0, betting_delta: delta } = input.params;
     if (mu0 === undefined || sigma0 === undefined || delta === undefined) {

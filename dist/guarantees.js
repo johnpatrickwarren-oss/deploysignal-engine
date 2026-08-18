@@ -108,8 +108,11 @@ exports.GUARANTEE_TABLE = Object.freeze([
         evidence: 'H0 battery 2026-08-01: rolling windows FAR 0.576 vs nominal 0.05 at ORACLE '
             + 'parameters (increments share 29/30 samples; martingale-difference fails) -> reclassified '
             + 'heuristic. Disjoint windows (d3d6d06): FAR 0.0005, but E[M_T|H0] = 1.0636 (T=300), '
-            + '1.1076 (T=900) — not an e-process; violation bounded. Priced c-bound (bb56070): firing at '
-            + 'c/alpha restores FDR <= alpha. e_value_inflation_bound ABSENT means unpriced inflation.',
+            + '1.1076 (T=900) at K=400-window calibration — refuted as an e-process under finite-K '
+            + 'calibration; exact-moment cells not-refuted at 1.0229/1.0336 (family-d-emean '
+            + 'run-20260818T220621Z; C54: state K beside T). Violation bounded. Priced c-bound '
+            + '(bb56070): firing at c/alpha restores FDR <= alpha. e_value_inflation_bound ABSENT '
+            + 'means unpriced inflation.',
     },
     {
         idPrefixes: ['mahalanobis_conformal_baseline'],

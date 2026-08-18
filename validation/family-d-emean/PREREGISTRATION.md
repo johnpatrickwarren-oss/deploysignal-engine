@@ -129,9 +129,18 @@ through `dist/detectors/spectral.js`, never a reimplementation.
 - **E1** verbatim from §2, scored on `N1-exact-T300` / `N1-exact-T900` only: FAIL iff the 95%
   lower bound on `E[M_T]` exceeds 1. §5's expectation stands: FAIL at both horizons, marginally.
 - **E2** reported per §3 on the same cells.
-- **E3 / NOT-EXECUTABLE** (§4, made mechanical): the rolling control `N7-rolling-T300` must read a
-  95% lower bound on `E[M_300]` **> 10** (the uncommitted 2026-08-03 reading was `6.6 × 10²³`; the
-  bar sits far below it and far above 1). Below the bar ⇒ the harness is wrong, no cell is scored.
+- **E3 / NOT-EXECUTABLE** (§4, made mechanical): the rolling control `N7-rolling-T300` must read
+  **both** (a) a point estimate `log₁₀ E[M_300] > 1` and (b) a crossing rate at the shipped
+  threshold `1/α_D = 10⁴` **> 0.2** (the committed history is `6.6 × 10²³` and `0.576`; both bars
+  sit far from marginal). Either below its bar ⇒ the harness is wrong, no cell is scored.
+
+  *Corrected 2026-08-18, before any execution of the harness (sim or live), superseding the first
+  form of this clause ("95% lower bound on `E[M_300]` > 10"). Reason: on a one-trajectory-dominated
+  mean the lower confidence bound is a degenerate instrument (`top1_share → 1` collapses it to
+  nothing — the bootstrap-overshoot run's D1 diagnostic), so the original bar could declare
+  NOT-EXECUTABLE on estimator degeneracy while the property it checks — the rolling path's gross
+  inflation — is present. The replacement tests the same property through two committed, robust
+  readings. No run had been executed when this was changed.*
 
 ## A1.5 — Dispositions, frozen before the run
 

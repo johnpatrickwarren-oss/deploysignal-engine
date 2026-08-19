@@ -1,0 +1,21 @@
+{
+  "study": "2026-08-grapa-stability",
+  "mode": "live",
+  "git_sha": "9fb54567750b937fbbd23b5b888285d2ac82db70",
+  "engine_version": "0.6.6-pre",
+  "node": "v25.9.0",
+  "command": "/Users/johnwarren/concord/deploysignal-engine/validation/grapa-stability/harness/run.mjs --mode live",
+  "sizes": {
+    "N": 2000,
+    "T": 300,
+    "SNAPSHOTS": [
+      50,
+      100,
+      200,
+      300
+    ],
+    "ALPHA": 0.05
+  },
+  "seed_scheme": "per-stream splitmix64 (family-d-emean/harness/seed.mjs); triple (cellIdx, 0, traj+1); §5 reproduction drives reuse the same triples",
+  "billing": "no model calls; pure simulation"
+}

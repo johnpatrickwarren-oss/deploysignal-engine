@@ -1,0 +1,57 @@
+{
+  "executable": true,
+  "repro_mismatches": 0,
+  "P1": {
+    "slope": -0.9650245383865403,
+    "mean_ok": true,
+    "held": true,
+    "verdict": "HELD"
+  },
+  "P2": {
+    "slope": -0.5112358262022482,
+    "held": true,
+    "verdict": "HELD"
+  },
+  "P3": {
+    "increment_estimator": 0.9999956440136044,
+    "held": true,
+    "verdict": "HELD"
+  },
+  "P4": {
+    "excess": [
+      0.027812627998896167,
+      0.009555596773185071,
+      0.001751667221393527
+    ],
+    "kappa": 0.8444881235589419,
+    "residuals": [
+      0.011970900845180784,
+      0.13152529995504772,
+      0.03711773589629861
+    ],
+    "held": true,
+    "verdict": "HELD"
+  },
+  "P5": {
+    "nonfinite": [
+      0,
+      0
+    ],
+    "max_abs_increment": [
+      13.81551055793552,
+      13.815510557935518
+    ],
+    "fire_rate": [
+      0.0595,
+      0.0395
+    ],
+    "held": true,
+    "verdict": "HELD"
+  },
+  "P6": {
+    "early_fallback_rate": 1,
+    "late_fallback_rate": 0.0000375,
+    "held": true,
+    "verdict": "HELD"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "study": "2026-08-grapa-stability",
+  "detector": "family_A_betting_e_process",
+  "family": "A",
+  "null_id": "N1",
+  "control": "grapa-stability",
+  "alpha": null,
+  "shift_sigma": null,
+  "n": 2000,
+  "ticks": 300,
+  "snapshots": [
+    {
+      "n": 50,
+      "lambda_mean": -0.0021087046726145486,
+      "lambda_var": 0.18064049772477458,
+      "logM_mean": -1.4200609014410213
+    },
+    {
+      "n": 100,
+      "lambda_mean": -0.01052277777758071,
+      "lambda_var": 0.09220758175831245,
+      "logM_mean": -1.7927500254750635
+    },
+    {
+      "n": 200,
+      "lambda_mean": -0.001196323944722467,
+      "lambda_var": 0.0483380599173614,
+      "logM_mean": -2.126616209535894
+    },
+    {
+      "n": 300,
+      "lambda_mean": -0.0014055129335376396,
+      "lambda_var": 0.03169997730380954,
+      "logM_mean": -2.343282843584476
+    }
+  ],
+  "lambda_var_slope": -0.9650245383865403,
+  "logM_slope": -0.5112358262022482,
+  "lambda300_mean": -0.0014055129335376396,
+  "lambda300_se": 0.003981204422270322,
+  "increment_estimator": 0.9999956440136044,
+  "nonfinite_increments": 0,
+  "max_abs_increment": 13.815510557935518,
+  "fire_rate": 0.035,
+  "early_fallback_rate": 1,
+  "late_fallback_rate": 0.0000375,
+  "mode": "live",
+  "control_state": "passed"
+}

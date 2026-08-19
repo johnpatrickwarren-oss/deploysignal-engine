@@ -47,6 +47,16 @@ function t3(r) {
   };
 }
 
+/** Amendment A4 (C27) — AR(1) with t3 innovations, unit marginal variance: the composition of
+ *  N3 and N6, the two departures every phi-aware detector clears individually. The marginal law
+ *  is the process's own, not t3. */
+function ar1T3(r, phi) {
+  const src = t3(r);
+  let prev = src();
+  const sd = Math.sqrt(1 - phi * phi);
+  return () => (prev = phi * prev + sd * src());
+}
+
 /** The registered battery. `windows` selects rolling vs disjoint for detectors
  *  that read a windowed statistic (§3, N1 vs N7). */
 export const NULLS = [
@@ -72,3 +82,16 @@ export const NULLS = [
   { id: 'N7', label: 'iid Gaussian, oracle params, ROLLING windows (shipped config)',
     gen: iidGauss, params: 'oracle', windows: 'rolling' },
 ];
+
+/** Amendment A4 (C27) — the combined-stress cell: N3-p09 x N6 together. Existing N1-N7
+ *  clearances are evidence about isolated departures only.
+ *
+ *  Exported SEPARATELY from NULLS, deliberately: the detector-audit, coverage and
+ *  certification harnesses import NULLS wholesale under registrations that name N1-N7
+ *  verbatim, so growing the shared array would silently change what any future execution
+ *  of those harnesses covers. The battery runner concatenates this in; a study that wants
+ *  N8 opts in by amendment, the way A4 did. */
+export const N8_COMBINED = {
+  id: 'N8', label: 'AR(1) phi=0.9 with t3 innovations, oracle params, disjoint (combined stress)',
+  gen: (r) => ar1T3(r, 0.9), phi: 0.9, params: 'oracle', windows: 'disjoint',
+};

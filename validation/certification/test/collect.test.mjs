@@ -701,8 +701,13 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
   // true); the first N8 run — 12 cells stamped with the wrong study id — is superseded by the
   // rerun's manifest declaration and drops. Like the runs above, N8 endpoint rows are filtered
   // by isValidityCell before any stage: no verdict, stage token or tier moves.
-  assert.equal(ev.cells.length, 2428,
-    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12); no surviving cell is dropped');
+  //
+  // 2428 -> 2434, 2026-08-18/19, one registered append and its arithmetic (grapa-stability
+  // PREREGISTRATION §3): the C58 stability run adds 6 cells under study id
+  // 2026-08-grapa-stability, identity-disambiguated via control: 'grapa-stability'. They carry
+  // no stage-readable fields, so no verdict, stage token or tier moves.
+  assert.equal(ev.cells.length, 2434,
+    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12) + the grapa-stability run (6); no surviving cell is dropped');
   const drops = ev.runs.filter((r) => r.superseded)
     .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);
   assert.deepEqual(Object.fromEntries(drops), {

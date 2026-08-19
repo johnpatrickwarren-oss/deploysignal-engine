@@ -1,0 +1,69 @@
+{
+  "study": "detector-certification",
+  "protocol_version": 1,
+  "report_format": 6,
+  "git_sha": "0f7b19703d9d30a1e94db5cc5391600689df73d5",
+  "node": "v25.9.0",
+  "cards": [
+    {
+      "file": "family_A_betting_e_process.json",
+      "sha256": "cd4097cdee36a68cfae57f4e7da27a47593aea77925291a9352d2c679b571f1e"
+    },
+    {
+      "file": "family_A_mixture_supermartingale.json",
+      "sha256": "90340313c1e227156c5b228a5c8f94376cc11818ba8a154179224578fcab1005"
+    },
+    {
+      "file": "family_C_safe_hotelling.json",
+      "sha256": "5633289e370a0ed6496375c9d8af22e517c7159753c40664dcddc35ecaecfddd"
+    },
+    {
+      "file": "family_D_spectral_e_detector.json",
+      "sha256": "8d21a5a17eecaa1f693a3052fad4d3967f0c6da98c18691f8ba3b80036fe83cf"
+    },
+    {
+      "file": "family_E_conformal.json",
+      "sha256": "75cba9e40c9747feda1f00589bbbee1e00448443d6ebafcd84b7e250d028f024"
+    },
+    {
+      "file": "family_E_conformal_heldout.json",
+      "sha256": "a95601be3f357226d3c65ffad6672001becd953358071c5e3392658210c3cd2a"
+    },
+    {
+      "file": "group_average_e_value.json",
+      "sha256": "5cb4100d8b359276e8c2c8f012158a3143a46f6d0c17018165dc585ca983d56e"
+    },
+    {
+      "file": "point_tail_bet_e_value.json",
+      "sha256": "f514d6f443f42a44b4d5b4e9df58ea7959466fb879d85d0d25af6ac69bebe2e0"
+    },
+    {
+      "file": "safe_t_e_value.json",
+      "sha256": "8d02a88cc6027518d6246eeb6f65395d3d9dfb34095ad195e29dda378797b02a"
+    },
+    {
+      "file": "sequential_mmd_betting_e_process.json",
+      "sha256": "274ab95414fb5f017c9f88e6cbf50484d5038209e396fd67891711f024e0d388"
+    },
+    {
+      "file": "sequential_ui_e_process.json",
+      "sha256": "7b854eaf69bb659f0d1de73316184e75ae2ed45f2e7414c4cebf83c0520f299e"
+    },
+    {
+      "file": "shape_block_conformal_bet.json",
+      "sha256": "e038077309d6d7c9fdf0842e26aedf1027f68e5dc8483e919d6b3c01a964200b"
+    },
+    {
+      "file": "shape_ecdf_accumulator.json",
+      "sha256": "ab67d54514ce1e51fc3175dc4b1af9c5d80aa32c9688fe2318271083a08c150d"
+    },
+    {
+      "file": "spectral_bet_e_process.json",
+      "sha256": "9a1bcf4aa716aeef286f5c5bdbff4cfb18d3d954d2d4c5c6c3d5c447eb91dd85"
+    },
+    {
+      "file": "universal_inference_e_value.json",
+      "sha256": "2aae59b08bd8cc013571d9c81905a220919bc52a22841e97d9ae26b62a07f52f"
+    }
+  ]
+}

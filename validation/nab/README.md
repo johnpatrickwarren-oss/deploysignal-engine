@@ -60,3 +60,34 @@ node dist/tools/run-nab-per-dataset.js --nab-repo ../NAB \
 - Threshold/likelihood tuning against the NAB probationary period (would need a
   train/validation split to avoid tuning on the scored corpus).
 - Re-scoring after the Q2.B calibration-coherence fixes land in DeploySignal.
+
+## 2026-08-18 — the Ville-only re-run (C3) and the Q69.D retirement (C8)
+
+Governed by `RERUN-2026-08-18-PREREGISTRATION.md`, committed before the code change and the run.
+
+**The classical `family_A_page_cusum` arm is retired from this tooling with the classical
+detector itself** (`detectors/_page-cusum-classical.ts` deleted at Q69.D; best-of-A is now over
+the two Ville A-detectors). The 2026-07-17 reports above are the classical arm's last committed
+record: Page-CUSUM standard 35.50 (default) / 26.52 (arp-seasonal).
+
+| Detector | 2026-08-18 default | 2026-08-18 arp-seasonal | floor | passes |
+|---|---|---|---|---|
+| `family_A_betting` | 27.06 | 27.78 | A best-of ≥ 50 | no |
+| `family_A_mixture_supermartingale` | 23.45 | 23.66 | — | no |
+| `family_D_spectral` | 29.79 | 29.79 | ≥ 40 | no |
+
+`family_A_passes = false` (best-of Ville-A 27.06 vs 50); `family_D_passes = false` (29.79 vs 40);
+`combined = false` in both runs. **The standing instruction is unchanged: these floors must not
+be cited as passed anywhere.** Per-dataset rows are bit-identical to 2026-07-17 for the three
+retained detectors — the tool is deterministic and no engine change since then touches the code
+paths it drives.
+
+**The silence floor, stated here so the artifact is self-qualifying** (added to the wiki
+2026-07-31, previously missing from this README): six of the 35 datasets carry zero annotation
+windows and score 100 for silence, so a detector that never fires scores `100 × 6/35 = 17.14` on
+the aggregate — the floor is 17.14, not 0, and not the leaderboard's "random ≈ 11". Above that
+floor the 2026-08-18 readings are: betting 9.92, mixture 6.31, spectral 12.65.
+
+- `report-2026-08-18-default.json` — Ville-only, default configuration.
+- `report-2026-08-18-arp-seasonal.json` — Ville-only, `--ar-p-calibration
+  --seasonal-decomposition`.

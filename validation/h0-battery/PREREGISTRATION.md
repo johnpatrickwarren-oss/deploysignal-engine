@@ -1510,3 +1510,68 @@ cited: they are **pooled but never recognised as candidates** — present in `lo
 `cells`, filtered out by `isValidityCell` before `scoreS2` can exclude them, which is why all three
 of `perCell`, `excluded` and `missing` were empty rather than just the first. A1.3 made this same
 distinction for the word "scored"; this append makes it for "missing".
+
+---
+
+## Amendment A4 — 2026-08-18, the combined-stress null N8 (WORKLIST C27)
+
+Appended before the generator or any run exists. §3's battery varies **one departure per cell**,
+and `stats/shape-clustersynth-2026-08-05` is the tenth instance of
+`stats/simulation-validates-instances-not-statements` — the first where the gap was combinatorial:
+a detector cleared N1–N7 one at a time and failed immediately on telemetry presenting several
+departures together. C27 registers the standing correction: **existing N1–N7 clearances are
+evidence about isolated departures only**, and the battery gains a combined cell.
+
+### A4.1 — The cell
+
+**N8: AR(1) φ = 0.9 with t₃ innovations, oracle parameters, disjoint windows** — the composition
+of N3-p09 and N6, the two departures every φ-aware detector clears individually. Generator:
+`x_t = φ·x_{t−1} + √(1−φ²)·t₃std`, unit marginal variance, stationary t₃-innovation start; the
+marginal law is the process's own, not t₃ — the null is the process, stated as such. Oracle
+parameters deliberately: estimation (N2/N4) already refutes the Family A detectors, so a combined
+cell including it would re-measure a known failure. N8 asks the one question N1–N7 cannot: does
+any detector that clears each component fail their interaction?
+
+### A4.2 — Sizes, endpoint, expectations
+
+Battery constants unchanged: N = 2000, T = 300, α ∈ {0.05, 0.01} scored + 1e-4 descriptive, the
+registered seed scheme, disjoint evaluation. Endpoint: **P1 verbatim** — FAIL iff the exact
+one-sided 95% (Wilson) lower bound on the fire rate exceeds α.
+
+Registered expectations, from the component cells (`REPORT.md` table):
+
+| detector | N3-p09 | N6 | N8 expectation |
+|---|---|---|---|
+| A betting (oracle φ) | 0.022 | 0.032 | fire rate ≤ 0.10 at α=0.05 — no interaction blowup |
+| A mixture (oracle φ) | 0.000 | 0.048 | ≤ 0.10 |
+| C safe-Hotelling | **0.380** | **0.302** | FAIL, ≥ 0.20 — both components already refute it; uninformative |
+| D spectral | 0.000 | 0.001 | ≤ 0.01 |
+
+**Either outcome is publishable.** A pass everywhere bounds this one interaction; a FAIL where
+both components pass is the C27 phenomenon on the battery's own detectors. One cell does not
+certify combination-robustness — N8 is one point in a combinatorial space, and this amendment
+says so rather than implying coverage.
+
+### A4.3 — Instrument changes, registered
+
+1. `harness/nulls.mjs` gains the N8 generator.
+2. `harness/run.mjs` gains `--only-null <id>`: filters the null loop and **skips P2** (P2 belongs
+   to the original registration and runs on N1). Like `--mode`, it selects scope; no generator,
+   detector call, seed, or endpoint branches on it.
+3. The manifest's legacy `supersedes: {priorRun, defect}` stamp describes the 2026-08-01 rerun
+   and is wrong provenance for an N8-only run: with `--only-null` set, the manifest records
+   `supersedes: null` and the `--only-null` argv. Full-battery runs keep the historical stamp
+   unchanged.
+
+### A4.4 — Census and verdict guards
+
+The run appends 12 cells (4 detectors × 3 α) to `results/live/`; the certification corpus census
+moves 2416 → 2428 with this arithmetic recorded in `collect.test.mjs`. N8 endpoint rows have the
+same shape as N1–N7 rows, which `isValidityCell` filters before any stage (Amendment A3's
+finding), so **no card verdict, tier, or stage token may move**; the certification re-score after
+the run must show all 15 identical, and a movement is a stop-and-assess, not a result.
+
+### A4.5 — One attempt
+
+Sim-mode shakedown allowed (git-ignored, never cited); one live run. A mid-run instrument defect:
+preserve unscored, fix test-first, re-run in full under this unchanged amendment.

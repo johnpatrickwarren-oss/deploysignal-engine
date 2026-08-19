@@ -1,4 +1,4 @@
-import type { MSPRTParams, CompiledConfig, DetectorVerdict, BaselineCell, BaselineCellEntry, TenantTier } from '../types';
+import type { SchemaContinuityRecord, MSPRTParams, CompiledConfig, DetectorVerdict, BaselineCell, BaselineCellEntry, TenantTier } from '../types';
 import type { BakeProfile } from '../types';
 export declare const DEFAULT_BAKE: BakeProfile;
 /** Per-(signal) CUSUM state. One scalar per signal per deploy; carries
@@ -53,4 +53,25 @@ export declare function trafficGateMin(cfg: CompiledConfig): number;
  *  the compiler, and the parity test agree on the set. */
 export declare const FAMILY_A_PRIMARY_SIGNALS: readonly ["p99_latency", "ttft", "eval_score", "tool_success_rate", "downstream_err", "cost_req"];
 export declare function suppressed(signal: string, reason: string, state: CUSUMState, threshold: number): DetectorVerdict;
+/** Q69.D (2026-08-18) — relocated from _page-cusum-classical.ts at the classical path's
+ *  full retirement (validation/nab/RERUN-2026-08-18-PREREGISTRATION.md); the mixture shadow
+ *  consumes this shape. */
+export interface FamilyAShadowCtx {
+    hourOfDay: number;
+    dayOfWeek?: number;
+    ticksSinceDeploy: number;
+    deployAgeDays: number;
+    trafficPct: number;
+    schemaContinuityClass?: SchemaContinuityRecord['schema_continuity'];
+    /** Addition #13: signals in the operator's ignore band; this detector
+     *  emits `reason_code: 'ignore_threshold'` for any matching signal
+     *  BEFORE cell/bake-profile/traffic checks and skips the CUSUM
+     *  update — an "ignored" signal is not an observation the comparative
+     *  test should consume. */
+    ignoredSignals?: Set<string>;
+    /** Addition #23 — tenant_id for the current request(s). Resolved to
+     *  `tenant_tier` via `cfg.tenant_tier_map` and threaded into cell
+     *  lookup. Absent → `'aggregate'` tier (pre-#23 semantics). */
+    tenantId?: string;
+}
 //# sourceMappingURL=_page-cusum-core.d.ts.map

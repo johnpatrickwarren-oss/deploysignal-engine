@@ -101,9 +101,10 @@ function aggregatePerFamilyScores(
 function evaluateAcceptance(
   perFamilyScores: NABValidationReport['per_family_scores'],
 ): NABValidationReport['acceptance_results'] {
+  // Q69.D: best-of-A is over the Ville A-detectors; the classical arm is retired.
   const familyAStandard = Math.max(
     perFamilyScores.family_A_betting?.standard_profile_score ?? 0,
-    perFamilyScores.family_A_page_cusum?.standard_profile_score ?? 0,
+    perFamilyScores.family_A_mixture_supermartingale?.standard_profile_score ?? 0,
   );
   const familyDStandard = perFamilyScores.family_D_spectral?.standard_profile_score ?? 0;
   const family_A_passes = familyAStandard >= 50;

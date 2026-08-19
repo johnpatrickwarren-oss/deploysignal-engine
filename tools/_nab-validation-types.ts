@@ -10,9 +10,10 @@
  *  adds the Howard-Ramdas-2021 mixture-supermartingale variant —
  *  anytime-valid Ville-bounded; the architecturally correct construct
  *  for mean-shift detection under correlated observations). */
+// Q69.D (2026-08-18): the classical 'family_A_page_cusum' arm is retired with the classical
+// detector itself (validation/nab/RERUN-2026-08-18-PREREGISTRATION.md). Ville-bounded only.
 export type NABDetectorFamily =
   | 'family_A_betting'
-  | 'family_A_page_cusum'
   | 'family_A_mixture_supermartingale'
   | 'family_D_spectral';
 
@@ -59,7 +60,7 @@ export interface NABValidationOpts {
   nabSubBenchmarks?: NABSubBenchmark[];
   /** DeploySignal compiled config path (substrate for detector calibration). */
   compiledConfig: string;
-  /** Detector families. Default: family_A_betting + family_A_page_cusum + family_D_spectral. */
+  /** Detector families. Default (Q69.D): family_A_betting + family_A_mixture_supermartingale + family_D_spectral. */
   detectors?: NABDetectorFamily[];
   /** Output validation report path. */
   outputPath: string;
@@ -102,7 +103,6 @@ export const DEFAULT_SUB_BENCHMARKS: NABSubBenchmark[] = [
 
 export const DEFAULT_DETECTORS: NABDetectorFamily[] = [
   'family_A_betting',
-  'family_A_page_cusum',
   'family_A_mixture_supermartingale',
   'family_D_spectral',
 ];

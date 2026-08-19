@@ -42,7 +42,6 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runDetectorOverDataset = runDetectorOverDataset;
 const fs = __importStar(require("node:fs"));
-const page_cusum_js_1 = require("../detectors/page-cusum.js");
 const betting_e_process_js_1 = require("../detectors/betting-e-process.js");
 const spectral_js_1 = require("../detectors/spectral.js");
 const family_a_mixture_supermartingale_js_1 = require("../detectors/family-a-mixture-supermartingale.js");
@@ -94,7 +93,7 @@ function resolveMixtureSupermartingalePerSignal(cfg, cell, signal) {
  *  Spectral (Family D) consumes raw values throughout — seasonal
  *  cycles AND autocorrelation are part of its signal. */
 function prewhitenFamilyAInput(family, values, dispatchOpts) {
-    const isFamilyA = family === 'family_A_page_cusum' || family === 'family_A_betting';
+    const isFamilyA = family === 'family_A_betting';
     let prewhitenedValues = values;
     if (isFamilyA) {
         // SLICE 9 — first stage: deseasonalize using per-phase means.
@@ -116,22 +115,6 @@ function prewhitenFamilyAInput(family, values, dispatchOpts) {
         }
     }
     return prewhitenedValues;
-}
-/** family_A_page_cusum branch — per-tick Page-CUSUM shadow evaluation. */
-function runPageCusumOverDataset(cfg, prewhitenedValues, calibrationSignal) {
-    const out = [];
-    const states = {};
-    for (let t = 0; t < prewhitenedValues.length; t++) {
-        const verdicts = (0, page_cusum_js_1.evaluateFamilyAShadow)(cfg, { [calibrationSignal]: prewhitenedValues[t] }, states, { ...NAB_DISPATCH_CTX, ticksSinceDeploy: t });
-        const v = verdicts.find((x) => x.signal === calibrationSignal);
-        out.push({
-            tick: t,
-            fire: v?.verdict === 'fire',
-            statistic_value: v?.statistic ?? undefined,
-            threshold: v?.threshold ?? undefined,
-        });
-    }
-    return out;
 }
 /** family_A_betting branch — per-tick betting e-process shadow evaluation. */
 function runBettingOverDataset(cfg, prewhitenedValues, calibrationSignal) {
@@ -259,10 +242,7 @@ function runDetectorOverDataset(family, values, compiledConfigPath, calibrationS
     const cfg = JSON.parse(fs.readFileSync(compiledConfigPath, 'utf8'));
     const prewhitenedValues = prewhitenFamilyAInput(family, values, dispatchOpts);
     let out;
-    if (family === 'family_A_page_cusum') {
-        out = runPageCusumOverDataset(cfg, prewhitenedValues, calibrationSignal);
-    }
-    else if (family === 'family_A_betting') {
+    if (family === 'family_A_betting') {
         out = runBettingOverDataset(cfg, prewhitenedValues, calibrationSignal);
     }
     else if (family === 'family_A_mixture_supermartingale') {
@@ -272,8 +252,8 @@ function runDetectorOverDataset(family, values, compiledConfigPath, calibrationS
         out = runSpectralOverDataset(cfg, values, calibrationSignal);
     }
     else {
-        throw new Error(`Detector ${family} not supported at Q64 NAB validation; only `
-            + 'family_A_betting + family_A_page_cusum + family_D_spectral architect-picked '
+        throw new Error(`Detector ${family} not supported at NAB validation; only `
+            + 'family_A_betting + family_A_mixture_supermartingale + family_D_spectral (Q69.D: classical arm retired) '
             + '(per Q64 spec § Q64.1 + ARCHITECT-REPLY-Q64-PHASE-4-NAB-ACQUISITION-STUB-DISPOSITION.md).');
     }
     return applyDispatchPostProcessing(out, dispatchOpts);

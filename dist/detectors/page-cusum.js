@@ -5,7 +5,7 @@
 // Extract target: @johnpatrickwarren-oss/deploysignal-engine (Tessera Phase 2 close commitment)
 // DO NOT modify internals without ADR; deltas only at architecturally-anchored extension points (see SCOPING-MEMO-v0.3 § 9).
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.evaluateFamilyA = exports.evaluateFamilyAShadowMixture = exports.evaluateFamilyAShadow = exports.lookupCellParams = exports.evaluateCUSUM = exports.FAMILY_A_PRIMARY_SIGNALS = exports.trafficGateMin = exports.updateCUSUM = exports.getOrCreateCUSUM = exports.freshCUSUM = void 0;
+exports.evaluateFamilyA = exports.evaluateFamilyAShadowMixture = exports.FAMILY_A_PRIMARY_SIGNALS = exports.trafficGateMin = exports.updateCUSUM = exports.getOrCreateCUSUM = exports.freshCUSUM = void 0;
 // engine/detectors/page-cusum.ts — Family A co-ship: Page-CUSUM with
 // mixture prior (this module group) + betting-based e-processes (see
 // betting-e-process.ts). Both fire independently under a 50/50 α-split
@@ -57,7 +57,9 @@ exports.evaluateFamilyA = exports.evaluateFamilyAShadowMixture = exports.evaluat
 // verbatim):
 //   _page-cusum-core.ts      — CUSUM state, classical update, cell match,
 //                              traffic-gate + primary-signal-set helpers.
-//   _page-cusum-classical.ts — classical Page-1954 reset-at-zero path.
+//   (Q69.D 2026-08-18: _page-cusum-classical.ts — the classical Page-1954
+//    reset-at-zero path — is DELETED; see validation/nab/RERUN-2026-08-18-
+//    PREREGISTRATION.md. FamilyAShadowCtx moved to _page-cusum-core.ts.)
 //   _page-cusum-mixture.ts   — Howard-Ramdas-2021 mixture-supermartingale
 //                              path (canonical Family A dispatch).
 // Every name that was importable from `detectors/page-cusum` before the
@@ -69,10 +71,6 @@ Object.defineProperty(exports, "updateCUSUM", { enumerable: true, get: function 
 // shared helpers
 Object.defineProperty(exports, "trafficGateMin", { enumerable: true, get: function () { return _page_cusum_core_1.trafficGateMin; } });
 Object.defineProperty(exports, "FAMILY_A_PRIMARY_SIGNALS", { enumerable: true, get: function () { return _page_cusum_core_1.FAMILY_A_PRIMARY_SIGNALS; } });
-var _page_cusum_classical_1 = require("./_page-cusum-classical");
-Object.defineProperty(exports, "evaluateCUSUM", { enumerable: true, get: function () { return _page_cusum_classical_1.evaluateCUSUM; } });
-Object.defineProperty(exports, "lookupCellParams", { enumerable: true, get: function () { return _page_cusum_classical_1.lookupCellParams; } });
-Object.defineProperty(exports, "evaluateFamilyAShadow", { enumerable: true, get: function () { return _page_cusum_classical_1.evaluateFamilyAShadow; } });
 var _page_cusum_mixture_1 = require("./_page-cusum-mixture");
 Object.defineProperty(exports, "evaluateFamilyAShadowMixture", { enumerable: true, get: function () { return _page_cusum_mixture_1.evaluateFamilyAShadowMixture; } });
 Object.defineProperty(exports, "evaluateFamilyA", { enumerable: true, get: function () { return _page_cusum_mixture_1.evaluateFamilyA; } });

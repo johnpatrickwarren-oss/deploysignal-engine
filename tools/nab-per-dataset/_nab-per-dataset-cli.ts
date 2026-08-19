@@ -77,7 +77,6 @@ export function main(): void {
   const a = report.acceptance_results;
   console.log(
     `[run-nab-per-dataset]   acceptance: A_betting=${a.family_A_betting_passes} `
-    + `A_page_cusum=${a.family_A_page_cusum_passes} `
     + `A_mixture_supermartingale=${a.family_A_mixture_supermartingale_passes} `
     + `D_spectral=${a.family_D_spectral_passes} combined=${a.combined_acceptance}`,
   );

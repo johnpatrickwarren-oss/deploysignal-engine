@@ -55,7 +55,9 @@
 // verbatim):
 //   _page-cusum-core.ts      — CUSUM state, classical update, cell match,
 //                              traffic-gate + primary-signal-set helpers.
-//   _page-cusum-classical.ts — classical Page-1954 reset-at-zero path.
+//   (Q69.D 2026-08-18: _page-cusum-classical.ts — the classical Page-1954
+//    reset-at-zero path — is DELETED; see validation/nab/RERUN-2026-08-18-
+//    PREREGISTRATION.md. FamilyAShadowCtx moved to _page-cusum-core.ts.)
 //   _page-cusum-mixture.ts   — Howard-Ramdas-2021 mixture-supermartingale
 //                              path (canonical Family A dispatch).
 // Every name that was importable from `detectors/page-cusum` before the
@@ -73,12 +75,6 @@ export {
   trafficGateMin,
   FAMILY_A_PRIMARY_SIGNALS,
 } from './_page-cusum-core';
-
-export {
-  evaluateCUSUM,
-  lookupCellParams,
-  evaluateFamilyAShadow,
-} from './_page-cusum-classical';
 
 export {
   type MixtureSupermartingaleStates,

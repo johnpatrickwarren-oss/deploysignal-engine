@@ -101,7 +101,8 @@ function aggregatePerFamilyScores(perFamilyScores, detectors) {
 }
 /** Evaluate acceptance gates per § Q64.2. */
 function evaluateAcceptance(perFamilyScores) {
-    const familyAStandard = Math.max(perFamilyScores.family_A_betting?.standard_profile_score ?? 0, perFamilyScores.family_A_page_cusum?.standard_profile_score ?? 0);
+    // Q69.D: best-of-A is over the Ville A-detectors; the classical arm is retired.
+    const familyAStandard = Math.max(perFamilyScores.family_A_betting?.standard_profile_score ?? 0, perFamilyScores.family_A_mixture_supermartingale?.standard_profile_score ?? 0);
     const familyDStandard = perFamilyScores.family_D_spectral?.standard_profile_score ?? 0;
     const family_A_passes = familyAStandard >= 50;
     const family_D_passes = familyDStandard >= 40;

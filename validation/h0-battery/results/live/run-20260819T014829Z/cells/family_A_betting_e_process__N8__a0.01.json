@@ -1,0 +1,18 @@
+{
+  "detector": "family_A_betting_e_process",
+  "family": "A",
+  "null_id": "N8",
+  "null_label": "AR(1) phi=0.9 with t3 innovations, oracle params, disjoint (combined stress)",
+  "alpha": 0.01,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 8,
+  "fire_rate": 0.004,
+  "lower_95": 0.002255178201912583,
+  "verdict": "not-refuted",
+  "mean_logM": -1.5402338478775028,
+  "mode": "live",
+  "engine_version": "0.6.6-pre",
+  "git_sha": "336026d339cdbc4266860b67eacf99cec7a6ea27",
+  "scored": true
+}

@@ -1575,3 +1575,16 @@ the run must show all 15 identical, and a movement is a stop-and-assess, not a r
 
 Sim-mode shakedown allowed (git-ignored, never cited); one live run. A mid-run instrument defect:
 preserve unscored, fix test-first, re-run in full under this unchanged amendment.
+
+### A4.6 — Correction append, 2026-08-18 (post-first-run): the study-id defect A4.3 missed
+
+A4.3's instrument changes let the `--only-null` run stamp `study: '2026-07-h0-battery'`, which
+grows the **per-study** census that A1.6/A2.4 registered as staying literally at 148 — the exact
+interaction the K6A class-instrument arm avoided by carrying a study id of its own
+(`collect.test.mjs:494`'s comment records that design). Caught by the census assertions
+immediately after the first live run. Per A4.5: instrument defect, fixed in the harness
+(`--only-null` runs stamp `study: '2026-08-h0-battery-n8'`), and the first run
+`run-20260819T014829Z` is preserved and **superseded** by the rerun, declared in the rerun's
+manifest in the applied C1.6 array shape (all four detectors). Corpus census arithmetic
+unchanged from A4.4: 2416 → 2428 (the superseded run's 12 drop, the rerun's 12 add); the
+per-study census stays 148.

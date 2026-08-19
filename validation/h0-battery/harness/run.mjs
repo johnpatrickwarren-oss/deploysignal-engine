@@ -10,13 +10,25 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
-import { rng, gaussFrom, NULLS } from './nulls.mjs';
+import { rng, gaussFrom, NULLS, N8_COMBINED } from './nulls.mjs';
 import { DETECTORS, OUT_OF_SCOPE } from './detectors.mjs';
 
 const STUDY = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 
 const MODE = arg('--mode', 'sim');
+// Amendment A4 (C27): --only-null <id> filters the null loop and skips P2 (P2 belongs to the
+// original registration and runs on N1). Like --mode, it selects scope; no generator, detector
+// call, seed, or endpoint branches on it. The battery's null set is NULLS + N8 (A4.1).
+const ONLY_NULL = arg('--only-null', null);
+// A4.6 — the rerun supersedes the first N8 run (wrong study id), applied C1.6 shape.
+const SUPERSEDES_N8 = [{
+  study: '2026-07-h0-battery', run: 'run-20260819T014829Z',
+  detectors: ['family_A_betting_e_process', 'family_A_mixture_supermartingale',
+    'family_C_safe_hotelling', 'family_D_spectral_e_detector'],
+  reason: 'A4.6 study-id defect: the first --only-null run stamped 2026-07-h0-battery, growing the per-study census A1.6/A2.4 registered as staying at 148; superseded by the rerun under study id 2026-08-h0-battery-n8',
+}];
+const BATTERY_NULLS = [...NULLS, N8_COMBINED].filter((n) => !ONLY_NULL || n.id === ONLY_NULL);
 const N = Number(arg('--n', 2000));
 const T = Number(arg('--t', 300));
 const ALPHAS = [0.05, 0.01];
@@ -99,7 +111,7 @@ const only = arg('--only', null);
 const cells = [];
 for (const det of DETECTORS) {
   if (only && det.id !== only) continue;
-  for (const nullSpec of NULLS) {
+  for (const nullSpec of BATTERY_NULLS) {
     for (const alpha of [...ALPHAS, SHIPPED_ALPHA]) {
       const c = cell(det, nullSpec, alpha);
       c.scored = alpha !== SHIPPED_ALPHA;      // §4: shipped alpha is descriptive
@@ -115,8 +127,9 @@ for (const det of DETECTORS) {
 }
 
 // ---- P2, the vacuous-pass guard (§5): 3-sigma step at tick 100, detect within 200.
+// A4.3: an --only-null run skips P2 — it belongs to the original registration, on N1.
 const p2 = [];
-for (const det of DETECTORS) {
+for (const det of ONLY_NULL ? [] : DETECTORS) {
   if (only && det.id !== only) continue;
   const n1 = NULLS.find((n) => n.id === 'N1');
   let detected = 0;
@@ -134,9 +147,14 @@ for (const det of DETECTORS) {
 }
 
 fs.writeFileSync(path.join(runDir, 'manifest.json'), JSON.stringify({
-  study: '2026-07-h0-battery', mode: MODE, engine_version: engineVersion, git_sha: gitSha,
+  // A4.6: an --only-null run carries its own study id so the registered per-study censuses
+  // (A1.6/A2.4: 148) stay literally true — the K6A class-instrument-arm design.
+  study: ONLY_NULL ? '2026-08-h0-battery-n8' : '2026-07-h0-battery',
+  mode: MODE, engine_version: engineVersion, git_sha: gitSha,
   registration_sha: '17cc3f8',
-  supersedes: { priorRun: 'run-20260801T062824Z', defect:
+  // A4.3: the legacy stamp describes the 2026-08-01 rerun and is wrong provenance for an
+  // --only-null run; full-battery runs keep it unchanged.
+  supersedes: ONLY_NULL ? SUPERSEDES_N8 : { priorRun: 'run-20260801T062824Z', defect:
     'oracle phi was never threaded into the detector config, so N3/N4 ran with AR(1) pre-whitening disabled; and the mixture adapter passed ar1_phi under params where that detector reads it off input, so it never received phi at all. The prior runs measure detectors unaware of phi, not the registered oracle-parameter cell' }, node: process.version, seed: SEED, n: N, ticks: T,
   alphas: ALPHAS, shipped_alpha: SHIPPED_ALPHA, generated_at: stamp,
   out_of_scope: OUT_OF_SCOPE, argv: process.argv.slice(2),

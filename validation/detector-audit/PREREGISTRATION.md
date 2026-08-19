@@ -107,3 +107,46 @@ an answer: a *construction* change, a *routing* restriction that keeps it inside
 I wrote or corrected most of the studies being superseded, and I produced several of the
 configuration-dependent numbers this audit exists to re-check. P1 and P6 are registered as the
 outcomes that would show the current record is worse than it looks.
+
+---
+
+# Amendment A1 — 2026-08-18. The detector-class taxonomy binds every future arm (WORKLIST C26, C24)
+
+Appended, not edited; §§1–9 stand. This amendment registers forward — it changes no completed
+arm's scoring and re-runs nothing. It exists because §3's two-class instrument rule was incomplete
+in a way that produced two confident wrong answers on the record, and because the correction was
+living in a WORKLIST row (`C26`) rather than in the registration future arms actually read.
+
+## A1.1 — Three classes, not two, and the class determines the instrument
+
+`stats/detector-audit-arm3-2026-08-05` established that §3's dichotomy omits a class and that the
+omission is not benign. The registered taxonomy, binding on every arm run after this date:
+
+| class | membership test | instruments that carry verdicts | instruments that are INVALID for it |
+|---|---|---|---|
+| **Test martingale** (Family A betting, Family A mixture, Family D e-detector) | per-tick multiplicative wealth, supermartingale claimed at every tick | the increment estimator `E[exp(Δ log M)]` (REFUTED iff lower 95% > 1; CLEARED iff upper < 1.0005) | the terminal mean (unmeasurable at feasible N — reads 0.0288 on a process with `E[M_T] = 1` by construction) |
+| **Terminal e-value** (safe-t, universal inference) | one number per fixed window; no per-tick wealth exists | **both, always**: the exceedance rate `P(e ≥ 1/α)` AND the sample mean — the two are informative in opposite directions (the mean is uninformative below 1 and strong evidence above it; exceedance carries information only when `E[e]` is near 1) | either one alone. Exceedance alone passed a cell whose `E[e]` was 9,710 (N4-p09, `stats/detector-audit-terminal-2026-08-05`); Markov is vacuous there (0.05 × 9,710 ≈ 485) |
+| **e-process** (sequential UI) | wealth exists, but the guarantee is `E[E_τ] ≤ 1` at stopping times — strictly weaker than a per-tick supermartingale | the stopped mean and the crossing rate | the increment estimator — it once "refuted" an e-process at 1.1×10⁸, caught only because the number was internally impossible (`stats/detector-audit-arm3-2026-08-05`) |
+
+Class membership is decided from the construction, not the detector's name or its registry label —
+the incidents above are what happens otherwise, and both mistakes were made in this repo within
+one day.
+
+## A1.2 — The both-instruments rule for the terminal class (closes WORKLIST C24's registration gap)
+
+§3 scored the terminal sample mean "by nothing". That stance is RETIRED for future arms: every
+terminal-class cell reports **both** exceedance and the sample mean, and a verdict that either
+instrument contradicts is flagged rather than passed — the pattern the certification layer already
+adopted when it registered the increment estimator as the terminal-class REPORTED instrument with
+the across-draw caveat (coverage prereg Amendment v2.C39). Completed arms are not re-scored by
+this amendment; their re-reading under the rule is already on the record
+(`stats/terminal-mean-rule-contested`, coverage v2.C39.4).
+
+## A1.3 — Scope
+
+- No completed arm's verdict moves; nothing re-runs.
+- The taxonomy governs this study's future arms and any successor audit citing this
+  pre-registration. The certification protocol's own instrument rules are registered in its
+  prereg and are not modified here.
+- The e-process class's power arm and Family D's oscillation fault-class arm (C29 residual)
+  remain named-not-done; when run, they are bound by this table.

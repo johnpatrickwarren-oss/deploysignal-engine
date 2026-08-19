@@ -480,9 +480,15 @@ test('A1: a registry drops exactly the (run x detector) cells it names, and noth
 
 test('A1: the real corpus census — the registry drops 440 h0-battery cells and leaves 064627Z whole', () => {
   const ev = loadEvidence(join(HERE, '..', '..'));
+  // Registry-sourced drops only: h0-battery A4.6 (2026-08-18) added a MANIFEST-declared drop
+  // of run-20260819T014829Z (the mis-stamped first N8 run) under this same study id; this
+  // test's claim is about the three runs Amendment A1's registry names, so it filters on the
+  // drop's provenance rather than the study id alone.
   const dropped = Object.fromEntries(ev.runs
     .filter((r) => r.study === '2026-07-h0-battery' && r.superseded)
-    .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]));
+    .map((r) => [r.run, r.superseded.filter((s) => s.source === 'registry').reduce((n, s) => n + s.cells, 0)]))
+  ;
+  for (const k of Object.keys(dropped)) if (dropped[k] === 0) delete dropped[k];
   // Exact counts, not floors: results/ is append-only, so these three run directories are frozen
   // and their cell counts cannot change. 144 = the 4 x 12 x 3 endpoint grid (run-20260801T062612Z
   // has no P2 cells at all); 148 = the same grid plus 4 P2__<detector>.json cells from cells/.
@@ -494,9 +500,12 @@ test('A1: the real corpus census — the registry drops 440 h0-battery cells and
   assert.equal(ev.cells.filter((c) => c.__study === '2026-07-h0-battery').length, 148,
     'run-20260801T064627Z is the sole scored h0-battery run, at its full 148 cells');
   for (const r of ev.runs.filter((r) => r.study === '2026-07-h0-battery' && r.superseded)) {
-    assert.equal(r.superseded.length, 4, `${r.run}: all four detectors named`);
-    assert.ok(r.superseded.every((s) => s.source === 'registry'));
-    assert.ok(r.superseded.every((s) => /Amendment A1/.test(s.superseded_by)));
+    // A4.6's manifest-declared drop of the mis-stamped N8 run shares this study id; the
+    // registry-provenance claims below are A1's and scope to A1's registry drops.
+    const registryDrops = r.superseded.filter((s) => s.source === 'registry');
+    if (registryDrops.length === 0) continue;
+    assert.equal(registryDrops.length, 4, `${r.run}: all four detectors named`);
+    assert.ok(registryDrops.every((s) => /Amendment A1/.test(s.superseded_by)));
   }
 });
 
@@ -685,8 +694,15 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
   //        they carry none of the fields any stage reads (no `exceedance`, `mean_e`,
   //        `detection_rate`, `rate_e_ge_20`, `fault_class`), so no verdict, stage token or tier
   //        moves; they appear only under `generated_from.runs`.
-  assert.equal(ev.cells.length, 2416,
-    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12); no cell is dropped');
+  //
+  // 2416 -> 2428, 2026-08-18, one registered append and its arithmetic (h0-battery Amendment
+  // A4.4/A4.6): the N8 combined-stress run adds 12 cells under its own study id
+  // (2026-08-h0-battery-n8, the K6A design, so the per-study censuses below stay literally
+  // true); the first N8 run — 12 cells stamped with the wrong study id — is superseded by the
+  // rerun's manifest declaration and drops. Like the runs above, N8 endpoint rows are filtered
+  // by isValidityCell before any stage: no verdict, stage token or tier moves.
+  assert.equal(ev.cells.length, 2428,
+    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12); no surviving cell is dropped');
   const drops = ev.runs.filter((r) => r.superseded)
     .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);
   assert.deepEqual(Object.fromEntries(drops), {
@@ -705,10 +721,13 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
     // census is UNCHANGED at 2416 because the superseding run emits the same 12 cell ids the
     // superseded run did.
     'run-20260818T220621Z': 12,
+    // h0-battery Amendment A4.6: the first N8 run stamped the wrong study id (grew the
+    // registered per-study census); superseded by the rerun under 2026-08-h0-battery-n8.
+    'run-20260819T014829Z': 12,
     'run-20260801T062612Z': 144,
     'run-20260801T062824Z': 148,
     'run-20260801T064237Z': 148,
-  }, 'eight runs — five manifest-declared, three registry');
+  }, 'nine runs — six manifest-declared, three registry');
 });
 
 // C44's reviewer's fixture, verbatim in structure: run-old measures detector d, run-empty measures

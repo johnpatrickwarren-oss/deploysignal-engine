@@ -115,15 +115,6 @@ function buildDispatchOpts(provenance) {
         seasonalMeans: seasonal?.seasonal_means,
         seasonalPeriod: seasonal?.period,
     } : {};
-    const familyAPageCusumOpts = sm ? {
-        ...baseFamilyA,
-        cooldownTicks: sm.page_cusum.cooldown_ticks,
-        smoothingWindow: sm.page_cusum.window,
-        smoothingThresholdCount: sm.page_cusum.threshold_count,
-    } : {
-        ...baseFamilyA,
-        cooldownTicks: provenance.family_a_cooldown_ticks,
-    };
     const familyABettingOpts = sm ? {
         ...baseFamilyA,
         cooldownTicks: sm.betting.cooldown_ticks,
@@ -150,7 +141,7 @@ function buildDispatchOpts(provenance) {
     } : {
         cooldownTicks: provenance.family_a_cooldown_ticks,
     };
-    return { familyAPageCusumOpts, familyABettingOpts, familyAMixtureSMOpts, familyDSpectralOpts };
+    return { familyABettingOpts, familyAMixtureSMOpts, familyDSpectralOpts };
 }
 /** Run all detectors over one dataset and write the per-dataset
  *  breakdown into `perFamilyScores`. */
@@ -163,10 +154,9 @@ function scoreDatasetAcrossDetectors(detectors, ctx, perFamilyScores) {
             firings = runSelfNormalizedOverDataset(values, provenance);
         }
         else {
-            const dispatchOpts = fam === 'family_A_page_cusum' ? dispatch.familyAPageCusumOpts
-                : fam === 'family_A_betting' ? dispatch.familyABettingOpts
-                    : fam === 'family_A_mixture_supermartingale' ? dispatch.familyAMixtureSMOpts
-                        : dispatch.familyDSpectralOpts;
+            const dispatchOpts = fam === 'family_A_betting' ? dispatch.familyABettingOpts
+                : fam === 'family_A_mixture_supermartingale' ? dispatch.familyAMixtureSMOpts
+                    : dispatch.familyDSpectralOpts;
             firings = (0, run_nab_validation_1.runDetectorOverDataset)(fam, values, cfgPath, calibrationSignal, dispatchOpts);
         }
         const standard = scorePostProbationary(firings, annotations, nProbationary, nab_scoring_1.NAB_PROFILES.standard);
@@ -248,7 +238,6 @@ function runPerDatasetNABValidation(opts) {
     }
     aggregatePerFamilyScores(detectors, perFamilyScores);
     const aBettingPass = (perFamilyScores.family_A_betting?.standard_profile_score ?? 0) >= 50;
-    const aPageCusumPass = (perFamilyScores.family_A_page_cusum?.standard_profile_score ?? 0) >= 50;
     const aMixtureSMPass = (perFamilyScores.family_A_mixture_supermartingale?.standard_profile_score ?? 0) >= 50;
     const dSpectralPass = (perFamilyScores.family_D_spectral?.standard_profile_score ?? 0) >= 40;
     const report = {
@@ -264,12 +253,12 @@ function runPerDatasetNABValidation(opts) {
         per_family_scores: perFamilyScores,
         acceptance_results: {
             family_A_betting_passes: aBettingPass,
-            family_A_page_cusum_passes: aPageCusumPass,
             family_A_mixture_supermartingale_passes: aMixtureSMPass,
             family_D_spectral_passes: dSpectralPass,
-            family_A_passes: aBettingPass || aPageCusumPass || aMixtureSMPass,
+            // Q69.D: best-of-A is over the two Ville A-detectors; the classical arm is retired.
+            family_A_passes: aBettingPass || aMixtureSMPass,
             family_D_passes: dSpectralPass,
-            combined_acceptance: (aBettingPass || aPageCusumPass || aMixtureSMPass) && dSpectralPass,
+            combined_acceptance: (aBettingPass || aMixtureSMPass) && dSpectralPass,
         },
     };
     try {

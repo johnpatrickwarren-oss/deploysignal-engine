@@ -36,7 +36,7 @@ import {
   FAMILY_A_PRIMARY_SIGNALS,
   type CUSUMStates,
 } from './_page-cusum-core';
-import type { FamilyAShadowCtx } from './_page-cusum-classical';
+import type { FamilyAShadowCtx } from './_page-cusum-core';
 
 export type MixtureSupermartingaleStates = { [signal: string]: MixtureSupermartingaleState };
 

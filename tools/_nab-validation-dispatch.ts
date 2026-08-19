@@ -8,7 +8,6 @@
 
 import * as fs from 'node:fs';
 
-import { evaluateFamilyAShadow, type CUSUMStates } from '../detectors/page-cusum.js';
 import { evaluateFamilyABettingShadow, type BettingStates } from '../detectors/betting-e-process.js';
 import { evaluateFamilyD } from '../detectors/spectral.js';
 import {
@@ -87,7 +86,7 @@ function prewhitenFamilyAInput(
   values: number[],
   dispatchOpts?: RunDetectorDispatchOpts,
 ): number[] {
-  const isFamilyA = family === 'family_A_page_cusum' || family === 'family_A_betting';
+  const isFamilyA = family === 'family_A_betting';
   let prewhitenedValues = values;
   if (isFamilyA) {
     // SLICE 9 — first stage: deseasonalize using per-phase means.
@@ -115,32 +114,6 @@ function prewhitenFamilyAInput(
     }
   }
   return prewhitenedValues;
-}
-
-/** family_A_page_cusum branch — per-tick Page-CUSUM shadow evaluation. */
-function runPageCusumOverDataset(
-  cfg: CompiledConfig,
-  prewhitenedValues: number[],
-  calibrationSignal: string,
-): DetectorFiringDecision[] {
-  const out: DetectorFiringDecision[] = [];
-  const states: CUSUMStates = {};
-  for (let t = 0; t < prewhitenedValues.length; t++) {
-    const verdicts = evaluateFamilyAShadow(
-      cfg,
-      { [calibrationSignal]: prewhitenedValues[t] },
-      states,
-      { ...NAB_DISPATCH_CTX, ticksSinceDeploy: t },
-    );
-    const v = verdicts.find((x) => x.signal === calibrationSignal);
-    out.push({
-      tick: t,
-      fire: v?.verdict === 'fire',
-      statistic_value: v?.statistic ?? undefined,
-      threshold: v?.threshold ?? undefined,
-    });
-  }
-  return out;
 }
 
 /** family_A_betting branch — per-tick betting e-process shadow evaluation. */
@@ -309,9 +282,7 @@ export function runDetectorOverDataset(
   const prewhitenedValues = prewhitenFamilyAInput(family, values, dispatchOpts);
 
   let out: DetectorFiringDecision[];
-  if (family === 'family_A_page_cusum') {
-    out = runPageCusumOverDataset(cfg, prewhitenedValues, calibrationSignal);
-  } else if (family === 'family_A_betting') {
+  if (family === 'family_A_betting') {
     out = runBettingOverDataset(cfg, prewhitenedValues, calibrationSignal);
   } else if (family === 'family_A_mixture_supermartingale') {
     out = runMixtureSupermartingaleOverDataset(cfg, values, calibrationSignal);
@@ -319,8 +290,8 @@ export function runDetectorOverDataset(
     out = runSpectralOverDataset(cfg, values, calibrationSignal);
   } else {
     throw new Error(
-      `Detector ${family} not supported at Q64 NAB validation; only `
-      + 'family_A_betting + family_A_page_cusum + family_D_spectral architect-picked '
+      `Detector ${family} not supported at NAB validation; only `
+      + 'family_A_betting + family_A_mixture_supermartingale + family_D_spectral (Q69.D: classical arm retired) '
       + '(per Q64 spec § Q64.1 + ARCHITECT-REPLY-Q64-PHASE-4-NAB-ACQUISITION-STUB-DISPOSITION.md).');
   }
 

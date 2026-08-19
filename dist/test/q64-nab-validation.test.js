@@ -237,14 +237,18 @@ function buildMiniNABRepo() {
             nabRepoPath: root,
             compiledConfig: compiledConfigPath,
             outputPath: outPath,
-            detectors: ['family_A_betting', 'family_A_page_cusum', 'family_D_spectral'],
+            // Q69.D (2026-08-18): the classical family_A_page_cusum arm is retired from the
+            // tooling with the classical detector itself; Ville-bounded detectors only.
+            detectors: ['family_A_betting', 'family_A_mixture_supermartingale', 'family_D_spectral'],
         });
         strict_1.default.ok(report.metadata.tool_version === 'Q64 SPEC-4 v1.0');
         strict_1.default.ok(Array.isArray(report.metadata.sub_benchmarks_evaluated));
         strict_1.default.equal(report.metadata.sub_benchmarks_evaluated.length, 4);
         strict_1.default.ok(report.per_family_scores.family_A_betting);
-        strict_1.default.ok(report.per_family_scores.family_A_page_cusum);
+        strict_1.default.ok(report.per_family_scores.family_A_mixture_supermartingale);
         strict_1.default.ok(report.per_family_scores.family_D_spectral);
+        // Q69.D: the classical arm is no longer scorable.
+        strict_1.default.equal(report.per_family_scores.family_A_page_cusum, undefined);
         strict_1.default.ok(typeof report.acceptance_results.combined_acceptance === 'boolean');
         // Report file written.
         strict_1.default.ok(fs.existsSync(outPath), 'report JSON should be emitted at outputPath');

@@ -99,7 +99,6 @@ exports.DEFAULT_SUB_BENCHMARKS = [
 ];
 exports.DEFAULT_DETECTORS = [
     'family_A_betting',
-    'family_A_page_cusum',
     // SLICE 7 — Howard-Ramdas-2021 mixture-supermartingale variant.
     // Anytime-valid Ville-bounded by construction (P(sup_t M_t ≥ 1/α) ≤
     // α uniformly); AR(1) pre-whitening built into the detector. This is

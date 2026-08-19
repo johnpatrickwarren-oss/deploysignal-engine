@@ -1,7 +1,7 @@
 import type { CompiledConfig, DetectorVerdict } from '../types';
 import { type MixtureSupermartingaleState } from './family-a-mixture-supermartingale';
 import { type CUSUMStates } from './_page-cusum-core';
-import type { FamilyAShadowCtx } from './_page-cusum-classical';
+import type { FamilyAShadowCtx } from './_page-cusum-core';
 export type MixtureSupermartingaleStates = {
     [signal: string]: MixtureSupermartingaleState;
 };

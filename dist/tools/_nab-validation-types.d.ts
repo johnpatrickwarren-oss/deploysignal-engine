@@ -3,7 +3,7 @@
  *  adds the Howard-Ramdas-2021 mixture-supermartingale variant —
  *  anytime-valid Ville-bounded; the architecturally correct construct
  *  for mean-shift detection under correlated observations). */
-export type NABDetectorFamily = 'family_A_betting' | 'family_A_page_cusum' | 'family_A_mixture_supermartingale' | 'family_D_spectral';
+export type NABDetectorFamily = 'family_A_betting' | 'family_A_mixture_supermartingale' | 'family_D_spectral';
 export type NABSubBenchmark = 'realKnownCause' | 'realAWSCloudwatch' | 'artificialNoAnomaly' | 'artificialWithAnomaly';
 /** Per-tick firing decision captured from detector dispatch. */
 export interface DetectorFiringDecision {
@@ -39,7 +39,7 @@ export interface NABValidationOpts {
     nabSubBenchmarks?: NABSubBenchmark[];
     /** DeploySignal compiled config path (substrate for detector calibration). */
     compiledConfig: string;
-    /** Detector families. Default: family_A_betting + family_A_page_cusum + family_D_spectral. */
+    /** Detector families. Default (Q69.D): family_A_betting + family_A_mixture_supermartingale + family_D_spectral. */
     detectors?: NABDetectorFamily[];
     /** Output validation report path. */
     outputPath: string;

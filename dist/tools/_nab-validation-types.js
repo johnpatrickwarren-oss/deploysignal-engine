@@ -13,7 +13,6 @@ exports.DEFAULT_SUB_BENCHMARKS = [
 ];
 exports.DEFAULT_DETECTORS = [
     'family_A_betting',
-    'family_A_page_cusum',
     'family_A_mixture_supermartingale',
     'family_D_spectral',
 ];

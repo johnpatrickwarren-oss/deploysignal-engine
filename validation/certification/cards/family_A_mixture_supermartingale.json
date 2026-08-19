@@ -8,12 +8,12 @@
   "class": "test_martingale",
   "engine_pin": {
     "version": "0.6.6-pre",
-    "sha": "ab918b2ea24ca7a968ba4e2f950b90ff13077b8f"
+    "sha": "866757aa663185d7d3798a1babb9bcd3184166da"
   },
   "source_files": [
     {
       "path": "detectors/_page-cusum-mixture.ts",
-      "sha256": "32a3b3b2624641a8e0127f9d14673b6f6d6b9f17303ae81041cf6a3dac551944"
+      "sha256": "4130fbf4f51f405665a661c12c4c760bf6e39c5e0bdd4b0e35d1eebdcf6274b3"
     },
     {
       "path": "detectors/family-a-mixture-supermartingale.ts",

@@ -177,3 +177,46 @@ CLEARED the premise-chain page's §Family C is refuted in its magnitude claim an
 Sim-mode shakedown allowed (git-ignored, never cited); one live run. Mid-run instrument defect:
 preserve the run unscored, fix test-first, full re-run under this unchanged registration, defect
 named in the superseding manifest (the family-d-emean A1.5.4 disposition).
+
+---
+
+# Amendment A1 — 2026-08-19, before any harness code or run. The bundle path is broken by C21 and the stamp is reconstructed
+
+Appended, not edited. §§1–7 stand verbatim. Discovered while smoke-checking the bundle
+interface (harness-discipline rule 1), before any harness file existed.
+
+**The finding.** §2 registered "bundles built with the shipped calibrator exactly as in
+family-c-pool". That is no longer possible: deploysignal `cee899c` ("retire: disable the Family
+C MMD branch at the calibrator stamp", the C21 merge) set `FAMILY_C_MMD_RETIRED = true` in
+`tools/calibrators/_family-c-build.ts:280`, so `buildFamilyCPerCell` now stamps
+`betting_e_process_params = null` unconditionally and `family-ce-nulls/harness/bundle.mjs`
+throws. The family-c-pool harness has been silently un-runnable since that merge — recorded
+here as an instrument-archaeology fact for the report.
+
+**The substitution, registered before implementation.** The calibrator is still used for
+everything it still produces: `mean_vector`, `covariance` (MCD), and `mmd_params` (which
+carries the median-heuristic `bandwidth`) are stamped as before. The harness reconstructs only
+the retired `betting_e_process_params` object, using the retired stamp block
+(`_family-c-build.ts:300-373` at deploysignal `e5e13c0`) as specification and **engine `dist/`
+functions only** — the same functions the stamp itself called, verified byte-identical to
+deploysignal's engine copy by `verifyProvenance()`:
+
+```
+kernel_bandwidth_sigma = cell.mmd_params.bandwidth
+lambda_max = 0.5                       ( _family-c-build.ts:39 )
+betting_strategy = 'ons', ons_initial_lambda = 0
+alpha = 1e-4                           ( buildBundle's alphaMMD, unchanged )
+baseline_sample_size = 500             ( _family-c-build.ts:45 = engine BASELINE_POOL_SIZE )
+rff_seed = rffCellSeed(CELL_KEY)       ( dist/detectors/family-c-rff.js )
+rff_dim = 256                          ( RFF_DEFAULT_DIM )
+baseline_rff_mean = rffMeanOverPool(
+  generateBaselinePool(cell, 500, baselinePoolSeed(CELL_KEY)), fm )
+```
+
+**Why this does not weaken the study.** E0.1 (the REPA2 replication anchor) was registered
+precisely to catch instrument drift: the committed A2 numbers (1.006732 / 1.006659) were
+produced through the pre-retirement calibrator, so if the reconstruction differs from the
+retired stamp in anything the detector consumes, the anchor fails and the study is
+NOT-EXECUTABLE. No band, endpoint, arm, size, or seed changes. The reconstruction lives in the
+harness, touches no deploysignal file, and revives nothing: compiles in deploysignal remain
+retired; this study drives the engine's own dist detector on synthetic cells, as registered.

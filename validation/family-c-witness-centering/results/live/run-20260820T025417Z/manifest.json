@@ -1,0 +1,86 @@
+{
+ "study": "2026-08-family-c-witness-centering",
+ "prereg": "../PREREGISTRATION.md (incl. Amendment A1: reconstructed betting-params stamp)",
+ "mode": "live",
+ "sim_scale": 1,
+ "git_sha": "a80149c1757cac26d40552e2c90c6a0968ebef38",
+ "engine_version": "0.6.6-pre",
+ "deploysignal_sha": "e5e13c0e3286b67df0b81ae83bf56c4675f362b0",
+ "node": "v25.9.0",
+ "command": "/Users/johnwarren/concord/deploysignal-engine/validation/family-c-witness-centering/harness/run.mjs --mode live",
+ "shared_modules_verified": [
+  "sequential-mmd",
+  "family-c-rff",
+  "conformal",
+  "family-c-betting-e-process",
+  "_family-c-betting-witness"
+ ],
+ "cells": [
+  {
+   "id": "EXACT-corr-T900",
+   "arm": "EXACT",
+   "null_id": "HC-gauss-corr",
+   "N": 4000,
+   "T": 900,
+   "pool": null
+  },
+  {
+   "id": "EXACT-diag-T900",
+   "arm": "EXACT",
+   "null_id": "HC-gauss-diag",
+   "N": 4000,
+   "T": 900,
+   "pool": null
+  },
+  {
+   "id": "REPA2-corr-T300",
+   "arm": "REPA2",
+   "null_id": "HC-gauss-corr",
+   "N": 2000,
+   "T": 300,
+   "pool": null
+  },
+  {
+   "id": "REPA2-diag-T300",
+   "arm": "REPA2",
+   "null_id": "HC-gauss-diag",
+   "N": 2000,
+   "T": 300,
+   "pool": null
+  },
+  {
+   "id": "LEG500-corr-T300",
+   "arm": "LEG",
+   "null_id": "HC-gauss-corr",
+   "N": 2000,
+   "T": 300,
+   "pool": 500
+  },
+  {
+   "id": "LEG500-diag-T300",
+   "arm": "LEG",
+   "null_id": "HC-gauss-diag",
+   "N": 2000,
+   "T": 300,
+   "pool": 500
+  },
+  {
+   "id": "LEG8000-corr-T300",
+   "arm": "LEG",
+   "null_id": "HC-gauss-corr",
+   "N": 1000,
+   "T": 300,
+   "pool": 8000
+  },
+  {
+   "id": "LEG8000-diag-T300",
+   "arm": "LEG",
+   "null_id": "HC-gauss-diag",
+   "N": 1000,
+   "T": 300,
+   "pool": 8000
+  }
+ ],
+ "seed_scheme": "EXACT/LEG cells: per-stream splitmix64 (family-d-emean/harness/seed.mjs), triple (cellIdx, bundle, traj), traj 0 = baseline rows, trajectories 1..perBundle; REPA2 cells: family-c-pool mulberry32 scheme verbatim (SEED 20260803, baseSeed +1000003*b +id.length*7919, traj seed +7919*done +31*b) for the E0.1 anchor",
+ "billing": "no model calls; pure simulation; ANTHROPIC env empty at launch"
+}

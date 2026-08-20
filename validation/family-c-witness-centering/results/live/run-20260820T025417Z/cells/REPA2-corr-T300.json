@@ -1,0 +1,211 @@
+{
+ "study": "2026-08-family-c-witness-centering",
+ "detector": "family_C_mmd_betting_e_process",
+ "family": "C",
+ "control": "witness-centering",
+ "cell_id": "REPA2-corr-T300",
+ "arm": "REPA2",
+ "null_id": "HC-gauss-corr",
+ "n": 2000,
+ "ticks": 300,
+ "bundles": 10,
+ "reference": {
+  "mu_p_phi": "closed_form_N0_Sigma_hat_mcd",
+  "pool_size": null,
+  "pool_law": null,
+  "baseline_rows": 600,
+  "bundles": 10,
+  "rff_dim": 256,
+  "bandwidth_source": "median heuristic, shipped calibrator, per bundle"
+ },
+ "increment_summary": {
+  "n": 2000,
+  "mean": 1.0067316740228238,
+  "sd": 0.002866944354079242,
+  "se": 0.0000641068246343041,
+  "ci95": [
+   1.0066060246465405,
+   1.0068573233991072
+  ],
+  "lower95_one_sided": 1.0066262182963004,
+  "upper95_one_sided": 1.0068371297493472
+ },
+ "increment_summary_verdict": "REFUTED",
+ "increment_summary_t300": {
+  "n": 2000,
+  "mean": 1.0067316740228238,
+  "sd": 0.002866944354079242,
+  "se": 0.0000641068246343041,
+  "ci95": [
+   1.0066060246465405,
+   1.0068573233991072
+  ],
+  "lower95_one_sided": 1.0066262182963004,
+  "upper95_one_sided": 1.0068371297493472
+ },
+ "blocks": [
+  {
+   "from": 1,
+   "to": 10,
+   "n": 2000,
+   "mean": 0.9991404312118536,
+   "sd": 0.010412138846177433,
+   "se": 0.00023282250251218967,
+   "ci95": [
+    0.9986840991069297,
+    0.9995967633167775
+   ],
+   "lower95_one_sided": 0.998757438195221,
+   "upper95_one_sided": 0.9995234242284862
+  },
+  {
+   "from": 11,
+   "to": 50,
+   "n": 2000,
+   "mean": 1.0052650104069574,
+   "sd": 0.00574184829123455,
+   "se": 0.00012839163095691464,
+   "ci95": [
+    1.0050133628102818,
+    1.005516658003633
+   ],
+   "lower95_one_sided": 1.0050538061740333,
+   "upper95_one_sided": 1.0054762146398815
+  },
+  {
+   "from": 51,
+   "to": 150,
+   "n": 2000,
+   "mean": 1.0070117506449896,
+   "sd": 0.003910146318395865,
+   "se": 0.00008743352969903691,
+   "ci95": [
+    1.0068403809267794,
+    1.0071831203631998
+   ],
+   "lower95_one_sided": 1.0068679224886348,
+   "upper95_one_sided": 1.0071555788013444
+  },
+  {
+   "from": 151,
+   "to": 300,
+   "n": 2000,
+   "mean": 1.0074421494263401,
+   "sd": 0.00268560762201366,
+   "se": 0.00006005201203714105,
+   "ci95": [
+    1.0073244474827474,
+    1.0075598513699329
+   ],
+   "lower95_one_sided": 1.007343363866539,
+   "upper95_one_sided": 1.0075409349861413
+  }
+ ],
+ "mechanism": null,
+ "legacy_mean_F": null,
+ "clamp": {
+  "pos_frac": {
+   "n": 2000,
+   "mean": 0.01894666666666672,
+   "sd": 0.035606834097239505,
+   "se": 0.0007961930150498489,
+   "ci95": [
+    0.017386128357169017,
+    0.02050720497616442
+   ],
+   "lower95_one_sided": 0.017636929156909717,
+   "upper95_one_sided": 0.02025640417642372
+  },
+  "neg_frac": {
+   "n": 2000,
+   "mean": 0.737871666666665,
+   "sd": 0.18549453983709827,
+   "se": 0.004147784005307945,
+   "ci95": [
+    0.7297420100162615,
+    0.7460013233170686
+   ],
+   "lower95_one_sided": 0.7310485619779334,
+   "upper95_one_sided": 0.7446947713553966
+  }
+ },
+ "floor_events": 0,
+ "suppressed_ticks": 0,
+ "consistency_max": 5.542441505745899e-16,
+ "terminal_t300": {
+  "mean": 10.785162313373137,
+  "p50": 7.2316552421400715,
+  "p99": 50.846283923257516,
+  "max": 159.77355225169896,
+  "top1_share": 0.0074071000328658305
+ },
+ "terminal_final": {
+  "mean": 10.785162313373137,
+  "p50": 7.2316552421400715,
+  "p99": 50.846283923257516,
+  "max": 159.77355225169896,
+  "top1_share": 0.0074071000328658305
+ },
+ "crossing": {
+  "alpha05_t300": 0.132,
+  "alpha05_full": 0.132,
+  "shipped_t300": 0,
+  "shipped_full": 0
+ },
+ "caught_failures": 0,
+ "bundle_meta": [
+  {
+   "bundle": 0,
+   "bandwidth": 0.22548267663002325,
+   "mu0_norm2": null
+  },
+  {
+   "bundle": 1,
+   "bandwidth": 0.22412705269832986,
+   "mu0_norm2": null
+  },
+  {
+   "bundle": 2,
+   "bandwidth": 0.22465100832624796,
+   "mu0_norm2": null
+  },
+  {
+   "bundle": 3,
+   "bandwidth": 0.22723496082208836,
+   "mu0_norm2": null
+  },
+  {
+   "bundle": 4,
+   "bandwidth": 0.2231327591963271,
+   "mu0_norm2": null
+  },
+  {
+   "bundle": 5,
+   "bandwidth": 0.22635477366124648,
+   "mu0_norm2": null
+  },
+  {
+   "bundle": 6,
+   "bandwidth": 0.22268985276548606,
+   "mu0_norm2": null
+  },
+  {
+   "bundle": 7,
+   "bandwidth": 0.22381411774865606,
+   "mu0_norm2": null
+  },
+  {
+   "bundle": 8,
+   "bandwidth": 0.22726157510011868,
+   "mu0_norm2": null
+  },
+  {
+   "bundle": 9,
+   "bandwidth": 0.2251837228776249,
+   "mu0_norm2": null
+  }
+ ],
+ "mode": "live",
+ "engine_version": "0.6.6-pre",
+ "git_sha": "a80149c1757cac26d40552e2c90c6a0968ebef38"
+}

@@ -706,8 +706,16 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
   // PREREGISTRATION §3): the C58 stability run adds 6 cells under study id
   // 2026-08-grapa-stability, identity-disambiguated via control: 'grapa-stability'. They carry
   // no stage-readable fields, so no verdict, stage token or tier moves.
-  assert.equal(ev.cells.length, 2434,
-    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12) + the grapa-stability run (6); no surviving cell is dropped');
+  //
+  // 2434 -> 2442, 2026-08-19, one registered append and its arithmetic
+  // (family-c-witness-centering PREREGISTRATION §6): the C57 magnitude battery adds 8 cells
+  // under study id 2026-08-family-c-witness-centering, identity-disambiguated via
+  // control: 'witness-centering'. Cell field names deliberately avoid every isValidityCell /
+  // isPowerCell key (increment_summary, not increment_estimator; crossing.*, not
+  // crossing_rate), so the cells are filtered before any stage: no verdict, stage token or
+  // tier moves.
+  assert.equal(ev.cells.length, 2442,
+    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12) + the grapa-stability run (6) + the witness-centering run (8); no surviving cell is dropped');
   const drops = ev.runs.filter((r) => r.superseded)
     .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);
   assert.deepEqual(Object.fromEntries(drops), {

@@ -18,6 +18,32 @@ export interface GuaranteeRow {
     evidence: string;
 }
 export declare const GUARANTEE_TABLE: readonly GuaranteeRow[];
+/** The core.ts heuristic layer, covered explicitly (2026-08-22). core.ts ships a second
+ *  statistical layer — TrendBuffer window summaries, trendStrength, effectiveThreshold,
+ *  computeVerdict, WARMUP_CONFIG — that is NOT a registry detector, so the table above cannot
+ *  reach it and test/guarantees.test.ts's totality check does not cover it. This entry is its
+ *  guarantee row: heuristic, spends no alpha, and its constants have no derivation trace.
+ *
+ *  Constants (all hand-tuned): stable = cv < 0.04 && |slopeNorm| > 0.002 (core.ts:90);
+ *  slopeScore = rawSlope/0.05, stabilityBonus 0.2 (linear falloff to cv 0.10), noisePenalty
+ *  (cv-0.15)/0.15 capped 0.5 (core.ts:162-165, mirrored in summarizeWindow core.ts:145-149).
+ *
+ *  Provenance: vendored at pin deploysignal main@5a72371 (2026-05-16), sync policy
+ *  vendored-at-pin, DO-NOT-modify-without-ADR (core.ts:1-5). No derivation exists in this repo
+ *  or the knowledge wiki (checked 2026-08-21).
+ *
+ *  Production surface (traced 2026-08-21): the ONLY production caller is DeploySignal
+ *  engine/gates/_health-defs.ts, i.e. the Family B structural rules — the row above. The layer
+ *  does not modulate any alpha-spending detector. In-repo callers are
+ *  test/core-trend-threshold.test.ts and type references only. */
+export declare const HEURISTIC_CORE_GUARANTEE: Readonly<{
+    exports: readonly ["TrendBuffer", "trendStrength", "effectiveThreshold", "computeVerdict", "WARMUP_CONFIG"];
+    implementation: "core.ts (vendored from DeploySignal engine/core.ts at main@5a72371, 2026-05-16)";
+    validityClass: "heuristic";
+    estimatedBaseline: "unrecorded";
+    alphaPolicy: "none";
+    evidence: string;
+}>;
 /** Estimated-baseline (axis-2) defaults and the retraction, keyed by construction rather than
  *  registry id — these are inputs a CONSUMER may route to the FDR path, not per-signal detectors. */
 export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{

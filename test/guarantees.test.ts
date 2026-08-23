@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { DETECTOR_REGISTRY, type DetectorId } from '../types/audit';
 import {
   GUARANTEE_TABLE, guaranteeFor, guaranteeManifest, ESTIMATED_BASELINE_GUARANTEES,
+  HEURISTIC_CORE_GUARANTEE,
 } from '../guarantees';
+import * as core from '../core';
 import {
   BETTING_E_PROCESS_ENVELOPE, MIXTURE_SUPERMARTINGALE_ENVELOPE,
 } from '../detectors/validity-envelope';
@@ -69,5 +71,24 @@ describe('guarantee table (WORKLIST C4)', () => {
   test('manifest round-trips as JSON with one entry per row', () => {
     const parsed = JSON.parse(guaranteeManifest());
     assert.equal(parsed.length, GUARANTEE_TABLE.length);
+  });
+
+  test('the core.ts heuristic layer is covered: heuristic, spends no alpha, exports live', () => {
+    assert.equal(HEURISTIC_CORE_GUARANTEE.validityClass, 'heuristic');
+    assert.equal(HEURISTIC_CORE_GUARANTEE.alphaPolicy, 'none');
+    assert.ok(Object.isFrozen(HEURISTIC_CORE_GUARANTEE));
+    // Every export the entry claims to cover actually exists in core.ts, so the entry
+    // cannot drift from the module it describes.
+    for (const name of HEURISTIC_CORE_GUARANTEE.exports) {
+      assert.ok(name in core, `HEURISTIC_CORE_GUARANTEE covers '${name}' but core.ts does not export it`);
+    }
+  });
+
+  test('the Family B row points at the trend layer that sets its thresholds', () => {
+    const row = guaranteeFor('kv_saturation')!;
+    assert.equal(row.family, 'B');
+    assert.ok(row.implementation.includes('core.ts'),
+      'Family B implementation must name the core.ts trend layer');
+    assert.ok(row.implementation.includes('HEURISTIC_CORE_GUARANTEE'));
   });
 });

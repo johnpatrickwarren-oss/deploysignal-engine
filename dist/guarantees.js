@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ESTIMATED_BASELINE_GUARANTEES = exports.GUARANTEE_TABLE = void 0;
+exports.ESTIMATED_BASELINE_GUARANTEES = exports.HEURISTIC_CORE_GUARANTEE = exports.GUARANTEE_TABLE = void 0;
 exports.guaranteeFor = guaranteeFor;
 exports.guaranteeManifest = guaranteeManifest;
 const validity_envelope_1 = require("./detectors/validity-envelope");
@@ -37,7 +37,10 @@ exports.GUARANTEE_TABLE = Object.freeze([
         ],
         family: 'B',
         detector: 'structural signature rules (16)',
-        implementation: 'DeploySignal engine/gates/_health-defs.ts (no engine implementation; ids here for audit compat)',
+        implementation: 'DeploySignal engine/gates/_health-defs.ts (rule bodies; ids here for audit '
+            + 'compat). Threshold machinery is THIS package\'s core.ts trend layer — _health-defs.ts '
+            + 'imports trendStrength/effectiveThreshold from @johnpatrickwarren-oss/deploysignal-engine/core '
+            + 'and sets every rule threshold through it. See HEURISTIC_CORE_GUARANTEE.',
         validityClass: 'heuristic',
         estimatedBaseline: 'unrecorded',
         alphaPolicy: 'none',
@@ -129,6 +132,34 @@ exports.GUARANTEE_TABLE = Object.freeze([
             + 'threshold tests with no wealth process.',
     },
 ]);
+/** The core.ts heuristic layer, covered explicitly (2026-08-22). core.ts ships a second
+ *  statistical layer — TrendBuffer window summaries, trendStrength, effectiveThreshold,
+ *  computeVerdict, WARMUP_CONFIG — that is NOT a registry detector, so the table above cannot
+ *  reach it and test/guarantees.test.ts's totality check does not cover it. This entry is its
+ *  guarantee row: heuristic, spends no alpha, and its constants have no derivation trace.
+ *
+ *  Constants (all hand-tuned): stable = cv < 0.04 && |slopeNorm| > 0.002 (core.ts:90);
+ *  slopeScore = rawSlope/0.05, stabilityBonus 0.2 (linear falloff to cv 0.10), noisePenalty
+ *  (cv-0.15)/0.15 capped 0.5 (core.ts:162-165, mirrored in summarizeWindow core.ts:145-149).
+ *
+ *  Provenance: vendored at pin deploysignal main@5a72371 (2026-05-16), sync policy
+ *  vendored-at-pin, DO-NOT-modify-without-ADR (core.ts:1-5). No derivation exists in this repo
+ *  or the knowledge wiki (checked 2026-08-21).
+ *
+ *  Production surface (traced 2026-08-21): the ONLY production caller is DeploySignal
+ *  engine/gates/_health-defs.ts, i.e. the Family B structural rules — the row above. The layer
+ *  does not modulate any alpha-spending detector. In-repo callers are
+ *  test/core-trend-threshold.test.ts and type references only. */
+exports.HEURISTIC_CORE_GUARANTEE = Object.freeze({
+    exports: Object.freeze(['TrendBuffer', 'trendStrength', 'effectiveThreshold', 'computeVerdict', 'WARMUP_CONFIG']),
+    implementation: 'core.ts (vendored from DeploySignal engine/core.ts at main@5a72371, 2026-05-16)',
+    validityClass: 'heuristic',
+    estimatedBaseline: 'unrecorded',
+    alphaPolicy: 'none',
+    evidence: 'Hand-tuned constants with no derivation trace; sole production caller is the Family B '
+        + 'row (DeploySignal engine/gates/_health-defs.ts). Coverage added 2026-08-22 after external '
+        + 'review flagged the layer as outside the guarantee table.',
+});
 /** Estimated-baseline (axis-2) defaults and the retraction, keyed by construction rather than
  *  registry id — these are inputs a CONSUMER may route to the FDR path, not per-signal detectors. */
 exports.ESTIMATED_BASELINE_GUARANTEES = Object.freeze({

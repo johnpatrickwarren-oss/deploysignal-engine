@@ -92,3 +92,38 @@ jobs:
       - name: Certification card expiry (reported, not gating — see comment)
         run: npm run cert:expiry
         continue-on-error: true
+
+  # Tag staleness tripwire — remediation 2026-08-22. External review found v0.6.6-pre 303
+  # commits / 3 weeks behind main while README:49 still told consumers to pin the latest tag:
+  # the pin resolved to code predating the guarantee table, the guarded e-BH entry point, and
+  # the Family D disjoint-window repair, and nothing watched the gap. This job fails a push to
+  # main when the latest tag has gone stale on detector semantics:
+  #   - any detector-semantics commit since the tag AND the tag is older than 21 days, or
+  #   - more than 20 detector-semantics commits since the tag regardless of age.
+  # Detector semantics = detectors/, fleet/, core.ts, guarantees.ts, types/. The fix when it
+  # fires is a release (bump + changelog + tag), which is deliberate and stays John's call —
+  # this job only makes the lapse visible where it arrives: with somebody's push.
+  tag-staleness:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Latest tag is not stale on detector semantics
+        run: |
+          set -euo pipefail
+          tag=$(git describe --tags --abbrev=0)
+          tag_date=$(git log -1 --format=%ct "$tag")
+          age_days=$(( ( $(date +%s) - tag_date ) / 86400 ))
+          count=$(git rev-list --count --no-merges "$tag"..HEAD -- detectors/ fleet/ core.ts guarantees.ts types/)
+          echo "latest tag: $tag (${age_days}d old); detector-semantics commits since: $count"
+          if [ "$count" -gt 20 ]; then
+            echo "::error::$count detector-semantics commits since $tag (limit 20) — cut a release."
+            exit 1
+          fi
+          if [ "$count" -ge 1 ] && [ "$age_days" -gt 21 ]; then
+            echo "::error::$tag is ${age_days}d old with $count detector-semantics commits behind — cut a release."
+            exit 1
+          fi

@@ -103,6 +103,10 @@ jobs:
   # Detector semantics = detectors/, fleet/, core.ts, guarantees.ts, types/. The fix when it
   # fires is a release (bump + changelog + tag), which is deliberate and stays John's call —
   # this job only makes the lapse visible where it arrives: with somebody's push.
+  #
+  # Race on the release push itself: push the tag WITH main (`git push --atomic origin main
+  # vX.Y.Z-pre`) or the release commit's run fetches the old tag and fails spuriously — the
+  # v0.6.7-pre push did exactly this (run 32617723621). A rerun after the tag lands clears it.
   tag-staleness:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest

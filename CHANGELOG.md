@@ -1,5 +1,55 @@
 # Changelog
 
+## v0.6.7-pre — 2026-08-22
+
+Cut after an external review (2026-08-21) found the release discipline lapsed: `v0.6.6-pre`
+(`8b611aa`, 2026-07-31) sat 303 commits and 3 weeks behind main while README's pin advice
+still pointed consumers at it. A consumer at that pin has **no `guarantees.ts`, no
+`fleet/e-bh-guarded.ts`, and the Family D rolling-window runtime that WORKLIST C53 records
+as refuted** — re-pin deliberately. Entry reconstructed from `git log 8b611aa..e824257`
+(the `v0.6.6-pre` entry is the precedent). CI now carries a tag-staleness tripwire that
+fails a push to main when the latest tag falls >21 days or >20 detector-semantics commits
+behind, so this lapse cannot recur silently.
+
+- **The engine's own guarantee table (`guarantees.ts`, WORKLIST C4, PR #43).** Every
+  registry detector id resolves to exactly one row (totality enforced by
+  `test/guarantees.test.ts`); axis 1 is the validity class, axis 2 the estimated-baseline
+  regime, with `'unrecorded'` as the honest blank. Family D inflation measurements state K
+  beside T (C54, `87d0d90`). 2026-08-22: the `core.ts` heuristic layer (TrendBuffer,
+  `trendStrength`, `effectiveThreshold`, `computeVerdict`, `WARMUP_CONFIG`) is covered by a
+  parallel `HEURISTIC_CORE_GUARANTEE` export — heuristic, spends no α, hand-tuned constants
+  with no derivation trace, sole production caller the Family B rules — and the Family B row
+  names it.
+- **Guarded e-BH entry point (`fleet/e-bh-guarded.ts`).** `assertValidForFdrPath` had zero
+  production callers across six repos until 2026-08-02; the guarded entry calls it on every
+  input (`fleet/e-bh-guarded.ts:82`), `fleet/localize` is migrated to it (`8a5764b`), and
+  the FDR path gates on the AR(1) coefficient (#50). Envelope type fix: the union members
+  added 2026-08-02 make previously-unpassable envelopes compile (`validity-envelope.ts`).
+- **Family D repaired and priced.** The e-detector evaluates once per disjoint window, not
+  once per tick (`d3d6d06`): FAR 0.0005 against the rolling variant's 0.576 at oracle
+  parameters. Measured NOT an e-process under finite-K calibration — E[M_T|H0] = 1.0636
+  (T=300) / 1.1076 (T=900) at K=400 (family-d-emean run-20260818T222835Z) — and priced by an
+  optional c-bound (`bb56070`): firing at c/α restores FDR ≤ α; `e_value_inflation_bound`
+  absent means unpriced inflation. `SpectralInflationBound` carries K beside T
+  (`types/families/d.ts`, C54).
+- **Classical Page-CUSUM fully retired (Q69.D / C8, `0f7b197`).**
+  `detectors/_page-cusum-classical.ts` deleted (`evaluateFamilyAShadow`, `evaluateCUSUM`,
+  `lookupCellParams`); `FamilyAShadowCtx` relocated to `_page-cusum-core.ts`; the
+  `family_A_page_cusum` NAB arm removed — best-of-A is now over the two Ville A-detectors.
+- **New candidate detector modules, all UNWIRED** (registered but not routed to production):
+  group-average e-value (K2), conformal point-tail bet (K4), periodogram betting e-process
+  (K3), block-conformal shape bet (K6), shape-ECDF accumulator (K6-slow), and the shape-
+  kurtosis e-value (built, battery-run, **refuted** — kept with its study record, #49).
+- Studies and certification landed alongside: family-d-emean (Amendment A1 + corrections),
+  family-c witness-centering (E1 refuted as derived), grapa-stability, φ-regime (C43),
+  strided-A (C50), across-draw (C51), K5/K6 grids, certification census 2434→2442.
+
+⚠️ **Interface notes:** (1) the classical Page-CUSUM API is gone — consumers importing
+`_page-cusum-classical` must move to the mixture path; (2) the Family D e-detector fires on
+disjoint window boundaries, not per tick — fire timing differs from `v0.6.6-pre`; (3) e-BH
+consumers should enter through `fleet/e-bh-guarded.ts`, which refuses out-of-envelope
+e-values that `fleet/e-bh.ts` accepted silently.
+
 ## v0.6.6-pre — 2026-07-31
 
 Released without an entry at the time (`8b611aa`); reconstructed from

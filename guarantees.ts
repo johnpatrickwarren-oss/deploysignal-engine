@@ -242,13 +242,16 @@ export function guaranteeFor(id: DetectorId): GuaranteeRow | undefined {
   return best;
 }
 
-/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts). */
+/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts).
+ *  The core.ts heuristic layer (HEURISTIC_CORE_GUARANTEE) is appended as a trailing entry with
+ *  `kind: 'heuristic_core'` — it is not a registry detector, so it carries no idPrefixes/family. */
 export function guaranteeManifest(): string {
+  const rows = GUARANTEE_TABLE.map((r) => ({
+    ...r,
+    estimatedBaseline: r.estimatedBaseline === 'unrecorded' ? 'unrecorded' : { ...r.estimatedBaseline },
+  }));
   return JSON.stringify(
-    GUARANTEE_TABLE.map((r) => ({
-      ...r,
-      estimatedBaseline: r.estimatedBaseline === 'unrecorded' ? 'unrecorded' : { ...r.estimatedBaseline },
-    })),
+    [...rows, { kind: 'heuristic_core', ...HEURISTIC_CORE_GUARANTEE }],
     null,
     2,
   );

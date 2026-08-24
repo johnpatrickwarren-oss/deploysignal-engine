@@ -89,9 +89,13 @@ const ALL_IDS = [
     (0, node_test_1.test)('the retraction stays visible where the table lives', () => {
         strict_1.default.equal(guarantees_1.ESTIMATED_BASELINE_GUARANTEES.nuisance_robust_bf_e_value.validUnderEstimatedBaseline, false);
     });
-    (0, node_test_1.test)('manifest round-trips as JSON with one entry per row', () => {
+    (0, node_test_1.test)('manifest round-trips as JSON with one entry per row plus the heuristic core', () => {
         const parsed = JSON.parse((0, guarantees_1.guaranteeManifest)());
-        strict_1.default.equal(parsed.length, guarantees_1.GUARANTEE_TABLE.length);
+        strict_1.default.equal(parsed.length, guarantees_1.GUARANTEE_TABLE.length + 1);
+        const core = parsed[parsed.length - 1];
+        strict_1.default.equal(core.kind, 'heuristic_core');
+        strict_1.default.equal(core.validityClass, 'heuristic');
+        strict_1.default.equal(core.alphaPolicy, 'none');
     });
     (0, node_test_1.test)('the core.ts heuristic layer is covered: heuristic, spends no alpha, exports live', () => {
         strict_1.default.equal(guarantees_1.HEURISTIC_CORE_GUARANTEE.validityClass, 'heuristic');

@@ -68,9 +68,13 @@ describe('guarantee table (WORKLIST C4)', () => {
       ESTIMATED_BASELINE_GUARANTEES.nuisance_robust_bf_e_value.validUnderEstimatedBaseline, false);
   });
 
-  test('manifest round-trips as JSON with one entry per row', () => {
+  test('manifest round-trips as JSON with one entry per row plus the heuristic core', () => {
     const parsed = JSON.parse(guaranteeManifest());
-    assert.equal(parsed.length, GUARANTEE_TABLE.length);
+    assert.equal(parsed.length, GUARANTEE_TABLE.length + 1);
+    const core = parsed[parsed.length - 1];
+    assert.equal(core.kind, 'heuristic_core');
+    assert.equal(core.validityClass, 'heuristic');
+    assert.equal(core.alphaPolicy, 'none');
   });
 
   test('the core.ts heuristic layer is covered: heuristic, spends no alpha, exports live', () => {

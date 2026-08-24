@@ -83,6 +83,8 @@ export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{
 /** The guarantee row for a registry detector id, by prefix match. Returns undefined only for ids
  *  outside DETECTOR_REGISTRY; test/guarantees.test.ts proves totality over the registry. */
 export declare function guaranteeFor(id: DetectorId): GuaranteeRow | undefined;
-/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts). */
+/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts).
+ *  The core.ts heuristic layer (HEURISTIC_CORE_GUARANTEE) is appended as a trailing entry with
+ *  `kind: 'heuristic_core'` — it is not a registry detector, so it carries no idPrefixes/family. */
 export declare function guaranteeManifest(): string;
 //# sourceMappingURL=guarantees.d.ts.map

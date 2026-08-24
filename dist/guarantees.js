@@ -187,11 +187,14 @@ function guaranteeFor(id) {
     }
     return best;
 }
-/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts). */
+/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts).
+ *  The core.ts heuristic layer (HEURISTIC_CORE_GUARANTEE) is appended as a trailing entry with
+ *  `kind: 'heuristic_core'` — it is not a registry detector, so it carries no idPrefixes/family. */
 function guaranteeManifest() {
-    return JSON.stringify(exports.GUARANTEE_TABLE.map((r) => ({
+    const rows = exports.GUARANTEE_TABLE.map((r) => ({
         ...r,
         estimatedBaseline: r.estimatedBaseline === 'unrecorded' ? 'unrecorded' : { ...r.estimatedBaseline },
-    })), null, 2);
+    }));
+    return JSON.stringify([...rows, { kind: 'heuristic_core', ...exports.HEURISTIC_CORE_GUARANTEE }], null, 2);
 }
 //# sourceMappingURL=guarantees.js.map

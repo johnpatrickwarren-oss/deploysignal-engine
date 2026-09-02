@@ -8,8 +8,8 @@
   "family": null,
   "class": "terminal_e_value",
   "engine_pin": {
-    "version": "0.6.6-pre",
-    "sha": "ab918b2ea24ca7a968ba4e2f950b90ff13077b8f"
+    "version": "0.6.7-pre",
+    "sha": "849618d7606ed0025018784ce917034e06f16271"
   },
   "source_files": [
     {

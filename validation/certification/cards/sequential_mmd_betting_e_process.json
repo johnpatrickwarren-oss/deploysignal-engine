@@ -9,8 +9,8 @@
   "family": "C",
   "class": "test_martingale",
   "engine_pin": {
-    "version": "0.6.6-pre",
-    "sha": "ab918b2ea24ca7a968ba4e2f950b90ff13077b8f"
+    "version": "0.6.7-pre",
+    "sha": "849618d7606ed0025018784ce917034e06f16271"
   },
   "source_files": [
     {
@@ -19,7 +19,7 @@
     },
     {
       "path": "detectors/family-c-betting-e-process.ts",
-      "sha256": "8b82af54b4459a1d4eb47bfe7025d638553f85a6087589aeefcabe87108d6476"
+      "sha256": "f27d418a5c5fd57cdc70a66d23039a34a9b608de042189fd870e2ed1aeb3e345"
     },
     {
       "path": "detectors/validity-envelope.ts",

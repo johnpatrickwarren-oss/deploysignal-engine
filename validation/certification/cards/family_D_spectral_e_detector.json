@@ -8,13 +8,13 @@
   "family": "D",
   "class": "test_martingale",
   "engine_pin": {
-    "version": "0.6.6-pre",
-    "sha": "798a545fe7b2c273e203d1dcdb7f84cec87f952d"
+    "version": "0.6.7-pre",
+    "sha": "849618d7606ed0025018784ce917034e06f16271"
   },
   "source_files": [
     {
       "path": "detectors/spectral.ts",
-      "sha256": "95ca789e6599d9ec4ce1f970c33e517cec74957c3f96a7786a524e8384967db6"
+      "sha256": "61fe586ec0d7cdfa6ef682b83db6e946d2b92581455bd40e4ec535179fe66abc"
     },
     {
       "path": "detectors/validity-envelope.ts",

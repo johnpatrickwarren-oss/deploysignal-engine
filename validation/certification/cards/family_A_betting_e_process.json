@@ -8,13 +8,13 @@
   "family": "A",
   "class": "test_martingale",
   "engine_pin": {
-    "version": "0.6.6-pre",
-    "sha": "ab918b2ea24ca7a968ba4e2f950b90ff13077b8f"
+    "version": "0.6.7-pre",
+    "sha": "849618d7606ed0025018784ce917034e06f16271"
   },
   "source_files": [
     {
       "path": "detectors/betting-e-process.ts",
-      "sha256": "d05c50d96d38f5609e0531ba45f2a56c1c7489529d8f5531db19eae6fbf3390f"
+      "sha256": "b172403330b5db228cbbc33c0c4f2e67b863f7248665859b445b8b626c90f9f9"
     },
     {
       "path": "detectors/validity-envelope.ts",

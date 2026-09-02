@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — C61 (2026-09-02)
+
+- **Axis 3 of the guarantee table: the (ε, δ)-approximate e-value form (`guarantees.ts`,
+  WORKLIST C61).** Every row states what its statistic is under H0 in Ramdas–Wang 2025's terms
+  (Definition 10.1): `e_value`, `epsilon` (a measured c − 1 at a stated horizon and K; FDR ≤
+  α(1+ε) by Theorem 10.24), `epsilon_growing` (no constant prices it — the Family A plug-in rows,
+  with the measured κ = 0.8445 and the law ε_T = e^{κT/m} − 1), `not_e_value`, or `unrecorded`.
+  `APPROXIMATE_E_VALUE_BY_CONSTRUCTION` does the same for safe-t, UI, sequential UI, and the
+  retracted BF (the one constant ε, 0.155). Additive field on `GuaranteeRow`; `guaranteeManifest()`
+  carries it. `_hotelling-safe.ts`'s header no longer claims Ville validity at 1/α on a path that
+  ships a bootstrap threshold. `knowledge/stats/pages/ramdas-wang-2025.md` §1.
+
 ## v0.6.8-pre — 2026-09-02
 
 The log-domain evidence surface and the live validity instruments, from the operator's

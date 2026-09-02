@@ -11,7 +11,13 @@
 // legacy chi_square variant; selection by `cell.hotelling_variant`.
 // Wealth update `M_t = M_{t-1} · exp(z_t)` with z_t derived from the
 // log-likelihood ratio under μ ~ N(0, τ²I_p) prior on the alternative.
-// Anytime-valid under Ville's inequality: fire at `M_t ≥ 1/α`.
+// Ville-valid at `M_t ≥ 1/α` ONLY when the compiled (μ, Σ) are the truth
+// (axis 2 unrecorded — guarantees.ts). The SHIPPED threshold is
+// `sliding_buffer_threshold`, a bootstrap (1−α) quantile of max wealth
+// under a joint AR(1) null (median 3.6e76 × 1/α across compiled cells,
+// knowledge stats/ville-guarantee-is-empirical); it calibrates a crossing
+// rate and licenses no e-value claim. Corrected 2026-09-02 (C61): this
+// header said "anytime-valid under Ville's inequality: fire at 1/α".
 
 import type { DetectorVerdict, FamilyCPerCell, SafeHotellingState } from '../types';
 import { cholesky, forwardSolve } from './_linalg';

@@ -43,6 +43,9 @@ export declare function evaluateFamilyE(cfg: CompiledConfig, liveMetrics: Record
      *  `cfg.tenant_tier_map`; drives per-tier cell lookup for μ/Σ. */
     tenantId?: string;
 }, state?: ConformalEValueState): DetectorVerdict | null;
+/** C65 — an advisory (zero-budget) Family E verdict: the evaluation stands, the α accounting
+ *  is zero, and a fire is tagged so fusion and audit can tell it from a budgeted one. */
+export declare function asAdvisory(v: DetectorVerdict): DetectorVerdict;
 type ConformalKind = 'unweighted' | 'weighted' | 'weighted_e_value';
 /** Unified context the Record<ConformalKind, Evaluator> receives.
  *  `state` is only required by `weighted_e_value`. */

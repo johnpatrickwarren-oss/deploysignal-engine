@@ -8,6 +8,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports._conformalKindForDispatch = exports._CONFORMAL_EVALUATORS_FOR_TEST = exports.conformalPValue = exports.mahalanobisDistance = void 0;
 exports.lookupFamilyEParams = lookupFamilyEParams;
 exports.evaluateFamilyE = evaluateFamilyE;
+exports.asAdvisory = asAdvisory;
 exports.freshConformalEValueState = freshConformalEValueState;
 exports.evaluateConformalWeightedEValue = evaluateConformalWeightedEValue;
 // relative-deviation helper is file-local; exported below for health.ts
@@ -151,7 +152,16 @@ function evaluateFamilyE(cfg, liveMetrics, ctx, state) {
     if (!lookup)
         return null;
     const { params, famC } = lookup;
-    const alphaE = cfg.alpha_budget.per_family.E ?? DEFAULT_ALPHA_E;
+    // C65 (2026-09-02, knowledge stats/family-e-budget-ruling option 3): a ZERO budget means
+    // ADVISORY, not silence. Before this change `per_family.E = 0` made the 1/α sample guard
+    // below read `n + 1 < ∞` and suppressed Family E on every tick. Now α_E = 0 evaluates at the
+    // nominal DEFAULT_ALPHA_E and stamps alpha_spent: 0 with reason_code 'advisory_zero_budget'
+    // on a fire, so the detector keeps reporting (evidence_outlook, audit) and draws nothing from
+    // the α budget. The CONSUMER owns keeping an advisory fire out of its rollback path
+    // (DeploySignal guards at engine/verdict.ts and engine/gates/_health-detectors.ts).
+    const alphaBudget = cfg.alpha_budget.per_family.E ?? DEFAULT_ALPHA_E;
+    const advisory = alphaBudget === 0;
+    const alphaE = advisory ? DEFAULT_ALPHA_E : alphaBudget;
     // Addition #8 runtime consumer (W5 §S6): calibration is parametric
     // under the baseline's schema; a breaking continuity change invalidates
     // the assumed null distribution, so the threshold / conformal p-value
@@ -221,7 +231,18 @@ function evaluateFamilyE(cfg, liveMetrics, ctx, state) {
         throw new Error(`Unknown ConformalParams.kind: '${String(params.kind)}'. `
             + `Known: ${Object.keys(CONFORMAL_EVALUATORS).join(', ')}`);
     }
-    return evaluator({ params, s, r, alphaE, covariance: famC.covariance, state });
+    const verdict = evaluator({ params, s, r, alphaE, covariance: famC.covariance, state });
+    return advisory ? asAdvisory(verdict) : verdict;
+}
+/** C65 — an advisory (zero-budget) Family E verdict: the evaluation stands, the α accounting
+ *  is zero, and a fire is tagged so fusion and audit can tell it from a budgeted one. */
+function asAdvisory(v) {
+    return {
+        ...v,
+        alpha_consumed: 0,
+        alpha_spent: 0,
+        ...(v.verdict === 'fire' ? { reason_code: 'advisory_zero_budget' } : {}),
+    };
 }
 /** Pre-#19 unweighted parametric-bootstrap p-value. Fires when
  *  p(s | calibration_scores) < α_E. */

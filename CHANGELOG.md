@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased — C61 (2026-09-02)
+## Unreleased — C61, C65 (2026-09-02)
+
+- **Family E at zero budget is advisory, not silent (`detectors/conformal.ts`, WORKLIST C65,
+  the C25 ruling).** `per_family.E = 0` used to make the `1/α` calibration guard read `n + 1 < ∞`
+  and suppress Family E on every tick. It now evaluates at the nominal `DEFAULT_ALPHA_E`, and a
+  fire carries `alpha_spent: 0` with `reason_code: 'advisory_zero_budget'` (`asAdvisory`). The
+  consumer keeps an advisory fire out of its rollback path; DeploySignal's guards land with its
+  profile change. Budgeted profiles (`E > 0`) are byte-identical.
 
 - **Axis 3 of the guarantee table: the (ε, δ)-approximate e-value form (`guarantees.ts`,
   WORKLIST C61).** Every row states what its statistic is under H0 in Ramdas–Wang 2025's terms

@@ -7,8 +7,8 @@
   "family": null,
   "class": "terminal_e_value",
   "engine_pin": {
-    "version": "0.6.7-pre",
-    "sha": "849618d7606ed0025018784ce917034e06f16271"
+    "version": "0.6.8-pre",
+    "sha": "a08cd6e159d67da964a3c6c1361473aa8fda97ab"
   },
   "source_files": [
     {

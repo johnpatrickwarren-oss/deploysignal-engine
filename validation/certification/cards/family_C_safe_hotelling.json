@@ -8,13 +8,13 @@
   "family": "C",
   "class": "test_martingale",
   "engine_pin": {
-    "version": "0.6.7-pre",
-    "sha": "849618d7606ed0025018784ce917034e06f16271"
+    "version": "0.6.8-pre",
+    "sha": "a08cd6e159d67da964a3c6c1361473aa8fda97ab"
   },
   "source_files": [
     {
       "path": "detectors/_hotelling-safe.ts",
-      "sha256": "703bb61084c3d56821973dead846c649e98bf790b3597b2f5f5994f7520ae2bd"
+      "sha256": "e3662bf336323697dc3c44c29be94e2475dfbc10304b4fa2cd8d07b77fa86515"
     },
     {
       "path": "detectors/validity-envelope.ts",

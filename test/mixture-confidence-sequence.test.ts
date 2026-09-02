@@ -41,3 +41,23 @@ test('rejects malformed inputs', () => {
   assert.throws(() => mixtureConfidenceSequence({ S_t: 0, t: 1, sigma_squared: 1, sigma_squared_prior: 0, alpha: 0.05 }), /prior/);
   assert.throws(() => mixtureConfidenceSequence({ S_t: 0, t: 1, sigma_squared: 1, sigma_squared_prior: 1, alpha: 1 }), /alpha/);
 });
+
+// ── the wired field (registered outcome of 2026-09-mixture-cs, §3) ──
+import { evaluatePageCusumMixtureSupermartingale, freshMixtureSupermartingaleState } from '../detectors/family-a-mixture-supermartingale';
+
+test('the mixture result carries the CS, and excludes_zero flips exactly at the first fire tick', () => {
+  const params = { mixture_distribution: 'gaussian' as const, gaussian_sigma_squared_prior: 1 };
+  const state = freshMixtureSupermartingaleState();
+  let firstFire = -1;
+  for (let t = 0; t < 200; t++) {
+    const r = evaluatePageCusumMixtureSupermartingale({
+      signal: 's', x_centered: 0.75, live_value: 0.75, baseline_mean: 0, sigma_squared: 1, params, state, alpha: 0.05,
+    });
+    const cs = r.confidence_sequence!;
+    assert.ok(Math.abs(cs.center - state.S_t / (t + 1)) < 1e-12);
+    if (firstFire < 0 && r.fire) firstFire = t;
+    if (firstFire < 0) assert.equal(cs.excludes_zero, false, `t=${t} before the first fire`);
+    if (t === firstFire) assert.equal(cs.excludes_zero, true, 'the CS excludes 0 exactly when the detector fires');
+  }
+  assert.ok(firstFire > 0, 'a 0.75σ shift fires within 200 ticks');
+});

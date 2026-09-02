@@ -1,4 +1,5 @@
 import type { FamilyAPerSignalParams } from '../types/families/a';
+import { type MixtureConfidenceSequence } from './mixture-confidence-sequence';
 /** Per-(signal) mixture-supermartingale state. Persists across ticks
  *  within a window; reset at window boundary. Sticky firing latch
  *  preserves Ville-bound semantic (once threshold crossed, detector
@@ -127,6 +128,15 @@ export interface PageCusumMixtureSupermartingaleResult {
     log_M_t: number;
     /** ADR 0027 — change of log_M_t across this tick. */
     log_increment: number;
+    /** ADR 0027, study 2026-09-mixture-cs (19/19 HELD, `validation/mixture-cs/REPORT.md`) — the
+     *  confidence sequence inverted from this same mixture: an interval for the shift FROM THE
+     *  COMPILED BASELINE MEAN, in whitened units when ar1_phi ≠ 0, with `excludes_zero` identical
+     *  to the fire rule. REPORTED, no verdict authority. Covers δ − ε under the compiled σ²: with
+     *  an m-sample calibration the fixed-horizon miss rate of the true shift is
+     *  2·Φ̄(w_T/√(1/T+1/m)) (0.30 / 0.09 / 0.007 at T = 300, m = 30/100/500), and as deployed
+     *  (μ̂ and σ̂² both from the window) the 900-tick uniform miss rate measured 0.58 / 0.33 / 0.09.
+     *  Gaussian mixture only; absent on the Beta path. */
+    confidence_sequence?: MixtureConfidenceSequence;
 }
 /** Q66 Phase-3.d.A — Howard-Ramdas-2021 mixture-supermartingale Page-CUSUM
  *  variant. Anytime-valid Ville-bounded; methodology-resampler-mode

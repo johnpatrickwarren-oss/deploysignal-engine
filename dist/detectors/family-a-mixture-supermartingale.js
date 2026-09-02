@@ -14,6 +14,7 @@ exports.evaluatePageCusumMixtureSupermartingale = evaluatePageCusumMixtureSuperm
 exports.computePerSignalAr1Phi = computePerSignalAr1Phi;
 exports.deriveMixtureSupermartingaleParams = deriveMixtureSupermartingaleParams;
 const _evidence_1 = require("./_evidence");
+const mixture_confidence_sequence_1 = require("./mixture-confidence-sequence");
 function freshMixtureSupermartingaleState() {
     return {
         S_t: 0, M_t: 1, fired: false, tick_at_first_fire: null, n: 0, last_x_centered: 0,
@@ -217,6 +218,11 @@ function evaluatePageCusumMixtureSupermartingale(input) {
         two_sided: true,
         log_M_t,
         log_increment: log_M_t - log_M_prev,
+        ...(params.mixture_distribution === 'gaussian' ? {
+            confidence_sequence: (0, mixture_confidence_sequence_1.mixtureConfidenceSequence)({
+                S_t: state.S_t, t, sigma_squared, sigma_squared_prior: params.gaussian_sigma_squared_prior, alpha,
+            }),
+        } : {}),
     };
 }
 /** Q66.A.b — compute per-signal AR(1) coefficient phi via Yule-Walker

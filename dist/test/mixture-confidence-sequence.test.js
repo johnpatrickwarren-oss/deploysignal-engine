@@ -42,4 +42,25 @@ const family_a_mixture_supermartingale_1 = require("../detectors/family-a-mixtur
     strict_1.default.throws(() => (0, mixture_confidence_sequence_1.mixtureConfidenceSequence)({ S_t: 0, t: 1, sigma_squared: 1, sigma_squared_prior: 0, alpha: 0.05 }), /prior/);
     strict_1.default.throws(() => (0, mixture_confidence_sequence_1.mixtureConfidenceSequence)({ S_t: 0, t: 1, sigma_squared: 1, sigma_squared_prior: 1, alpha: 1 }), /alpha/);
 });
+// ── the wired field (registered outcome of 2026-09-mixture-cs, §3) ──
+const family_a_mixture_supermartingale_2 = require("../detectors/family-a-mixture-supermartingale");
+(0, node_test_1.test)('the mixture result carries the CS, and excludes_zero flips exactly at the first fire tick', () => {
+    const params = { mixture_distribution: 'gaussian', gaussian_sigma_squared_prior: 1 };
+    const state = (0, family_a_mixture_supermartingale_2.freshMixtureSupermartingaleState)();
+    let firstFire = -1;
+    for (let t = 0; t < 200; t++) {
+        const r = (0, family_a_mixture_supermartingale_2.evaluatePageCusumMixtureSupermartingale)({
+            signal: 's', x_centered: 0.75, live_value: 0.75, baseline_mean: 0, sigma_squared: 1, params, state, alpha: 0.05,
+        });
+        const cs = r.confidence_sequence;
+        strict_1.default.ok(Math.abs(cs.center - state.S_t / (t + 1)) < 1e-12);
+        if (firstFire < 0 && r.fire)
+            firstFire = t;
+        if (firstFire < 0)
+            strict_1.default.equal(cs.excludes_zero, false, `t=${t} before the first fire`);
+        if (t === firstFire)
+            strict_1.default.equal(cs.excludes_zero, true, 'the CS excludes 0 exactly when the detector fires');
+    }
+    strict_1.default.ok(firstFire > 0, 'a 0.75σ shift fires within 200 ticks');
+});
 //# sourceMappingURL=mixture-confidence-sequence.test.js.map

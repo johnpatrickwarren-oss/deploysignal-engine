@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — ADR 0027 (2026-09-02)
+## v0.6.8-pre — 2026-09-02
 
 The log-domain evidence surface and the live validity instruments, from the operator's
 2026-09-01 question on using testing-by-betting for metrics insight
@@ -26,10 +26,16 @@ Additive only: no verdict, statistic, threshold, fire tick, α accounting or wea
   inversion of the Howard normal mixture the Family A detector already computes, under a
   pre-registered study; not wired into any verdict.
 
-⚠️ **Interface notes:** every field is optional or new. DeploySignal's `DetectorTripV2`
-projection drops `evidence` until amended; `tessera-rng`'s `buildSurface` ignores the new e-BH
-fields until it reads them. Certification cards for the five touched detectors were re-frozen
-(pins only; no verdict re-scored moves).
+- **`guaranteeManifest()` includes the `core.ts` heuristic layer (`fa7573b`).** The
+  `HEURISTIC_CORE_GUARANTEE` row introduced at v0.6.7-pre is now part of the manifest a consumer
+  reads, not only an export.
+- **CI: the release-push tag race on the staleness job documented (`75eb6df`).**
+
+⚠️ **Interface notes:** every field is optional or new. DeploySignal reads `evidence` into
+`evidence_outlook` and `DetectorTripV2` as of its PR #82 (keys omitted when absent);
+`tessera-rng`'s `buildSurface` ignores the new e-BH fields until it reads them. Certification
+cards for the five touched detectors were re-frozen in a dedicated commit (`fc84e2e`) with
+`cert:verdict` byte-identical. Merged as PR #73 (`97406e2`).
 
 ## v0.6.7-pre — 2026-08-22
 

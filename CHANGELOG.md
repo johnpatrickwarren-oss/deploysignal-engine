@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased — C61, C65 (2026-09-02)
+## v0.6.9-pre — 2026-09-02
+
+Cut so the Family E advisory path (C65) reaches DeploySignal, whose guards (PR #84) are
+already on its `main`. Merged as engine PRs #74 (C61, with the missing `exports` entry for
+`types/verdict-extensions/evidence-surface`) and #76 (C65; #75 had merged into its stacked base
+after the base merged and never reached `main`).
 
 - **Family E at zero budget is advisory, not silent (`detectors/conformal.ts`, WORKLIST C65,
   the C25 ruling).** `per_family.E = 0` used to make the `1/α` calibration guard read `n + 1 < ∞`

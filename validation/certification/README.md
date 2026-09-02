@@ -153,6 +153,8 @@ recomputes every `source_files[].sha256`:
 
 | (this freeze) | `a08cd6e` | **One detector source sha moves, on one card: `family_C_safe_hotelling`'s pin of `detectors/_hotelling-safe.ts`**, for a HEADER-ONLY change (C61): the comment that claimed "anytime-valid under Ville's inequality: fire at 1/α" now states that the shipped threshold is a bootstrap quantile and licenses no e-value claim. No executable line changed (diff is comment lines only); `cert:verdict` byte-identical before and after. The other fourteen cards changed only `engine_pin.sha`. `engine_pin.version` stays `0.6.8-pre`. **A dedicated commit carrying nothing else.** |
 
+| (this freeze) | `8192b47` | **One detector source sha moves, on the two cards that pin `detectors/conformal.ts` (`family_E_conformal`, `family_E_conformal_heldout`)**, for C65: a zero `per_family.E` now evaluates at the nominal level and spends nothing (`asAdvisory`) instead of tripping the `1/α` sample guard into permanent suppression; budgeted profiles are byte-identical. `cert:verdict` byte-identical before and after (Family E's cards were NOT_EXECUTABLE / REFUSE on other grounds and remain so). The other thirteen cards changed only `engine_pin.sha`; `engine_pin.version` stays `0.6.8-pre`. **A dedicated commit carrying nothing else.** |
+
 **Correction to the sentence below, 2026-09-02:** it was true for every freeze through `ab918b2`.
 The `849618d` freeze above is the first where detector source shas move; the row says which five
 and why. The sentence is left as written because it is the provenance record for the pins it

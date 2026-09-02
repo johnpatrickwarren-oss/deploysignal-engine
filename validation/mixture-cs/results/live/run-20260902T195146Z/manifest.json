@@ -1,0 +1,22 @@
+{
+  "study": "2026-09-mixture-cs",
+  "quick": false,
+  "engine_sha": "f477ae4950ffca4f86852111c87702ac18eebaf6",
+  "node": "v25.9.0",
+  "N": 4000,
+  "T": 900,
+  "T_P3": 300,
+  "alpha": 0.05,
+  "rhos": [
+    1,
+    38
+  ],
+  "ms": [
+    30,
+    100,
+    500
+  ],
+  "delta_star": 0.75,
+  "prng": "mulberry32 with scrambled per-(cell,trajectory) seeds",
+  "generated_from": "harness/run.mjs"
+}

@@ -1,0 +1,264 @@
+{
+  "manifest": {
+    "study": "2026-09-mixture-cs",
+    "quick": false,
+    "engine_sha": "f477ae4950ffca4f86852111c87702ac18eebaf6",
+    "node": "v25.9.0",
+    "N": 4000,
+    "T": 900,
+    "T_P3": 300,
+    "alpha": 0.05,
+    "rhos": [
+      1,
+      38
+    ],
+    "ms": [
+      30,
+      100,
+      500
+    ],
+    "delta_star": 0.75,
+    "prng": "mulberry32 with scrambled per-(cell,trajectory) seeds",
+    "generated_from": "harness/run.mjs"
+  },
+  "endpoints": [
+    {
+      "id": "P1.rho1.delta0",
+      "claim": "time-uniform miscoverage of δ at oracle parameters",
+      "measured": 0.02975,
+      "band": [
+        0.005,
+        0.06
+      ],
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P1.rho1.delta0.75",
+      "claim": "time-uniform miscoverage of δ at oracle parameters",
+      "measured": 0.026,
+      "band": [
+        0.005,
+        0.06
+      ],
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P1.rho38.delta0",
+      "claim": "time-uniform miscoverage of δ at oracle parameters",
+      "measured": 0.0225,
+      "band": [
+        0.005,
+        0.06
+      ],
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P1.rho38.delta0.75",
+      "claim": "time-uniform miscoverage of δ at oracle parameters",
+      "measured": 0.02975,
+      "band": [
+        0.005,
+        0.06
+      ],
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P2.rho1",
+      "claim": "first tick CS excludes 0 == detector first-fire tick",
+      "measured": 4000,
+      "band": [
+        3996,
+        4000
+      ],
+      "verdict": "HELD",
+      "N": 4000
+    },
+    {
+      "id": "P2.rho38",
+      "claim": "first tick CS excludes 0 == detector first-fire tick",
+      "measured": 4000,
+      "band": [
+        3996,
+        4000
+      ],
+      "verdict": "HELD",
+      "N": 4000
+    },
+    {
+      "id": "P3.rho1.m30",
+      "claim": "fixed-T miscoverage of δ under plug-in μ̂ equals 2Φ̄(w_T/√(1/T+1/m))",
+      "measured": 0.3,
+      "band": [
+        0.27984205253790306,
+        0.3233826199881895
+      ],
+      "verdict": "HELD",
+      "predicted": 0.3016123362630463,
+      "se": 0.0072567612417144016,
+      "N": 4000,
+      "T": 300
+    },
+    {
+      "id": "P3.rho1.m100",
+      "claim": "fixed-T miscoverage of δ under plug-in μ̂ equals 2Φ̄(w_T/√(1/T+1/m))",
+      "measured": 0.083,
+      "band": [
+        0.07336275372248965,
+        0.1000597919877079
+      ],
+      "verdict": "HELD",
+      "predicted": 0.08671127285509878,
+      "se": 0.004449506377536372,
+      "N": 4000,
+      "T": 300
+    },
+    {
+      "id": "P3.rho1.m500",
+      "claim": "fixed-T miscoverage of δ under plug-in μ̂ equals 2Φ̄(w_T/√(1/T+1/m))",
+      "measured": 0.0045,
+      "band": [
+        0.0028723306365913484,
+        0.010645223548754877
+      ],
+      "verdict": "HELD",
+      "predicted": 0.006758777092673113,
+      "se": 0.0012954821520272549,
+      "N": 4000,
+      "T": 300
+    },
+    {
+      "id": "P3.rho38.m30",
+      "claim": "fixed-T miscoverage of δ under plug-in μ̂ equals 2Φ̄(w_T/√(1/T+1/m))",
+      "measured": 0.358,
+      "band": [
+        0.33733848096956776,
+        0.3828782768534216
+      ],
+      "verdict": "HELD",
+      "predicted": 0.36010837891149466,
+      "se": 0.007589965980642305,
+      "N": 4000,
+      "T": 300
+    },
+    {
+      "id": "P3.rho38.m100",
+      "claim": "fixed-T miscoverage of δ under plug-in μ̂ equals 2Φ̄(w_T/√(1/T+1/m))",
+      "measured": 0.13325,
+      "band": [
+        0.11320478096167985,
+        0.14501623921922802
+      ],
+      "verdict": "HELD",
+      "predicted": 0.12911051009045393,
+      "se": 0.005301909709591364,
+      "N": 4000,
+      "T": 300
+    },
+    {
+      "id": "P3.rho38.m500",
+      "claim": "fixed-T miscoverage of δ under plug-in μ̂ equals 2Φ̄(w_T/√(1/T+1/m))",
+      "measured": 0.0155,
+      "band": [
+        0.010387373575968622,
+        0.022441655072296802
+      ],
+      "verdict": "HELD",
+      "predicted": 0.016414514324132712,
+      "se": 0.002009046916054697,
+      "N": 4000,
+      "T": 300
+    },
+    {
+      "id": "P4.rho1.a",
+      "claim": "as-deployed time-uniform miscoverage at m=30 ≥ 0.50",
+      "measured": 0.57525,
+      "band": [
+        0.5,
+        1
+      ],
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P4.rho1.b",
+      "claim": "as-deployed time-uniform miscoverage at m=500 ≤ 0.20",
+      "measured": 0.09325,
+      "band": [
+        0,
+        0.2
+      ],
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P4.rho1.c",
+      "claim": "monotone non-increasing in m",
+      "measured": {
+        "30": 0.57525,
+        "100": 0.33325,
+        "500": 0.09325
+      },
+      "band": null,
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P4.rho38.a",
+      "claim": "as-deployed time-uniform miscoverage at m=30 ≥ 0.50",
+      "measured": 0.65,
+      "band": [
+        0.5,
+        1
+      ],
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P4.rho38.b",
+      "claim": "as-deployed time-uniform miscoverage at m=500 ≤ 0.20",
+      "measured": 0.1265,
+      "band": [
+        0,
+        0.2
+      ],
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P4.rho38.c",
+      "claim": "monotone non-increasing in m",
+      "measured": {
+        "30": 0.65,
+        "100": 0.39725,
+        "500": 0.1265
+      },
+      "band": null,
+      "verdict": "HELD",
+      "N": 4000,
+      "T": 900
+    },
+    {
+      "id": "P5",
+      "claim": "module half-width vs independent closed form, max relative deviation",
+      "measured": 0,
+      "band": [
+        0,
+        1e-9
+      ],
+      "verdict": "HELD"
+    }
+  ]
+}

@@ -126,3 +126,13 @@ like P2.
   (`knowledge/stats/detector-audit-sequential-2026-08-05`), and says nothing beyond it.
 - Nothing here bears on the betting e-process or on the bootstrap threshold; the mixture uses
   the analytical `1/α` on the shipped path.
+
+## Amendment A1 — 2026-09-02, before the live run (harness smoke at N = 400)
+
+The P3 table's hand-computed `w_300` for `ρ = 1` was wrong: `sqrt(301 · log(301/0.0025))/300 =
+0.1978`, not `0.1958` (`log(120,400) = 11.699`, not the value I carried). The registered claim is
+the **formula** `2·Φ̄(w_T / sqrt(1/T + 1/m))`, which the harness evaluates itself; the table was
+illustrative and is corrected here rather than edited in place: `ρ = 1` → **0.302 / 0.087 /
+0.0068** (was 0.307 / 0.090 / 0.0073); `ρ = 38` → 0.360 / 0.129 / 0.0164 (unchanged to three
+places). No band moves: the band is `predicted ± 3·se` with `predicted` computed at run time. The
+quick run's endpoints file was discarded; only the full-N run is scored.

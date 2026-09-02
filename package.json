@@ -95,6 +95,10 @@
       "types": "./dist/types/verdict-extensions/cluster-topology.d.ts",
       "default": "./dist/types/verdict-extensions/cluster-topology.js"
     },
+    "./types/verdict-extensions/evidence-surface": {
+      "types": "./dist/types/verdict-extensions/evidence-surface.d.ts",
+      "default": "./dist/types/verdict-extensions/evidence-surface.js"
+    },
     "./types/families/a": {
       "types": "./dist/types/families/a.d.ts",
       "default": "./dist/types/families/a.js"

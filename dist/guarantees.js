@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ESTIMATED_BASELINE_GUARANTEES = exports.HEURISTIC_CORE_GUARANTEE = exports.GUARANTEE_TABLE = void 0;
+exports.ESTIMATED_BASELINE_GUARANTEES = exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = exports.HEURISTIC_CORE_GUARANTEE = exports.GUARANTEE_TABLE = void 0;
 exports.guaranteeFor = guaranteeFor;
 exports.guaranteeManifest = guaranteeManifest;
 const validity_envelope_1 = require("./detectors/validity-envelope");
@@ -17,6 +17,14 @@ exports.GUARANTEE_TABLE = Object.freeze([
         estimatedBaseline: validity_envelope_1.MIXTURE_SUPERMARTINGALE_ENVELOPE,
         alphaPolicy: 'ville_spend',
         evidence: 'ADR 0004 PR E envelope; plug-in invalidity Tessera ADR 0014 (E[e|H0] -> ~3e9 at n>>m).',
+        approximateEValue: {
+            form: 'epsilon_growing',
+            law: 'E[M_n|H0] under an m-sample plug-in baseline grows without bound in n '
+                + '(validity-envelope.ts: ~3e9 at n >> m); the per-tick rate is unmeasured for the '
+                + 'mixture (the betting path measures kappa/m). Exact at oracle parameters (H0 battery '
+                + 'N1 CLEARED); NaN on right-skewed and 8.5e46 on t3 increments (C23).',
+            source: 'Tessera ADR 0014; knowledge stats/validity-premise-chain; detector-audit-sequential-2026-08-05',
+        },
     },
     {
         idPrefixes: ['betting_e_process_'],
@@ -27,6 +35,15 @@ exports.GUARANTEE_TABLE = Object.freeze([
         estimatedBaseline: validity_envelope_1.BETTING_E_PROCESS_ENVELOPE,
         alphaPolicy: 'ville_spend',
         evidence: 'ADR 0004 PR E envelope; plug-in invalidity Tessera ADR 0008 (E[e|H0] -> ~1e8).',
+        approximateEValue: {
+            form: 'epsilon_growing',
+            law: 'per-tick increment excess kappa/m under an m-sample calibration (the GRAPA loop '
+                + 'converges on the calibration bias), so epsilon_T = exp(kappa·T/m) − 1: unbounded in T. '
+                + 'Measured 1.029 / 1.009 / 1.002 per tick at m = 30 / 100 / 500; martingale exact at '
+                + 'oracle parameters (0.9999956).',
+            kappa: 0.8445,
+            source: 'grapa-stability run-20260819T040000Z (C58); detector-audit-sequential-2026-08-05 (C23)',
+        },
     },
     {
         idPrefixes: [
@@ -47,6 +64,7 @@ exports.GUARANTEE_TABLE = Object.freeze([
         evidence: 'Hand-tuned rules by design; measured against the shipped Ville arms 2026-08-04 '
             + '(deploysignal studies/drift-regime-sweep): no drift regime where a rule detects and the '
             + 'mixture portfolio does not.',
+        approximateEValue: { form: 'not_e_value', reason: 'threshold rules; no expectation claim of any kind.' },
     },
     {
         idPrefixes: ['hotelling_t2_joint_vector'],
@@ -57,6 +75,7 @@ exports.GUARANTEE_TABLE = Object.freeze([
         estimatedBaseline: 'unrecorded',
         alphaPolicy: 'classical_epoch_alpha',
         evidence: 'Per-tick chi-square threshold; no wealth process.',
+        approximateEValue: { form: 'not_e_value', reason: 'a per-tick p-value test; enters a budget only via a calibrator (Ramdas–Wang 2025 Prop. 2.5, Thm 11.5).' },
     },
     {
         idPrefixes: ['hotelling_t2_safe'],
@@ -67,7 +86,12 @@ exports.GUARANTEE_TABLE = Object.freeze([
         estimatedBaseline: 'unrecorded',
         alphaPolicy: 'ville_spend',
         evidence: 'Safe-test construction; E[e|H0] = 1 iff compiled parameters are the truth '
-            + '(_hotelling-safe.ts:110-112) — axis-2 unrecorded, not established.',
+            + '(_hotelling-safe.ts:110-112) — axis-2 unrecorded, not established. The SHIPPED '
+            + 'threshold is a bootstrap (1−alpha) quantile of max wealth, not 1/alpha '
+            + '(sliding_buffer_threshold; median 3.6e76 × 1/alpha over 34,481 compiled cells, '
+            + 'knowledge stats/ville-guarantee-is-empirical): a crossing-rate calibration on an '
+            + 'unstated class (Ramdas–Wang 2025 Lemma 15.1), which licenses no e-value claim.',
+        approximateEValue: { form: 'unrecorded' },
     },
     {
         idPrefixes: ['sequential_mmd_betting_e_process', 'sequential_mmd_e_process'],
@@ -77,7 +101,16 @@ exports.GUARANTEE_TABLE = Object.freeze([
         validityClass: 'ville_anytime_valid',
         estimatedBaseline: 'unrecorded',
         alphaPolicy: 'ville_spend',
-        evidence: 'Betting construction on RFF witnesses; classical bootstrap-null retired at Q68.',
+        evidence: 'Betting construction on RFF witnesses; classical bootstrap-null retired at Q68. '
+            + 'Construction premise REFUTED at exact parameters 2026-08-19 (C57): the streaming witness '
+            + 'is not conditionally centered; detector retired from DeploySignal compiles (C21), '
+            + 'certification REFUSE.',
+        approximateEValue: {
+            form: 'epsilon_growing',
+            law: 'increment estimator 1.001303 / 1.001234 (corr / diag) at EXACT compiled parameters, '
+                + 'the lambda·b channel; E[S_900|H0] ≈ 5, i.e. epsilon_900 ≈ 4 and growing with T.',
+            source: 'family-c-witness-centering run 2026-08-19 (C57)',
+        },
     },
     {
         idPrefixes: ['sequential_mmd'],
@@ -88,6 +121,7 @@ exports.GUARANTEE_TABLE = Object.freeze([
         estimatedBaseline: 'unrecorded',
         alphaPolicy: 'none',
         evidence: 'Q68 classical retirement; audit readers may still see the id in v1 replays.',
+        approximateEValue: { form: 'not_e_value', reason: 'classical bootstrap-null p-value; removed.' },
     },
     {
         idPrefixes: ['spectral_peak_acf_'],
@@ -99,6 +133,7 @@ exports.GUARANTEE_TABLE = Object.freeze([
         alphaPolicy: 'classical_epoch_alpha',
         evidence: 'Bootstrap quantile threshold. Known defect: at N bootstraps the threshold cannot '
             + 'resolve alpha_D finer than 1/N (AR(1) path N=500 -> 2e-3); finer alphas book alpha not delivered.',
+        approximateEValue: { form: 'not_e_value', reason: 'a bootstrap-quantile p-value test per evaluation; no wealth process.' },
     },
     {
         idPrefixes: ['spectral_e_detector_'],
@@ -116,6 +151,17 @@ exports.GUARANTEE_TABLE = Object.freeze([
             + 'FAIL-marginal (family-d-emean run-20260818T222835Z; C54: state K beside T). Violation '
             + 'bounded. Priced c-bound (bb56070): firing at c/alpha restores FDR <= alpha. '
             + 'e_value_inflation_bound ABSENT means unpriced inflation.',
+        approximateEValue: {
+            form: 'epsilon',
+            epsilon: 0.0636,
+            horizon: 300,
+            calibration_windows: 400,
+            note: 'epsilon = c − 1 (Def. 10.1, delta = 0); 0.1076 at T = 900 (K = 400), 0.1184 at T = 900 '
+                + 'at exact moments, 1.4934 at K = 100 / T = 900 — grows with T, shrinks with K, so the '
+                + 'price is valid only up to the measured horizon at the stated K (SpectralInflationBound '
+                + 'carries both, C54). FDR <= alpha·(1+epsilon) by Thm 10.24 when the bound is set.',
+            source: 'family-d-emean run-20260818T222835Z (C54/C55)',
+        },
     },
     {
         idPrefixes: ['mahalanobis_conformal_baseline'],
@@ -130,6 +176,13 @@ exports.GUARANTEE_TABLE = Object.freeze([
             + 'tools/calibrators/family-e.ts). The weighted_e_value variant is Ville-classed '
             + '(conformal.ts) under the same assumption; unweighted/weighted variants are per-tick '
             + 'threshold tests with no wealth process.',
+        approximateEValue: {
+            form: 'not_e_value',
+            reason: 'the shipped kinds (unweighted / weighted) are per-tick conformal p-value tests, and '
+                + 'the p is not established super-uniform (parametric-bootstrap calibration, '
+                + 'knowledge stats/family-e-budget-ruling); the weighted_e_value kind is unmeasured '
+                + '(unrecorded) and unreachable under the default compiler path.',
+        },
     },
 ]);
 /** The core.ts heuristic layer, covered explicitly (2026-08-22). core.ts ships a second
@@ -159,6 +212,38 @@ exports.HEURISTIC_CORE_GUARANTEE = Object.freeze({
     evidence: 'Hand-tuned constants with no derivation trace; sole production caller is the Family B '
         + 'row (DeploySignal engine/gates/_health-defs.ts). Coverage added 2026-08-22 after external '
         + 'review flagged the layer as outside the guarantee table.',
+    approximateEValue: { form: 'not_e_value', reason: 'heuristic trend layer; no expectation claim.' },
+});
+/** Axis 3 for the constructions in ESTIMATED_BASELINE_GUARANTEES, keyed the same way. These are
+ *  the portfolio's genuine e-values inside their envelopes, and the one CONSTANT epsilon on the
+ *  record. */
+exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = Object.freeze({
+    safe_t_e_value: {
+        form: 'e_value',
+        note: 'right-Haar / GROW: sigma integrated out exactly, an e-value at every calibration length '
+            + 'with KNOWN phi; outside the envelope (estimated phi at 0.9 from a 100-sample window) '
+            + 'mean(e) = 9,710 — knowledge stats/terminal-evalue-2026-08-02; maxPhiValid 0.95.',
+    },
+    universal_inference_e_value: {
+        form: 'e_value',
+        note: 'split LRT, an e-value with no regularity conditions (E[e|H0] ≈ 0.13–0.17: ~6× slack '
+            + 'from the fixed split); valid at every phi, inert above maxPhiPowered 0.8.',
+    },
+    sequential_ui_e_process: {
+        form: 'e_value',
+        note: 'E[E_tau] <= 1 at every stopping time including near-unit-root (ADR 0025); the free-phi '
+            + 'null absorbs small steps (valid and inert against +3 sd on clustersynth).',
+    },
+    nuisance_robust_bf_e_value: {
+        form: 'epsilon',
+        epsilon: 0.155,
+        horizon: 0,
+        calibration_windows: 'exact',
+        note: 'RETRACTED: E[BF|H0] = (1+2x)/sqrt((1+x)(1+3x)) ≈ 1.155 at EVERY calibration length — the '
+            + 'one constant epsilon in the portfolio (horizon 0 = single-shot). FDR <= 1.155·alpha if '
+            + 'used as-is; deprecated for safe-t.',
+        source: 'engine ADR 0005; knowledge stats/invalid-nuisance-robust-bf-e-value',
+    },
 });
 /** Estimated-baseline (axis-2) defaults and the retraction, keyed by construction rather than
  *  registry id — these are inputs a CONSUMER may route to the FDR path, not per-signal detectors. */

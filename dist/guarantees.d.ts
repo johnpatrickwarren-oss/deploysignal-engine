@@ -2,6 +2,40 @@ import { type DetectorId } from './types/audit';
 import { type ValidityEnvelope } from './detectors/validity-envelope';
 /** Axis 1 — what the repeated-look guarantee is, if any. */
 export type ValidityClass = 'ville_anytime_valid' | 'bounded_priced' | 'classical_epoch' | 'exact_finite_sample' | 'heuristic' | 'retracted';
+/** Axis 3 — the (epsilon, delta)-approximate e-value form of the row's statistic under H0
+ *  (Ramdas–Wang 2025 Def. 10.1). Every form is a MEASURED or DERIVED statement with its source;
+ *  'unrecorded' is the honest blank and does not mean epsilon = 0. */
+export type ApproximateEValue = 
+/** a genuine e-value in the stated regime (epsilon = delta = 0). */
+{
+    form: 'e_value';
+    note: string;
+}
+/** (epsilon, 0) at a MEASURED horizon and calibration size: E/(1+epsilon) is an e-value there,
+ *  FDR <= alpha·(1+epsilon) by Theorem 10.24. epsilon grows with the horizon unless stated. */
+ | {
+    form: 'epsilon';
+    epsilon: number;
+    horizon: number;
+    calibration_windows: number | 'exact';
+    note: string;
+    source: string;
+}
+/** epsilon unbounded in the horizon: no constant prices it. `law` states the growth. */
+ | {
+    form: 'epsilon_growing';
+    law: string;
+    kappa?: number;
+    source: string;
+}
+/** not an e-value by construction (a p-value, a rule, a classical test): Theorem 10.24 does
+ *  not apply and the statistic must not enter an e-value budget as one. */
+ | {
+    form: 'not_e_value';
+    reason: string;
+} | {
+    form: 'unrecorded';
+};
 export interface GuaranteeRow {
     /** Registry ids this row covers (prefix-matched against types/audit DETECTOR_REGISTRY). */
     idPrefixes: readonly string[];
@@ -16,6 +50,8 @@ export interface GuaranteeRow {
     alphaPolicy: 'ville_spend' | 'priced_spend_requires_c_bound' | 'classical_epoch_alpha' | 'none';
     /** What established the class: the measurement or decision, dated. */
     evidence: string;
+    /** Axis 3 — see ApproximateEValue. */
+    approximateEValue: ApproximateEValue;
 }
 export declare const GUARANTEE_TABLE: readonly GuaranteeRow[];
 /** The core.ts heuristic layer, covered explicitly (2026-08-22). core.ts ships a second
@@ -43,7 +79,15 @@ export declare const HEURISTIC_CORE_GUARANTEE: Readonly<{
     estimatedBaseline: "unrecorded";
     alphaPolicy: "none";
     evidence: string;
+    approximateEValue: {
+        readonly form: "not_e_value";
+        readonly reason: "heuristic trend layer; no expectation claim.";
+    };
 }>;
+/** Axis 3 for the constructions in ESTIMATED_BASELINE_GUARANTEES, keyed the same way. These are
+ *  the portfolio's genuine e-values inside their envelopes, and the one CONSTANT epsilon on the
+ *  record. */
+export declare const APPROXIMATE_E_VALUE_BY_CONSTRUCTION: Readonly<Record<keyof typeof ESTIMATED_BASELINE_GUARANTEES, ApproximateEValue>>;
 /** Estimated-baseline (axis-2) defaults and the retraction, keyed by construction rather than
  *  registry id — these are inputs a CONSUMER may route to the FDR path, not per-signal detectors. */
 export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{

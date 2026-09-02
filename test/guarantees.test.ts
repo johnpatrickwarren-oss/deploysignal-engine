@@ -1,6 +1,7 @@
 // test/guarantees.test.ts — the guarantee table is total, honest, and live.
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { APPROXIMATE_E_VALUE_BY_CONSTRUCTION } from '../guarantees';
 import { DETECTOR_REGISTRY, type DetectorId } from '../types/audit';
 import {
   GUARANTEE_TABLE, guaranteeFor, guaranteeManifest, ESTIMATED_BASELINE_GUARANTEES,
@@ -96,3 +97,57 @@ describe('guarantee table (WORKLIST C4)', () => {
     assert.ok(row.implementation.includes('HEURISTIC_CORE_GUARANTEE'));
   });
 });
+
+// ── Axis 3 (C61, 2026-09-02): the (epsilon, delta)-approximate e-value form ──────────────
+test('axis 3 is total: every row and the core layer state an approximate-e-value form', () => {
+  for (const row of GUARANTEE_TABLE) {
+    assert.ok(row.approximateEValue && row.approximateEValue.form, `${row.detector}: no axis 3`);
+  }
+  assert.equal(HEURISTIC_CORE_GUARANTEE.approximateEValue.form, 'not_e_value');
+});
+
+test('axis 3 is consistent with axes 1 and 2', () => {
+  for (const row of GUARANTEE_TABLE) {
+    const a = row.approximateEValue;
+    // a genuine e-value claim needs a recorded envelope; nothing in the registry table qualifies today
+    if (a.form === 'e_value') assert.notEqual(row.estimatedBaseline, 'unrecorded', `${row.detector}: e_value with no envelope`);
+    // a Ville label whose envelope records the estimation premise false cannot be 'e_value'
+    if (row.validityClass === 'ville_anytime_valid' && row.estimatedBaseline !== 'unrecorded'
+        && row.estimatedBaseline.validUnderEstimatedBaseline === false) {
+      assert.notEqual(a.form, 'e_value', `${row.detector}: premise false but claimed e_value`);
+    }
+    // a priced row is an (epsilon, 0) form with a measured horizon and K
+    if (row.validityClass === 'bounded_priced') {
+      assert.equal(a.form, 'epsilon');
+      if (a.form === 'epsilon') { assert.ok(a.epsilon > 0 && a.horizon > 0 && a.calibration_windows !== undefined); }
+    }
+    // classical / heuristic / retracted rows are not e-values
+    if (row.validityClass === 'classical_epoch' || row.validityClass === 'heuristic') {
+      assert.equal(a.form, 'not_e_value', `${row.detector}: ${row.validityClass} must be not_e_value`);
+    }
+    if (a.form === 'epsilon') assert.ok(a.epsilon >= 0 && a.source.length > 0);
+    if (a.form === 'epsilon_growing') assert.ok(a.law.length > 20 && a.source.length > 0);
+  }
+});
+
+test('the Family A plug-in rows carry the growing-epsilon law with the measured kappa', () => {
+  const betting = guaranteeFor('betting_e_process_ttft')!.approximateEValue;
+  assert.equal(betting.form, 'epsilon_growing');
+  if (betting.form === 'epsilon_growing') assert.equal(betting.kappa, 0.8445);
+  assert.equal(guaranteeFor('page_cusum_ttft')!.approximateEValue.form, 'epsilon_growing');
+});
+
+test('the constructions: three e-values inside their envelopes and one constant epsilon', () => {
+  assert.equal(APPROXIMATE_E_VALUE_BY_CONSTRUCTION.safe_t_e_value.form, 'e_value');
+  assert.equal(APPROXIMATE_E_VALUE_BY_CONSTRUCTION.universal_inference_e_value.form, 'e_value');
+  assert.equal(APPROXIMATE_E_VALUE_BY_CONSTRUCTION.sequential_ui_e_process.form, 'e_value');
+  const bf = APPROXIMATE_E_VALUE_BY_CONSTRUCTION.nuisance_robust_bf_e_value;
+  assert.equal(bf.form, 'epsilon');
+  if (bf.form === 'epsilon') assert.ok(Math.abs(bf.epsilon - 0.155) < 1e-9);
+});
+
+test('the manifest carries axis 3 on every row', () => {
+  const parsed = JSON.parse(guaranteeManifest()) as Array<{ approximateEValue?: { form: string } }>;
+  for (const r of parsed) assert.ok(r.approximateEValue?.form, 'manifest row without axis 3');
+});
+

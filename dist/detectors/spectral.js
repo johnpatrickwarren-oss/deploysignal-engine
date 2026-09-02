@@ -14,6 +14,7 @@ exports.freshSpectralEDetectorState = freshSpectralEDetectorState;
 exports.evaluateSpectralEDetector = evaluateSpectralEDetector;
 const schema_continuity_1 = require("../l0/schema-continuity");
 const _wealth_1 = require("./_wealth");
+const _evidence_1 = require("./_evidence");
 const DEFAULT_ALPHA_D = 1e-4;
 exports.DEFAULT_ALPHA_D = DEFAULT_ALPHA_D;
 const DEFAULT_MIN_PEAK_LAG = 3;
@@ -316,6 +317,16 @@ function evaluateSpectralEDetector(input, peak_t, state) {
     state.log_M = (0, _wealth_1.advanceLogWealth)(logM, z_t, LOG_E_DETECTOR_WEALTH_FLOOR);
     state.M = (0, _wealth_1.wealthView)(state.log_M);
     state.n += 1;
+    // ADR 0027 — evidence surface. `priced` when a c-bound is in force (threshold = c/α).
+    if (!Number.isNaN(z_t))
+        state.log_peak_M = (0, _evidence_1.advanceLogPeak)(state.log_peak_M, state.log_M);
+    const evidence = (0, _evidence_1.buildEvidence)({
+        log_wealth: state.log_M,
+        log_increment: Number.isNaN(z_t) ? null : state.log_M - logM,
+        bet: null, n: state.n, threshold,
+        threshold_kind: inflationBound !== 1 ? 'priced' : 'ville',
+        log_peak_wealth: (0, _evidence_1.advanceLogPeak)(state.log_peak_M, state.log_M),
+    });
     if (state.M >= threshold) {
         const alphaSpent = Math.max(0, input.alpha - state.alphaConsumed);
         state.alphaConsumed = input.alpha;
@@ -323,14 +334,14 @@ function evaluateSpectralEDetector(input, peak_t, state) {
             verdict: 'fire', statistic: state.M, threshold,
             alpha_consumed: alphaSpent, alpha_spent: alphaSpent,
             reason_code: 'spectral_e_detector_wealth_exceeded',
-            family: 'D', signal: input.signal,
+            family: 'D', signal: input.signal, evidence,
         };
     }
     return {
         verdict: 'clean', statistic: state.M, threshold,
         alpha_consumed: 0, alpha_spent: 0,
         reason_code: 'below_threshold',
-        family: 'D', signal: input.signal,
+        family: 'D', signal: input.signal, evidence,
     };
 }
 //# sourceMappingURL=spectral.js.map

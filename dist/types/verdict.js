@@ -32,5 +32,12 @@
 //      peer-to-peer interconnect; undirected-deduped; BFS at engine/topology-overlay.ts
 //      treats edges bidirectionally regardless of relationship).
 // Both extensions are additive-only; Addition #25 D2/D5 + Addition #26 D4 preserved.
+//
+// ADR 0027 amendment (2026-09-02) — one additive extension:
+//   8. DetectorVerdict adds optional `evidence?: EvidenceSurface` (the log-domain evidence
+//      surface, types/verdict-extensions/evidence-surface.ts). Emitted by the multiplicative
+//      wealth detectors only; absent everywhere else. No consumer enumerates or spreads a
+//      DetectorVerdict, and the audit projection (DeploySignal DetectorTripV2) selects fields
+//      explicitly, so the addition is invisible until a consumer opts in.
 Object.defineProperty(exports, "__esModule", { value: true });
 //# sourceMappingURL=verdict.js.map

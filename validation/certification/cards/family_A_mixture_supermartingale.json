@@ -7,17 +7,17 @@
   "family": "A",
   "class": "test_martingale",
   "engine_pin": {
-    "version": "0.6.6-pre",
-    "sha": "866757aa663185d7d3798a1babb9bcd3184166da"
+    "version": "0.6.7-pre",
+    "sha": "849618d7606ed0025018784ce917034e06f16271"
   },
   "source_files": [
     {
       "path": "detectors/_page-cusum-mixture.ts",
-      "sha256": "4130fbf4f51f405665a661c12c4c760bf6e39c5e0bdd4b0e35d1eebdcf6274b3"
+      "sha256": "9417f54bcd2d0c4632ac63a5f0125b990ddfb70e151a15aa8cf676aeddca5094"
     },
     {
       "path": "detectors/family-a-mixture-supermartingale.ts",
-      "sha256": "af2c2c414187d41a33dc5f0702ffcb76bfb98cd2e393492a9e8381ec5a150c4f"
+      "sha256": "c27a94e54d7afd39927a473e889d6134d9765794c13565d89c2dc9e61e43873e"
     },
     {
       "path": "detectors/validity-envelope.ts",

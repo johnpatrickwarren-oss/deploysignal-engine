@@ -31,11 +31,19 @@
 //      peer-to-peer interconnect; undirected-deduped; BFS at engine/topology-overlay.ts
 //      treats edges bidirectionally regardless of relationship).
 // Both extensions are additive-only; Addition #25 D2/D5 + Addition #26 D4 preserved.
+//
+// ADR 0027 amendment (2026-09-02) — one additive extension:
+//   8. DetectorVerdict adds optional `evidence?: EvidenceSurface` (the log-domain evidence
+//      surface, types/verdict-extensions/evidence-surface.ts). Emitted by the multiplicative
+//      wealth detectors only; absent everywhere else. No consumer enumerates or spreads a
+//      DetectorVerdict, and the audit projection (DeploySignal DetectorTripV2) selects fields
+//      explicitly, so the addition is invisible until a consumer opts in.
 
 // engine/types/verdict.ts — Scenario, orchestrator return, fusion
 // output, detector-verdict, verdict-group + topology overlay artifacts.
 
 import type { Verdict, FamilyId } from './primitives';
+import type { EvidenceSurface } from './verdict-extensions/evidence-surface';
 import type { Baseline, Flags } from './metrics';
 import type {
   RiskLevel, Author, ChangeType, TimeWindow,
@@ -170,6 +178,12 @@ export interface DetectorVerdict {
    *  suppress under `ignore_thresholds` (per ARCHITECT-REPLY-31
    *  multivariate semantic). */
   ignore_threshold_trigger_signal?: string;
+  /** ADR 0027 — the log-domain evidence surface: log-wealth, realized log-increment, the bet,
+   *  nats to the threshold in force and what that threshold is, the realized growth rate, and the
+   *  anytime p-value 1/max wealth. Present only on verdicts from multiplicative wealth detectors.
+   *  Carries the validity boundary in its own docs: on a path whose estimation premise is false
+   *  these are the detector's bookkeeping, not evidence. */
+  evidence?: EvidenceSurface;
 }
 
 // ── Addition #25 (ARCHITECT-REPLY-47) — L3b VerdictGroup aggregator ──

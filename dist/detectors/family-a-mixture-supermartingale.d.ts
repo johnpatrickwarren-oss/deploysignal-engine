@@ -1,4 +1,5 @@
 import type { FamilyAPerSignalParams } from '../types/families/a';
+import { type MixtureConfidenceSequence } from './mixture-confidence-sequence';
 /** Per-(signal) mixture-supermartingale state. Persists across ticks
  *  within a window; reset at window boundary. Sticky firing latch
  *  preserves Ville-bound semantic (once threshold crossed, detector
@@ -25,6 +26,12 @@ export interface MixtureSupermartingaleState {
      *  freshMixtureSupermartingaleState). When ar1_phi=0 (default), this
      *  field is unused and pre-whitening reduces to identity. */
     last_x_centered: number;
+    /** ADR 0027 — the UNCAPPED log of M_t. `M_t` is materialized from a copy capped at 120 nats
+     *  (see computeGaussianMixtureSupermartingale), so this is the only exact record of the
+     *  evidence once a fault runs long. Optional (additive); absence heals to log(M_t). */
+    log_M_t?: number;
+    /** ADR 0027 — running max of log_M_t (anytime p-value). Optional; heals on update. */
+    log_peak_M?: number;
 }
 export declare function freshMixtureSupermartingaleState(): MixtureSupermartingaleState;
 export type MixtureSupermartingaleStates = Record<string, MixtureSupermartingaleState>;
@@ -43,6 +50,11 @@ export declare function getOrCreateMixtureSupermartingaleState(states: MixtureSu
  *
  *  M_t starts at 1.0 at t=0 (S_0=0, denom=σ²_prior, log_M_0 = 0). */
 export declare function computeGaussianMixtureSupermartingale(S_t: number, t: number, sigma_squared: number, sigma_squared_prior: number): number;
+/** ADR 0027 — the same closed form, UNCAPPED, in the log domain. This is Howard-Ramdas-2021's
+ *  two-sided normal mixture with mixing variance ρ = σ²_prior (eq. 14 there); the linear view
+ *  above caps it at 120 nats for exp safety, this one does not. The engine's mixture-CS
+ *  inversion (detectors/mixture-confidence-sequence.ts) and the evidence surface read this. */
+export declare function computeGaussianMixtureLogSupermartingale(S_t: number, t: number, sigma_squared: number, sigma_squared_prior: number): number;
 /** Howard-Ramdas-2021 §5 Beta mixture supermartingale closed-form.
  *
  *  For a [0,1]-bounded process (Bernoulli or bounded random variables
@@ -112,6 +124,19 @@ export interface PageCusumMixtureSupermartingaleResult {
      *  supermartingale; classical Page-CUSUM was one-sided (reset-at-zero
      *  truncates negative drift); Phase D variant flips to two-sided. */
     two_sided: boolean;
+    /** ADR 0027 — uncapped log M_t (see MixtureSupermartingaleState.log_M_t). */
+    log_M_t: number;
+    /** ADR 0027 — change of log_M_t across this tick. */
+    log_increment: number;
+    /** ADR 0027, study 2026-09-mixture-cs (19/19 HELD, `validation/mixture-cs/REPORT.md`) — the
+     *  confidence sequence inverted from this same mixture: an interval for the shift FROM THE
+     *  COMPILED BASELINE MEAN, in whitened units when ar1_phi ≠ 0, with `excludes_zero` identical
+     *  to the fire rule. REPORTED, no verdict authority. Covers δ − ε under the compiled σ²: with
+     *  an m-sample calibration the fixed-horizon miss rate of the true shift is
+     *  2·Φ̄(w_T/√(1/T+1/m)) (0.30 / 0.09 / 0.007 at T = 300, m = 30/100/500), and as deployed
+     *  (μ̂ and σ̂² both from the window) the 900-tick uniform miss rate measured 0.58 / 0.33 / 0.09.
+     *  Gaussian mixture only; absent on the Beta path. */
+    confidence_sequence?: MixtureConfidenceSequence;
 }
 /** Q66 Phase-3.d.A — Howard-Ramdas-2021 mixture-supermartingale Page-CUSUM
  *  variant. Anytime-valid Ville-bounded; methodology-resampler-mode

@@ -16,6 +16,7 @@
 import type { DetectorVerdict, FamilyCPerCell, SafeHotellingState } from '../types';
 import { cholesky, forwardSolve } from './_linalg';
 import { wealthView, healLogWealth, advanceLogWealth } from './_wealth';
+import { buildEvidence, advanceLogPeak } from './_evidence';
 
 /** ADR 0026 — log-domain observability floor, same value as the previous
  *  linear floor (1e-300). See the floor comment at the update site. */
@@ -124,6 +125,15 @@ export function evaluateSafeHotelling(
   state.log_M = advanceLogWealth(logM, z_t, LOG_SAFE_HOTELLING_FLOOR);
   state.M = wealthView(state.log_M);
   state.n += 1;
+  // ADR 0027 — evidence surface. A NaN z_t held the wealth: no increment to report.
+  if (!Number.isNaN(z_t)) state.log_peak_M = advanceLogPeak(state.log_peak_M, state.log_M);
+  const evidence = buildEvidence({
+    log_wealth: state.log_M,
+    log_increment: Number.isNaN(z_t) ? null : state.log_M - logM,
+    bet: null, n: state.n, threshold,
+    threshold_kind: params.sliding_buffer_threshold !== undefined ? 'bootstrap' : 'ville',
+    log_peak_wealth: advanceLogPeak(state.log_peak_M, state.log_M),
+  });
   if (state.M >= threshold) {
     const alphaSpent = Math.max(0, input.alpha - state.alphaConsumed);
     state.alphaConsumed = input.alpha;
@@ -131,13 +141,13 @@ export function evaluateSafeHotelling(
       verdict: 'fire', statistic: state.M, threshold,
       alpha_consumed: alphaSpent, alpha_spent: alphaSpent,
       reason_code: 'safe_hotelling_wealth_exceeded', family: 'C',
-      signal: 'hotelling_t2_safe',
+      signal: 'hotelling_t2_safe', evidence,
     };
   }
   return {
     verdict: 'clean', statistic: state.M, threshold,
     alpha_consumed: 0, alpha_spent: 0,
     reason_code: 'below_threshold', family: 'C',
-    signal: 'hotelling_t2_safe',
+    signal: 'hotelling_t2_safe', evidence,
   };
 }

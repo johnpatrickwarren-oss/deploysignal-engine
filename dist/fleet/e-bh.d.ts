@@ -11,6 +11,28 @@ export interface EBenjaminiHochbergOutput {
     /** Number of selected shards. Operator-facing K in the FDR claim
      *  "expected falsely-flagged shards ≤ q · K." Equals selected.length. */
     K: number;
+    /** Realized selection threshold, in the LOG domain: log(N / (q · max(K, 1))).
+     *
+     *  The selection rule K · e_(K) ≥ N/q means every selected shard has
+     *  e ≥ N/(qK) and — because R is the LARGEST such k — every unselected
+     *  shard has e < N/(qK) (if e_(K+1) ≥ N/(qK) then (K+1)·e_(K+1) > N/q and
+     *  R would be ≥ K+1). So this single number separates the selected set
+     *  exactly: `selected` is precisely the indices with log_margin ≥ 0
+     *  (ties at the boundary are selected). With K = 0 it is log(N/q), the
+     *  value the largest e-value would have needed.
+     *
+     *  DIAGNOSTIC, NOT A GUARANTEE (ramdas-2023 §6.2; knowledge
+     *  stats/e-betting-metrics-2026-09-02 option 3): the threshold is
+     *  data-dependent — it moves with K — so a shard's distance to it is a
+     *  statement about THIS snapshot's ranking, not a certified quantity.
+     *  The FDR claim is unchanged and still rests on the inputs being
+     *  e-values (see the validity contract on eBenjaminiHochberg). */
+    log_threshold_e: number;
+    /** Per-input log-margin to the realized threshold, index-aligned with
+     *  the input array: log(e_i) − log_threshold_e. ≥ 0 iff selected.
+     *  JSON-safe: a zero e-value (log = −∞) is floored at −LOG_MAX_WEALTH so
+     *  the surface never carries −Infinity (the ADR 0026 convention). */
+    log_margin: ReadonlyArray<number>;
 }
 /** Run the e-BH FDR procedure on N per-shard linear-space e-values at FDR
  *  target q.

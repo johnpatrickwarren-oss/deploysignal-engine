@@ -35,6 +35,7 @@ import type {
 } from '../types';
 import { shouldSuppress } from '../l0/schema-continuity';
 import { wealthView, healLogWealth, advanceLogWealth } from './_wealth';
+import { buildEvidence, advanceLogPeak } from './_evidence';
 
 const DEFAULT_ALPHA_D = 1e-4;
 const DEFAULT_MIN_PEAK_LAG = 3;
@@ -394,6 +395,15 @@ export function evaluateSpectralEDetector(
   state.log_M = advanceLogWealth(logM, z_t, LOG_E_DETECTOR_WEALTH_FLOOR);
   state.M = wealthView(state.log_M);
   state.n += 1;
+  // ADR 0027 — evidence surface. `priced` when a c-bound is in force (threshold = c/α).
+  if (!Number.isNaN(z_t)) state.log_peak_M = advanceLogPeak(state.log_peak_M, state.log_M);
+  const evidence = buildEvidence({
+    log_wealth: state.log_M,
+    log_increment: Number.isNaN(z_t) ? null : state.log_M - logM,
+    bet: null, n: state.n, threshold,
+    threshold_kind: inflationBound !== 1 ? 'priced' : 'ville',
+    log_peak_wealth: advanceLogPeak(state.log_peak_M, state.log_M),
+  });
   if (state.M >= threshold) {
     const alphaSpent = Math.max(0, input.alpha - state.alphaConsumed);
     state.alphaConsumed = input.alpha;
@@ -401,13 +411,13 @@ export function evaluateSpectralEDetector(
       verdict: 'fire', statistic: state.M, threshold,
       alpha_consumed: alphaSpent, alpha_spent: alphaSpent,
       reason_code: 'spectral_e_detector_wealth_exceeded',
-      family: 'D', signal: input.signal,
+      family: 'D', signal: input.signal, evidence,
     };
   }
   return {
     verdict: 'clean', statistic: state.M, threshold,
     alpha_consumed: 0, alpha_spent: 0,
     reason_code: 'below_threshold',
-    family: 'D', signal: input.signal,
+    family: 'D', signal: input.signal, evidence,
   };
 }

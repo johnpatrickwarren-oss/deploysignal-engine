@@ -49,6 +49,7 @@ import { FAMILY_A_PRIMARY_SIGNALS, trafficGateMin } from './page-cusum';
 // runtime behavior. DEFAULT_SIGNAL_CLASSES is compile-time only.
 import { transformForClass } from '../signal-classes';
 import { wealthView, healLogWealth, advanceLogWealth } from './_wealth';
+import { buildEvidence, advanceLogPeak } from './_evidence';
 
 const DEFAULT_BAKE: BakeProfile = {
   min_ticks_before_eligible: 3,
@@ -84,6 +85,7 @@ export function freshBettingState(): BettingEProcessState {
     onsFallbackCount: 0,
     last_x_centered: 0,
     log_M: 0,
+    log_peak_M: 0,
   };
 }
 
@@ -197,6 +199,7 @@ export function updateBettingState(
   const logM = healLogWealth(state.log_M, state.M, LOG_WEALTH_FLOOR);
   state.log_M = advanceLogWealth(logM, Math.log(Math.max(0, factor)), LOG_WEALTH_FLOOR);
   state.M = wealthView(state.log_M);
+  state.log_peak_M = advanceLogPeak(state.log_peak_M, state.log_M);  // ADR 0027
   state.bet = picked.bet;
   if (picked.fellBack) state.onsFallbackCount += 1;
   // Running first + second moments of z (for the next tick's bet).
@@ -221,7 +224,24 @@ export interface BettingInput {
   alphaBetting: number;
 }
 
-function suppressed(signal: string, reason: string, state: BettingEProcessState, threshold: number): DetectorVerdict {
+/** ADR 0027 — the evidence surface from the betting state. `logIncrement` is the realized
+ *  change of log_M this tick (null when the tick did not advance the wealth). */
+function bettingEvidence(
+  state: BettingEProcessState, threshold: number | null, thresholdKind: 'ville' | 'bootstrap',
+  logIncrement: number | null,
+) {
+  const logM = healLogWealth(state.log_M, state.M, LOG_WEALTH_FLOOR);
+  return buildEvidence({
+    log_wealth: logM, log_increment: logIncrement, bet: state.bet, n: state.n,
+    threshold, threshold_kind: thresholdKind,
+    log_peak_wealth: advanceLogPeak(state.log_peak_M, logM),
+  });
+}
+
+function suppressed(
+  signal: string, reason: string, state: BettingEProcessState, threshold: number,
+  thresholdKind: 'ville' | 'bootstrap', logIncrement: number | null,
+): DetectorVerdict {
   return {
     verdict: 'suppressed',
     statistic: state.M,
@@ -231,6 +251,7 @@ function suppressed(signal: string, reason: string, state: BettingEProcessState,
     reason_code: reason,
     family: 'A',
     signal,
+    evidence: bettingEvidence(state, threshold, thresholdKind, logIncrement),
   };
 }
 
@@ -246,8 +267,14 @@ export function evaluateBettingEProcess(input: BettingInput, x: number): Detecto
   if (sigmaSquared === undefined || baselineMean === undefined) {
     throw new Error(`betting: missing derivation.{mean, empirical_variance} for signal ${signal}`);
   }
+  // ADR 0027 — realized log-increment: the change of the exact books across this update.
+  // A NaN tick returns before any mutation (n unchanged) and reads as `null`.
+  const logMBefore = healLogWealth(state.log_M, state.M, LOG_WEALTH_FLOOR);
+  const nBefore = state.n;
   updateBettingState(state, x + baselineMean, baselineMean, sigmaSquared, alphaBetting,
     params.derivation?.ar1_phi ?? 0);
+  const logIncrement = state.n === nBefore ? null
+    : healLogWealth(state.log_M, state.M, LOG_WEALTH_FLOOR) - logMBefore;
   // NOTE: the gates/health caller supplies `x` already mean-centered
   // (live − baseline mean, same convention as Page-CUSUM). updateBettingState
   // expects the raw `x` and re-centers internally; we restore by adding
@@ -261,18 +288,20 @@ export function evaluateBettingEProcess(input: BettingInput, x: number): Detecto
   // MECHANISM-2026-04-28.md.
   const threshold = params.derivation?.betting_sliding_buffer_threshold
     ?? (1 / alphaBetting);
+  const thresholdKind = params.derivation?.betting_sliding_buffer_threshold !== undefined
+    ? 'bootstrap' : 'ville';
 
   if (input.ticksSinceDeploy < params.min_ticks_before_eligible) {
-    return suppressed(signal, 'bake_profile_not_met', state, threshold);
+    return suppressed(signal, 'bake_profile_not_met', state, threshold, thresholdKind, logIncrement);
   }
   if (state.n < params.min_observation_window) {
-    return suppressed(signal, 'bake_profile_not_met', state, threshold);
+    return suppressed(signal, 'bake_profile_not_met', state, threshold, thresholdKind, logIncrement);
   }
   if (input.deployAgeDays > params.max_deploy_window_days) {
-    return suppressed(signal, 'bake_profile_not_met', state, threshold);
+    return suppressed(signal, 'bake_profile_not_met', state, threshold, thresholdKind, logIncrement);
   }
   if (input.trafficPct < input.trafficGate) {
-    return suppressed(signal, 'traffic_pct_below_gate', state, threshold);
+    return suppressed(signal, 'traffic_pct_below_gate', state, threshold, thresholdKind, logIncrement);
   }
 
   if (state.M >= threshold) {
@@ -285,6 +314,7 @@ export function evaluateBettingEProcess(input: BettingInput, x: number): Detecto
       reason_code: 'betting_wealth_exceeded_threshold',
       family: 'A',
       signal,
+      evidence: bettingEvidence(state, threshold, thresholdKind, logIncrement),
     };
   }
   return {
@@ -296,6 +326,7 @@ export function evaluateBettingEProcess(input: BettingInput, x: number): Detecto
     reason_code: state.M > 1 ? 'accumulating' : 'at_initial_wealth',
     family: 'A',
     signal,
+    evidence: bettingEvidence(state, threshold, thresholdKind, logIncrement),
   };
 }
 

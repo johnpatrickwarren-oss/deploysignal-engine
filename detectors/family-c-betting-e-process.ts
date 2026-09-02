@@ -84,6 +84,7 @@ import {
   freshFamilyCBettingEProcessState, liveVectorFamilyC,
   familyCBakeProfile, suppressedVerdict,
 } from './_family-c-betting-state';
+import { buildEvidence, advanceLogPeak } from './_evidence';
 
 // ── Public export surface (re-export facade; paths unchanged) ───────────
 export {
@@ -360,12 +361,19 @@ function stepBettingTick(
 function bettingFireCheck(
   state: FamilyCBettingEProcessState,
   setup: BettingEvalSetup,
+  tick: { log_factor: number; bet_used: number },
 ): { result: DetectorVerdict; verdictLabel: string; firedThisTick: boolean; S_t_audit: number } {
   const { bp, log_threshold, threshold } = setup;
 
   // Materialize S_t for audit visibility; use Math.exp guarded against
   // inf overflow at extreme wealth (rare but real on prolonged H₁ runs).
   const S_t_audit = state.log_S_t > 700 ? Number.MAX_VALUE : Math.exp(state.log_S_t);
+  // ADR 0027 — evidence surface; the log threshold is already canonical here.
+  state.log_peak_S_t = advanceLogPeak(state.log_peak_S_t, state.log_S_t);
+  const evidence = buildEvidence({
+    log_wealth: state.log_S_t, log_increment: tick.log_factor, bet: tick.bet_used,
+    n: state.n, threshold, threshold_kind: 'ville', log_peak_wealth: state.log_peak_S_t,
+  });
   if (state.log_S_t >= log_threshold) {
     const alphaSpent = Math.max(0, bp.alpha - state.alphaConsumed);
     state.alphaConsumed = bp.alpha;
@@ -381,7 +389,7 @@ function bettingFireCheck(
         alpha_consumed: alphaSpent, alpha_spent: alphaSpent,
         reason_code: 'family_c_betting_wealth_exceeded',
         family: 'C',
-        signal: 'sequential_mmd_betting_e_process',
+        signal: 'sequential_mmd_betting_e_process', evidence,
       },
       verdictLabel: 'fire', firedThisTick, S_t_audit,
     };
@@ -391,7 +399,7 @@ function bettingFireCheck(
       verdict: 'clean', statistic: S_t_audit, threshold,
       alpha_consumed: 0, alpha_spent: 0,
       reason_code: 'below_threshold', family: 'C',
-      signal: 'sequential_mmd_betting_e_process',
+      signal: 'sequential_mmd_betting_e_process', evidence,
     },
     verdictLabel: 'clean', firedThisTick: false, S_t_audit,
   };
@@ -431,11 +439,13 @@ export function evaluateFamilyCBettingEProcess(
   // Q72 trace — capture pre-state BEFORE any mutation + emit headers.
   const pre = q72CapturePre(state, setup, pool, stateKey);
 
-  // Per-tick core: witness → wealth → ONS → bookkeeping.
+  // Per-tick core: witness → wealth → ONS → bookkeeping. The bet applied this tick is the
+  // predictable λ_{t−1} held BEFORE the step (onsUpdate then writes λ_t for the next tick).
+  const bet_used = state.ons_lambda;
   const { F_t, wealth_factor, log_factor } = stepBettingTick(state, setup, fm, pool);
 
   // Ville-bound fire check.
-  const { result, verdictLabel, firedThisTick } = bettingFireCheck(state, setup);
+  const { result, verdictLabel, firedThisTick } = bettingFireCheck(state, setup, { log_factor, bet_used });
 
   // Q72 Phase 1 instrumentation — emit per-tick record AFTER all
   // mutations. Captures pre + post state + computed-this-tick deltas.

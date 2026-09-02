@@ -44,6 +44,9 @@ export interface BettingEProcessState {
    *  OPTIONAL (additive) for the same literal-construction reason as
    *  last_x_centered; updateBettingState heals absence via healLogWealth. */
   log_M?: number;
+  /** ADR 0027 — running max of log_M, for the anytime p-value 1/max wealth. OPTIONAL (additive);
+   *  absence heals to the current log_M on the next update. */
+  log_peak_M?: number;
 }
 
 /** Per-signal Family A parameters within a cell. Replaces the Week-2

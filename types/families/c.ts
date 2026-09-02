@@ -331,6 +331,8 @@ export interface FamilyCBettingEProcessState {
   tick_at_first_fire: number | null;
   /** α consumed at fire(s); audit symmetry with EMmdState.alphaConsumed. */
   alphaConsumed: number;
+  /** ADR 0027 — running max of log_S_t (anytime p-value). Optional; heals on update. */
+  log_peak_S_t?: number;
 }
 
 /** Addition #20 — per-(deploy, cell) safe-Hotelling e-process state.
@@ -345,6 +347,8 @@ export interface SafeHotellingState {
   n: number;
   alphaConsumed: number;
   log_M?: number;
+  /** ADR 0027 — running max of log_M (anytime p-value). Optional; heals on update. */
+  log_peak_M?: number;
 }
 
 /** Addition #20 — per-(deploy, cell) e-MMD betting-e-process state.

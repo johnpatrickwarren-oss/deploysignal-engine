@@ -3,7 +3,7 @@
 //
 // Operator-facing API:
 //
-//   eBenjaminiHochberg(perShardEValues, qLevel) → { selected, K }
+//   eBenjaminiHochberg(perShardEValues, qLevel) → { selected, K, log_threshold_e, log_margin }
 //
 // Implements the Ren-Barber 2024 e-BH procedure (Algorithm 1; equivalent
 // to Wang-Ramdas 2022 e-BH; theoretically grounded in Vovk-Wang 2021 §4).
@@ -56,6 +56,8 @@
 // Tessera-original code (NOT vendored from DeploySignal). Extracts to the
 // shared npm package at Tessera Phase 2 close per SCOPING-MEMO-v0.3 § 9.
 
+import { LOG_MAX_WEALTH } from '../detectors/_wealth';
+
 /** Output shape of the e-BH procedure. Wrapped in an object (rather than
  *  returning a bare `number[]`) for forward compatibility — future SLICEs
  *  may add fields (e.g., `threshold_e` for diagnostics) without breaking
@@ -69,6 +71,28 @@ export interface EBenjaminiHochbergOutput {
   /** Number of selected shards. Operator-facing K in the FDR claim
    *  "expected falsely-flagged shards ≤ q · K." Equals selected.length. */
   K: number;
+  /** Realized selection threshold, in the LOG domain: log(N / (q · max(K, 1))).
+   *
+   *  The selection rule K · e_(K) ≥ N/q means every selected shard has
+   *  e ≥ N/(qK) and — because R is the LARGEST such k — every unselected
+   *  shard has e < N/(qK) (if e_(K+1) ≥ N/(qK) then (K+1)·e_(K+1) > N/q and
+   *  R would be ≥ K+1). So this single number separates the selected set
+   *  exactly: `selected` is precisely the indices with log_margin ≥ 0
+   *  (ties at the boundary are selected). With K = 0 it is log(N/q), the
+   *  value the largest e-value would have needed.
+   *
+   *  DIAGNOSTIC, NOT A GUARANTEE (ramdas-2023 §6.2; knowledge
+   *  stats/e-betting-metrics-2026-09-02 option 3): the threshold is
+   *  data-dependent — it moves with K — so a shard's distance to it is a
+   *  statement about THIS snapshot's ranking, not a certified quantity.
+   *  The FDR claim is unchanged and still rests on the inputs being
+   *  e-values (see the validity contract on eBenjaminiHochberg). */
+  log_threshold_e: number;
+  /** Per-input log-margin to the realized threshold, index-aligned with
+   *  the input array: log(e_i) − log_threshold_e. ≥ 0 iff selected.
+   *  JSON-safe: a zero e-value (log = −∞) is floored at −LOG_MAX_WEALTH so
+   *  the surface never carries −Infinity (the ADR 0026 convention). */
+  log_margin: ReadonlyArray<number>;
 }
 
 /** Run the e-BH FDR procedure on N per-shard linear-space e-values at FDR
@@ -138,7 +162,11 @@ export function eBenjaminiHochberg(
     selected.push(indexed[r].idx);
   }
   selected.sort((a, b) => a - b);
-  return { selected, K: R };
+  const log_threshold_e = Math.log(N_over_q / Math.max(R, 1));
+  const log_margin = perShardEValues.map(
+    (e) => Math.max(-LOG_MAX_WEALTH, Math.log(e) - log_threshold_e),
+  );
+  return { selected, K: R, log_threshold_e, log_margin };
 }
 
 /** ADR 0026 — run the e-BH procedure on LOG-space per-shard e-values.
@@ -186,5 +214,9 @@ export function eBenjaminiHochbergLog(
     selected.push(indexed[r].idx);
   }
   selected.sort((a, b) => a - b);
-  return { selected, K: R };
+  const log_threshold_e = logNOverQ - Math.log(Math.max(R, 1));
+  const log_margin = perShardLogEValues.map(
+    (logE) => Math.max(-LOG_MAX_WEALTH, logE - log_threshold_e),
+  );
+  return { selected, K: R, log_threshold_e, log_margin };
 }

@@ -37,6 +37,7 @@ import {
   type CUSUMStates,
 } from './_page-cusum-core';
 import type { FamilyAShadowCtx } from './_page-cusum-core';
+import { buildEvidence, advanceLogPeak } from './_evidence';
 
 export type MixtureSupermartingaleStates = { [signal: string]: MixtureSupermartingaleState };
 
@@ -82,6 +83,7 @@ function mixtureSchemaContinuitySuppression(
       reason_code: reason,
       family: 'A',
       signal,
+      evidence: mixtureEvidence(state, null, null),
     });
   }
   return out;
@@ -112,6 +114,7 @@ function evaluateMixtureSignal(
       family: 'A',
       signal,
       ignore_threshold_trigger_signal: signal,
+      evidence: mixtureEvidence(state, null, null),
     };
   }
   const perSig = lookupFamilyAPerSignal(cfg, cell, signal);
@@ -169,7 +172,21 @@ function evaluateMixtureSignal(
     reason_code: result.fire ? 'cusum_exceeded_threshold' : 'accumulating',
     family: 'A',
     signal,
+    evidence: mixtureEvidence(state, result.threshold, result.log_increment),
   };
+}
+
+/** ADR 0027 — evidence surface from the mixture state; no bet (a mixture, not a betting
+ *  strategy); the threshold is the analytical 1/α. Pre-0027 snapshots heal from M_t. */
+function mixtureEvidence(
+  state: MixtureSupermartingaleState, threshold: number | null, logIncrement: number | null,
+) {
+  const logM = state.log_M_t ?? Math.log(state.M_t);
+  return buildEvidence({
+    log_wealth: logM, log_increment: logIncrement, bet: null, n: state.n,
+    threshold, threshold_kind: 'ville',
+    log_peak_wealth: advanceLogPeak(state.log_peak_M, logM),
+  });
 }
 
 /** Per-tick mixture-supermartingale Page-CUSUM evaluator. Parallel to

@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased — ADR 0027 (2026-09-02)
+
+The log-domain evidence surface and the live validity instruments, from the operator's
+2026-09-01 question on using testing-by-betting for metrics insight
+(`knowledge/stats/pages/e-betting-metrics-2026-09-02.md` carries the literature check).
+Additive only: no verdict, statistic, threshold, fire tick, α accounting or wealth book moves.
+
+- **`DetectorVerdict.evidence?` (ADR 0027, `types/verdict-extensions/evidence-surface.ts`).**
+  The five per-tick wealth detectors (Family A betting and mixture, safe-Hotelling, the spectral
+  e-detector, the Family C betting e-process) emit log-wealth, the realized log-increment, the
+  bet, `nats_to_threshold` with `threshold_kind ∈ {ville, bootstrap, priced}`, the realized
+  growth rate, and `anytime_p = 1/max wealth`. States gain an optional running-max field; the
+  mixture records its uncapped log (`log_M_t`) so the evidence survives the 120-nat cap of the
+  linear view. Validity boundary stated on the type: on an estimated-baseline path these are
+  bookkeeping, not evidence.
+- **e-BH `log_threshold_e` and `log_margin` (`fleet/e-bh.ts`).** The realized selection
+  threshold `log(N/(q·max(K,1)))` and each input's log-margin to it; margin ≥ 0 iff selected,
+  checked on 200 random snapshots. Zero e-values floor at `−LOG_MAX_WEALTH`.
+- **`fleet/calibration-monitor.ts`.** Tessera's runtime calibration monitor ported
+  (bounded/gaussian increments, per-λ capital average, sticky revocation at `1/α_cal`) with its
+  tests, contract-agnostic; plus the increment estimator `E[exp(Δ log M)]` as a REPORTED
+  instrument (`refutedAboveOne` is its only claim).
+- **`detectors/mixture-confidence-sequence.ts` and `validation/mixture-cs/`.** The closed-form
+  inversion of the Howard normal mixture the Family A detector already computes, under a
+  pre-registered study; not wired into any verdict.
+
+⚠️ **Interface notes:** every field is optional or new. DeploySignal's `DetectorTripV2`
+projection drops `evidence` until amended; `tessera-rng`'s `buildSurface` ignores the new e-BH
+fields until it reads them. Certification cards for the five touched detectors were re-frozen
+(pins only; no verdict re-scored moves).
+
 ## v0.6.7-pre — 2026-08-22
 
 Cut after an external review (2026-08-21) found the release discipline lapsed: `v0.6.6-pre`

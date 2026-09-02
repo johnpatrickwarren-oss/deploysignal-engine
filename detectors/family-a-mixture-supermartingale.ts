@@ -32,6 +32,8 @@
 // Phase-3.d.A close — Phase D's purpose is exactly that re-engineering.
 
 import type { FamilyAPerSignalParams } from '../types/families/a';
+import { advanceLogPeak } from './_evidence';
+import { mixtureConfidenceSequence, type MixtureConfidenceSequence } from './mixture-confidence-sequence';
 
 /** Per-(signal) mixture-supermartingale state. Persists across ticks
  *  within a window; reset at window boundary. Sticky firing latch
@@ -59,10 +61,19 @@ export interface MixtureSupermartingaleState {
    *  freshMixtureSupermartingaleState). When ar1_phi=0 (default), this
    *  field is unused and pre-whitening reduces to identity. */
   last_x_centered: number;
+  /** ADR 0027 — the UNCAPPED log of M_t. `M_t` is materialized from a copy capped at 120 nats
+   *  (see computeGaussianMixtureSupermartingale), so this is the only exact record of the
+   *  evidence once a fault runs long. Optional (additive); absence heals to log(M_t). */
+  log_M_t?: number;
+  /** ADR 0027 — running max of log_M_t (anytime p-value). Optional; heals on update. */
+  log_peak_M?: number;
 }
 
 export function freshMixtureSupermartingaleState(): MixtureSupermartingaleState {
-  return { S_t: 0, M_t: 1, fired: false, tick_at_first_fire: null, n: 0, last_x_centered: 0 };
+  return {
+    S_t: 0, M_t: 1, fired: false, tick_at_first_fire: null, n: 0, last_x_centered: 0,
+    log_M_t: 0, log_peak_M: 0,
+  };
 }
 
 export type MixtureSupermartingaleStates = Record<string, MixtureSupermartingaleState>;
@@ -93,6 +104,21 @@ export function getOrCreateMixtureSupermartingaleState(
 export function computeGaussianMixtureSupermartingale(
   S_t: number, t: number, sigma_squared: number, sigma_squared_prior: number,
 ): number {
+  const log_M_t = computeGaussianMixtureLogSupermartingale(S_t, t, sigma_squared, sigma_squared_prior);
+  // Numerical guard — clamp log_M to avoid Math.exp overflow returning Infinity
+  // when test scenarios push M_t past Ville threshold by huge margin. Cap at
+  // 10× threshold log scale for typical α=1e-3..1e-5 → ln(1/α) ≈ 7..12 → cap ~120.
+  const log_M_capped = Math.min(log_M_t, 120);
+  return Math.exp(log_M_capped);
+}
+
+/** ADR 0027 — the same closed form, UNCAPPED, in the log domain. This is Howard-Ramdas-2021's
+ *  two-sided normal mixture with mixing variance ρ = σ²_prior (eq. 14 there); the linear view
+ *  above caps it at 120 nats for exp safety, this one does not. The engine's mixture-CS
+ *  inversion (detectors/mixture-confidence-sequence.ts) and the evidence surface read this. */
+export function computeGaussianMixtureLogSupermartingale(
+  S_t: number, t: number, sigma_squared: number, sigma_squared_prior: number,
+): number {
   if (sigma_squared_prior <= 0) {
     throw new Error(`Gaussian mixture σ²_prior must be > 0; got ${sigma_squared_prior}`);
   }
@@ -102,15 +128,9 @@ export function computeGaussianMixtureSupermartingale(
   const denom = sigma_squared * t + sigma_squared_prior;
   if (denom <= 0) {
     // Degenerate: σ² = 0 and t = 0; treat as no-evidence (M_0 = 1).
-    return 1.0;
+    return 0;
   }
-  const log_M_t = (S_t * S_t) / (2 * denom)
-                + 0.5 * Math.log(sigma_squared_prior / denom);
-  // Numerical guard — clamp log_M to avoid Math.exp overflow returning Infinity
-  // when test scenarios push M_t past Ville threshold by huge margin. Cap at
-  // 10× threshold log scale for typical α=1e-3..1e-5 → ln(1/α) ≈ 7..12 → cap ~120.
-  const log_M_capped = Math.min(log_M_t, 120);
-  return Math.exp(log_M_capped);
+  return (S_t * S_t) / (2 * denom) + 0.5 * Math.log(sigma_squared_prior / denom);
 }
 
 /** Log-Gamma via Stirling+Lanczos approximation. Accurate to ~1e-10 for
@@ -238,6 +258,19 @@ export interface PageCusumMixtureSupermartingaleResult {
    *  supermartingale; classical Page-CUSUM was one-sided (reset-at-zero
    *  truncates negative drift); Phase D variant flips to two-sided. */
   two_sided: boolean;
+  /** ADR 0027 — uncapped log M_t (see MixtureSupermartingaleState.log_M_t). */
+  log_M_t: number;
+  /** ADR 0027 — change of log_M_t across this tick. */
+  log_increment: number;
+  /** ADR 0027, study 2026-09-mixture-cs (19/19 HELD, `validation/mixture-cs/REPORT.md`) — the
+   *  confidence sequence inverted from this same mixture: an interval for the shift FROM THE
+   *  COMPILED BASELINE MEAN, in whitened units when ar1_phi ≠ 0, with `excludes_zero` identical
+   *  to the fire rule. REPORTED, no verdict authority. Covers δ − ε under the compiled σ²: with
+   *  an m-sample calibration the fixed-horizon miss rate of the true shift is
+   *  2·Φ̄(w_T/√(1/T+1/m)) (0.30 / 0.09 / 0.007 at T = 300, m = 30/100/500), and as deployed
+   *  (μ̂ and σ̂² both from the window) the 900-tick uniform miss rate measured 0.58 / 0.33 / 0.09.
+   *  Gaussian mixture only; absent on the Beta path. */
+  confidence_sequence?: MixtureConfidenceSequence;
 }
 
 /** Q66 Phase-3.d.A — Howard-Ramdas-2021 mixture-supermartingale Page-CUSUM
@@ -271,6 +304,9 @@ export function evaluatePageCusumMixtureSupermartingale(
   const t = state.n;
 
   let M_t: number;
+  let log_M_t: number;
+  // ADR 0027 — previous exact log for the realized increment; heal a pre-0027 snapshot from M_t.
+  const log_M_prev = state.log_M_t ?? Math.log(state.M_t);
   if (params.mixture_distribution === 'gaussian') {
     if (params.gaussian_sigma_squared_prior === undefined) {
       throw new Error(
@@ -286,6 +322,9 @@ export function evaluatePageCusumMixtureSupermartingale(
     M_t = computeGaussianMixtureSupermartingale(
       state.S_t, t, sigma_squared, params.gaussian_sigma_squared_prior,
     );
+    log_M_t = computeGaussianMixtureLogSupermartingale(
+      state.S_t, t, sigma_squared, params.gaussian_sigma_squared_prior,
+    );
   } else if (params.mixture_distribution === 'beta') {
     if (params.beta_alpha_prior === undefined || params.beta_beta_prior === undefined) {
       throw new Error(
@@ -297,6 +336,7 @@ export function evaluatePageCusumMixtureSupermartingale(
       state.S_t, t, baseline_mean,
       params.beta_alpha_prior, params.beta_beta_prior,
     );
+    log_M_t = Math.log(M_t);
     // Suppress unused-variable lint for Beta path (sigma_squared + live_value
     // not consumed; kept in input shape for caller-side parity with Gaussian).
     void sigma_squared; void live_value;
@@ -308,6 +348,8 @@ export function evaluatePageCusumMixtureSupermartingale(
   }
 
   state.M_t = M_t;
+  state.log_M_t = log_M_t;
+  state.log_peak_M = advanceLogPeak(state.log_peak_M, log_M_t);
 
   const threshold = 1 / alpha;
   const fire = M_t >= threshold;
@@ -321,6 +363,13 @@ export function evaluatePageCusumMixtureSupermartingale(
     M_t,
     threshold,
     two_sided: true,
+    log_M_t,
+    log_increment: log_M_t - log_M_prev,
+    ...(params.mixture_distribution === 'gaussian' ? {
+      confidence_sequence: mixtureConfidenceSequence({
+        S_t: state.S_t, t, sigma_squared, sigma_squared_prior: params.gaussian_sigma_squared_prior!, alpha,
+      }),
+    } : {}),
   };
 }
 

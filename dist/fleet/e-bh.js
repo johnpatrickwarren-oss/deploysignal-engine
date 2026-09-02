@@ -4,7 +4,7 @@
 //
 // Operator-facing API:
 //
-//   eBenjaminiHochberg(perShardEValues, qLevel) → { selected, K }
+//   eBenjaminiHochberg(perShardEValues, qLevel) → { selected, K, log_threshold_e, log_margin }
 //
 // Implements the Ren-Barber 2024 e-BH procedure (Algorithm 1; equivalent
 // to Wang-Ramdas 2022 e-BH; theoretically grounded in Vovk-Wang 2021 §4).
@@ -59,6 +59,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.eBenjaminiHochberg = eBenjaminiHochberg;
 exports.eBenjaminiHochbergLog = eBenjaminiHochbergLog;
+const _wealth_1 = require("../detectors/_wealth");
 /** Run the e-BH FDR procedure on N per-shard linear-space e-values at FDR
  *  target q.
  *
@@ -124,7 +125,9 @@ function eBenjaminiHochberg(perShardEValues, qLevel) {
         selected.push(indexed[r].idx);
     }
     selected.sort((a, b) => a - b);
-    return { selected, K: R };
+    const log_threshold_e = Math.log(N_over_q / Math.max(R, 1));
+    const log_margin = perShardEValues.map((e) => Math.max(-_wealth_1.LOG_MAX_WEALTH, Math.log(e) - log_threshold_e));
+    return { selected, K: R, log_threshold_e, log_margin };
 }
 /** ADR 0026 — run the e-BH procedure on LOG-space per-shard e-values.
  *
@@ -169,6 +172,8 @@ function eBenjaminiHochbergLog(perShardLogEValues, qLevel) {
         selected.push(indexed[r].idx);
     }
     selected.sort((a, b) => a - b);
-    return { selected, K: R };
+    const log_threshold_e = logNOverQ - Math.log(Math.max(R, 1));
+    const log_margin = perShardLogEValues.map((logE) => Math.max(-_wealth_1.LOG_MAX_WEALTH, logE - log_threshold_e));
+    return { selected, K: R, log_threshold_e, log_margin };
 }
 //# sourceMappingURL=e-bh.js.map

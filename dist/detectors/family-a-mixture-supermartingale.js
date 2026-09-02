@@ -8,12 +8,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.freshMixtureSupermartingaleState = freshMixtureSupermartingaleState;
 exports.getOrCreateMixtureSupermartingaleState = getOrCreateMixtureSupermartingaleState;
 exports.computeGaussianMixtureSupermartingale = computeGaussianMixtureSupermartingale;
+exports.computeGaussianMixtureLogSupermartingale = computeGaussianMixtureLogSupermartingale;
 exports.computeBetaMixtureSupermartingale = computeBetaMixtureSupermartingale;
 exports.evaluatePageCusumMixtureSupermartingale = evaluatePageCusumMixtureSupermartingale;
 exports.computePerSignalAr1Phi = computePerSignalAr1Phi;
 exports.deriveMixtureSupermartingaleParams = deriveMixtureSupermartingaleParams;
+const _evidence_1 = require("./_evidence");
 function freshMixtureSupermartingaleState() {
-    return { S_t: 0, M_t: 1, fired: false, tick_at_first_fire: null, n: 0, last_x_centered: 0 };
+    return {
+        S_t: 0, M_t: 1, fired: false, tick_at_first_fire: null, n: 0, last_x_centered: 0,
+        log_M_t: 0, log_peak_M: 0,
+    };
 }
 function getOrCreateMixtureSupermartingaleState(states, signal) {
     const s = states[signal];
@@ -37,6 +42,18 @@ function getOrCreateMixtureSupermartingaleState(states, signal) {
  *
  *  M_t starts at 1.0 at t=0 (S_0=0, denom=σ²_prior, log_M_0 = 0). */
 function computeGaussianMixtureSupermartingale(S_t, t, sigma_squared, sigma_squared_prior) {
+    const log_M_t = computeGaussianMixtureLogSupermartingale(S_t, t, sigma_squared, sigma_squared_prior);
+    // Numerical guard — clamp log_M to avoid Math.exp overflow returning Infinity
+    // when test scenarios push M_t past Ville threshold by huge margin. Cap at
+    // 10× threshold log scale for typical α=1e-3..1e-5 → ln(1/α) ≈ 7..12 → cap ~120.
+    const log_M_capped = Math.min(log_M_t, 120);
+    return Math.exp(log_M_capped);
+}
+/** ADR 0027 — the same closed form, UNCAPPED, in the log domain. This is Howard-Ramdas-2021's
+ *  two-sided normal mixture with mixing variance ρ = σ²_prior (eq. 14 there); the linear view
+ *  above caps it at 120 nats for exp safety, this one does not. The engine's mixture-CS
+ *  inversion (detectors/mixture-confidence-sequence.ts) and the evidence surface read this. */
+function computeGaussianMixtureLogSupermartingale(S_t, t, sigma_squared, sigma_squared_prior) {
     if (sigma_squared_prior <= 0) {
         throw new Error(`Gaussian mixture σ²_prior must be > 0; got ${sigma_squared_prior}`);
     }
@@ -46,15 +63,9 @@ function computeGaussianMixtureSupermartingale(S_t, t, sigma_squared, sigma_squa
     const denom = sigma_squared * t + sigma_squared_prior;
     if (denom <= 0) {
         // Degenerate: σ² = 0 and t = 0; treat as no-evidence (M_0 = 1).
-        return 1.0;
+        return 0;
     }
-    const log_M_t = (S_t * S_t) / (2 * denom)
-        + 0.5 * Math.log(sigma_squared_prior / denom);
-    // Numerical guard — clamp log_M to avoid Math.exp overflow returning Infinity
-    // when test scenarios push M_t past Ville threshold by huge margin. Cap at
-    // 10× threshold log scale for typical α=1e-3..1e-5 → ln(1/α) ≈ 7..12 → cap ~120.
-    const log_M_capped = Math.min(log_M_t, 120);
-    return Math.exp(log_M_capped);
+    return (S_t * S_t) / (2 * denom) + 0.5 * Math.log(sigma_squared_prior / denom);
 }
 /** Log-Gamma via Stirling+Lanczos approximation. Accurate to ~1e-10 for
  *  positive real arguments; sufficient for Beta mixture supermartingale
@@ -158,6 +169,9 @@ function evaluatePageCusumMixtureSupermartingale(input) {
     state.n += 1;
     const t = state.n;
     let M_t;
+    let log_M_t;
+    // ADR 0027 — previous exact log for the realized increment; heal a pre-0027 snapshot from M_t.
+    const log_M_prev = state.log_M_t ?? Math.log(state.M_t);
     if (params.mixture_distribution === 'gaussian') {
         if (params.gaussian_sigma_squared_prior === undefined) {
             throw new Error(`mixture_supermartingale_params.gaussian_sigma_squared_prior missing for ${input.signal}; `
@@ -169,6 +183,7 @@ function evaluatePageCusumMixtureSupermartingale(input) {
         // Closed-form is symmetric in S_t² so |S_t| treatment is identical;
         // single computation suffices for two-sided semantic.
         M_t = computeGaussianMixtureSupermartingale(state.S_t, t, sigma_squared, params.gaussian_sigma_squared_prior);
+        log_M_t = computeGaussianMixtureLogSupermartingale(state.S_t, t, sigma_squared, params.gaussian_sigma_squared_prior);
     }
     else if (params.mixture_distribution === 'beta') {
         if (params.beta_alpha_prior === undefined || params.beta_beta_prior === undefined) {
@@ -176,6 +191,7 @@ function evaluatePageCusumMixtureSupermartingale(input) {
                 + 'Q66.1 hyperparameter derivation incomplete at compile time');
         }
         M_t = computeBetaMixtureSupermartingale(state.S_t, t, baseline_mean, params.beta_alpha_prior, params.beta_beta_prior);
+        log_M_t = Math.log(M_t);
         // Suppress unused-variable lint for Beta path (sigma_squared + live_value
         // not consumed; kept in input shape for caller-side parity with Gaussian).
         void sigma_squared;
@@ -186,6 +202,8 @@ function evaluatePageCusumMixtureSupermartingale(input) {
             + 'categorical mixture deferred to Phase-3.d.A.b sub-track');
     }
     state.M_t = M_t;
+    state.log_M_t = log_M_t;
+    state.log_peak_M = (0, _evidence_1.advanceLogPeak)(state.log_peak_M, log_M_t);
     const threshold = 1 / alpha;
     const fire = M_t >= threshold;
     if (fire && !state.fired) {
@@ -197,6 +215,8 @@ function evaluatePageCusumMixtureSupermartingale(input) {
         M_t,
         threshold,
         two_sided: true,
+        log_M_t,
+        log_increment: log_M_t - log_M_prev,
     };
 }
 /** Q66.A.b — compute per-signal AR(1) coefficient phi via Yule-Walker

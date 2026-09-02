@@ -1,4 +1,5 @@
 import type { Verdict } from './primitives';
+import type { EvidenceSurface } from './verdict-extensions/evidence-surface';
 import type { Baseline, Flags } from './metrics';
 import type { RiskLevel, Author, ChangeType, TimeWindow } from './primitives';
 import type { HealthResult, GateResults, PolicyContext, FailFastState, ReversibilityClassification, FiredSignal } from './policy';
@@ -125,6 +126,12 @@ export interface DetectorVerdict {
      *  suppress under `ignore_thresholds` (per ARCHITECT-REPLY-31
      *  multivariate semantic). */
     ignore_threshold_trigger_signal?: string;
+    /** ADR 0027 — the log-domain evidence surface: log-wealth, realized log-increment, the bet,
+     *  nats to the threshold in force and what that threshold is, the realized growth rate, and the
+     *  anytime p-value 1/max wealth. Present only on verdicts from multiplicative wealth detectors.
+     *  Carries the validity boundary in its own docs: on a path whose estimation premise is false
+     *  these are the detector's bookkeeping, not evidence. */
+    evidence?: EvidenceSurface;
 }
 /** Human-readable stable-sorting group identifier.
  *  Format: `group-{deploy_id}-{window_start_ts}` per ARCHITECT-REPLY-47

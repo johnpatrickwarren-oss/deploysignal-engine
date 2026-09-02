@@ -16,6 +16,7 @@ const _q72_trace_1 = require("./_q72-trace");
 const family_c_rff_1 = require("./family-c-rff");
 const _family_c_betting_witness_1 = require("./_family-c-betting-witness");
 const _family_c_betting_state_1 = require("./_family-c-betting-state");
+const _evidence_1 = require("./_evidence");
 // ── Public export surface (re-export facade; paths unchanged) ───────────
 var _family_c_betting_witness_2 = require("./_family-c-betting-witness");
 Object.defineProperty(exports, "computeRffWitness", { enumerable: true, get: function () { return _family_c_betting_witness_2.computeRffWitness; } });
@@ -208,11 +209,17 @@ function stepBettingTick(state, setup, fm, pool) {
 }
 /** Ville-bound fire check (log-space) → DetectorVerdict, plus the trace
  *  bookkeeping fields. Mutates fire/alpha state exactly as original. */
-function bettingFireCheck(state, setup) {
+function bettingFireCheck(state, setup, tick) {
     const { bp, log_threshold, threshold } = setup;
     // Materialize S_t for audit visibility; use Math.exp guarded against
     // inf overflow at extreme wealth (rare but real on prolonged H₁ runs).
     const S_t_audit = state.log_S_t > 700 ? Number.MAX_VALUE : Math.exp(state.log_S_t);
+    // ADR 0027 — evidence surface; the log threshold is already canonical here.
+    state.log_peak_S_t = (0, _evidence_1.advanceLogPeak)(state.log_peak_S_t, state.log_S_t);
+    const evidence = (0, _evidence_1.buildEvidence)({
+        log_wealth: state.log_S_t, log_increment: tick.log_factor, bet: tick.bet_used,
+        n: state.n, threshold, threshold_kind: 'ville', log_peak_wealth: state.log_peak_S_t,
+    });
     if (state.log_S_t >= log_threshold) {
         const alphaSpent = Math.max(0, bp.alpha - state.alphaConsumed);
         state.alphaConsumed = bp.alpha;
@@ -228,7 +235,7 @@ function bettingFireCheck(state, setup) {
                 alpha_consumed: alphaSpent, alpha_spent: alphaSpent,
                 reason_code: 'family_c_betting_wealth_exceeded',
                 family: 'C',
-                signal: 'sequential_mmd_betting_e_process',
+                signal: 'sequential_mmd_betting_e_process', evidence,
             },
             verdictLabel: 'fire', firedThisTick, S_t_audit,
         };
@@ -238,7 +245,7 @@ function bettingFireCheck(state, setup) {
             verdict: 'clean', statistic: S_t_audit, threshold,
             alpha_consumed: 0, alpha_spent: 0,
             reason_code: 'below_threshold', family: 'C',
-            signal: 'sequential_mmd_betting_e_process',
+            signal: 'sequential_mmd_betting_e_process', evidence,
         },
         verdictLabel: 'clean', firedThisTick: false, S_t_audit,
     };
@@ -263,10 +270,12 @@ function evaluateFamilyCBettingEProcess(cfg, liveMetrics, states, ctx) {
     const { state, fm, pool, stateKey } = resolveBettingResources(states, setup, ctx);
     // Q72 trace — capture pre-state BEFORE any mutation + emit headers.
     const pre = q72CapturePre(state, setup, pool, stateKey);
-    // Per-tick core: witness → wealth → ONS → bookkeeping.
+    // Per-tick core: witness → wealth → ONS → bookkeeping. The bet applied this tick is the
+    // predictable λ_{t−1} held BEFORE the step (onsUpdate then writes λ_t for the next tick).
+    const bet_used = state.ons_lambda;
     const { F_t, wealth_factor, log_factor } = stepBettingTick(state, setup, fm, pool);
     // Ville-bound fire check.
-    const { result, verdictLabel, firedThisTick } = bettingFireCheck(state, setup);
+    const { result, verdictLabel, firedThisTick } = bettingFireCheck(state, setup, { log_factor, bet_used });
     // Q72 Phase 1 instrumentation — emit per-tick record AFTER all
     // mutations. Captures pre + post state + computed-this-tick deltas.
     if ((0, _q72_trace_1.q72TraceEnabled)()) {

@@ -144,6 +144,8 @@ export interface SpectralEDetectorState {
    *  view (detectors/_wealth.ts). Optional (additive); absence is healed on
    *  the next update. */
   log_M?: number;
+  /** ADR 0027 — running max of log_M (anytime p-value). Optional; heals on update. */
+  log_peak_M?: number;
   /** 2026-08-03 — ticks observed since the last wealth update.
    *
    *  The e-detector consumes `peak|ACF|` over a rolling window, so evaluating it every tick makes

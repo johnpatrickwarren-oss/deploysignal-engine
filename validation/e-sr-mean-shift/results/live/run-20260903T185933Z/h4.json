@@ -1,0 +1,48 @@
+{
+  "cells": [
+    {
+      "detector_id": "e_sr_mean_shift",
+      "hypothesis": "H4",
+      "null_id": "N2-m30",
+      "alpha": 0.001,
+      "T": 20000,
+      "n": 2000,
+      "p_alarm_T": 0.9825,
+      "arl0_T": 1128.407,
+      "median_run_length": 173,
+      "exceptions": 0
+    },
+    {
+      "detector_id": "e_sr_mean_shift",
+      "hypothesis": "H4",
+      "null_id": "N2-m100",
+      "alpha": 0.001,
+      "T": 20000,
+      "n": 2000,
+      "p_alarm_T": 0.9895,
+      "arl0_T": 1509.126,
+      "median_run_length": 464,
+      "exceptions": 0
+    },
+    {
+      "detector_id": "e_sr_mean_shift",
+      "hypothesis": "H4",
+      "null_id": "N2-m500",
+      "alpha": 0.001,
+      "T": 20000,
+      "n": 2000,
+      "p_alarm_T": 1,
+      "arl0_T": 1587.2,
+      "median_run_length": 868,
+      "exceptions": 0
+    }
+  ],
+  "a": {
+    "pass": true
+  },
+  "b": {
+    "arl0_m30": 1128.407,
+    "pass": false
+  },
+  "verdict": "FAILED"
+}

@@ -1,0 +1,55 @@
+{
+  "protocol_version": 1,
+  "detector_id": "e_sr_mean_shift",
+  "aliases": [
+    "e_sr",
+    "e-sr-mean-shift"
+  ],
+  "family": "SR",
+  "class": "e_detector",
+  "engine_pin": {
+    "version": null,
+    "sha": null
+  },
+  "source_files": [
+    { "path": "detectors/e-sr-mean-shift.ts", "sha256": null },
+    { "path": "detectors/validity-envelope.ts", "sha256": null },
+    { "path": "validation/certification/lib/score.mjs", "sha256": null },
+    { "path": "validation/certification/lib/guards.mjs", "sha256": null },
+    { "path": "validation/certification/lib/constants.mjs", "sha256": null },
+    { "path": "validation/certification/verdict.mjs", "sha256": null },
+    { "path": "validation/certification/lib/collect.mjs", "sha256": null },
+    { "path": "validation/e-detector-cert/harness/run.mjs", "sha256": null }
+  ],
+  "guarantee": {
+    "sentence": "Shiryaev-Roberts mixture e-detector (Shin-Ramdas-Rinaldo 2022 Thm 2.4): E_inf[N*] >= 1/alpha_arl at alpha_arl = 1e-3 for every conditionally mean-zero sub-Gaussian(1) pre-change law after AR(1) whitening at oracle or estimated (m >= 30) parameters, phi <= 0.9, any changepoint. Heavy-tailed pre-change laws (N5, N6, N8) are NOT claimed. Delay after a K1 canonical step is at most D*(alpha_arl, delta_eff) (Thm 4.3 + Prop. B.2 at the effective whitened shift), registered as a floor and not claimed as a theorem about the increment mixture (Amendment v1.C69).",
+    "quantifiers": [
+      { "text": "every sub-Gaussian(1) pre-change law in the claimed regime, any changepoint", "tag": "empirical", "proof_artifact": null },
+      { "text": "delay under D* at every phi <= 0.9", "tag": "empirical", "proof_artifact": null }
+    ],
+    "regime": {
+      "phi_max": 0.9,
+      "m_min": 30,
+      "null_prefixes": ["N1", "N2", "N3", "N4", "N7"],
+      "alpha_arl": 0.001,
+      "baseline": "oracle or estimated (m >= 30)",
+      "nulls": "iid-gaussian, ar1-gaussian (phi <= 0.9), estimated moments and phi"
+    }
+  },
+  "shipped_path": {
+    "kind": "e-detector (SR mixture of increments over 16 lambdas), AR(1) pre-whitened, alarm at M_t >= 1/alpha_arl; exported through ./detectors/*, NO shipped compile path (no engine surface dispatches this detector, so S1 is MISSING by construction and the USE, if issued, is USE under the scorer's non-blocking reading of S1)",
+    "estimator": null,
+    "notes": "ADR 0029: ValidityEnvelope.statistic 'e-detector'; assertValidForFdrPath refuses it under every assertion. alpha_arl is delivered by a log(1/alpha) threshold inside the module, not by a bootstrap. The increment is an e-process only for sub-Gaussian(1) residuals: on t3 the ARL was a fifth of the claim (stats/e-sr-delay-2026-09-03)."
+  },
+  "budget": {
+    "participating": false,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
+  "falsifier": "an in-regime S2 cell with arl0_T + 1.645*arl0_se < 1/alpha_arl, or an in-regime K1-canonical delay cell with delay_canonical + 1.645*delay_se > D*(alpha_arl, delta_eff)",
+  "prior_evidence": [
+    { "stage": "S2", "study": "e-sr-mean-shift", "runs": "e-sr-mean-shift/results/live/run-20260903T185933Z (cells carry detector_id, not pooled by the collector)", "wiki": "stats/e-sr-delay-2026-09-03" },
+    { "stage": "S3", "study": "e-sr-mean-shift", "runs": "e-sr-mean-shift/results/live/run-20260903T185933Z (delay flat in the onset; H3 vs the Thm 4.3 bound at phi = 0)", "wiki": "stats/e-sr-delay-2026-09-03" },
+    { "stage": "S2+S3", "study": "e-detector-cert", "runs": "e-detector-cert/results/live/run-*", "wiki": "stats/e-detector-cert-2026-09-03" }
+  ]
+}

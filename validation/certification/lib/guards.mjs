@@ -1,4 +1,4 @@
-import { CLASS_INSTRUMENTS, TERMINAL_MEAN_BOUND } from './constants.mjs';
+import { CLASS_INSTRUMENTS, TERMINAL_MEAN_BOUND, E_DETECTOR_Z } from './constants.mjs';
 
 // Union of every instrument field the protocol recognizes, across all classes.
 const ALL_INSTRUMENTS = Object.values(CLASS_INSTRUMENTS).flat();
@@ -92,8 +92,43 @@ export function meanRule(cell, cls) {
 // instrument (test_martingale). On e_process cells (the sui shape: increment_estimator
 // present alongside crossing_rate as a foreign, descriptive-only annotation) a huge mean
 // recorded beside crossing_rate: 0 is expected, not impossible -- it was never scored.
+// Amendment v1.C69 -- THE ARL RULE, the e_detector class's S2 instrument scored from its fields.
+// Three outcomes, registered before any run (e-detector-cert PREREGISTRATION §2): CLEARED when
+// the one-sided lower bound clears 1/alpha_arl, REFUTED when the upper bound is below it,
+// INCONCLUSIVE (missing evidence, never a verdict) between. The T-censored arl0_T is a lower
+// bound on E_inf[N*], so censoring can only make clearance harder.
+export function arlRule(cell) {
+  const arl = cell.arl0_T, se = cell.arl0_se, a = cell.alpha_arl;
+  if (![arl, se, a].every(Number.isFinite) || !(a > 0 && a < 1) || se < 0) {
+    return { mapped: 'INCONCLUSIVE', reason: `arl rule: arl0_T=${arl}, arl0_se=${se}, alpha_arl=${a} not all finite and admissible` };
+  }
+  const floor = 1 / a, lo = arl - E_DETECTOR_Z * se, hi = arl + E_DETECTOR_Z * se;
+  if (lo >= floor) return { mapped: 'CLEARED', reason: `arl rule: arl0_T ${arl} - ${E_DETECTOR_Z}*se ${se} = ${lo} >= 1/alpha_arl ${floor}` };
+  if (hi < floor) return { mapped: 'REFUTED', reason: `arl rule: arl0_T ${arl} + ${E_DETECTOR_Z}*se ${se} = ${hi} < 1/alpha_arl ${floor}` };
+  return { mapped: 'INCONCLUSIVE', reason: `arl rule: [${lo}, ${hi}] straddles 1/alpha_arl ${floor}; needs more N` };
+}
+
+// The harness token an e_detector S2 cell records, mapped onto the arl rule's vocabulary so a
+// disagreement between what the harness wrote and what its own fields say can be detected.
+const E_DETECTOR_TOKEN = { 'not-refuted': 'CLEARED', CLEARED: 'CLEARED', FAIL: 'REFUTED', REFUTED: 'REFUTED', INCONCLUSIVE: 'INCONCLUSIVE' };
+
 export function internalConsistency(cells, cls) {
   const flags = [];
+  // v1.C69: for e_detector the recorded token must agree with the arl rule recomputed from the
+  // cell's own fields -- the arm-3 lesson (a harness whose token and numbers disagree) applied to
+  // this class. A flagged cell voids its run, like the test_martingale check below.
+  if (cls === 'e_detector') {
+    for (const c of cells) {
+      if (!('arl0_T' in c) || c.verdict === undefined) continue;
+      const recorded = E_DETECTOR_TOKEN[c.verdict];
+      const rule = arlRule(c).mapped;
+      if (recorded !== rule) {
+        flags.push({ detector: c.detector, null_id: c.null_id, __run: c.__run,
+          reason: `${c.detector} ${c.null_id}: recorded token ${c.verdict} (${recorded ?? 'unmapped'}) disagrees with the arl rule on its own fields (${rule})` });
+      }
+    }
+    return flags;
+  }
   if (cls !== 'test_martingale') return flags;
   for (const c of cells) {
     const inc = c.increment_estimator;

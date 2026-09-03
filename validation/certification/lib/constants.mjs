@@ -1,4 +1,7 @@
-export const CLASSES = ['test_martingale', 'terminal_e_value', 'e_process'];
+// Amendment v1.C69 (2026-09-03): `e_detector` -- a run-length guarantee (E_inf[N*] >= 1/alpha_ARL),
+// not an e-value one. Its instruments are the two v1.C66 endpoints, which for THIS class carry
+// verdict authority (validation/e-detector-cert/PREREGISTRATION.md §2).
+export const CLASSES = ['test_martingale', 'terminal_e_value', 'e_process', 'e_detector'];
 // C1 vocabulary fix: the terminal instruments are `exceedance` and the MEAN. The mean's
 // field name in the corpus is `mean_e` (validation/terminal-evalue/harness/run.mjs:95).
 // This table said `mean_above_1` until 2026-08-07 -- a field that exists in no cell in
@@ -10,7 +13,43 @@ export const CLASS_INSTRUMENTS = {
   test_martingale: ['increment_estimator'],
   terminal_e_value: ['exceedance', 'mean_e'],
   e_process: ['stopped_mean', 'crossing_rate'],
+  e_detector: ['arl0_T', 'delay_canonical'],
 };
+
+// ── Amendment v1.C69 registered constants (do not move inside protocol v1) ──
+// One-sided 95% normal quantile: S2 clears on arl0_T - Z*se >= 1/alpha_arl, refutes on
+// arl0_T + Z*se < 1/alpha_arl, and is INCONCLUSIVE between. S3 scores delay_canonical + Z*se.
+export const E_DETECTOR_Z = 1.645;
+// A canonical delay cell with more than this fraction of post-onset trajectories censored at T
+// is not scoreable (the censored mean would understate the delay).
+export const E_DETECTOR_CENSOR_MAX = 0.01;
+// The class canonical severity the delay floor is read at: FAULT_CLASSES.K1.canonical, 1.5 sigma.
+export const E_DETECTOR_CANONICAL_SHIFT_SIGMA = 1.5;
+// psi*(Delta_U)/psi*(Delta_L) on the frozen 16-lambda grid (0.25 .. 3 sigma): (3/0.25)^2 = 144.
+export const E_DETECTOR_LOG_RATIO = Math.log(144);
+/** A persistent step of delta (in sigma) in the metric is a step of delta*sqrt((1-phi)/(1+phi))
+ *  in the AR(1)-whitened residual after its first post-onset tick. The delay bound is evaluated
+ *  at this effective shift because that is the post-change law the detector sees. */
+export function effectiveShift(deltaSigma, phi) {
+  if (!(Math.abs(phi) < 1)) throw new Error(`effectiveShift: |phi| must be < 1, got ${phi}`);
+  return deltaSigma * Math.sqrt((1 - phi) / (1 + phi));
+}
+/** Shin-Ramdas-Rinaldo 2022 Theorem 4.3 with Proposition B.2 on the registered grid:
+ *  E_nu[N* - nu | N* > nu] <= g_alpha/D + V/D^2 + 1, D = delta^2/2, V = delta^2,
+ *  g_alpha = min_{eta in [1.001, 8]} eta*log(1/alpha) + log(1 + log(144)/log(eta)).
+ *  Registered values at alpha_arl = 1e-3, delta = 1.5: phi 0 -> 13.0, 0.3 -> 23.3, 0.6 -> 49.1,
+ *  0.9 -> 229.6. A FLOOR for the class, not a theorem about the increment mixture (the theorem
+ *  is proved for the mixture of detectors). */
+export function eDetectorDelayBound(alphaArl, deltaEff) {
+  if (!(alphaArl > 0 && alphaArl < 1)) throw new Error(`eDetectorDelayBound: alpha_arl must be in (0,1), got ${alphaArl}`);
+  if (!(deltaEff > 0)) throw new Error(`eDetectorDelayBound: delta_eff must be > 0, got ${deltaEff}`);
+  let g = Infinity;
+  for (let eta = 1.001; eta <= 8; eta += 0.001) {
+    g = Math.min(g, eta * Math.log(1 / alphaArl) + Math.log(1 + E_DETECTOR_LOG_RATIO / Math.log(eta)));
+  }
+  const D = (deltaEff * deltaEff) / 2, V = deltaEff * deltaEff;
+  return { g_alpha: g, bound: g / D + V / (D * D) + 1 };
+}
 // The registered bound a terminal e-value's mean is scored against: E[e|H0] <= 1.
 // Registered 2026-08-07 with the third card freeze; a mechanical-verdict protocol's
 // numbers cannot drift between runs. See stats/terminal-mean-is-not-measurable for why

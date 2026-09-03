@@ -1,5 +1,6 @@
-import { applyGuards, internalConsistency, meanRule } from './guards.mjs';
-import { COVERAGE_FLOOR, FAULT_CLASSES, INERTNESS_FLOOR, INERTNESS_SHIFT_SIGMA, TIERS, assertVerdict } from './constants.mjs';
+import { applyGuards, internalConsistency, meanRule, arlRule } from './guards.mjs';
+import { COVERAGE_FLOOR, FAULT_CLASSES, INERTNESS_FLOOR, INERTNESS_SHIFT_SIGMA, TIERS, assertVerdict,
+  E_DETECTOR_Z, E_DETECTOR_CENSOR_MAX, E_DETECTOR_CANONICAL_SHIFT_SIGMA, effectiveShift, eDetectorDelayBound } from './constants.mjs';
 import { effectivePhi, phiIsEstimated } from './nulls.mjs';
 import { isWired } from './envelope.mjs';
 
@@ -8,8 +9,9 @@ import { isWired } from './envelope.mjs';
 // exceedance, no increment_estimator) never reach the scorer at all.
 // C1: `mean_e` joins the list for the same reason -- it is a terminal_e_value instrument
 // (CLASS_INSTRUMENTS), so a mean-bearing cell is a validity candidate on its own.
+// v1.C69: `arl0_T` is e_detector's S2 instrument (CLASS_INSTRUMENTS), same reason as the two above.
 const isValidityCell = (c) =>
-  'increment_estimator' in c || 'stopped_mean' in c || 'exceedance' in c || 'crossing_rate' in c || 'mean_e' in c;
+  'increment_estimator' in c || 'stopped_mean' in c || 'exceedance' in c || 'crossing_rate' in c || 'mean_e' in c || 'arl0_T' in c;
 // Fix round 2: rate_e_ge_20 is a vocabulary gap, not an evidence gap. The terminal-evalue
 // CONTROL_power cells (safe_t, universal_inference) are live power evidence at the
 // registered shift, recorded as an e>=20 detection rate under a different field name.
@@ -59,6 +61,15 @@ const rawClassVerdict = (cell, cls) => {
 // protocol's "cells outside the claimed regime bound the regime" clause and exactly how
 // safe-t stays usable at oracle phi while being wrong at estimated phi.
 function regimeCheck(cell, regime) {
+  // v1.C69 (C69.5): an optional list of null-id prefixes the card claims. A cell whose null is
+  // outside the list bounds the regime and does not fail it. Absent, nothing changes. 'N1'
+  // matches 'N1' and 'N1-…', never 'N10'.
+  if (Array.isArray(regime.null_prefixes) && regime.null_prefixes.length > 0) {
+    const id = typeof cell.null_id === 'string' ? cell.null_id : '';
+    if (!regime.null_prefixes.some((p) => id === p || id.startsWith(`${p}-`))) {
+      return { in: false, refused: false, reason: `null ${cell.null_id ?? '(none)'} outside the claimed null classes [${regime.null_prefixes.join(', ')}]` };
+    }
+  }
   const phi = effectivePhi(cell);
   if (regime.phi_max != null && phi == null) {
     return { in: false, refused: true, reason: 'phi unmeasured, refused (fail-closed)' };
@@ -189,6 +200,19 @@ export function scoreS2(card, cells) {
       continue;
     }
 
+    // v1.C69: e_detector cells are scored by the arl rule on their own fields, not by the
+    // recorded token (which internalConsistency has already checked agrees). INCONCLUSIVE is
+    // missing evidence, named, never a verdict.
+    if (card.class === 'e_detector') {
+      const arl = arlRule(cell);
+      if (arl.mapped === 'INCONCLUSIVE') {
+        missing.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: arl.reason }, rawVerdict));
+        continue;
+      }
+      perCell.push({ ...cell, mapped: arl.mapped, out_of_regime, out_of_regime_reason: regimeStatus.reason, arl_rule_reason: arl.reason });
+      continue;
+    }
+
     const mapped = VERDICT_MAP[rawVerdict];
     if (!mapped) {
       missing.push({ detector: cell.detector, null_id: cell.null_id, reason: `unmapped verdict token ${rawVerdict}`, suppressed_verdict: rawVerdict });
@@ -260,9 +284,15 @@ export function scoreS3(card, cells) {
     if (cur) cur.count += 1; else map.set(key, { ...entry, count: 1 });
   };
 
+  const isCanonicalDelayCell = (c) => card.class === 'e_detector' && 'delay_canonical' in c && c.shift_sigma === E_DETECTOR_CANONICAL_SHIFT_SIGMA;
+
   for (const cell of candidates) {
     if (cell.shift_sigma !== INERTNESS_SHIFT_SIGMA) {
-      bump(offShift, `${cell.detector}\0${cell.shift_sigma}`, { detector: cell.detector, shift_sigma: cell.shift_sigma ?? null });
+      // v1.C69: an e_detector canonical delay cell is scored by the delay pass below, so it is
+      // not an off-shift gap.
+      if (!isCanonicalDelayCell(cell)) {
+        bump(offShift, `${cell.detector}\0${cell.shift_sigma}`, { detector: cell.detector, shift_sigma: cell.shift_sigma ?? null });
+      }
       continue;
     }
     // C2 note: S3 does NOT fail closed on an unmeasured phi. A pooled power control
@@ -334,18 +364,58 @@ export function scoreS3(card, cells) {
     });
   }
 
+  // v1.C69 (C69.3 b): the delay floor. Every in-regime e_detector cell at the class canonical
+  // severity must have delay_canonical + Z*se <= D*(alpha_arl, delta_eff), D* the Theorem 4.3 +
+  // Prop. B.2 bound at the effective whitened shift. Censored cells are gaps, not verdicts.
+  const delayCells = [];
+  const slow = [];
+  if (card.class === 'e_detector') {
+    for (const cell of cells) {
+      if (!isCanonicalDelayCell(cell)) continue;
+      const regimeStatus = regimeCheck(cell, regime);
+      if (regimeStatus.refused) {
+        missing.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: regimeStatus.reason }, cell.verdict));
+        continue;
+      }
+      if (!regimeStatus.in) continue;
+      const guard = applyGuards(cell, card.class);
+      if (guard.status !== 'OK') {
+        excluded.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: guard.reason }, cell.verdict));
+        continue;
+      }
+      if (!(Number.isFinite(cell.censored) && cell.censored <= E_DETECTOR_CENSOR_MAX)) {
+        missing.push(withSuppression({ detector: cell.detector, null_id: cell.null_id,
+          reason: `delay cell censored fraction ${cell.censored} > ${E_DETECTOR_CENSOR_MAX} (or unrecorded): the censored mean understates the delay, not scoreable` }, cell.verdict));
+        continue;
+      }
+      const phi = effectivePhi(cell);
+      const upper = Number.isFinite(cell.delay_upper95) ? cell.delay_upper95 : cell.delay_canonical + E_DETECTOR_Z * cell.delay_se;
+      if (phi == null || ![cell.alpha_arl, cell.shift_sigma, upper].every(Number.isFinite)) {
+        missing.push(withSuppression({ detector: cell.detector, null_id: cell.null_id, reason: 'delay cell lacks a finite phi, alpha_arl, shift_sigma or delay bound input' }, cell.verdict));
+        continue;
+      }
+      const delta_eff = effectiveShift(cell.shift_sigma, phi);
+      const { bound } = eDetectorDelayBound(cell.alpha_arl, delta_eff);
+      const entry = { ...cell, delay_upper95: upper, delta_eff, delay_bound: bound, slow: upper > bound };
+      delayCells.push(entry);
+      if (entry.slow) slow.push(entry);
+    }
+  }
+
   const suppressed_verdicts = tallySuppressed([...excluded, ...missing]);
 
   let status;
-  if (perCell.length === 0) {
+  if (perCell.length === 0 || (card.class === 'e_detector' && delayCells.length === 0)) {
     status = 'MISSING';
   } else if (perCell.some((c) => c.detection_rate < INERTNESS_FLOOR)) {
     status = 'INERT';
+  } else if (slow.length > 0) {
+    status = 'SLOW';
   } else {
     status = 'PASS';
   }
 
-  return { status, perCell, excluded, missing, suppressed_verdicts };
+  return { status, perCell, excluded, missing, suppressed_verdicts, delayCells, slow };
 }
 
 // coverageFor -- fault-class coverage, a grouping layer over the same power evidence S3
@@ -425,6 +495,22 @@ export function scoreS4(card, opts = {}) {
   const budget = card.budget ?? {};
   const reasons = [];
   let status = 'PASS';
+
+  // v1.C69 (C69.4): an e_detector must NOT enter the FDR path. PASS iff its budget is advisory
+  // and its id is absent from DETECTOR_ENVELOPES; either the other way is a REFUSE. The v1
+  // "no envelope wiring" gap is not recorded here, because for this class absence is the rule.
+  if (card.class === 'e_detector') {
+    if (budget.participating !== false) {
+      reasons.push('e_detector budget must be advisory (participating: false): an ARL guarantee is not an e-value and cannot draw from the e-BH budget (v1.C69 S4)');
+      status = 'REFUSE';
+    }
+    if (Array.isArray(opts.envelopeKeys) && isWired(card.detector_id, card.aliases, opts.envelopeKeys)) {
+      reasons.push('e_detector id is wired into DETECTOR_ENVELOPES: the FDR gate must refuse it (ADR 0029), so wiring is a defect (v1.C69 S4)');
+      status = 'REFUSE';
+    }
+    if (!Array.isArray(opts.envelopeKeys)) reasons.push('envelope map not supplied: absence of wiring unverified');
+    return { status, reasons };
+  }
 
   // S4.4 wiring: recorded, never blocking in v1. P1 (the gate has no production caller)
   // means no card's USE is enforced today anyway, so an unwired envelope is a gap to name,
@@ -572,6 +658,21 @@ export function overallVerdict(card, s1, s2, s3, s4) {
   }
 
   const tier = minTier([...s2Supporting.map((c) => c.__tier), ...s3Powered.map((c) => c.__tier)]);
+
+  // v1.C69 (C69.3): SLOW is the delay-floor analogue of valid-but-inert -- valid, powered, but
+  // not as fast as its registered bound -- and lands in the same slot, ADVISORY, with the cells
+  // named on the regime object.
+  if (s3.status === 'SLOW') {
+    for (const c of s3.slow ?? []) {
+      excluded_cells.push({
+        stage: 'S3', detector: c.detector, null_id: c.null_id ?? null, mapped: 'SLOW',
+        reason: `slow: delay_upper95 ${c.delay_upper95} > registered bound ${c.delay_bound} at delta_eff ${c.delta_eff}`,
+      });
+      reasons.push(`${c.detector} ${c.null_id ?? '(no null_id)'} slow (delay_upper95=${c.delay_upper95} > D*=${c.delay_bound}): canonical delay above its registered bound`);
+    }
+    reasons.push('S3 SLOW: valid but slower than the registered delay bound fails USE');
+    return done('ADVISORY', tier);
+  }
 
   if (s4.status === 'REFUSE') {
     reasons.push(...s4.reasons, 'budget participation refused');

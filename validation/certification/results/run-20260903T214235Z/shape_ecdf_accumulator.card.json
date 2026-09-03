@@ -1,0 +1,494 @@
+{
+  "card": {
+    "protocol_version": 1,
+    "detector_id": "shape_ecdf_accumulator",
+    "aliases": [
+      "ecdf_accumulator",
+      "k6slow_bet"
+    ],
+    "family": null,
+    "class": "test_martingale",
+    "engine_pin": {
+      "version": "0.6.10-pre",
+      "sha": "72af4388eab31a8e6ee1048220b9157e6998ac01"
+    },
+    "source_files": [
+      {
+        "path": "detectors/shape-ecdf-accumulator.ts",
+        "sha256": "e03ea3662342eb3dc2c5dd79c85800aa0f5a07a2b93d643a1288d843b726b9b8"
+      },
+      {
+        "path": "validation/coverage/harness/run-battery.mjs",
+        "sha256": "8e914508a228dde1f3fbc76e282144349634c742d6fd25f3ae62a835dc1fff54"
+      },
+      {
+        "path": "validation/certification/lib/collect.mjs",
+        "sha256": "62389a1377c4f3e742c87c17069a4d839ae868e17f152ccef3cb567585e66e37"
+      }
+    ],
+    "guarantee": {
+      "sentence": "block-conformal energy-distance accumulator on a held-out reference ECDF, read over an HOURS-SCALE horizon: per registered held-out draw of n=100,000 rows at phi=0 (A = rows 1..25,000 -> Fhat_A; B = rows 25,001..100,000 -> m = 500 disjoint contiguous W=150 blocks, exactly, no remainder), T(w) = (2/(W*n_A))*SUM|x_i - a_j| - (1/W^2)*SUM|x_i - x_k| is the two-sample energy distance against Fhat_A with the constant reference term dropped (rank-invariant); p = (1+#{ref T(B_j) >= T(live)})/(m+1) is super-uniform under block exchangeability of the m reference blocks and the live window's own statistic (stationarity across the calibration+live span -- the registered regime; O(1/m) discreteness qualifier at finite m, not the continuous-rank identity exactly); e = kappa*p^(kappa-1) satisfies E[e|H0] <= 1 with kappa = 0.6820 a FROZEN literal (not re-derived on the data that reports the endpoint -- PREREGISTRATION.md Amendment v2.K6A K6A.6's circularity removal), giving E[e|null] = 0.991433 exactly at m = 500; this construction has ONE feature, so there is no per-window averaging step, and across the 40 disjoint W=150 windows of the registered post-onset span [300,6300) the per-window e combine by PRODUCT in the log domain (ADR 0026), a genuine test martingale, never by max. Registered horizon, and the whole of what distinguishes this card from shape_block_conformal_bet: H = 6,000 post-onset ticks (T = 6,300, ONSET = 300), where the SAME construction at the deploy-gate H = 3,000 is REFUTED on the record (Amendment v2.K6A K6A.7, un-withdrawn; v2.K6A.1's own fresh draw reproduces it at 0.250). The H = 3,000 -> 6,000 bar was re-ratified by OPERATOR DECISION AFTER the first measurement missed it (v2.K6A.1 K6A.1.1) -- a post-measurement relaxation, disclosed as such and paid for with a fresh gate on fresh seeds. Registered before any run: canonical (d=1.5) detection 0.62 with a per-calibration-draw band [0.333, 0.848], so a single-draw reading is a draw and not a class answer (see notes). Out of claim, by design: contamination robustness (a contaminated calibration segment is NOT covered -- the exchangeability argument assumes the same stationary continuous law in every reference block and in the live window, and the module throws on a degenerate or constant reference rather than scoring it), any T3 real-telemetry claim, and any wall-clock guarantee.",
+      "quantifiers": [
+        {
+          "text": "block-conformal rank super-uniformity under block exchangeability, O(1/m) qualifier at finite m; E[e|null] = kappa*(m+1)^(-kappa)*SUM k^(kappa-1) = 0.991433 at m = 500 and 0.960274 at the T2 m = 45",
+          "tag": "proof",
+          "proof_artifact": "conformal rank identity (integral of kappa*p^(kappa-1) dp = 1 for kappa in (0,1)) + tie-inclusive >= countGte, detectors/shape-ecdf-accumulator.ts:228-235,289-296,419-447; the energy form's prefix-sum identity pinned against the literal W*n_A double sum at the REGISTERED geometry (W=150, n_A=25,000, relative 1e-12) and at a hand-computed W=4 fixture, plus degenerate-reference/constant-block/zero-spread throw fixtures, test/shape-ecdf-accumulator.test.ts; the two m-dependent null laws PREREGISTRATION.md Amendment v2.K6A.2 K6A.2.6"
+        },
+        {
+          "text": "healthy crossing rate over 40 disjoint W=150 windows at phi=0, marginal over the calibration draw (Ville applies to the marginal supermartingale): predicted 0.0181, and 7.9% of calibration draws page above alpha within H = 6,000 by the lottery alone",
+          "tag": "empirical",
+          "proof_artifact": null
+        },
+        {
+          "text": "reference-conditional null growth g_null(S) = log kappa + (1-kappa)*E[-log p|null,S] < 0 at the frozen kappa: measured 0/280 draws positive, with the PER-DRAW MEAN 4.30 across-draw sd below zero (6.754e-2 / 1.571e-2) and the WORST of the 280 draws 1.501e-2 below zero, which is 0.96 sd -- the two margins belong to different objects and Amendment v2.K6A.5 K6A.5.4(a) corrects this card's earlier juxtaposition of them -- and re-checked on fresh draws AT RUN TIME as a registered stop condition, never inherited from the amendment",
+          "tag": "empirical",
+          "proof_artifact": null
+        }
+      ],
+      "regime": {
+        "phi_max": null,
+        "m_min": 45,
+        "baseline": "heldout-empirical",
+        "nulls": "stationary",
+        "stationarity": true,
+        "contamination_out_of_claim": true,
+        "phi_regime": "matched-calibration",
+        "phi_regime_note": "validity is not gated by a phi ceiling -- it requires the calibration blocks and the live window to share the SAME generating process (matched). The registered T1 cells cover phi=0 (cells 43/44/45, arm 47) and a phi=0.6 replicate (cell 46) whose calibration draw is matched to its own live stream. MISMATCHED calibration/live process is out-of-claim, inherited unchanged from the sibling construction's measurement (PREREGISTRATION.md Amendment v2.K6 K6.11) and NOT re-measured for this geometry -- named as a gap, not as a covered case. m_min = 45 is the SMALLEST registered m across both tiers, not the T1 value: T1 runs at m = 500 (75,000/150 exactly, SATURATED per v2.K6A Table 3) and the T2 clustersynth arm runs at m = 45, because 9,000 reference ticks cannot supply 75,000 and the frozen 1:3 A/B ratio is preserved instead (Amendment v2.K6A.1 K6A.1.11). The discrete null law differs materially between them -- E[e|null] 0.991433 at m=500 against 0.960274 at m=45 -- so a T2 reading near 0.99 indicates the wrong m was used (Amendment v2.K6A.2 K6A.2.6). At m = 45 with 4 live windows the T2 healthy falsifier is very nearly VACUOUS (a crossing requires all four windows within a whisker of the p-floor; predicted T2 pooled healthy crossing 0.0000), disclosed rather than routed around: a T2 PASS on validity carries little information at W = 150, and the arm still runs because K6.12's contiguity question is answered by its skip/degeneracy accounting and its p marginals whether or not the crossing endpoint can move."
+      }
+    },
+    "shipped_path": {
+      "kind": "block-conformal energy-distance accumulator on a held-out reference ECDF, 40 disjoint 150-tick live windows over an hours-scale horizon (H = 6,000 post-onset ticks), one feature, product-combined in the log domain against an analytical 1/alpha = 20 threshold (no bootstrap substitution) (K6-slow distributional-shape-change candidate)",
+      "estimator": null,
+      "notes": "K6-slow (distributional shape change, hours-scale accumulator) candidate; not deploysignal's shipped selector path. THE SAME construction is REFUTED at the deploy-gate horizon H = 3,000 (PREREGISTRATION.md Amendment v2.K6A K6A.7) and that refutation is not withdrawn; K6 at 300 ticks is answered NO on the record twice (shape_block_conformal_bet, k6-ecdf-successor). What this card claims is the hours-scale reading only, at a bar re-ratified by operator decision after the first measurement missed it. THE SATURATION DEPENDENCY, registered as mechanism at Amendment v2.K6A.3 K6A.3.3 and stated here because a reader must not have to intersect an amendment with a task report to find it: the route past score.mjs:567's valid-but-inert ADVISORY cap runs through arm 47's S3 row, and that row cannot evidence its own fault class. At d = 2.0 the mixture's component sd is s = sqrt(1 - d^2/4) = 0 exactly, so the injection is a two-point +-1sigma law (Amendment v2.K6A.1 K6A.1.8 rules it a boundary artifact and NOT evidence of shape sensitivity); every one of the 40 windows then returns the rank floor p = 1/501, e = 4.924167, and a data-independent wealth of 4.9352693425143e+27. A 3-sigma MEAN STEP saturates the identical rank -- measured: substituting injectStep(delta=3) for the registered injectShapeMix(d=2.0) leaves the emitted S3 row bit-identical. So S3 POWERED here proves the module fires, not what it fires on; the cell-level half of this dependency is Amendment v2.K6A.2 K6A.2.2 (the card's USE route rests on the mix-d2.0 cell), and an informative d = 1.5 arm is named NOT-DONE because changing the S3 severity is a protocol change (K6E.9's ruling reused). THE LOTTERY REPORTING RULE, BOTH DIRECTIONS, quoted from Amendment v2.K6A.2 K6A.2.4(b) (the single-draw NO wording and its mirror YES wording) and K6A.2.4(a) (the band, the consistency interval and the (0.848, 0.958] disposition) -- the attribution corrected by Amendment v2.K6A.5 K6A.5.4(b) -- and binding on every report of this card: a single-draw NO is reported as \"class NO at this calibration draw\" rather than as a falsification, and -- the mirror obligation, because v2.K6A.1 caveated only the outcome that would disappoint -- a single-draw YES is reported as \"class K6-slow YES at this calibration draw; gate P(YES) approx 0.79\" and NEVER as a settled class answer. The operative band is the empirical [0.333, 0.848] with consistency interval [0.333, 0.958]; a reading in (0.848, 0.958] is CONSISTENT with the gate (an upper-tail draw inside the 280-draw observed support) and is not to be reported as a falsification. The calibration-draw sd dominates the run's binomial noise by a factor of 13.0 (Amendment v2.K6A.2 K6A.2.4c), which is why the draw, not the run, is the unit of uncertainty. This class row rests on ONE detector by registration (Amendment v2.K6A.1 K6A.1.9: safe_t and universal_inference are deliberately not scored on a 6,300-tick scenario nothing registers for them), so it has no paired-comparison partner and pairingGaps will name it -- the honest cost of a single-candidate class row. source_files pins the collection path (validation/coverage/harness/run-battery.mjs) as well as the detector module, so a change to how this card's evidence is PRODUCED expires the card: the C48(3) lesson, applied here as far as one card can. CORRECTED 2026-08-08 (C48(3) closed), quote-and-correct, because a reader of this card alone would otherwise act on a sentence that is now false. This card used to read: \"lib/collect.mjs -- how evidence is COLLECTED -- is still pinned by no card, and that remains open as a protocol amendment rather than something this card can close.\" That was true when written. The protocol amendment exists: h0-battery PREREGISTRATION.md Amendment A2 A2.5 registered adding validation/certification/lib/collect.mjs to ALL FIFTEEN cards' source_files, commit 4a48450 did it, and this card is one of the fifteen -- so a change to how evidence is COLLECTED, and not only how it is PRODUCED, now expires this card too. A2.6 is the registered record of this correction: it named this sentence stale at the re-freeze and deferred the card edit as a content change outside that commit's authorized scope. ERRATA 2026-08-08, the controller's adopted ruling on the fired non-authoritative falsifier (C49 task-6 concern 2), recorded on the card because this is where a reader of the card alone would need it: on the registered T1 run (coverage/results/live/run-20260809T035934Z) arm 47's S2 increment_estimator.mean read 1.024959, which FIRES the [0.97, 1.01] range PREREGISTRATION.md Amendment v2.K6A.1 K6A.1.12 registers as that endpoint's falsifier. Its one-sided 95% lower bound is 1.021567, and the reading sits 16.26 SE above the EXACT registered null E[e|null] = 0.991433 (not merely 12.10 SE above 1). At the frozen kappa = 0.682 the calibrator's tail index is 1/(1-kappa) = 3.145 > 2, so Var[e] is FINITE and the SE is CLT-backed: the infinite-variance objection that neutralises a mean-of-e reading on the sibling arms DOES NOT TRANSFER here, and the K3.1.3/K6.7 rationale for treating such a field as non-authoritative was argued on those arms, not on this one. THE RULING, adopted: S2 PASS stands and is crossing_rate-derived, per K6A.1.10's authority allocation, which gives increment_estimator no verdict authority; the fired range is NOT scored and this card's verdict does not move; and the reading is filed to the contested-instrument record AS ITS OWN CLAIM -- a finite-variance, CLT-backed departure of the null's mean e-value from its exact closed form on one calibration draw -- rather than absorbed as a caveat on a cleared stage. Read with the three readings that point the same way on the same draw: canonical detection 0.8515 above the prediction band's p95, healthy point rate 0.0540 above alpha with its Wilson bound cleared at 0.046273, and pooled p_uniformity KS 8.56x its critical value. Each is inside its own registered rule; no registered instrument combines them."
+    },
+    "budget": {
+      "participating": true,
+      "alpha_booked": null,
+      "resolution_claim": null
+    },
+    "falsifier": "T1 healthy-arm (cell 47) crossing_rate Wilson one-sided 95% lower bound > alpha = 0.05, reported with the null-growth screen's reading beside it (screen-clean plus paging-fired is the calibration lottery's signature, approx a few percent of draws by lottery alone; screen-dirty plus paging-fired is a construction defect); OR T2 pooled t2_crossing_rate Wilson 95% lower bound > alpha across scored (shard, coordinate) pairs; OR the null-growth screen itself -- >= 1 of 250 fresh calibration draws at the frozen kappa with g_null(S) > 0, checked at run time before any endpoint is read, which STOPS the run and REFUTES this candidate on the record (PREREGISTRATION.md Amendment v2.K6A.1 K6A.1.10, driver v2.K6A.3 K6A.3.1); OR cell 47 S2 increment_estimator.mean outside [0.97, 1.01]; OR any nonzero degenerate_windows or non_finite_wealth count, both registered as STRUCTURAL zeros. SCOPE OF THE SCREEN, stated here rather than left in the amendment because this card's own standard is that a reader must not have to intersect two documents: the null-growth screen runs on phi = 0 draws ONLY, so the phi = 0.6 replicate's calibration (cell 46) is NOT screened. Amendment v2.K6A.3 K6A.3.1, quoted: \"The screen runs on phi = 0 draws only. Cell 46 (mix-d1.5-ar1, phi = 0.6) has its own calibration draw, and that draw is not screened -- K6A.1.10 registers ONE screen and K6A.1.5 measured ONE law (phi = 0), and screening a second law would be a new measurement this rider is not entitled to register. Disclosed: a positive-null-growth defect confined to the phi = 0.6 calibrator would pass this screen.\" So a clean screen reading is evidence about the phi = 0 calibrator and about nothing else, and cell 46's INERT prediction (0.0000) rests on no screened calibrator",
+    "prior_evidence": [
+      {
+        "stage": "S2",
+        "study": "coverage",
+        "runs": "coverage/results/live/*",
+        "wiki": "methodology/fault-class-coverage-matrix"
+      },
+      {
+        "stage": "design",
+        "study": "k6-accumulator",
+        "runs": null,
+        "wiki": "methodology/k6-accumulator"
+      }
+    ]
+  },
+  "s1": {
+    "status": "MISSING"
+  },
+  "s2": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "shape_ecdf_accumulator",
+        "arm": "healthy",
+        "cell_index": 47,
+        "null_id": "K6slow-arm-heldout",
+        "phi": 0,
+        "params": "heldout-empirical",
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 6300,
+        "onset": 300,
+        "windows": 40,
+        "window_len": 150,
+        "window_span": "[300,6300)",
+        "k": 108,
+        "crossing_rate": 0.054,
+        "lower_95": 0.04627273858970009,
+        "increment_estimator": {
+          "n": 2000,
+          "mean": 1.0249590993997122,
+          "sd": 0.09222296895406777,
+          "se": 0.002062168276681482,
+          "lower95_one_sided": 1.0215668325845713,
+          "upper95_one_sided": 1.0283513662148531
+        },
+        "p_uniformity": {
+          "n": 80000,
+          "decile_counts": [
+            8840,
+            7655,
+            7233,
+            7283,
+            7512,
+            6667,
+            9812,
+            9155,
+            7423,
+            8420
+          ],
+          "ks_statistic": 0.04114977544910181,
+          "ks_critical_at_alpha": 0.004808326112068524
+        },
+        "final_wealth_mean": 4.718784571788353,
+        "final_wealth_median": 0.09700478938563264,
+        "degenerate_windows": 0,
+        "non_finite_wealth": 0,
+        "adapter_failures": 0,
+        "verdict": "not-refuted",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "heldout_seed": 20760854,
+        "heldout_rows": 100000,
+        "cal_fingerprint": {
+          "W": 150,
+          "m": 500,
+          "n_A": 25000,
+          "blockT": {
+            "median": 1.1329720182344718,
+            "absdev_p50": 0.0026410183655467545,
+            "absdev_p90": 0.008014906847683134,
+            "absdev_max": 0.027197200657254728
+          }
+        },
+        "null_growth_screen": {
+          "draws": 250,
+          "positive": 0,
+          "g_null_max": -0.025749331416218935
+        },
+        "__study": "coverage",
+        "__run": "run-20260809T035934Z",
+        "__git_sha": "f4878007335d560a68e0e7fda3343c5815b07516",
+        "__tier": "T1",
+        "mapped": "CLEARED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null
+      }
+    ],
+    "excluded": [],
+    "missing": [],
+    "mean_rule_overrides": [],
+    "suppressed_verdicts": {}
+  },
+  "s3": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "shape_ecdf_accumulator",
+        "arm": "power",
+        "cell_index": 47,
+        "null_id": "K6slow-arm-heldout",
+        "phi": 0,
+        "params": "heldout-empirical",
+        "shift_sigma": 3,
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 6300,
+        "onset": 300,
+        "fires": 2000,
+        "detection_rate": 1,
+        "final_wealth_mean": 4.935269342514437e+27,
+        "final_wealth_median": 4.9352693425143034e+27,
+        "degenerate_windows": 0,
+        "adapter_failures": 0,
+        "non_finite_wealth": 0,
+        "verdict": "POWERED",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "heldout_seed": 20760854,
+        "heldout_rows": 100000,
+        "cal_fingerprint": {
+          "W": 150,
+          "m": 500,
+          "n_A": 25000,
+          "blockT": {
+            "median": 1.1329720182344718,
+            "absdev_p50": 0.0026410183655467545,
+            "absdev_p90": 0.008014906847683134,
+            "absdev_max": 0.027197200657254728
+          }
+        },
+        "__study": "coverage",
+        "__run": "run-20260809T035934Z",
+        "__git_sha": "f4878007335d560a68e0e7fda3343c5815b07516",
+        "__tier": "T1"
+      }
+    ],
+    "excluded": [],
+    "missing": [
+      {
+        "detector": "shape_ecdf_accumulator",
+        "null_id": null,
+        "reason": "power cell with no shift_sigma recorded x4: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT"
+      }
+    ],
+    "suppressed_verdicts": {}
+  },
+  "s4": {
+    "status": "PASS",
+    "reasons": [
+      "no envelope wiring"
+    ]
+  },
+  "pairing": [],
+  "overall": {
+    "verdict": "USE",
+    "tier": "T1",
+    "regime": {
+      "phi_max": null,
+      "m_min": 45,
+      "baseline": "heldout-empirical",
+      "nulls": "stationary",
+      "stationarity": true,
+      "contamination_out_of_claim": true,
+      "phi_regime": "matched-calibration",
+      "phi_regime_note": "validity is not gated by a phi ceiling -- it requires the calibration blocks and the live window to share the SAME generating process (matched). The registered T1 cells cover phi=0 (cells 43/44/45, arm 47) and a phi=0.6 replicate (cell 46) whose calibration draw is matched to its own live stream. MISMATCHED calibration/live process is out-of-claim, inherited unchanged from the sibling construction's measurement (PREREGISTRATION.md Amendment v2.K6 K6.11) and NOT re-measured for this geometry -- named as a gap, not as a covered case. m_min = 45 is the SMALLEST registered m across both tiers, not the T1 value: T1 runs at m = 500 (75,000/150 exactly, SATURATED per v2.K6A Table 3) and the T2 clustersynth arm runs at m = 45, because 9,000 reference ticks cannot supply 75,000 and the frozen 1:3 A/B ratio is preserved instead (Amendment v2.K6A.1 K6A.1.11). The discrete null law differs materially between them -- E[e|null] 0.991433 at m=500 against 0.960274 at m=45 -- so a T2 reading near 0.99 indicates the wrong m was used (Amendment v2.K6A.2 K6A.2.6). At m = 45 with 4 live windows the T2 healthy falsifier is very nearly VACUOUS (a crossing requires all four windows within a whisker of the p-floor; predicted T2 pooled healthy crossing 0.0000), disclosed rather than routed around: a T2 PASS on validity carries little information at W = 150, and the arm still runs because K6.12's contiguity question is answered by its skip/degeneracy accounting and its p marginals whether or not the crossing endpoint can move.",
+      "excluded_cells": []
+    },
+    "reasons": [
+      "S1 reachability not run-backed (v1 floor)",
+      "no envelope wiring"
+    ]
+  },
+  "coverage": {
+    "K1": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K2": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K3": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K4": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K5": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6-slow": {
+      "status": "COVERED",
+      "cells": [
+        {
+          "detector": "shape_ecdf_accumulator",
+          "fault_class": "K6-slow",
+          "severity": "mix-d1.0",
+          "canonical": false,
+          "cell_index": 43,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 6300,
+          "onset": 300,
+          "fires": 38,
+          "detection_rate": 0.019,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 40,
+          "window_len": 150,
+          "window_span": "[300,6300)",
+          "final_wealth_mean": 0.7602664292719051,
+          "final_wealth_median": 0.06265115625798517,
+          "degenerate_windows": 0,
+          "cal_fingerprint": {
+            "W": 150,
+            "m": 500,
+            "n_A": 25000,
+            "blockT": {
+              "median": 1.1315429020937422,
+              "absdev_p50": 0.0027236581635592394,
+              "absdev_p90": 0.008794320783704679,
+              "absdev_max": 0.037781715673296024
+            }
+          },
+          "heldout_seed": 20760850,
+          "heldout_rows": 100000,
+          "__study": "coverage",
+          "__run": "run-20260809T035934Z",
+          "__git_sha": "f4878007335d560a68e0e7fda3343c5815b07516",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "shape_ecdf_accumulator",
+          "fault_class": "K6-slow",
+          "severity": "mix-d1.5",
+          "canonical": true,
+          "cell_index": 44,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 6300,
+          "onset": 300,
+          "fires": 1703,
+          "detection_rate": 0.8515,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 40,
+          "window_len": 150,
+          "window_span": "[300,6300)",
+          "final_wealth_mean": 4381.965703403861,
+          "final_wealth_median": 168.59008046255036,
+          "degenerate_windows": 0,
+          "cal_fingerprint": {
+            "W": 150,
+            "m": 500,
+            "n_A": 25000,
+            "blockT": {
+              "median": 1.1376821487081572,
+              "absdev_p50": 0.002328535143994115,
+              "absdev_p90": 0.007727796096878459,
+              "absdev_max": 0.0460014157834574
+            }
+          },
+          "heldout_seed": 20760851,
+          "heldout_rows": 100000,
+          "__study": "coverage",
+          "__run": "run-20260809T035934Z",
+          "__git_sha": "f4878007335d560a68e0e7fda3343c5815b07516",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "shape_ecdf_accumulator",
+          "fault_class": "K6-slow",
+          "severity": "mix-d2.0",
+          "canonical": false,
+          "cell_index": 45,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 6300,
+          "onset": 300,
+          "fires": 2000,
+          "detection_rate": 1,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "POWERED",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 40,
+          "window_len": 150,
+          "window_span": "[300,6300)",
+          "final_wealth_mean": 4.935269342514437e+27,
+          "final_wealth_median": 4.9352693425143034e+27,
+          "degenerate_windows": 0,
+          "cal_fingerprint": {
+            "W": 150,
+            "m": 500,
+            "n_A": 25000,
+            "blockT": {
+              "median": 1.1385012454511885,
+              "absdev_p50": 0.0025584811721215406,
+              "absdev_p90": 0.010451151959510296,
+              "absdev_max": 0.028205718480967645
+            }
+          },
+          "heldout_seed": 20760852,
+          "heldout_rows": 100000,
+          "__study": "coverage",
+          "__run": "run-20260809T035934Z",
+          "__git_sha": "f4878007335d560a68e0e7fda3343c5815b07516",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "shape_ecdf_accumulator",
+          "fault_class": "K6-slow",
+          "severity": "mix-d1.5-ar1",
+          "canonical": false,
+          "cell_index": 46,
+          "null_id": "N3-p06",
+          "phi": 0.6,
+          "params": "heldout-empirical",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 6300,
+          "onset": 300,
+          "fires": 0,
+          "detection_rate": 0,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "windows": 40,
+          "window_len": 150,
+          "window_span": "[300,6300)",
+          "final_wealth_mean": 0.00023500232769793527,
+          "final_wealth_median": 0.00015999969717346167,
+          "degenerate_windows": 0,
+          "cal_fingerprint": {
+            "W": 150,
+            "m": 500,
+            "n_A": 25000,
+            "blockT": {
+              "median": 1.1454247409606793,
+              "absdev_p50": 0.007500981858967526,
+              "absdev_p90": 0.0337473616455084,
+              "absdev_max": 0.14681481417970654
+            }
+          },
+          "heldout_seed": 20760853,
+          "heldout_rows": 100000,
+          "__study": "coverage",
+          "__run": "run-20260809T035934Z",
+          "__git_sha": "f4878007335d560a68e0e7fda3343c5815b07516",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        }
+      ],
+      "canonical": {
+        "severity": "mix-d1.5",
+        "rate": 0.8515
+      },
+      "excluded": [],
+      "suppressed_verdicts": {}
+    }
+  },
+  "generated_from": {
+    "runs": [
+      "coverage/run-20260809T035934Z",
+      "coverage-t2-clustersynth/run-t2-20260809T075607Z"
+    ]
+  }
+}

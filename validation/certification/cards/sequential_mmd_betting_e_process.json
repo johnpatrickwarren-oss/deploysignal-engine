@@ -10,7 +10,7 @@
   "class": "test_martingale",
   "engine_pin": {
     "version": "0.6.10-pre",
-    "sha": "1641dacf25b6e1268d99f89a07900025aa2eb1b2"
+    "sha": "72af4388eab31a8e6ee1048220b9157e6998ac01"
   },
   "source_files": [
     {
@@ -27,11 +27,11 @@
     },
     {
       "path": "validation/certification/lib/score.mjs",
-      "sha256": "91553b0bec1c9980e74c9f3ec758d3250de2f13f3693b2473d7dc5caa58267c8"
+      "sha256": "7cc235566ed3e983a7aa993080a35ceeb7fb4c8dd710c56d2d6a8978d300b1ed"
     },
     {
       "path": "validation/certification/verdict.mjs",
-      "sha256": "2ae5761d8f9cc22cd75da8153c9fe13d142a9ede4f3abb09c7dcdb74e0cb8e62"
+      "sha256": "7572c074e60b3b0cefb876660a4073f06a8f8ae29e373ad288259666ee5e720a"
     },
     {
       "path": "validation/certification/lib/collect.mjs",

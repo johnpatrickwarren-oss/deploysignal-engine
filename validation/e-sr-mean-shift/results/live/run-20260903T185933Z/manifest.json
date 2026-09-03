@@ -1,0 +1,61 @@
+{
+  "study": "2026-09-e-sr-delay",
+  "mode": "live",
+  "quick": false,
+  "git_sha": "756a0adc8c907be70d9b2de280d3652744f11d19",
+  "node": "v25.9.0",
+  "engine_version": "0.6.10-pre",
+  "registration": {
+    "file": "validation/e-sr-mean-shift/PREREGISTRATION.md",
+    "sha256": "698bdb682500895c38df03541d9fa6442ea78061cfdce8e7399a7d53df24ea3a"
+  },
+  "module": {
+    "file": "detectors/e-sr-mean-shift.ts",
+    "sha256": "23802080fc3df919e6b02a3475200cc73160084132e6126a6e803a702f69aea0"
+  },
+  "harness_sha256": "edd50c9be3b109d34b03ec11728c61217d7b19392add3febc162dcf10c3fe147",
+  "n": 2000,
+  "seed": 20260904,
+  "salt": {
+    "H1": 0,
+    "H2": 1000003,
+    "H3": 2000003,
+    "H4": 3000003,
+    "H5": 4000003
+  },
+  "alpha_arl": [
+    0.01,
+    0.001
+  ],
+  "alpha_shipped": 0.0001,
+  "lambda_grid": [
+    0.25,
+    -0.25,
+    0.3565404088068447,
+    -0.3565404088068447,
+    0.5084842524486077,
+    -0.5084842524486077,
+    0.7251807329594777,
+    -0.7251807329594777,
+    1.034224939952878,
+    -1.034224939952878,
+    1.4749719315561343,
+    -1.4749719315561343,
+    2.1035483818225815,
+    -2.1035483818225815,
+    3,
+    -3
+  ],
+  "verdicts": {
+    "H1": "HELD",
+    "H2": "HELD",
+    "H3": "HELD",
+    "H4": "FAILED",
+    "H5": "HELD"
+  },
+  "wall_seconds": 87,
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

@@ -415,7 +415,10 @@ export function scoreS3(card, cells) {
     status = 'PASS';
   }
 
-  return { status, perCell, excluded, missing, suppressed_verdicts, delayCells, slow };
+  // The two v1.C69 keys appear only on e_detector output, so the fifteen v1-class card JSONs stay
+  // byte-identical outside their pins across this scorer change (the freeze-table standard).
+  if (card.class === 'e_detector') return { status, perCell, excluded, missing, suppressed_verdicts, delayCells, slow };
+  return { status, perCell, excluded, missing, suppressed_verdicts };
 }
 
 // coverageFor -- fault-class coverage, a grouping layer over the same power evidence S3

@@ -8,8 +8,8 @@
   "family": null,
   "class": "test_martingale",
   "engine_pin": {
-    "version": "0.6.8-pre",
-    "sha": "8192b479efae0f545cdcd2451c868dedd349959f"
+    "version": "0.6.10-pre",
+    "sha": "a3dc325a59e1173d3459d6c2ce61fab4555c73ff"
   },
   "source_files": [
     {

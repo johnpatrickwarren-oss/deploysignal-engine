@@ -56,6 +56,8 @@ void _bfEnvelopeSatisfiesShared;
  *  asserts its validity regime (a true baseline, or m≫n) — otherwise E[e|H0] > 1 and feeding it to
  *  e-BH silently breaks the FDR guarantee (Tessera ADR 0008/0014; BF: ≈1.155 at every cal length). */
 function isValidForFdrPath(env, assertions = {}) {
+    if (env.statistic === 'e-detector')
+        return false;
     return phiAdmissible(env, assertions)
         && (env.validUnderEstimatedBaseline
             || Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN));
@@ -73,6 +75,10 @@ function phiAdmissible(env, assertions = {}) {
 /** Throw if an e-value with this envelope would be fed to the FDR path OUTSIDE its validity regime.
  *  Call this at the e-BH boundary so an invalid plug-in e-value cannot silently degrade FDR control. */
 function assertValidForFdrPath(env, assertions = {}) {
+    if (env.statistic === 'e-detector') {
+        throw new Error('validity-envelope: an e-DETECTOR statistic (E∞[M_t] = t, an average-run-length guarantee, '
+            + 'not E[e|H0] ≤ 1) can never enter the FDR path. No assertion admits it (ADR 0029).');
+    }
     if (!phiAdmissible(env, assertions)) {
         throw new Error(`validity-envelope: this e-value holds only for |φ| ≤ ${env.maxPhiValid}; got `
             + `${assertions.observedPhi === undefined ? 'an UNMEASURED φ' : `φ=${assertions.observedPhi}`}. `

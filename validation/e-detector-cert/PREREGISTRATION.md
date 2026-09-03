@@ -108,3 +108,28 @@ is a defect in the branch, fixed test-first before anything ships.
 Any consumer wiring (no engine surface compiles this detector; S1 is MISSING and the card says
 so); onsets other than a K1 step; the bounded-bet fallback for heavy tails; anything at T2 or
 T3; `alpha_arl` other than the shipped 1e-3.
+
+## Amendment A1 — 2026-09-03, after the registered run `run-20260903T213908Z`, before any further run
+
+**What the run showed.** Eight of the ten in-class S2 cells CLEARED. Two are INCONCLUSIVE under
+§2's rule: N2-m30 (`arl0_T` 1,003.7 ± 64.9) and N4-p09-m100 (1,061.6 ± 68.6); their intervals
+straddle 1/α_ARL = 1,000. §4's prediction that all ten would clear **FAILED** on these two
+(N2-m30 was predicted at a lower bound ≈ 1,085 from C68's 1,128 on other seeds). Every other
+registered prediction held: N5, N6, N8 REFUTED outside the regime; every 3σ cell powered
+(detection 1.000 on all ten); every canonical delay under D* (largest ratio N4-p09-m100, 71.7 +
+1.645·se vs 229.6). The run stands and is reported in full; nothing in it is edited.
+
+**The remedy §2 already names.** INCONCLUSIVE "needs more N". This amendment registers that
+re-run, before it happens: the two cells only, `N = 20,000` (se ≈ 22, interval half-width ≈ 36),
+fresh salt `SALT_S2 = 5,000,003` so no seed overlaps the first run, α_ARL, T and the rule
+unchanged. The harness gains three flags for it — `--cells <ids>`, `--n <N>`, `--salt-s2 <salt>`
+— and skips S3 when `--cells` is given; nothing else in it changes. Both runs stay under
+`results/live/` and both pool into the card: the first run's two INCONCLUSIVE cells remain named
+as missing evidence, and the second run's two cells score.
+
+**Registered prediction.** Pooling the two measurements of N2-m30 (C68 1,128 at N = 2,000; here
+1,004) gives ≈ 1,066 ± 46, so the re-run is predicted CLEARED with a lower bound near 1,030; it
+could as easily read INCONCLUSIVE again or REFUTED — the true ARL at m = 30 sits within a few
+percent of the floor, which is the finding whatever the token. N4-p09-m100 (one measurement,
+1,062 ± 69): predicted CLEARED, less certain. If either cell REFUTES, S2 is REFUTED and the
+card's verdict is REFUSE; the regime is not narrowed by hand (§5).

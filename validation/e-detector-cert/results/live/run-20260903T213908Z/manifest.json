@@ -1,0 +1,31 @@
+{
+  "study": "2026-09-e-detector-cert",
+  "run": "run-20260903T213908Z",
+  "mode": "live",
+  "quick": false,
+  "tier": "T1",
+  "git_sha": "f943b1c3fd49aab0ecd86aedf6ed45d492021be8",
+  "harness_sha256": "8a3041bde74fc75e9c6a8fe40f2921d185027aaef5c85e2f6f787e14a124cf1a",
+  "module_sha256": "23802080fc3df919e6b02a3475200cc73160084132e6126a6e803a702f69aea0",
+  "n": 2000,
+  "seed": 20260905,
+  "salt": {
+    "S2": 0,
+    "S3": [
+      1000003,
+      1000103,
+      1000203
+    ]
+  },
+  "alpha_arl": 0.001,
+  "T_s2": 20000,
+  "nu": 200,
+  "T_s3": 1200,
+  "cells": 43,
+  "exceptions": 0,
+  "wall_seconds": 28,
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

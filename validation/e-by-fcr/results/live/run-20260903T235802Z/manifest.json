@@ -1,0 +1,36 @@
+{
+  "study": "2026-09-e-by-fcr",
+  "run": "run-20260903T235802Z",
+  "mode": "live",
+  "quick": false,
+  "tier": "T1",
+  "git_sha": "dfb4bea059c95a1541f19f53bacb7e5f7a390345",
+  "harness_sha256": "a2b0620205b2f7a5126e59e633bfc23afc6ee7a1c6662f761e5a4593e214bda5",
+  "n": 2000,
+  "seed": 20260906,
+  "K": 20,
+  "L": 5,
+  "T": 300,
+  "alpha_detector": 0.001,
+  "rhos": [
+    1,
+    38
+  ],
+  "shifts": [
+    0,
+    0.75,
+    1.5
+  ],
+  "deltas": [
+    0.05,
+    0.1,
+    0.2
+  ],
+  "top": 3,
+  "cells": 18,
+  "wall_seconds": 17,
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

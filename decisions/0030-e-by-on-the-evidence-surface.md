@@ -38,6 +38,18 @@ level; the surface says so. Only the Gaussian mixture has a CS; the betting e-pr
 D and E carry no `confidence_sequence`. Dependence between signals is not exercised by the study
 (independent signals only); the theorem does not need it, the measurement did not test it.
 
-## Results append — 2026-09-03
+## Results append — 2026-09-03, run `run-20260903T235802Z`
 
-(Filled after the registered run; see `validation/e-by-fcr/results/live/`.)
+18 cells × 3 δ, N = 2,000, 0 exceptions, 0 re-inversion deviations above 1e-12. **P1 HELD in
+every cell at every δ**: the largest e-BY FCR relative to its δ is 0.032 (ρ = 38, extremeness
+rule, δ_shift = 0, δ = 0.2: 0.0063). Ship rule met; this ADR is ACCEPTED as built. **P2
+FAILED**: the naive intervals at level δ never exceeded δ under the extremeness rule on this
+substrate (δ = 0.05: 0.0047 at ρ = 1, 0.0147 at ρ = 38; the closest approach 0.085 vs 0.2 at
+ρ = 38) — my registered prediction was wrong. The time-uniform interval read at a fixed T = 300 is
+conservative enough that selecting the three most extreme of twenty signals does not push
+miscoverage past the nominal level; the selection trap the e-BY guarantee closes is not visible
+at this width. P3 HELD (closed form to 1e-12); the e-BY width ratio over naive is 1.2–1.5 at
+|S|/K = 3/20 to 5/20. P4 HELD with P1. What this means for the consumer: the FCR guarantee is
+real and cheap (a 20–50% wider interval), and on a Gaussian substrate at these horizons it buys
+insurance against a failure the naive intervals did not exhibit. Not measured: dependent signals,
+estimated baselines, AR(1), heavy tails.

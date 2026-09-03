@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — C63 (2026-09-02)
+
+- **Martingale merging in the fleet layer (ADR 0028, `fleet/combine.ts`).** `combineMartingale`
+  (`∏(1 − λ_k + λ_k e_k)`, predictable λ, Ramdas–Wang 2025 Definition 8.10) and `adaptiveLambdas`
+  (the empirically adaptive bet, Example 8.14, γ = ½ default; bisection on the concave objective).
+  `combineProduct` now requires `{ sequential: true }` and throws otherwise (it is the all-in bet,
+  Proposition 8.16); `combineProductUnguarded` keeps the raw sum for harnesses. No shipped path
+  called the product.
+
 ## v0.6.9-pre — 2026-09-02
 
 Cut so the Family E advisory path (C65) reaches DeploySignal, whose guards (PR #84) are

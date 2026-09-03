@@ -7,3 +7,5 @@ validation/family-ce-nulls/results/sim/
 validation/family-d-emean/results/sim/
 validation/grapa-stability/results/sim/
 validation/family-c-witness-centering/results/sim/
+
+validation/arl-delay/results/sim/

@@ -254,3 +254,14 @@ its claim changes; a detector card is regenerated every run and never hand-edite
     unknown after derivation from the registered null-id grammar is refused, not admitted.
     S3 does not fail closed: a pooled power control has no null and no φ by construction,
     and power is not a validity claim, so the gap is recorded and the cell is still scored.
+
+## Reported endpoints with no verdict authority (Amendment v1.C66, 2026-09-03)
+
+Two change-detection endpoints exist beside the cards and are read by nothing in `lib/`:
+the T-censored average run length under H₀ (`arl0_T`) and the conditional detection delay at
+the card's fault-class canonical severity (`delay_canonical`). They are measured by
+`validation/arl-delay/` on the h0-battery's nulls with the battery's own adapters, and are
+written with `detector_id` rather than `detector` so `lib/collect.mjs` never pools them as
+scoring evidence. `lib/score.mjs` is deliberately untouched: every card pins its hash. A floor
+that would make either endpoint verdict-bearing needs a further numbered amendment on the
+protocol page. Definitions and scope: the protocol page, Amendment v1.C66.

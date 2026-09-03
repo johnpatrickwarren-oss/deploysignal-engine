@@ -55,6 +55,11 @@ export interface ValidityEnvelope {
    *  robust BF). False ⇒ the e-value is only valid with a TRUE baseline or m≫n (the plug-in betting /
    *  mixture e-values); feeding it to e-BH under an estimated baseline silently breaks FDR control. */
   validUnderEstimatedBaseline: boolean;
+  /** What the statistic IS. Absent or 'e-value' ⇒ E[e|H0] ≤ 1 is the claim. 'e-detector' ⇒ a
+   *  change-detection statistic with E∞[M_t] = t (Shin–Ramdas–Rinaldo 2022) whose guarantee is an
+   *  average run length, never an e-value: the FDR path refuses it regardless of any assertion
+   *  (ADR 0029, `detectors/e-sr-mean-shift.ts`). */
+  statistic?: 'e-value' | 'e-detector';
   /** Minimum calibration length for the by-construction validity to hold, if the detector has one. */
   minCalibration?: number;
   /** Largest AR(1) φ at which E[e|H0] ≤ 1 still holds. Above it the detector is WRONG, not merely
@@ -140,6 +145,7 @@ export interface FdrPathAssertions {
  *  asserts its validity regime (a true baseline, or m≫n) — otherwise E[e|H0] > 1 and feeding it to
  *  e-BH silently breaks the FDR guarantee (Tessera ADR 0008/0014; BF: ≈1.155 at every cal length). */
 export function isValidForFdrPath(env: ValidityEnvelope, assertions: FdrPathAssertions = {}): boolean {
+  if (env.statistic === 'e-detector') return false;
   return phiAdmissible(env, assertions)
     && (env.validUnderEstimatedBaseline
       || Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN));
@@ -157,6 +163,12 @@ export function phiAdmissible(env: ValidityEnvelope, assertions: FdrPathAssertio
 /** Throw if an e-value with this envelope would be fed to the FDR path OUTSIDE its validity regime.
  *  Call this at the e-BH boundary so an invalid plug-in e-value cannot silently degrade FDR control. */
 export function assertValidForFdrPath(env: ValidityEnvelope, assertions: FdrPathAssertions = {}): void {
+  if (env.statistic === 'e-detector') {
+    throw new Error(
+      'validity-envelope: an e-DETECTOR statistic (E∞[M_t] = t, an average-run-length guarantee, '
+      + 'not E[e|H0] ≤ 1) can never enter the FDR path. No assertion admits it (ADR 0029).',
+    );
+  }
   if (!phiAdmissible(env, assertions)) {
     throw new Error(
       `validity-envelope: this e-value holds only for |φ| ≤ ${env.maxPhiValid}; got `

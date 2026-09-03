@@ -15,6 +15,11 @@ export interface ValidityEnvelope {
      *  robust BF). False ⇒ the e-value is only valid with a TRUE baseline or m≫n (the plug-in betting /
      *  mixture e-values); feeding it to e-BH under an estimated baseline silently breaks FDR control. */
     validUnderEstimatedBaseline: boolean;
+    /** What the statistic IS. Absent or 'e-value' ⇒ E[e|H0] ≤ 1 is the claim. 'e-detector' ⇒ a
+     *  change-detection statistic with E∞[M_t] = t (Shin–Ramdas–Rinaldo 2022) whose guarantee is an
+     *  average run length, never an e-value: the FDR path refuses it regardless of any assertion
+     *  (ADR 0029, `detectors/e-sr-mean-shift.ts`). */
+    statistic?: 'e-value' | 'e-detector';
     /** Minimum calibration length for the by-construction validity to hold, if the detector has one. */
     minCalibration?: number;
     /** Largest AR(1) φ at which E[e|H0] ≤ 1 still holds. Above it the detector is WRONG, not merely

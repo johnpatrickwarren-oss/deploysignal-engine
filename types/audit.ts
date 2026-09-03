@@ -67,6 +67,14 @@ export const DETECTOR_REGISTRY = {
     'betting_e_process_p99_latency', 'betting_e_process_ttft',
     'betting_e_process_eval_score', 'betting_e_process_tool_success_rate',
     'betting_e_process_downstream_err', 'betting_e_process_cost_req',
+    // C64 (a), 2026-09-03 — the envelope-valid TERMINAL path: the safe two-sample t e-value
+    // (detectors/safe-t-e-value.ts, right-Haar / GROW) read once per signal at the end of a
+    // canary against a caller-supplied calibration series. Emitted by DeploySignal's valid-path
+    // routing as `safe_t_e_value_{signal}`; guarantees.ts carries its row (class
+    // e_value_terminal). Registered here first so the audit path can name it.
+    'safe_t_e_value_p99_latency', 'safe_t_e_value_ttft',
+    'safe_t_e_value_eval_score', 'safe_t_e_value_tool_success_rate',
+    'safe_t_e_value_downstream_err', 'safe_t_e_value_cost_req',
   ] as const,
   B: [
     'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',

@@ -1,7 +1,7 @@
 import { type DetectorId } from './types/audit';
 import { type ValidityEnvelope } from './detectors/validity-envelope';
 /** Axis 1 — what the repeated-look guarantee is, if any. */
-export type ValidityClass = 'ville_anytime_valid' | 'bounded_priced' | 'classical_epoch' | 'exact_finite_sample' | 'heuristic' | 'retracted';
+export type ValidityClass = 'ville_anytime_valid' | 'bounded_priced' | 'classical_epoch' | 'exact_finite_sample' | 'heuristic' | 'retracted' | 'e_value_terminal';
 /** Axis 3 — the (epsilon, delta)-approximate e-value form of the row's statistic under H0
  *  (Ramdas–Wang 2025 Def. 10.1). Every form is a MEASURED or DERIVED statement with its source;
  *  'unrecorded' is the honest blank and does not mean epsilon = 0. */

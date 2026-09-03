@@ -46,7 +46,10 @@ export type ValidityClass =
   | 'classical_epoch'       // classical test per epoch; no anytime guarantee across looks
   | 'exact_finite_sample'   // conformal/randomization exactness per evaluation
   | 'heuristic'             // operational score or rule; no calibration claim
-  | 'retracted';            // shipped with a validity claim later measured false
+  | 'retracted'             // shipped with a validity claim later measured false
+  | 'e_value_terminal';     // a genuine e-value at ONE pre-scheduled look (P(e >= 1/alpha) <= alpha by
+                            // Markov; valid at data-dependent alpha, Ramdas–Wang 2025 Prop. 4.4); no
+                            // guarantee under repeated looks — it is not an e-process
 
 /** Axis 3 — the (epsilon, delta)-approximate e-value form of the row's statistic under H0
  *  (Ramdas–Wang 2025 Def. 10.1). Every form is a MEASURED or DERIVED statement with its source;
@@ -123,6 +126,29 @@ export const GUARANTEE_TABLE: readonly GuaranteeRow[] = Object.freeze([
         + 'oracle parameters (0.9999956).',
       kappa: 0.8445,
       source: 'grapa-stability run-20260819T040000Z (C58); detector-audit-sequential-2026-08-05 (C23)',
+    },
+  },
+  {
+    idPrefixes: ['safe_t_e_value_'],
+    family: 'A',
+    detector: 'safe two-sample t e-value (right-Haar / GROW), terminal read at the end of a canary',
+    implementation: 'detectors/safe-t-e-value.ts',
+    validityClass: 'e_value_terminal',
+    estimatedBaseline: SAFE_T_ENVELOPE,
+    alphaPolicy: 'classical_epoch_alpha',
+    evidence: 'C64 (d) valid-path power study (deploysignal studies/valid-path-power, run '
+      + '2026-09-03T18182Z): with KNOWN phi, 1.0000 detection at the K1 canonical 1.5 sd on the '
+      + '100-tick canary (floor 0.50), 0 of 524 null crossings at alpha = 0.05, exactly '
+      + 'scale-invariant across the four corpus signals. Registered ship rule routed this '
+      + 'construction (knowledge stats/valid-path-power-2026-09-03). Read ONCE per signal at the '
+      + 'terminal tick: the e-value is not an e-process, so per-tick peeking is not licensed. '
+      + 'Envelope: maxPhiValid 0.95; with an ESTIMATED phi the e-BH-relevant mean needs '
+      + 'calibration >= ~100 (file header, ADR 0005).',
+    approximateEValue: {
+      form: 'e_value',
+      note: 'sigma integrated out exactly: E[e|H0] = 1 at every calibration length with known phi '
+        + '(APPROXIMATE_E_VALUE_BY_CONSTRUCTION.safe_t_e_value carries the out-of-envelope '
+        + 'measurement, mean(e) = 9,710 at estimated phi = 0.9 from 100 samples).',
     },
   },
   {

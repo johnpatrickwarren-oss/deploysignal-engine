@@ -72,9 +72,11 @@ const exampleE = (rng, pFour) => (rng() < pFour ? Math.log(4) : -Infinity);
     strict_1.default.ok(Math.abs(lamMean - 1 / 3) < 0.05, `λ should converge to the log-optimal 1/3, got ${lamMean.toFixed(3)}`);
     const mart = (0, combine_1.combineMartingale)(xs, lam).log_fleet_e;
     const avg = (0, combine_1.combineAverage)(xs).log_fleet_e;
-    // growth ≈ K·log(4/3) ≈ 863 nats vs the mean's log 2 ≈ 0.69
-    strict_1.default.ok(mart > 0.8 * K * Math.log(4 / 3), `martingale growth ${mart.toFixed(1)} nats`);
-    strict_1.default.ok(mart > avg + 500, 'the adaptive merge dominates the mean in e-power on iid powered inputs');
+    // Per-step e-power at λ = 1/3: ½·log(2) + ½·log(2/3) = ½·log(4/3) ≈ 0.1438 nats, so ≈ 431 nats
+    // over K = 3000 (measured 440.7). Example 8.17 as printed says log(4/3) per step; the
+    // arithmetic gives half that — recorded on knowledge stats/pages/ramdas-wang-2025.md.
+    strict_1.default.ok(mart > 0.8 * K * 0.5 * Math.log(4 / 3), `martingale growth ${mart.toFixed(1)} nats`);
+    strict_1.default.ok(mart > avg + 300, 'the adaptive merge dominates the mean in e-power on iid powered inputs (≈ 431 vs 0.7 nats)');
     // and the all-in product is the pathological one: it is 0 as soon as any e is 0
     strict_1.default.equal((0, combine_1.combineProductUnguarded)(xs).log_fleet_e, -Infinity);
 });

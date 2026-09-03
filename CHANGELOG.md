@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased — C63 (2026-09-02), C64 (a) (2026-09-03)
+## v0.6.10-pre — 2026-09-03
+
+Cut so DeploySignal's valid-path routing (C64 a) can name its fires: the registry ids below.
+Also carries the C63 fleet merging (ADR 0028) and the C66 arl-delay study artifacts that were
+on `main` untagged.
 
 - **Registry ids and a guarantee row for the terminal safe-t path (C64 a).** `DETECTOR_REGISTRY.A`
   gains `safe_t_e_value_{signal}` for the six Family A signals, and `guarantees.ts` a row with the

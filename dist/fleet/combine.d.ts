@@ -20,7 +20,33 @@ export interface FleetMergeOutput {
  *  bound is NOT guaranteed; switch caller to combineAverage as the compensating
  *  control. Vovk-Wang 2021 §4.
  */
-export declare function combineProduct(log_e_values: ReadonlyArray<number>): FleetMergeOutput;
+export declare function combineProduct(log_e_values: ReadonlyArray<number>, opts?: {
+    sequential: true;
+}): FleetMergeOutput;
+/** The raw product, for measurement harnesses computing observed quantities against labelled
+ *  ground truth. Carries no validity claim. */
+export declare function combineProductUnguarded(log_e_values: ReadonlyArray<number>): FleetMergeOutput;
+/** ADR 0028 — martingale merging (Ramdas–Wang 2025 Definition 8.10):
+ *
+ *    log ∏_k (1 − λ_k + λ_k e_k),   λ_k ∈ [0, 1] PREDICTABLE (a function of e_1..e_{k−1} only).
+ *
+ *  An e-value whenever the inputs are sequential e-values (Proposition 8.11); exact when they are
+ *  exact. Predictability is the caller's contract — `adaptiveLambdas` satisfies it by construction.
+ *  λ ≡ 0 is the constant 1 (no bet); λ ≡ 1 is the product; the arithmetic mean is the λ_k = 1/K
+ *  fixed-amount bet. Throws on empty input or a λ outside [0, 1] or a length mismatch. */
+export declare function combineMartingale(log_e_values: ReadonlyArray<number>, lambdas: ReadonlyArray<number>): FleetMergeOutput;
+/** ADR 0028 — the empirically adaptive bet (Ramdas–Wang 2025 Example 8.14 / Definition 7.21):
+ *
+ *    λ_1 = 0;   λ_k = argmax_{λ ∈ [0, γ]} (1/(k−1)) Σ_{s<k} log(1 − λ + λ e_s)   for k ≥ 2.
+ *
+ *  Each λ_k depends only on e_1..e_{k−1}, so the sequence is predictable and combineMartingale on
+ *  it is an e-value for sequential inputs. The objective is concave in λ (a mean of logs of
+ *  affine functions), so the maximizer is found by bisection on its derivative
+ *  g(λ) = Σ (e_s − 1)/(1 − λ + λ e_s): λ_k = 0 iff the running mean of e_1..e_{k−1} is ≤ 1
+ *  (Theorem 3.14 as the text notes), λ_k = γ when g(γ) ≥ 0. γ = 1/2 is the book's uninformative
+ *  default; γ = 1 permits the all-in bet. Asymptotically log-optimal on inputs iid under the
+ *  alternative (Theorem 7.22). */
+export declare function adaptiveLambdas(log_e_values: ReadonlyArray<number>, gamma?: number): number[];
 /** Average-of-e-values combination (AoE). Ville-preserved under arbitrary
  *  dependence (no independence assumption required). Throws on empty input.
  *

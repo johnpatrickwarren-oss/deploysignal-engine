@@ -217,6 +217,8 @@ const missing = emitted.flatMap((o) => [
   ...(o.s1.status === 'MISSING' ? [`- ${o.card.detector_id}: S1 reachability has no run-backed evidence`] : []),
   ...(o.s2.status === 'MISSING' ? [`- ${o.card.detector_id}: S2 has no scoreable in-regime validity cell`] : []),
   ...(o.s3.status === 'MISSING' ? [`- ${o.card.detector_id}: S3 has no in-regime power cell at the registered shift`] : []),
+  // v1.C69: a SLOW e_detector names the canonical cells above their registered delay bound.
+  ...(o.s3.status === 'SLOW' ? (o.s3.slow ?? []).map((c) => `- ${o.card.detector_id}: S3 SLOW ${c.detector}/${c.null_id}: delay_upper95 ${c.delay_upper95.toFixed(2)} > D* ${c.delay_bound.toFixed(2)} at delta_eff ${c.delta_eff.toFixed(3)}`) : []),
   ...(o.s4.status === 'UNPRICED' ? [`- ${o.card.detector_id}: S4 c-bound unmeasured behind a bootstrap-substituted threshold`] : []),
   // Every S4 reason, whatever the status. Some record a gap without changing the status
   // (no envelope wiring, alpha resolution unverifiable) and would otherwise appear nowhere,

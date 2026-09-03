@@ -2,7 +2,7 @@
 // wealth detector already knows. Pure; never touches state. See
 // types/verdict-extensions/evidence-surface.ts for the semantics and the validity boundary.
 
-import type { EvidenceSurface, ThresholdKind } from '../types/verdict-extensions/evidence-surface';
+import type { EvidenceSurface, ThresholdKind, ConfidenceSequenceEvidence } from '../types/verdict-extensions/evidence-surface';
 
 export interface EvidenceArgs {
   log_wealth: number;
@@ -13,6 +13,8 @@ export interface EvidenceArgs {
   threshold: number | null;
   threshold_kind: ThresholdKind | null;
   log_peak_wealth: number;
+  /** ADR 0030 — attached by the Family A Gaussian-mixture path only. */
+  confidence_sequence?: ConfidenceSequenceEvidence;
 }
 
 export function buildEvidence(a: EvidenceArgs): EvidenceSurface {
@@ -29,6 +31,7 @@ export function buildEvidence(a: EvidenceArgs): EvidenceSurface {
     growth_rate_hat: a.n > 0 ? a.log_wealth / a.n : null,
     log_peak_wealth: a.log_peak_wealth,
     anytime_p: Math.min(1, Math.exp(-a.log_peak_wealth)),
+    ...(a.confidence_sequence ? { confidence_sequence: a.confidence_sequence } : {}),
   };
 }
 

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **e-BY intervals for a selected set, and the mixture CS travels level-free (ADR 0030, C62 b).**
+  `EvidenceSurface.confidence_sequence` (Family A Gaussian mixture only) now carries the interval
+  at the detector's α plus the level-free inputs `(S_t, t, σ², ρ)`; `mixtureConfidenceSequenceAt`
+  re-inverts at any level; `fleet/e-by.ts` (`eByLevel`, `eBenjaminiYekutieli`) reports each
+  selected signal at `δ|S|/K` with FCR ≤ δ for any selection rule and any dependence
+  (Ramdas–Wang 2025 Thm 13.7). Additive; no existing field or verdict moves. Registered study
+  `2026-09-e-by-fcr` (results recorded in the ADR's append).
+
 - **The `e_detector` certification class (Amendment v1.C69, C69).** `validation/certification`
   gains a fourth class for run-length guarantees: S2 = the T-censored ARL against `1/alpha_arl`
   (one-sided 95% bound, INCONCLUSIVE between recorded as missing evidence, recomputed from the

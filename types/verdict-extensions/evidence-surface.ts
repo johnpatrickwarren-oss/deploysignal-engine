@@ -37,6 +37,38 @@ export type ThresholdKind =
   /** c/α with a measured inflation bound c (Family D spectral e-detector). */
   | 'priced';
 
+/** ADR 0030 (C62 b) — the LEVEL-FREE inputs of the mixture confidence sequence: the interval at
+ *  ANY level α is `S_t/t ± sqrt(v·log(v/(α²ρ)))/t`, `v = σ²t + ρ` (Howard 2021 eq. 14; Ramdas–Wang
+ *  2025 Proposition 13.4: the e-process `M_t(S_t − tm)` does not involve α, so its stopped CS is a
+ *  level-free family of e-CIs). Carried so a consumer can re-invert at the e-BY level `δ|S|/K`
+ *  (`fleet/e-by.ts`) without re-running the detector. */
+export interface LevelFreeMixtureCs {
+  /** the detector's centered (whitened) partial sum S_t. */
+  S_t: number;
+  /** wealth updates so far, t ≥ 1. */
+  t: number;
+  /** compiled per-tick variance σ². */
+  sigma_squared: number;
+  /** mixing variance ρ = gaussian_sigma_squared_prior. */
+  sigma_squared_prior: number;
+}
+
+/** ADR 0030 — the confidence sequence as the detector reported it at its own level, plus the
+ *  level-free inputs. REPORTED, no verdict authority (study 2026-09-mixture-cs). The interval is
+ *  for the shift FROM THE COMPILED BASELINE MEAN in whitened units; the estimation-premise price
+ *  (μ̂, σ̂² from a window) is on the detector result's docstring and applies at every level. */
+export interface ConfidenceSequenceEvidence {
+  level_free: LevelFreeMixtureCs;
+  /** the level the detector inverted at (its own fire α). */
+  alpha: number;
+  center: number;
+  half_width: number;
+  lower: number;
+  upper: number;
+  /** identical to the detector's fire rule at `alpha`. */
+  excludes_zero: boolean;
+}
+
 export interface EvidenceSurface {
   /** exact log-wealth log M_t in nats (the ADR 0026 books; floors and saturation included). */
   log_wealth: number;
@@ -65,4 +97,6 @@ export interface EvidenceSurface {
   /** min(1, exp(−log_peak_wealth)) — an anytime-valid p-value for the detector's null given a
    *  valid increment. */
   anytime_p: number;
+  /** ADR 0030 — present on the Family A Gaussian-mixture path only; absent elsewhere. */
+  confidence_sequence?: ConfidenceSequenceEvidence;
 }

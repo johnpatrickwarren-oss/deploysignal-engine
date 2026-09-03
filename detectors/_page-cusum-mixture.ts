@@ -38,6 +38,7 @@ import {
 } from './_page-cusum-core';
 import type { FamilyAShadowCtx } from './_page-cusum-core';
 import { buildEvidence, advanceLogPeak } from './_evidence';
+import type { ConfidenceSequenceEvidence } from '../types/verdict-extensions/evidence-surface';
 
 export type MixtureSupermartingaleStates = { [signal: string]: MixtureSupermartingaleState };
 
@@ -172,7 +173,12 @@ function evaluateMixtureSignal(
     reason_code: result.fire ? 'cusum_exceeded_threshold' : 'accumulating',
     family: 'A',
     signal,
-    evidence: mixtureEvidence(state, result.threshold, result.log_increment),
+    evidence: mixtureEvidence(state, result.threshold, result.log_increment,
+      // ADR 0030: the CS and its level-free inputs (Gaussian path only; absent on Beta).
+      result.confidence_sequence && mixtureParams.gaussian_sigma_squared_prior !== undefined ? {
+        level_free: { S_t: state.S_t, t: state.n, sigma_squared: sigmaSquared, sigma_squared_prior: mixtureParams.gaussian_sigma_squared_prior },
+        alpha, ...result.confidence_sequence,
+      } : undefined),
   };
 }
 
@@ -180,12 +186,14 @@ function evaluateMixtureSignal(
  *  strategy); the threshold is the analytical 1/α. Pre-0027 snapshots heal from M_t. */
 function mixtureEvidence(
   state: MixtureSupermartingaleState, threshold: number | null, logIncrement: number | null,
+  confidence_sequence?: ConfidenceSequenceEvidence,
 ) {
   const logM = state.log_M_t ?? Math.log(state.M_t);
   return buildEvidence({
     log_wealth: logM, log_increment: logIncrement, bet: null, n: state.n,
     threshold, threshold_kind: 'ville',
     log_peak_wealth: advanceLogPeak(state.log_peak_M, logM),
+    confidence_sequence,
   });
 }
 

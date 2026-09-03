@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased — C63 (2026-09-02)
+## Unreleased — C63 (2026-09-02), C64 (a) (2026-09-03)
+
+- **Registry ids and a guarantee row for the terminal safe-t path (C64 a).** `DETECTOR_REGISTRY.A`
+  gains `safe_t_e_value_{signal}` for the six Family A signals, and `guarantees.ts` a row with the
+  new class `e_value_terminal` (a genuine e-value at one pre-scheduled look; not an e-process),
+  `alphaPolicy: 'classical_epoch_alpha'`, the live `SAFE_T_ENVELOPE`, axis 3 `e_value`. Evidence:
+  the C64 (d) valid-path power study (deploysignal `studies/valid-path-power`, run
+  `2026-09-03T18182Z`; knowledge `stats/valid-path-power-2026-09-03`). No detector code changes;
+  DeploySignal's routing consumes the ids.
 
 - **Martingale merging in the fleet layer (ADR 0028, `fleet/combine.ts`).** `combineMartingale`
   (`∏(1 − λ_k + λ_k e_k)`, predictable λ, Ramdas–Wang 2025 Definition 8.10) and `adaptiveLambdas`

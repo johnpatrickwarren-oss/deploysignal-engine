@@ -30,6 +30,22 @@ describe('guarantee table (WORKLIST C4)', () => {
     assert.equal(guaranteeFor('sequential_mmd')!.evidence.includes('Q68'), true);
   });
 
+  test('C64 (a): the six safe_t_e_value_* ids are registered and resolve to the terminal e-value row', () => {
+    const signals = ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'];
+    for (const sig of signals) {
+      const id = `safe_t_e_value_${sig}` as DetectorId;
+      assert.ok((DETECTOR_REGISTRY.A as readonly string[]).includes(id), `${id} not in DETECTOR_REGISTRY.A`);
+      const row = guaranteeFor(id)!;
+      assert.equal(row.validityClass, 'e_value_terminal');
+      assert.equal(row.alphaPolicy, 'classical_epoch_alpha', 'one look per canary spends alpha once');
+      assert.equal(row.estimatedBaseline, ESTIMATED_BASELINE_GUARANTEES.safe_t_e_value, 'the live safe-t envelope');
+      assert.equal(row.approximateEValue.form, 'e_value');
+      assert.ok(row.evidence.includes('2026-09-03T18182Z'), 'evidence names the C64 (d) run');
+    }
+    // the row must not be mistaken for an e-process: the class is terminal, never ville
+    assert.notEqual(guaranteeFor('safe_t_e_value_ttft')!.validityClass, 'ville_anytime_valid');
+  });
+
   test('axis-2 entries are the live envelope objects, not copies', () => {
     assert.equal(guaranteeFor('betting_e_process_ttft')!.estimatedBaseline, BETTING_E_PROCESS_ENVELOPE);
     assert.equal(guaranteeFor('page_cusum_ttft')!.estimatedBaseline, MIXTURE_SUPERMARTINGALE_ENVELOPE);

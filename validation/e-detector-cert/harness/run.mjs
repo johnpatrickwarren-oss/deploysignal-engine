@@ -28,9 +28,11 @@ if (MODE === 'live' && QUICK) { console.error('--quick may not write under resul
 
 // ── registered constants (PREREGISTRATION §3) ──
 const DETECTOR = 'e_sr_mean_shift';
-const N = QUICK ? 20 : 2000;
+// Amendment A1: `--cells <ids>` re-runs only those S2 cells, `--n` and `--salt-s2` override N and the S2 salt.
+const CELLS = arg('--cells', null);
+const N = QUICK ? 20 : Number(arg('--n', 2000));
 const SEED = 20260905;
-const SALT_S2 = 0, SALT_S3 = (k) => 1_000_003 + 100 * k;
+const SALT_S2 = Number(arg('--salt-s2', 0)), SALT_S3 = (k) => 1_000_003 + 100 * k;
 const ALPHA_ARL = 1e-3;
 const T_S2 = 20_000;
 const NU = 200, T_S3 = 1_200;
@@ -143,15 +145,16 @@ if (fs.existsSync(runDir)) { console.error(`refusing to reuse ${runDir}`); proce
 fs.mkdirSync(runDir, { recursive: true });
 
 const cells = [];
-for (const id of [...IN_CLASS, ...OUT_OF_CLASS]) { const c = arlCell(id); cells.push(c); console.log(`S2 ${id}: arl0_T ${c.arl0_T.toFixed(1)} ± ${c.arl0_se.toFixed(1)} → ${c.verdict}`); }
-for (const id of IN_CLASS) for (const g of GRID) { const c = delayCell(id, g); cells.push(c); console.log(`S3 ${id} ${g.severity}: det ${c.detection_rate?.toFixed(3)} delay ${c.delay_canonical?.toFixed(1)} (D* ${c.delay_bound_registered.toFixed(1)}) → ${c.verdict}`); }
+const S2_IDS = CELLS ? CELLS.split(',') : [...IN_CLASS, ...OUT_OF_CLASS];
+for (const id of S2_IDS) { const c = arlCell(id); cells.push(c); console.log(`S2 ${id}: arl0_T ${c.arl0_T.toFixed(1)} ± ${c.arl0_se.toFixed(1)} → ${c.verdict}`); }
+for (const id of CELLS ? [] : IN_CLASS) for (const g of GRID) { const c = delayCell(id, g); cells.push(c); console.log(`S3 ${id} ${g.severity}: det ${c.detection_rate?.toFixed(3)} delay ${c.delay_canonical?.toFixed(1)} (D* ${c.delay_bound_registered.toFixed(1)}) → ${c.verdict}`); }
 
 const sha256 = (p) => createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 const manifest = {
   study: '2026-09-e-detector-cert', run: `run-${stamp}`, mode: MODE, quick: QUICK, tier: 'T1',
   git_sha: execSync('git rev-parse HEAD', { cwd: ROOT }).toString().trim(),
   harness_sha256: sha256(fileURLToPath(import.meta.url)), module_sha256: sha256(path.join(ROOT, 'detectors', 'e-sr-mean-shift.ts')),
-  n: N, seed: SEED, salt: { S2: SALT_S2, S3: GRID.map((g) => SALT_S3(g.k)) }, alpha_arl: ALPHA_ARL, T_s2: T_S2, nu: NU, T_s3: T_S3,
+  n: N, seed: SEED, salt: { S2: SALT_S2, S3: GRID.map((g) => SALT_S3(g.k)) }, cells_arg: CELLS, alpha_arl: ALPHA_ARL, T_s2: T_S2, nu: NU, T_s3: T_S3,
   cells: cells.length, exceptions: cells.reduce((a, c) => a + c.exceptions, 0),
   wall_seconds: Math.round((Date.now() - t0) / 1000), argv: process.argv.slice(2),
 };

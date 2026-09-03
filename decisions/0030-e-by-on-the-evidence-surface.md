@@ -41,8 +41,11 @@ D and E carry no `confidence_sequence`. Dependence between signals is not exerci
 ## Results append — 2026-09-03, run `run-20260903T235802Z`
 
 18 cells × 3 δ, N = 2,000, 0 exceptions, 0 re-inversion deviations above 1e-12. **P1 HELD in
-every cell at every δ**: the largest e-BY FCR relative to its δ is 0.032 (ρ = 38, extremeness
-rule, δ_shift = 0, δ = 0.2: 0.0063). Ship rule met; this ADR is ACCEPTED as built. **P2
+every cell at every δ**: the largest e-BY FCR relative to its δ is 0.270 (ρ = 1, the fired-set
+rule read at each signal's first fire, no shift, δ = 0.05: 0.0135 — every false fire is a miss at
+its fire tick by construction, so this cell's FCR is the false-fire rate); every other cell is at
+or under 0.04 of its δ. *Correction, same day:* the first version of this append and the commit
+that carried it said 0.032, read off the extremeness cell alone; the REPORT's figure is 0.270. Ship rule met; this ADR is ACCEPTED as built. **P2
 FAILED**: the naive intervals at level δ never exceeded δ under the extremeness rule on this
 substrate (δ = 0.05: 0.0047 at ρ = 1, 0.0147 at ρ = 38; the closest approach 0.085 vs 0.2 at
 ρ = 38) — my registered prediction was wrong. The time-uniform interval read at a fixed T = 300 is

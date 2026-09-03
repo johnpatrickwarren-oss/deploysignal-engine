@@ -103,3 +103,28 @@ module's header beside "never enters e-BH".
 `REPORT.md` rendered by an `analysis/report.mjs` and pinned by `analysis/check_report.mjs`
 (the `arl-delay` pattern). Cells carry `detector_id`, never `detector` (Amendment v1.C66,
 C66.4).
+
+## Amendment A1 — 2026-09-03, before any run: H5's instrument was not measurable as registered
+
+H5 registered "the trajectory mean of `M_1000` lies in `[800, 1200]`". Writing the module's unit
+test showed that instrument cannot read the quantity it names: for `λ = 3` a 150-tick product of
+increments has log-sd `3·sqrt(150) ≈ 37`, and the sample mean of 3,000 such trajectories read
+**64 against an expectation of 150** — the terminal-mean trap the wiki already records
+(`knowledge/stats/pages/terminal-mean-is-not-measurable.md`; the C63 session's lesson (1) was the
+same error on a 30-fold product). `E∞[M_t] = t` is exact by linearity once `E[L_t(λ) | F_{t−1}] = 1`
+and the recursion is the SR sum; the claim does not move, the instrument does.
+
+**H5 as amended** (two harness gates, N1 at oracle parameters, `N = 2,000`, `T = 1,000`, seeds as
+registered for H5):
+
+- **H5a — the increment estimator per λ.** For each of the 16 grid points, the mean of
+  `L_t(λ) = exp(λ r_t − λ²/2)` over all `N·T = 2·10⁶` (trajectory, tick) pairs lies within
+  `1 ± 3·se`, `se` the sample standard deviation over the same pairs divided by `sqrt(N·T)`.
+  HELD iff all 16 hold.
+- **H5b — `E∞[M_T] = T` where it is measurable.** On the restricted grid `λ ∈ {+0.25, −0.25}`
+  (a valid e-detector in its own right, Prop. 2.3) with `T = 20`, the trajectory mean of `M_20`
+  lies in `[0.8·20, 1.2·20]`; and it exceeds 5 (an e-value would average at most 1). HELD iff both.
+
+A FAIL on either remains an implementation defect and a harness stop. No other hypothesis, band,
+seed, grid or size moves. The full-grid trajectory mean of `M_1000` is still reported, labelled
+as the unmeasurable quantity, so the trap is visible in the run record.

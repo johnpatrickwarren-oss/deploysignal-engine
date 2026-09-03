@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- **The `e_detector` certification class (Amendment v1.C69, C69).** `validation/certification`
+  gains a fourth class for run-length guarantees: S2 = the T-censored ARL against `1/alpha_arl`
+  (one-sided 95% bound, INCONCLUSIVE between recorded as missing evidence, recomputed from the
+  fields), S3 = the house inertness floor plus a delay floor at the class canonical severity
+  against the Theorem 4.3 + Prop. B.2 bound evaluated at the effective whitened shift
+  `delta·sqrt((1−phi)/(1+phi))` (new status SLOW → ADVISORY), S4 inverted (advisory budget and NOT
+  wired into the FDR gate). New optional regime key `null_prefixes` for every class (absent =
+  unchanged). First card of the class: `e_sr_mean_shift`, **USE T1** on study
+  `2026-09-e-detector-cert` (45 cells over two registered runs, 0 exceptions): all ten in-class
+  nulls clear the ARL floor (N2-m30 and N4-p09-m100 only at N = 20,000, both within 15% of the
+  floor), N5/N6/N8 refute outside the regime, every canonical delay under its bound (iid 7.1 vs
+  13.0; φ = 0.9 estimated 77.8 vs 229.6). Fifteen existing cards re-frozen, byte-identical
+  outside pins. No detector or shipped-path code changes.
+
 ## v0.6.10-pre — 2026-09-03
 
 Cut so DeploySignal's valid-path routing (C64 a) can name its fires: the registry ids below.

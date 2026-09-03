@@ -1,0 +1,38 @@
+{
+  "cells": [
+    {
+      "detector": "e_sr_mean_shift",
+      "null_id": "N2-m30",
+      "params": "estimated",
+      "phi": 0,
+      "m": 30,
+      "alpha_arl": 0.001,
+      "T": 20000,
+      "n": 20000,
+      "p_alarm_T": 0.9799,
+      "arl0_T": 1147.75275,
+      "arl0_se": 23.49319904484991,
+      "arl0_lower95": 1109.106437571222,
+      "median_run_length": 183,
+      "verdict": "not-refuted",
+      "exceptions": 0
+    },
+    {
+      "detector": "e_sr_mean_shift",
+      "null_id": "N4-p09-m100",
+      "params": "estimated",
+      "phi": 0.9,
+      "m": 100,
+      "alpha_arl": 0.001,
+      "T": 20000,
+      "n": 20000,
+      "p_alarm_T": 0.9797,
+      "arl0_T": 1184.8783,
+      "arl0_se": 23.976314458277553,
+      "arl0_lower95": 1145.4372627161335,
+      "median_run_length": 192,
+      "verdict": "not-refuted",
+      "exceptions": 0
+    }
+  ]
+}

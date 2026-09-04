@@ -1,0 +1,66 @@
+{
+  "study": "2026-09-e-by-dependence",
+  "run": "run-20260904T053838Z",
+  "mode": "live",
+  "quick": false,
+  "tier": "T1",
+  "git_sha": "d254cad218d8fad52dd3e30207584edd07cf4017",
+  "harness_sha256": "76930a4f0c72c83e0fadd10a00b6758d52b23c38eb7b2d9026e3a9c8ff08c0e4",
+  "n": 2000,
+  "seed": 20260911,
+  "K": 20,
+  "L": 5,
+  "T": 300,
+  "alpha_detector": 0.001,
+  "laws": [
+    {
+      "law": "equi-0.5",
+      "sigma_squared": 1
+    },
+    {
+      "law": "equi-0.9",
+      "sigma_squared": 1
+    },
+    {
+      "law": "common-mode",
+      "sigma_squared": 4
+    },
+    {
+      "law": "coupled",
+      "sigma_squared": 1
+    },
+    {
+      "law": "independent",
+      "sigma_squared": 1
+    }
+  ],
+  "negative_signs": [
+    3,
+    7,
+    11,
+    15,
+    19
+  ],
+  "rhos": [
+    1,
+    38
+  ],
+  "shifts": [
+    0,
+    0.75,
+    1.5
+  ],
+  "deltas": [
+    0.05,
+    0.1,
+    0.2
+  ],
+  "top": 3,
+  "half": 10,
+  "cells": 120,
+  "wall_seconds": 34,
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

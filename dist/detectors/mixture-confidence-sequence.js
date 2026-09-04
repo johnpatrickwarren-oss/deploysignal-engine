@@ -28,23 +28,32 @@
 // REPORTED instrument: no verdict authority. Wired onto the mixture result only per the study's
 // registered outcome rule (PREREGISTRATION.md §3).
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.mixtureConfidenceSequenceAt = mixtureConfidenceSequenceAt;
 exports.mixtureConfidenceSequence = mixtureConfidenceSequence;
-function mixtureConfidenceSequence(a) {
-    if (!(a.t >= 1))
-        throw new Error(`mixtureConfidenceSequence: t must be ≥ 1, got ${a.t}`);
-    if (!(a.alpha > 0 && a.alpha < 1))
-        throw new Error(`mixtureConfidenceSequence: alpha must be in (0,1), got ${a.alpha}`);
-    if (!(a.sigma_squared_prior > 0))
-        throw new Error(`mixtureConfidenceSequence: σ²_prior must be > 0, got ${a.sigma_squared_prior}`);
-    if (!(a.sigma_squared >= 0))
-        throw new Error(`mixtureConfidenceSequence: σ² must be ≥ 0, got ${a.sigma_squared}`);
-    const v = a.sigma_squared * a.t + a.sigma_squared_prior;
-    const half_width = Math.sqrt(v * Math.log(v / (a.alpha * a.alpha * a.sigma_squared_prior))) / a.t;
-    const center = a.S_t / a.t;
+/** ADR 0030 (C62 b) — the same interval at an arbitrary level from the level-free inputs. The
+ *  e-process behind the CS does not depend on α (Ramdas–Wang 2025 Proposition 13.4), so one
+ *  `(S_t, t, σ², ρ)` yields the whole family; `fleet/e-by.ts` re-inverts it at `δ|S|/K`. */
+function mixtureConfidenceSequenceAt(lf, alpha) {
+    if (!(lf.t >= 1))
+        throw new Error(`mixtureConfidenceSequence: t must be ≥ 1, got ${lf.t}`);
+    if (!(alpha > 0 && alpha < 1))
+        throw new Error(`mixtureConfidenceSequence: alpha must be in (0,1), got ${alpha}`);
+    if (!(lf.sigma_squared_prior > 0))
+        throw new Error(`mixtureConfidenceSequence: σ²_prior must be > 0, got ${lf.sigma_squared_prior}`);
+    if (!(lf.sigma_squared >= 0))
+        throw new Error(`mixtureConfidenceSequence: σ² must be ≥ 0, got ${lf.sigma_squared}`);
+    if (!Number.isFinite(lf.S_t))
+        throw new Error(`mixtureConfidenceSequence: S_t must be finite, got ${lf.S_t}`);
+    const v = lf.sigma_squared * lf.t + lf.sigma_squared_prior;
+    const half_width = Math.sqrt(v * Math.log(v / (alpha * alpha * lf.sigma_squared_prior))) / lf.t;
+    const center = lf.S_t / lf.t;
     return {
         center, half_width,
         lower: center - half_width, upper: center + half_width,
         excludes_zero: Math.abs(center) >= half_width,
     };
+}
+function mixtureConfidenceSequence(a) {
+    return mixtureConfidenceSequenceAt({ S_t: a.S_t, t: a.t, sigma_squared: a.sigma_squared, sigma_squared_prior: a.sigma_squared_prior }, a.alpha);
 }
 //# sourceMappingURL=mixture-confidence-sequence.js.map

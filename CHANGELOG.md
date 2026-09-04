@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## v0.6.11-pre — 2026-09-03
+
+Cut so DeploySignal can report e-BY effect-size intervals for its fired mixture signals (C62 b)
+and so the consumers' pins can carry the `e_detector` certification class (C69) and the e-SR
+detector (C68, ADR 0029), all of which were on `main` untagged.
 
 - **e-BY intervals for a selected set, and the mixture CS travels level-free (ADR 0030, C62 b).**
   `EvidenceSurface.confidence_sequence` (Family A Gaussian mixture only) now carries the interval

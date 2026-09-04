@@ -1,4 +1,4 @@
-import type { EvidenceSurface, ThresholdKind } from '../types/verdict-extensions/evidence-surface';
+import type { EvidenceSurface, ThresholdKind, ConfidenceSequenceEvidence } from '../types/verdict-extensions/evidence-surface';
 export interface EvidenceArgs {
     log_wealth: number;
     log_increment: number | null;
@@ -8,6 +8,8 @@ export interface EvidenceArgs {
     threshold: number | null;
     threshold_kind: ThresholdKind | null;
     log_peak_wealth: number;
+    /** ADR 0030 — attached by the Family A Gaussian-mixture path only. */
+    confidence_sequence?: ConfidenceSequenceEvidence;
 }
 export declare function buildEvidence(a: EvidenceArgs): EvidenceSurface;
 /** Running-max bookkeeping: the new peak given the previous (possibly absent) peak and the

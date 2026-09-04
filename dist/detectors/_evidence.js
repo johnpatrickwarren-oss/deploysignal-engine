@@ -19,6 +19,7 @@ function buildEvidence(a) {
         growth_rate_hat: a.n > 0 ? a.log_wealth / a.n : null,
         log_peak_wealth: a.log_peak_wealth,
         anytime_p: Math.min(1, Math.exp(-a.log_peak_wealth)),
+        ...(a.confidence_sequence ? { confidence_sequence: a.confidence_sequence } : {}),
     };
 }
 /** Running-max bookkeeping: the new peak given the previous (possibly absent) peak and the

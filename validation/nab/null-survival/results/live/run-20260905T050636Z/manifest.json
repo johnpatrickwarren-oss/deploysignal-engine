@@ -1,0 +1,87 @@
+{
+  "study": "2026-09-nab-null-survival",
+  "run": "run-20260905T050636Z",
+  "mode": "live",
+  "engine_sha": "b4000a331f03ca00e7899eaee7ae69ccbbc68f8d",
+  "engine_version": "0.6.11-pre",
+  "node": "v25.9.0",
+  "nab_sha": "ea702d75cc2258d9d7dd35ca8e5e2539d71f3140",
+  "labels_sha256": {
+    "combined_windows": "1e1fbc4601321aad8d0f8b3784c8134299379f68f6c1f7777565f8ffd57ab6b1",
+    "combined_labels": "98724014c162fcfd4be605683517f194051a54e98756c53667bd33ddbc644d9b"
+  },
+  "registration_sha256": "9fc1547bfd26d1f93deb9f791a3dc1c1b699a2ae0d5e795a6a3aef7df52ca361",
+  "harness_sha256": "6f30ccdcfe90bac011e4dbd034245be60123598597d2c1cd54446bf46bd2e70b",
+  "report_sha256": "1fa432bf2b506bf10f056b2d9d91139f5cabb4693d4167f466b1dd42e0ea805e",
+  "sub_benchmarks": [
+    "realKnownCause",
+    "realAWSCloudwatch"
+  ],
+  "tool_fraction": 0.15,
+  "arms": [
+    "tool",
+    "0.15",
+    "0.30",
+    "0.50"
+  ],
+  "alphas": [
+    0.05,
+    0.01
+  ],
+  "alpha_arl": 0.001,
+  "alpha_cal": 0.01,
+  "window_length": 100,
+  "bounded_esr": "absent",
+  "constructions": [
+    "family_A_mixture_supermartingale",
+    "family_A_betting_e_process",
+    "e_sr_mean_shift",
+    "sequential_ui_e_process",
+    "safe_t_e_value",
+    "universal_inference_e_value"
+  ],
+  "n_traces": 23,
+  "registered_traces": 23,
+  "c75_reproduction": {
+    "family_A_mixture_supermartingale": {
+      "want": 14,
+      "got": 14,
+      "ok": true
+    },
+    "family_A_betting_e_process": {
+      "want": 11,
+      "got": 11,
+      "ok": true
+    },
+    "e_sr_mean_shift": {
+      "want": 20,
+      "got": 20,
+      "ok": true
+    }
+  },
+  "survivors": {
+    "family_A_mixture_supermartingale": [],
+    "family_A_betting_e_process": [],
+    "e_sr_mean_shift": [
+      "tool",
+      "0.15",
+      "0.30",
+      "0.50"
+    ],
+    "sequential_ui_e_process": [
+      "0.15"
+    ],
+    "safe_t_e_value": [],
+    "universal_inference_e_value": [
+      "tool",
+      "0.15",
+      "0.30",
+      "0.50"
+    ]
+  },
+  "exceptions": 0,
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

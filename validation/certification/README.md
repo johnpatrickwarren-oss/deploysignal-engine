@@ -271,9 +271,14 @@ S4 is inverted for the class: PASS iff the budget is advisory and the id is NOT 
 `DETECTOR_ENVELOPES`. One regime key is new for every class, `guarantee.regime.null_prefixes`
 (absent = unchanged). The class's evidence is `validation/e-detector-cert/` (cells carry
 `detector`, so the collector pools them — the C66.4 exclusion reversed for this class only);
-its one card is `cards/e_sr_mean_shift.json`. Registration and predictions: the protocol page,
-Amendment v1.C69, and `validation/e-detector-cert/PREREGISTRATION.md` (with Amendment A1, the
-N = 20,000 re-run of the two cells the first run left INCONCLUSIVE at the floor).
+its cards are `cards/e_sr_mean_shift.json` and, since Amendment v1.C77 (2026-09-04),
+`cards/e_sr_mean_shift_bounded.json` — the bounded-bet increment (ADR 0031), whose delay floor the
+scorer evaluates at the card's declared `guarantee.regime.increment` ('gaussian' absent =
+unchanged; 'bounded' D, V by quadrature in `lib/constants.mjs`) and whose evidence is
+`validation/e-sr-bounded/` (cells carry `detector`). Registration and predictions: the protocol page,
+Amendments v1.C69 and v1.C77, `validation/e-detector-cert/PREREGISTRATION.md` (with Amendment A1, the
+N = 20,000 re-run of the two cells the first run left INCONCLUSIVE at the floor) and
+`validation/e-sr-bounded/PREREGISTRATION.md` (with its Amendment A1).
 
 ## Reported endpoints with no verdict authority (Amendment v1.C66, 2026-09-03)
 

@@ -1,0 +1,358 @@
+{
+  "card": {
+    "protocol_version": 1,
+    "detector_id": "family_E_conformal_heldout",
+    "aliases": [
+      "family_E_heldout",
+      "K4_conformal_heldout"
+    ],
+    "family": "E",
+    "class": "terminal_e_value",
+    "engine_pin": {
+      "version": "0.6.11-pre",
+      "sha": "68b9b2cc548f49986936d7d65a6af9e660bdb864"
+    },
+    "source_files": [
+      {
+        "path": "tools/stamp-heldout-family-e.mjs",
+        "sha256": "470fbd2282a08aaaa232192cc171d1f87aab041f06a3015a42ed5c4ecd13df64"
+      },
+      {
+        "path": "detectors/conformal.ts",
+        "sha256": "437776bd1b7c2465ea36cfed1297750615c404cbe84d62a3b8ee6c9762a59f7e"
+      },
+      {
+        "path": "validation/certification/lib/collect.mjs",
+        "sha256": "62389a1377c4f3e742c87c17069a4d839ae868e17f152ccef3cb567585e66e37"
+      }
+    ],
+    "guarantee": {
+      "sentence": "per-tick hedged-indicator e-value wealth process (M_t = M_{t-1} * (1 + indicator - alpha_E), fires iff M_t >= 1/alpha_E, Ville's inequality) with the tail quantile calibrated on held-out data (n >= 10,000/cell); P(indicator|H0) = alpha holds by exchangeability of held-out calibration and live draws — T1 (this battery's own generator) now, T2 (clustersynth) blocked by substrate since clustersynth ships multivariate-only per-shard telemetry, not the 1-D stream this route scores, T3 (real corpus) blocked pending C37",
+      "quantifiers": [
+        {
+          "text": "by exchangeability",
+          "tag": "empirical",
+          "proof_artifact": null
+        }
+      ],
+      "regime": {
+        "phi_max": 0.6,
+        "m_min": null,
+        "baseline": "held-out empirical, T1 (this battery's own generator, not clustersynth)",
+        "nulls": "gaussian iid (phi=0) and AR(1) phi<=0.6 (cell 21)"
+      }
+    },
+    "shipped_path": {
+      "kind": "per-tick weighted-e-value wealth process (Addition #22), held-out calibration route",
+      "estimator": null,
+      "notes": "K4 (point-outlier) candidate; not deploysignal's shipped selector path -- see family_E_conformal.json for the shipped chi_p route's own unreachability finding"
+    },
+    "budget": {
+      "participating": true,
+      "alpha_booked": null,
+      "resolution_claim": null
+    },
+    "falsifier": "crossing rate > alpha on the held-out-calibrated healthy battery",
+    "prior_evidence": [
+      {
+        "stage": "S2",
+        "study": "coverage",
+        "runs": "coverage/results/live/*",
+        "wiki": "methodology/fault-class-coverage-matrix"
+      }
+    ]
+  },
+  "s1": {
+    "status": "MISSING"
+  },
+  "s2": {
+    "status": "REFUTED",
+    "perCell": [
+      {
+        "detector": "family_E_conformal_heldout",
+        "arm": "healthy",
+        "cell_index": 31,
+        "null_id": "N1",
+        "phi": 0,
+        "params": "oracle",
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 300,
+        "onset": 100,
+        "exceedance": 0.0455,
+        "mean_e": 4.175984181731008,
+        "lower_95": 0.038429145301453534,
+        "non_finite_wealth": 0,
+        "adapter_failures": 0,
+        "verdict": "not-refuted",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "heldout_seed": 20760838,
+        "heldout_rows": 10000,
+        "__study": "coverage",
+        "__run": "run-20260808T133859Z",
+        "__git_sha": "ef586477e4b403e676ab3a9b0529306f43a53337",
+        "__tier": "T1",
+        "phi_source": "oracle",
+        "mapped": "REFUTED",
+        "out_of_regime": false,
+        "out_of_regime_reason": null,
+        "mean_rule_applied": true,
+        "mean_rule_reason": "mean rule: exceedance verdict overridden (mean_e 4.175984181731008 > registered bound 1; no interval on the mean is recorded — lower_95 0.038429145301453534 bounds the exceedance, not the mean)",
+        "overridden_verdict": "not-refuted"
+      }
+    ],
+    "excluded": [],
+    "missing": [],
+    "mean_rule_overrides": [
+      {
+        "detector": "family_E_conformal_heldout",
+        "null_id": "N1",
+        "suppressed_verdict": "not-refuted",
+        "reason": "mean rule: exceedance verdict overridden (mean_e 4.175984181731008 > registered bound 1; no interval on the mean is recorded — lower_95 0.038429145301453534 bounds the exceedance, not the mean)"
+      }
+    ],
+    "suppressed_verdicts": {
+      "not-refuted": 1
+    }
+  },
+  "s3": {
+    "status": "PASS",
+    "perCell": [
+      {
+        "detector": "family_E_conformal_heldout",
+        "arm": "power",
+        "cell_index": 31,
+        "null_id": "N1",
+        "phi": 0,
+        "params": "oracle",
+        "shift_sigma": 3,
+        "alpha": 0.05,
+        "n": 2000,
+        "ticks": 300,
+        "onset": 100,
+        "fires": 2000,
+        "detection_rate": 1,
+        "adapter_failures": 0,
+        "non_finite_wealth": 0,
+        "verdict": "POWERED",
+        "not_executable_reason": null,
+        "substrate_tier": "T1",
+        "heldout_seed": 20760838,
+        "heldout_rows": 10000,
+        "__study": "coverage",
+        "__run": "run-20260808T133859Z",
+        "__git_sha": "ef586477e4b403e676ab3a9b0529306f43a53337",
+        "__tier": "T1",
+        "phi_source": "oracle"
+      }
+    ],
+    "excluded": [],
+    "missing": [
+      {
+        "detector": "family_E_conformal_heldout",
+        "null_id": null,
+        "reason": "power cell with no shift_sigma recorded x4: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT"
+      }
+    ],
+    "suppressed_verdicts": {}
+  },
+  "s4": {
+    "status": "PASS",
+    "reasons": [
+      "no envelope wiring"
+    ]
+  },
+  "pairing": [],
+  "overall": {
+    "verdict": "REFUSE",
+    "tier": null,
+    "regime": {
+      "phi_max": 0.6,
+      "m_min": null,
+      "baseline": "held-out empirical, T1 (this battery's own generator, not clustersynth)",
+      "nulls": "gaussian iid (phi=0) and AR(1) phi<=0.6 (cell 21)",
+      "excluded_cells": []
+    },
+    "reasons": [
+      "S1 reachability not run-backed (v1 floor)",
+      "S2 in-regime refutation"
+    ]
+  },
+  "coverage": {
+    "K1": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K2": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K3": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K4": {
+      "status": "NOT_POWERED",
+      "cells": [
+        {
+          "detector": "family_E_conformal_heldout",
+          "fault_class": "K4",
+          "severity": "3sigma-point",
+          "canonical": false,
+          "cell_index": 18,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 153,
+          "detection_rate": 0.0765,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "indicator_rate_at_injected_tick": 0.8695,
+          "heldout_seed": 20760825,
+          "heldout_rows": 10000,
+          "__study": "coverage",
+          "__run": "run-20260808T133859Z",
+          "__git_sha": "ef586477e4b403e676ab3a9b0529306f43a53337",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "family_E_conformal_heldout",
+          "fault_class": "K4",
+          "severity": "5sigma-point",
+          "canonical": true,
+          "cell_index": 19,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 72,
+          "detection_rate": 0.036,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "indicator_rate_at_injected_tick": 0.999,
+          "heldout_seed": 20760826,
+          "heldout_rows": 10000,
+          "__study": "coverage",
+          "__run": "run-20260808T133859Z",
+          "__git_sha": "ef586477e4b403e676ab3a9b0529306f43a53337",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "family_E_conformal_heldout",
+          "fault_class": "K4",
+          "severity": "8sigma-point",
+          "canonical": false,
+          "cell_index": 20,
+          "null_id": "N1",
+          "phi": 0,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 90,
+          "detection_rate": 0.045,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "indicator_rate_at_injected_tick": 1,
+          "heldout_seed": 20760827,
+          "heldout_rows": 10000,
+          "__study": "coverage",
+          "__run": "run-20260808T133859Z",
+          "__git_sha": "ef586477e4b403e676ab3a9b0529306f43a53337",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        },
+        {
+          "detector": "family_E_conformal_heldout",
+          "fault_class": "K4",
+          "severity": "5sigma-point-ar1",
+          "canonical": false,
+          "cell_index": 21,
+          "null_id": "N3-p06",
+          "phi": 0.6,
+          "params": "oracle",
+          "alpha": 0.05,
+          "n": 2000,
+          "ticks": 300,
+          "onset": 100,
+          "fires": 231,
+          "detection_rate": 0.1155,
+          "adapter_failures": 0,
+          "non_finite_wealth": 0,
+          "verdict": "INERT",
+          "not_executable_reason": null,
+          "substrate_tier": "T1",
+          "indicator_rate_at_injected_tick": 1,
+          "heldout_seed": 20760828,
+          "heldout_rows": 10000,
+          "__study": "coverage",
+          "__run": "run-20260808T133859Z",
+          "__git_sha": "ef586477e4b403e676ab3a9b0529306f43a53337",
+          "__tier": "T1",
+          "phi_source": "oracle"
+        }
+      ],
+      "canonical": {
+        "severity": "5sigma-point",
+        "rate": 0.036
+      },
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K5": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6-slow": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    }
+  },
+  "generated_from": {
+    "runs": [
+      "coverage/run-20260808T133859Z"
+    ]
+  }
+}

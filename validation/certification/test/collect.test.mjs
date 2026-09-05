@@ -722,8 +722,15 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
   // `detector: 'e_sr_mean_shift'` -- the FIRST study whose arl0_T / delay_canonical cells are
   // pooled as scoring evidence, for the one card of that class. They match no v1-class card
   // (cellsFor keys on detector id), so no existing verdict, stage token or tier moves.
-  assert.equal(ev.cells.length, 2487,
-    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12) + the grapa-stability run (6) + the witness-centering run (8) + the e-detector-cert runs (43 + 2); no surviving cell is dropped');
+  //
+  // 2487 -> 2539, 2026-09-04, one registered append and its arithmetic (e-sr-bounded
+  // PREREGISTRATION §3, protocol Amendment v1.C77): the bounded-bet e-SR's certification study
+  // adds 52 cells (13 S2 `arl0_T` cells + 39 S3 K1 delay cells) carrying
+  // `detector: 'e_sr_mean_shift_bounded'`; its Gaussian comparator and estimator cells live in
+  // comparison.json under `detector_id` and are never loaded. They match no other card, so no
+  // existing verdict, stage token or tier moves.
+  assert.equal(ev.cells.length, 2539,
+    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12) + the grapa-stability run (6) + the witness-centering run (8) + the e-detector-cert runs (43 + 2) + the e-sr-bounded run (52); no surviving cell is dropped');
   const drops = ev.runs.filter((r) => r.superseded)
     .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);
   assert.deepEqual(Object.fromEntries(drops), {

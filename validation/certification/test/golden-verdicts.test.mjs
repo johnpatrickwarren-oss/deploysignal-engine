@@ -387,6 +387,11 @@ const GOLDEN = {
   shape_ecdf_accumulator: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
   // Amendment v1.C69 C69.7's registered golden expectation, pre-run (e-detector-cert PREREGISTRATION §4).
   e_sr_mean_shift: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
+  // Amendment v1.C77 / e-sr-bounded PREREGISTRATION §4 registered { USE, T1, MISSING, PASS, PASS, PASS }
+  // pre-run; its Amendment A1 (after the unscored pilot, before the scored run) revised the expectation
+  // to REFUSE. The scored run (run-20260905T051320Z) refuted N5 and every estimated-parameter null, so
+  // the frozen row is the MEASURED verdict and the registered prediction is on the record as wrong.
+  e_sr_mean_shift_bounded: { verdict: 'REFUSE', tier: null, s1: 'MISSING', s2: 'REFUTED', s3: 'PASS', s4: 'PASS' },
 };
 
 function runHarness(t) {

@@ -105,3 +105,79 @@ test('rejects malformed inputs', () => {
   assert.throws(() => evaluateESrMeanShift(0, { alpha_arl: 1 }, st), /alpha_arl/);
   assert.throws(() => evaluateESrMeanShift(0, { lambdas: [1] }, st), /components/);
 });
+
+// ── ADR 0031: the bounded-bet increment (study 2026-09-e-sr-bounded, C77) ──
+import { E_SR_BOUNDED_LAMBDA_GRID, E_SR_MEAN_SHIFT_BOUNDED_ENVELOPE, eSrLambdaGrid } from '../detectors/e-sr-mean-shift';
+import { gBounded, BOUND_LAMBDAS } from '../fleet/calibration-monitor';
+
+test('bounded: the default is unchanged — increment absent and increment "gaussian" give byte-identical log_M', () => {
+  const rng = mulberry32(11); const rs = Array.from({ length: 200 }, () => gaussian(rng));
+  const a = freshESrMeanShiftState({ alpha_arl: 1e-3 }), b = freshESrMeanShiftState({ alpha_arl: 1e-3, increment: 'gaussian' });
+  for (const r of rs) {
+    const x = evaluateESrMeanShift(r, { alpha_arl: 1e-3 }, a), y = evaluateESrMeanShift(r, { alpha_arl: 1e-3, increment: 'gaussian' }, b);
+    assert.equal(x.log_M, y.log_M); assert.equal(x.onset_estimate, y.onset_estimate);
+  }
+  assert.deepEqual(eSrLambdaGrid({}), E_SR_LAMBDA_GRID);
+});
+
+test('bounded: the grid is the calibration monitor\'s eight ±λ and every |λ| < 1', () => {
+  assert.deepEqual([...E_SR_BOUNDED_LAMBDA_GRID], [...BOUND_LAMBDAS]);
+  assert.deepEqual(eSrLambdaGrid({ increment: 'bounded' }), E_SR_BOUNDED_LAMBDA_GRID);
+  assert.ok(E_SR_BOUNDED_LAMBDA_GRID.every((l) => Math.abs(l) < 1));
+  assert.throws(() => freshESrMeanShiftState({ increment: 'bounded', lambdas: [0.5, 1.0] }), /\|lambda\| < 1/);
+});
+
+test('bounded: the increment integrates to exactly 1 under any symmetric law — N(0,1) and a scaled t3 by quadrature', () => {
+  const h = 1e-3;
+  for (const lam of E_SR_BOUNDED_LAMBDA_GRID) {
+    let sN = 0, sT = 0, wT = 0;
+    for (let z = -12; z <= 12; z += h) {
+      const wN = Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI) * h;
+      const wt = Math.pow(1 + (z * z) / 3, -2) * h; // t3 kernel, unnormalized, at a different scale
+      sN += wN * gBounded(z, lam); sT += wt * gBounded(2.5 * z, lam); wT += wt;
+    }
+    assert.ok(Math.abs(sN - 1) < 1e-6, `N(0,1) λ=${lam}: ${sN}`);
+    assert.ok(Math.abs(sT / wT - 1) < 1e-6, `t3×2.5 λ=${lam}: ${sT / wT}`);
+  }
+});
+
+test('bounded: the recursion equals the brute-force SR sum per λ and the mixture is their mean', () => {
+  const rng = mulberry32(5); const rs = Array.from({ length: 40 }, () => 0.5 + 3 * gaussian(rng)); // heavy enough to clip
+  const p = { alpha_arl: 1e-3, increment: 'bounded' as const };
+  const st = freshESrMeanShiftState(p); let last = { log_M: 0 } as { log_M: number };
+  for (const r of rs) last = evaluateESrMeanShift(r, p, st);
+  let mix = 0;
+  E_SR_BOUNDED_LAMBDA_GRID.forEach((lam, k) => {
+    let sum = 0;
+    for (let j = 0; j < rs.length; j++) { let prod = 1; for (let i = j; i < rs.length; i++) prod *= gBounded(rs[i], lam); sum += prod; }
+    assert.ok(Math.abs(Math.log(sum) - st.log_M_sr[k]) < 1e-9, `λ=${lam}`); mix += sum;
+  });
+  assert.ok(Math.abs(Math.log(mix / E_SR_BOUNDED_LAMBDA_GRID.length) - last.log_M) < 1e-9);
+});
+
+test('bounded: on an exactly-zero residual M_t = t and the alarm lands at exactly 1/alpha_arl; alarms on a 3σ step; survives a +60 fault in the log domain', () => {
+  const p = { alpha_arl: 1e-3, increment: 'bounded' as const };
+  // g_λ(0) = 1 for every λ, so the SR recursion is M_t = M_{t−1} + 1 = t: the run-length guarantee
+  // E∞[N*] ≥ 1/α_ARL holds with EQUALITY on a degenerate residual (a stuck signal at the baseline
+  // alarms after 1,000 ticks), where the Gaussian increment exp(−λ²/2) < 1 would never alarm.
+  const flat = freshESrMeanShiftState(p); let firstAlarm = -1;
+  for (let t = 0; t < 1200; t++) {
+    const out = evaluateESrMeanShift(0, p, flat);
+    assert.ok(Math.abs(out.log_M - Math.log(t + 1)) < 1e-9, `M_${t + 1} = ${t + 1}`);
+    if (out.fired && firstAlarm < 0) firstAlarm = t + 1;
+  }
+  assert.equal(firstAlarm, 1000);
+  const rng = mulberry32(3); const st = freshESrMeanShiftState(p); let fireAt = -1;
+  for (let t = 0; t < 400 && fireAt < 0; t++) if (evaluateESrMeanShift((t >= 100 ? 3 : 0) + gaussian(rng), p, st).fired) fireAt = t;
+  assert.ok(fireAt >= 100 && fireAt < 200, `fired at ${fireAt}`);
+  const big = freshESrMeanShiftState(p); let out = evaluateESrMeanShift(60, p, big);
+  for (let t = 0; t < 200; t++) out = evaluateESrMeanShift(60, p, big);
+  assert.ok(Number.isFinite(out.log_M) && out.fired);
+});
+
+test('bounded: the envelope is an e-detector and the FDR gate refuses it by name', () => {
+  assert.equal(E_SR_MEAN_SHIFT_BOUNDED_ENVELOPE.statistic, 'e-detector');
+  assert.equal(isValidForFdrPath(E_SR_MEAN_SHIFT_BOUNDED_ENVELOPE), false);
+  assert.throws(() => assertValidForFdrPath(E_SR_MEAN_SHIFT_BOUNDED_ENVELOPE), /e-DETECTOR/);
+  assert.throws(() => evaluateESrMeanShift(0, { increment: 'cauchy' as unknown as 'gaussian' }, freshESrMeanShiftState()), /increment must be/);
+});

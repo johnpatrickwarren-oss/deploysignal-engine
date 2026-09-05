@@ -37,6 +37,17 @@
 // `M` is exp(log_M) and may overflow to Infinity on an enormous fault; `log_M` never does.
 
 import type { ValidityEnvelope } from './validity-envelope';
+import { BOUND_LAMBDAS, gBounded } from '../fleet/calibration-monitor';
+
+// ADR 0031 (study 2026-09-e-sr-bounded, WORKLIST C77) — the BOUNDED-BET increment, the heavy-tail
+// fallback the design page names. Same SR recursion, same mixture, same CUSUM companion, on
+//   g_λ(r) = 1 + λ·clip(r, ±B)/B,   B = BOUND_CLIP = 3,   λ ∈ BOUND_LAMBDAS = ±{0.1, 0.3, 0.6, 0.9}
+// (fleet/calibration-monitor.ts, the gate's own increment). E[g_λ | F_{t−1}] = 1 whenever the CLIPPED
+// residual is conditionally mean-zero — any tail, any scale error, no sub-Gaussian premise — so
+// Thm 2.4 gives E∞[N*] ≥ 1/α_ARL for symmetric pre-change laws at the reference location. A skewed
+// law breaks it by the clipped mean (the standardized lognormal: ≈ −0.028). The price is delay: the
+// growth rate at 1.5σ is 0.344 against the Gaussian's 1.125 (Thm 4.3 floor 34.9 vs 13.0 ticks at
+// α_ARL = 1e-3; protocol Amendment v1.C77). Default 'gaussian': behaviour byte-identical.
 
 /** ±{0.25·12^{k/7} : k = 0..7} — λ_op = δ for a Gaussian increment, so the grid spans shifts of
  *  0.25σ (below the smallest registered K1 step, 0.75σ) to 3σ (the largest). Frozen with the study. */
@@ -46,11 +57,35 @@ export const E_SR_LAMBDA_GRID: readonly number[] = Object.freeze(
 
 export const E_SR_DEFAULT_ALPHA_ARL = 1e-3;
 
+/** The bounded increment's default grid: the calibration monitor's eight ±λ (ADR 0031). */
+export const E_SR_BOUNDED_LAMBDA_GRID: readonly number[] = Object.freeze([...BOUND_LAMBDAS]);
+
+export type ESrIncrement = 'gaussian' | 'bounded';
+
 export interface ESrMeanShiftParams {
   /** ARL level: alarm threshold 1/alpha_arl; E∞[N*] ≥ 1/alpha_arl. Default 1e-3. */
   alpha_arl?: number;
-  /** Increment grid; default E_SR_LAMBDA_GRID. Any grid is a valid e-detector (Prop. 2.3). */
+  /** Increment grid; default E_SR_LAMBDA_GRID ('gaussian') or E_SR_BOUNDED_LAMBDA_GRID ('bounded').
+   *  Any grid is a valid e-detector (Prop. 2.3); with 'bounded' every |λ| must be < 1. */
   lambdas?: readonly number[];
+  /** 'gaussian' (default): exp(λr − λ²/2), needs a sub-Gaussian(1) residual. 'bounded': the
+   *  clipped linear bet 1 + λ·clip(r, ±3)/3 — any tail, any scale error (ADR 0031). */
+  increment?: ESrIncrement;
+}
+
+/** The grid a params object resolves to. */
+export function eSrLambdaGrid(params: ESrMeanShiftParams = {}): readonly number[] {
+  const inc = params.increment ?? 'gaussian';
+  const grid = params.lambdas ?? (inc === 'bounded' ? E_SR_BOUNDED_LAMBDA_GRID : E_SR_LAMBDA_GRID);
+  if (inc === 'bounded' && grid.some((l) => !(Math.abs(l) < 1))) {
+    throw new Error(`e-sr-mean-shift: the bounded increment needs |lambda| < 1 on every grid point, got ${grid.join(',')}`);
+  }
+  return grid;
+}
+
+/** log of the baseline increment for one residual at one λ. */
+function logIncrement(inc: ESrIncrement, lam: number, r: number): number {
+  return inc === 'bounded' ? Math.log(gBounded(r, lam)) : lam * r - 0.5 * lam * lam;
 }
 
 export interface ESrMeanShiftState {
@@ -71,7 +106,7 @@ export interface ESrMeanShiftState {
 }
 
 export function freshESrMeanShiftState(params: ESrMeanShiftParams = {}): ESrMeanShiftState {
-  const K = (params.lambdas ?? E_SR_LAMBDA_GRID).length;
+  const K = eSrLambdaGrid(params).length;
   return {
     t: 0, log_M_sr: Array(K).fill(-Infinity), log_C_cu: Array(K).fill(0), last_reset: Array(K).fill(-1),
     log_M: -Infinity, log_M_peak: -Infinity, alarm_tick: null,
@@ -118,14 +153,16 @@ export function evaluateESrMeanShift(r: number, params: ESrMeanShiftParams, stat
   if (!Number.isFinite(r)) throw new Error(`evaluateESrMeanShift: r must be finite, got ${r}`);
   const alpha = params.alpha_arl ?? E_SR_DEFAULT_ALPHA_ARL;
   if (!(alpha > 0 && alpha < 1)) throw new Error(`evaluateESrMeanShift: alpha_arl must be in (0,1), got ${alpha}`);
-  const lambdas = params.lambdas ?? E_SR_LAMBDA_GRID;
+  const inc: ESrIncrement = params.increment ?? 'gaussian';
+  if (inc !== 'gaussian' && inc !== 'bounded') throw new Error(`evaluateESrMeanShift: increment must be 'gaussian' or 'bounded', got ${String(inc)}`);
+  const lambdas = eSrLambdaGrid(params);
   const K = lambdas.length;
   if (state.log_M_sr.length !== K) throw new Error(`evaluateESrMeanShift: state has ${state.log_M_sr.length} components, grid has ${K}`);
   const t = state.t;
   let logSum = -Infinity, best = 0, bestLog = -Infinity;
   for (let k = 0; k < K; k++) {
     const lam = lambdas[k];
-    const logL = lam * r - 0.5 * lam * lam;
+    const logL = logIncrement(inc, lam, r);
     // SR: M_t = L·(M_{t−1} + 1)
     const logM = logL + logaddexp(state.log_M_sr[k], 0);
     state.log_M_sr[k] = logM;
@@ -161,3 +198,23 @@ export const E_SR_MEAN_SHIFT_ENVELOPE: Readonly<ValidityEnvelope> = Object.freez
     + 'run length E∞[N*] ≥ 1/alpha_arl at oracle parameters (study 2026-09-e-sr-delay). Never an e-value; '
     + 'never on the FDR path or the per-run α budget.',
 });
+
+/** The bounded e-SR's envelope (ADR 0031): the same 'e-detector' statistic, refused by the FDR gate
+ *  by name. Its premise is a conditionally mean-zero CLIPPED residual — symmetric pre-change laws at
+ *  the reference location, any tail, any scale error — not sub-Gaussianity. Registry id
+ *  `e_sr_mean_shift_bounded`; certified under the e_detector class with N5/N6/N8 inside the regime
+ *  (study 2026-09-e-sr-bounded). */
+export const E_SR_MEAN_SHIFT_BOUNDED_ENVELOPE: Readonly<ValidityEnvelope> = Object.freeze({
+  baseline: 'plug-in',
+  autocorrelation: 'ar1-whitened',
+  null: 'mean-shift',
+  variance: 'stable',
+  validUnderEstimatedBaseline: false,
+  statistic: 'e-detector',
+  notes: 'An e-DETECTOR on the bounded-bet increment 1 + lambda*clip(r, +-3)/3 over +-{0.1, 0.3, 0.6, 0.9} '
+    + '(ADR 0031): E_inf[M_t] = t, never an e-value, never on the FDR path or the per-run alpha budget. '
+    + 'Its guarantee is E_inf[N*] >= 1/alpha_arl whenever the clipped whitened residual is conditionally '
+    + 'mean-zero -- symmetric laws at any scale and any tail; a skewed law breaks it by its clipped mean. '
+    + 'Delay floor at 1.5 sigma: 34.9 ticks against the Gaussian increment\'s 13.0 (Amendment v1.C77).',
+});
+

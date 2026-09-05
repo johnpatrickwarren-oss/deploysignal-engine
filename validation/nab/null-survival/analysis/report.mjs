@@ -1,0 +1,57 @@
+// validation/nab/null-survival/analysis/report.mjs — renders REPORT.md for one run directory from its
+// JSON, deterministically. check_report.mjs re-renders and diffs. Every number is tier T3.
+import fs from 'node:fs';
+import path from 'node:path';
+const f = (x, d = 3) => (x === null || x === undefined || !Number.isFinite(x) ? '—' : Number(x).toFixed(d));
+const i0 = (x) => (x === null || x === undefined ? '—' : String(x));
+export function render(runDir) {
+  const J = (n) => JSON.parse(fs.readFileSync(path.join(runDir, n), 'utf8'));
+  const m = J('manifest.json'), cells = J('cells.json'), mc = J('monitor_cells.json'), p4 = J('p4.json'), cal = J('calibration.json');
+  const L = [];
+  L.push(`# REPORT — 2026-09-nab-null-survival (C76), run ${m.run}`);
+  L.push('');
+  L.push(`Engine \`${m.engine_version}\` at \`${m.engine_sha}\`; NAB at \`${m.nab_sha}\`; node ${m.node}; mode ${m.mode}. Registration sha256 \`${m.registration_sha256.slice(0, 12)}\`; harness sha256 \`${m.harness_sha256.slice(0, 12)}\`. ${m.n_traces} scored traces (registered ${m.registered_traces}); arms ${m.arms.join(', ')}; α ${m.alphas.join(', ')} for per-run and per-window cards; α_ARL ${m.alpha_arl}; monitor α_cal ${m.alpha_cal}; terminal window L = ${m.window_length}. Bounded e-SR: **${m.bounded_esr}**. Exceptions: ${m.exceptions}.`);
+  L.push('');
+  L.push('**Tier T3 on every number below** (real telemetry, unlabelled quiet stretches). P1 bars are the constructions\' own contracts read on this corpus (PREREGISTRATION §4); a FAILED is "the contract does not describe this corpus at this calibration", not a certification verdict.');
+  L.push('');
+  L.push(`Instrument check (§5, the tool arm reproduces C75): ${Object.entries(m.c75_reproduction).map(([k, v]) => `${k} ${v.got} of ${v.want} ${v.ok ? 'ok' : 'MISMATCH'}`).join('; ')}.`);
+  L.push('');
+  L.push('## P1 — false alerts on the quiet stretches against the contract, and the gate');
+  L.push('');
+  L.push('| arm | construction | level | contract | alerting | bar | **P1** | per 1,000 quiet ticks | quiet ticks / windows | alerting stretches | gaussian abstained | bounded abstained | counted after gaussian gate | P2 gaussian before alert | P2 bounded before alert |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const c of cells) L.push(`| ${c.arm} | ${c.construction} | ${c.level} | ${c.contract} | ${c.alerting} | ${c.bar} | **${c.p1}** | ${f(c.rate_per_1000, 2)} | ${c.kind === 'terminal' ? `${c.windows} windows` : `${c.quiet_ticks}`} | ${c.alerting_stretches} | ${c.gaussian_abstained} | ${c.bounded_abstained} | ${c.counted_after_gaussian_gate} | ${f(c.p2_gaussian_before_alert, 2)} | ${f(c.p2_bounded_before_alert, 2)} |`);
+  L.push('');
+  L.push('## P2 — the monitor\'s revocations per arm and kind');
+  L.push('');
+  L.push('| arm | kind | revoked | of | rate | median revocation offset after cut (ticks) |');
+  L.push('|---|---|---|---|---|---|');
+  for (const c of mc) L.push(`| ${c.arm} | ${c.kind} | ${c.revoked} | ${c.n} | ${f(c.revocation_rate)} | ${i0(c.median_revocation_offset)} |`);
+  L.push('');
+  L.push('## P3 — detection retained on the labelled windows (C75\'s classes)');
+  L.push('');
+  L.push('| arm | construction | level | pre | in | late | none | by end | strict in | clears P1 in this arm |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|');
+  for (const c of cells) L.push(`| ${c.arm} | ${c.construction} | ${c.level} | ${c.n_pre} | ${c.n_in} | ${c.n_late} | ${c.n_none} | ${f(c.p3_by_end)} | ${f(c.p3_strict)} | ${m.survivors[c.construction].includes(c.arm) ? 'yes' : 'no'} |`);
+  L.push('');
+  L.push('## P4 — the estimation price: rate per 1,000 quiet ticks by head fraction');
+  L.push('');
+  L.push('| construction | level | 0.15 | 0.30 | 0.50 | monotone non-increasing |');
+  L.push('|---|---|---|---|---|---|');
+  for (const p of p4) L.push(`| ${p.construction} | ${p.level} | ${f(p.rate_015, 2)} | ${f(p.rate_030, 2)} | ${f(p.rate_050, 2)} | ${p.monotone_non_increasing ? 'yes' : 'no'} |`);
+  L.push('');
+  L.push('## Survivors (clear P1 at every level in the arm)');
+  L.push('');
+  for (const [k, arms] of Object.entries(m.survivors)) L.push(`- ${k}: ${arms.length ? arms.join(', ') : 'none'}`);
+  const any = Object.values(m.survivors).some((a) => a.length);
+  L.push('');
+  L.push(`Survivor set non-empty: **${any ? 'yes' : 'no'}**. Bounded e-SR arm: ${m.bounded_esr}.`);
+  L.push('');
+  L.push('## Calibration per (trace, arm)');
+  L.push('');
+  L.push('| trace | arm | cut | quiet ticks | μ̂ | φ̂ | σ̂ (innov.) |');
+  L.push('|---|---|---|---|---|---|---|');
+  for (const c of cal) L.push(`| ${c.trace.replace(/^real/, '').replace('.csv', '')} | ${c.arm} | ${c.cut} | ${c.quiet_ticks} | ${f(c.mu, 2)} | ${f(c.phi)} | ${f(c.sigma, 3)} |`);
+  L.push('');
+  return L.join('\n') + '\n';
+}

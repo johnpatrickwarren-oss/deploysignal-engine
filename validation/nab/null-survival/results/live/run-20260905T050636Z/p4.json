@@ -1,0 +1,90 @@
+[
+  {
+    "construction": "family_A_mixture_supermartingale",
+    "level": 0.05,
+    "rate_015": 0.3986559599066006,
+    "rate_030": 0.32271448988059565,
+    "rate_050": 0.3549990318208223,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "family_A_mixture_supermartingale",
+    "level": 0.01,
+    "rate_015": 0.3606887256297815,
+    "rate_030": 0.29966345488912455,
+    "rate_050": 0.3227263925643839,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "family_A_betting_e_process",
+    "level": 0.05,
+    "rate_015": 0.3606887256297815,
+    "rate_030": 0.3688165598635379,
+    "rate_050": 0.3872716710772607,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "family_A_betting_e_process",
+    "level": 0.01,
+    "rate_015": 0.28475425707614327,
+    "rate_030": 0.29966345488912455,
+    "rate_050": 0.3549990318208223,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "e_sr_mean_shift",
+    "level": 0.001,
+    "rate_015": 0.4366231941834197,
+    "rate_030": 0.5071227698123646,
+    "rate_050": 0.6777254243852062,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "sequential_ui_e_process",
+    "level": 0.05,
+    "rate_015": 0.018983617138409552,
+    "rate_030": 0.06915310497441335,
+    "rate_050": 0.12909055702575356,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "sequential_ui_e_process",
+    "level": 0.01,
+    "rate_015": 0.018983617138409552,
+    "rate_030": 0.06915310497441335,
+    "rate_050": 0.12909055702575356,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "safe_t_e_value",
+    "level": 0.05,
+    "rate_015": 1.2403100775193798,
+    "rate_030": 1.0714285714285714,
+    "rate_050": 1.1409395973154361,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "safe_t_e_value",
+    "level": 0.01,
+    "rate_015": 1.1046511627906976,
+    "rate_030": 0.8809523809523809,
+    "rate_050": 1.0067114093959733,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "universal_inference_e_value",
+    "level": 0.05,
+    "rate_015": 0.09689922480620156,
+    "rate_030": 0.11904761904761904,
+    "rate_050": 0.03355704697986577,
+    "monotone_non_increasing": false
+  },
+  {
+    "construction": "universal_inference_e_value",
+    "level": 0.01,
+    "rate_015": 0.09689922480620156,
+    "rate_030": 0.09523809523809523,
+    "rate_050": 0.03355704697986577,
+    "monotone_non_increasing": true
+  }
+]

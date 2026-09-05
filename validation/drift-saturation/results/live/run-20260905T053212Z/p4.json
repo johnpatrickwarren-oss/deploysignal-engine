@@ -1,0 +1,98 @@
+[
+  {
+    "cell": "linear-H500-N1",
+    "shape": "linear",
+    "H": 500,
+    "null": "N1",
+    "n": 500,
+    "k5_fraction": 0.998
+  },
+  {
+    "cell": "linear-H500-N3-p06",
+    "shape": "linear",
+    "H": 500,
+    "null": "N3-p06",
+    "n": 500,
+    "k5_fraction": 0.348
+  },
+  {
+    "cell": "linear-H2000-N1",
+    "shape": "linear",
+    "H": 2000,
+    "null": "N1",
+    "n": 500,
+    "k5_fraction": 0.024
+  },
+  {
+    "cell": "linear-H2000-N3-p06",
+    "shape": "linear",
+    "H": 2000,
+    "null": "N3-p06",
+    "n": 500,
+    "k5_fraction": 0.002
+  },
+  {
+    "cell": "exponential-H500-N1",
+    "shape": "exponential",
+    "H": 500,
+    "null": "N1",
+    "n": 500,
+    "k5_fraction": 0.002
+  },
+  {
+    "cell": "exponential-H500-N3-p06",
+    "shape": "exponential",
+    "H": 500,
+    "null": "N3-p06",
+    "n": 500,
+    "k5_fraction": 0.002
+  },
+  {
+    "cell": "exponential-H2000-N1",
+    "shape": "exponential",
+    "H": 2000,
+    "null": "N1",
+    "n": 500,
+    "k5_fraction": 0
+  },
+  {
+    "cell": "exponential-H2000-N3-p06",
+    "shape": "exponential",
+    "H": 2000,
+    "null": "N3-p06",
+    "n": 500,
+    "k5_fraction": 0
+  },
+  {
+    "cell": "staircase-H500-N1",
+    "shape": "staircase",
+    "H": 500,
+    "null": "N1",
+    "n": 500,
+    "k5_fraction": 0.248
+  },
+  {
+    "cell": "staircase-H500-N3-p06",
+    "shape": "staircase",
+    "H": 500,
+    "null": "N3-p06",
+    "n": 500,
+    "k5_fraction": 0.032
+  },
+  {
+    "cell": "staircase-H2000-N1",
+    "shape": "staircase",
+    "H": 2000,
+    "null": "N1",
+    "n": 500,
+    "k5_fraction": 0.002
+  },
+  {
+    "cell": "staircase-H2000-N3-p06",
+    "shape": "staircase",
+    "H": 2000,
+    "null": "N3-p06",
+    "n": 500,
+    "k5_fraction": 0
+  }
+]

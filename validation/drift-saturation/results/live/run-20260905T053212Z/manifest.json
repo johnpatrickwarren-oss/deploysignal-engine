@@ -1,0 +1,89 @@
+{
+  "study": "2026-09-drift-saturation",
+  "run": "run-20260905T053212Z",
+  "mode": "live",
+  "quick": false,
+  "engine_sha": "697da9588ecf939f921b819abfd620bb00f9a67f",
+  "engine_version": "0.6.11-pre",
+  "node": "v25.9.0",
+  "registration_sha256": "61e1b748008875a4b21c8edb5c721015eda882a174782035978dcfd3e526c00c",
+  "harness_sha256": "b6d33a3bbf436d7ebe91d3f7e464b60f1ecfd5679e7ed56afd6659be8cae10da",
+  "report_sha256": "55b6eb37298dc7a7da62638f6e27dd17bebe0e3a311cce7180e73fa8d9d77165",
+  "nulls_sha256": "5f6746bfbecaa0159bcc3401e81b699cb14fe4e00096fd719a3f7610bc573e5b",
+  "detectors_sha256": "4affa3c9fc7b36bfa5e73d53c15e7c999de9475a9ec1e76e2a631e9e0fbce69d",
+  "seed": 20260904,
+  "n": 500,
+  "m": 100,
+  "nu": 500,
+  "post": 500,
+  "window_length": 100,
+  "capacity": 4,
+  "kappa": 4,
+  "steps": 5,
+  "delta_latency": 1.5,
+  "shapes": [
+    "linear",
+    "exponential",
+    "staircase"
+  ],
+  "horizons": [
+    500,
+    2000
+  ],
+  "nulls": [
+    "N1",
+    "N3-p06"
+  ],
+  "alphas": [
+    0.05,
+    0.0001
+  ],
+  "alpha_arls": [
+    0.001,
+    0.0001
+  ],
+  "alpha_cal": 0.01,
+  "k5_len": 200,
+  "k5_threshold": 20,
+  "bounded_esr": "absent",
+  "constructions": [
+    "e_sr_mean_shift",
+    "universal_inference_e_value",
+    "sequential_ui_e_process",
+    "family_A_mixture_supermartingale"
+  ],
+  "instrument_check": {
+    "step_fires": {
+      "e_sr_mean_shift": 502,
+      "universal_inference_e_value": 599,
+      "sequential_ui_e_process": 2038,
+      "family_A_mixture_supermartingale": 524
+    },
+    "clean_quiet": {
+      "family_A_mixture_supermartingale": -1,
+      "universal_inference_e_value": -1,
+      "sequential_ui_e_process": -1
+    },
+    "ok": true
+  },
+  "cells": [
+    "linear-H500-N1",
+    "linear-H500-N3-p06",
+    "linear-H2000-N1",
+    "linear-H2000-N3-p06",
+    "exponential-H500-N1",
+    "exponential-H500-N3-p06",
+    "exponential-H2000-N1",
+    "exponential-H2000-N3-p06",
+    "staircase-H500-N1",
+    "staircase-H500-N3-p06",
+    "staircase-H2000-N1",
+    "staircase-H2000-N3-p06"
+  ],
+  "n_reps": 6000,
+  "exceptions": 0,
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "arm": "tool",
+    "kind": "gaussian",
+    "revoked": 5,
+    "n": 23,
+    "revocation_rate": 0.21739130434782608,
+    "median_revocation_offset": 18
+  },
+  {
+    "arm": "tool",
+    "kind": "bounded",
+    "revoked": 15,
+    "n": 23,
+    "revocation_rate": 0.6521739130434783,
+    "median_revocation_offset": 272
+  },
+  {
+    "arm": "0.15",
+    "kind": "gaussian",
+    "revoked": 10,
+    "n": 23,
+    "revocation_rate": 0.43478260869565216,
+    "median_revocation_offset": 90
+  },
+  {
+    "arm": "0.15",
+    "kind": "bounded",
+    "revoked": 19,
+    "n": 23,
+    "revocation_rate": 0.8260869565217391,
+    "median_revocation_offset": 200
+  },
+  {
+    "arm": "0.30",
+    "kind": "gaussian",
+    "revoked": 7,
+    "n": 23,
+    "revocation_rate": 0.30434782608695654,
+    "median_revocation_offset": 11
+  },
+  {
+    "arm": "0.30",
+    "kind": "bounded",
+    "revoked": 14,
+    "n": 23,
+    "revocation_rate": 0.6086956521739131,
+    "median_revocation_offset": 254
+  },
+  {
+    "arm": "0.50",
+    "kind": "gaussian",
+    "revoked": 8,
+    "n": 23,
+    "revocation_rate": 0.34782608695652173,
+    "median_revocation_offset": 17
+  },
+  {
+    "arm": "0.50",
+    "kind": "bounded",
+    "revoked": 17,
+    "n": 23,
+    "revocation_rate": 0.7391304347826086,
+    "median_revocation_offset": 327
+  }
+]

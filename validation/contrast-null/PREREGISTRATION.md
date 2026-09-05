@@ -265,3 +265,16 @@ hash, the contrast module's hash, Tessera's sha and the lockstep counts (or `abs
 `--expect` in C76's form so the wiki page's numbers pin to the run. The h0-battery's `nulls.mjs`
 and `detectors.mjs` are imported (they do not execute on import); nothing from another study is
 imported.
+
+## Amendment A1 — 2026-09-05, before any live run: instrument check (iii) narrowed to the mixture
+
+On the first quick (sim, never scored) run, check (iii) failed on the betting card: at α = 10⁻⁴
+on the `null` variant of the check seed (`N1`, `m = 300`) it alerted at tick 2140, while the
+mixture did not. That is not an instrument defect: the betting card's GRAPA loop converges on the
+fit's scale error (C58: a per-tick excess κ/m, κ = 0.8445), which on a 300-tick fit compounds to
+E[M] ≈ e^{0.8445·2000/300} ≈ 280 over the 2,000-tick horizon, and a crossing of 10⁴ on one seed
+is inside that law. Check (iii) as written tested P2's hypothesis on one seed, not the pipeline.
+**(iii) now reads: on the `null` variant the MIXTURE at α = 10⁻⁴ does not alert by `m + T_mon`.**
+The betting card's reading on the check seed stays in the manifest (`instrument.clean_quiet`)
+and is reported; P2 measures it at N = 500. No other check, null, level, seed, bar or prediction
+moves. The quick run was under `results/sim/` and is not scored.

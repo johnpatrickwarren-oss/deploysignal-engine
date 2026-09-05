@@ -1,0 +1,35 @@
+{
+  "study": "2026-09-nab-time-to-alert",
+  "run": "run-20260905T025224Z",
+  "mode": "live",
+  "engine_sha": "7ca59a96897085fe29d6126640726163a9978cf9",
+  "engine_version": "0.6.11-pre",
+  "node": "v25.9.0",
+  "nab_sha": "ea702d75cc2258d9d7dd35ca8e5e2539d71f3140",
+  "labels_sha256": {
+    "combined_windows": "1e1fbc4601321aad8d0f8b3784c8134299379f68f6c1f7777565f8ffd57ab6b1",
+    "combined_labels": "98724014c162fcfd4be605683517f194051a54e98756c53667bd33ddbc644d9b"
+  },
+  "registration_sha256": "1f4c12904445b0c5284c2a416dddba255265dd8653b3f63ff1bf59f2b95b8a79",
+  "harness_sha256": "9a06555877238ed74cd3bf8efe0901469297b8922f6a3b3aef103b9117a7b2dc",
+  "report_sha256": "bf936b6ebcdca4d34a1296a2e43acf0afd00470cc50cc2b02f7d060d136eb614",
+  "sub_benchmarks": [
+    "realKnownCause",
+    "realAWSCloudwatch"
+  ],
+  "probationary_fraction": 0.15,
+  "calibration_signal": "p99_latency",
+  "alphas_scored": [
+    0.05,
+    0.01
+  ],
+  "alpha_arl": 0.001,
+  "n_traces": 23,
+  "registered_traces": 23,
+  "min_traces": 20,
+  "exceptions": 0,
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "study": "2026-09-e-sr-bounded",
+  "run": "run-20260905T051320Z",
+  "mode": "live",
+  "quick": false,
+  "tier": "T1",
+  "git_sha": "3a035bcfa40a74563782cef653af185a3bae5986",
+  "harness_sha256": "6bbe7879a77f500a3990eb2fe6720600f5330bc9a4a960dc9871025585704bc3",
+  "module_sha256": "b23aab9c85fd412db5a19c6cbc32d9562b5623d44520362a5d423887fad78e32",
+  "scorer_constants_sha256": "f9d994d79cac9206b93cf86ea85891b6d811213e6e33d421ac0f9e5d73ea3427",
+  "n": 2000,
+  "n_s2": 20000,
+  "seed": 20260906,
+  "salt": {
+    "S2": 0,
+    "S3": [
+      1000003,
+      1000103,
+      1000203
+    ],
+    "H2": 2000003,
+    "H3": 3000003
+  },
+  "alpha_arl": 0.001,
+  "T_s2": 20000,
+  "nu": 200,
+  "T_s3": 1200,
+  "T_h3": 1000,
+  "bounded_grid": [
+    0.1,
+    0.3,
+    0.6,
+    0.9,
+    -0.1,
+    -0.3,
+    -0.6,
+    -0.9
+  ],
+  "n5_clipped_mean_per_lambda": -0.0093,
+  "gaussian_m30_reference": 1148,
+  "cells": 52,
+  "exceptions": 0,
+  "wall_seconds": 350,
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

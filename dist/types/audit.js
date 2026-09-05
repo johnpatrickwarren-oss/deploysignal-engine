@@ -41,6 +41,14 @@ exports.DETECTOR_REGISTRY = {
         'safe_t_e_value_p99_latency', 'safe_t_e_value_ttft',
         'safe_t_e_value_eval_score', 'safe_t_e_value_tool_success_rate',
         'safe_t_e_value_downstream_err', 'safe_t_e_value_cost_req',
+        // C81 (2026-09-05) — the contrast null (per-shard/contrast.ts): a mean-shift card on the
+        // standardized contrast residual of a treatment/control PAIR for the signal. Emitted by
+        // DeploySignal's control arm as `contrast_null_{signal}`; guarantees.ts carries its row, whose
+        // envelope is a measured REFUSAL (study 2026-09-contrast-null) — the ids exist so the audit path
+        // can name an advisory contrast fire, not because the construction is admitted.
+        'contrast_null_p99_latency', 'contrast_null_ttft',
+        'contrast_null_eval_score', 'contrast_null_tool_success_rate',
+        'contrast_null_downstream_err', 'contrast_null_cost_req',
     ],
     B: [
         'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',

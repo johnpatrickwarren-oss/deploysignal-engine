@@ -1,0 +1,212 @@
+[
+ {
+  "cell": "N1-m60",
+  "null": "N1",
+  "m": 60,
+  "gaussian_held": 1,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "FAILED"
+ },
+ {
+  "cell": "N1-m300",
+  "null": "N1",
+  "m": 300,
+  "gaussian_held": 1,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "FAILED"
+ },
+ {
+  "cell": "N1-m2000",
+  "null": "N1",
+  "m": 2000,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N3-p03-m60",
+  "null": "N3-p03",
+  "m": 60,
+  "gaussian_held": 1,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "FAILED"
+ },
+ {
+  "cell": "N3-p03-m300",
+  "null": "N3-p03",
+  "m": 300,
+  "gaussian_held": 1,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "FAILED"
+ },
+ {
+  "cell": "N3-p03-m2000",
+  "null": "N3-p03",
+  "m": 2000,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N3-p06-m60",
+  "null": "N3-p06",
+  "m": 60,
+  "gaussian_held": 0,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "FAILED"
+ },
+ {
+  "cell": "N3-p06-m300",
+  "null": "N3-p06",
+  "m": 300,
+  "gaussian_held": 0,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N3-p06-m2000",
+  "null": "N3-p06",
+  "m": 2000,
+  "gaussian_held": 4,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N3-p09-m60",
+  "null": "N3-p09",
+  "m": 60,
+  "gaussian_held": 0,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "FAILED"
+ },
+ {
+  "cell": "N3-p09-m300",
+  "null": "N3-p09",
+  "m": 300,
+  "gaussian_held": 0,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N3-p09-m2000",
+  "null": "N3-p09",
+  "m": 2000,
+  "gaussian_held": 5,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N5-m60",
+  "null": "N5",
+  "m": 60,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N5-m300",
+  "null": "N5",
+  "m": 300,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N5-m2000",
+  "null": "N5",
+  "m": 2000,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N6-m60",
+  "null": "N6",
+  "m": 60,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N6-m300",
+  "null": "N6",
+  "m": 300,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N6-m2000",
+  "null": "N6",
+  "m": 2000,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N8-m60",
+  "null": "N8",
+  "m": 60,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N8-m300",
+  "null": "N8",
+  "m": 300,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 4,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ },
+ {
+  "cell": "N8-m2000",
+  "null": "N8",
+  "m": 2000,
+  "gaussian_held": 6,
+  "gaussian_of": 6,
+  "bounded_held": 8,
+  "bounded_of": 8,
+  "verdict": "HELD"
+ }
+]

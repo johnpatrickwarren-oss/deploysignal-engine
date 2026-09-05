@@ -123,6 +123,9 @@ export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{
     /** RETRACTED 2026-07-02: E[BF|H0] ~= 1.155 at every calibration length. Kept so the retraction
      *  is visible where the guarantee table lives; see the envelope's own file header. */
     nuisance_robust_bf_e_value: Readonly<import("./detectors/nuisance-robust-bf-e-value").NuisanceRobustBFEnvelope>;
+    /** REFUSED 2026-09-05 by study 2026-09-contrast-null (C81): the estimated offset is the plug-in
+     *  n >> m price. Kept here so the refusal is visible where the guarantee table lives. */
+    contrast_null: Readonly<import("./per-shard/contrast").ContrastNullEnvelope>;
 }>;
 /** The guarantee row for a registry detector id, by prefix match. Returns undefined only for ids
  *  outside DETECTOR_REGISTRY; test/guarantees.test.ts proves totality over the registry. */

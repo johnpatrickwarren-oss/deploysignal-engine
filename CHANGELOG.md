@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.6.12-pre — 2026-09-05
+
+Cut so DeploySignal's control arm (C81 Part 2) can consume the contrast construction and name an
+advisory contrast fire by registry id.
+
+- **The contrast null (ADR 0032, C81 Part 1).** `per-shard/contrast.ts`: Tessera's pair contrast
+  (`fitContrast` / `applyContrast` / `composeFit` / `fitContrastFast`, with its AR(1) estimator and
+  whitener) ported line for line, held in lockstep against Tessera's compiled tools by
+  `test/contrast.test.ts` (139,800 comparisons, 0 mismatches); `contrastOf` / `contrastResidual`
+  for a treatment/control pair; `CONTRAST_NULL_ENVELOPE` with the premise stated and the fit
+  length as the regime. Registered study `validation/contrast-null` (`2026-09-contrast-null`,
+  21 cells × 500 × 3 variants, 0 exceptions) **refused the envelope** under its ship rule: the
+  shared component cancels exactly (73,500 of 73,500 alert ticks identical), but the contrast's
+  estimated OFFSET is the plug-in n ≫ m price (mixture false alerts 0.34 / 0.18 / 0.03 per 1,000
+  ticks at fit 60 / 300 / 2000 on iid pairs). The envelope ships as a named refusal with the
+  numbers in `admission`; `fleet/e-bh-guarded.ts` admits `contrast_null_mixture` /
+  `contrast_null_betting` only under `{ mMuchGreaterThanN }` or `{ trueBaseline }`;
+  `DETECTOR_REGISTRY.A` gains `contrast_null_{signal}` and `guarantees.ts` the row. Additive;
+  no detector, monitor or consumer path changed; no certification card touched.
+
 ## v0.6.11-pre — 2026-09-03
 
 Cut so DeploySignal can report e-BY effect-size intervals for its fired mixture signals (C62 b)

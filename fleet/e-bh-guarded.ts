@@ -25,6 +25,7 @@ import { SAFE_T_ENVELOPE } from '../detectors/safe-t-e-value';
 import { UI_MEAN_SHIFT_ENVELOPE } from '../detectors/universal-inference-e-value';
 import { SEQUENTIAL_UI_ENVELOPE } from '../detectors/sequential-ui';
 import { NUISANCE_ROBUST_BF_ENVELOPE } from '../detectors/nuisance-robust-bf-e-value';
+import { CONTRAST_NULL_ENVELOPE } from '../per-shard/contrast';
 
 /** Detector id → the regime in which that detector's `E[e|H0] ≤ 1` holds.
  *
@@ -42,6 +43,14 @@ export const DETECTOR_ENVELOPES: Readonly<Record<string, ValidityEnvelope>> = Ob
   // Retracted at v0.6.2-pre; kept so a caller still feeding it gets a NAMED refusal rather than
   // an "unknown detector" one. Its envelope carries validUnderEstimatedBaseline: false.
   nuisance_robust_bf_e_value: NUISANCE_ROBUST_BF_ENVELOPE,
+  // C81 (2026-09-05): the contrast null (per-shard/contrast.ts) — the mixture or betting card on the
+  // standardized contrast residual of a treatment/control pair. A NAMED REFUSAL: study
+  // 2026-09-contrast-null measured the estimated OFFSET of the contrast as the plug-in n >> m price
+  // (0.34 / 0.18 / 0.03 false alerts per 1,000 ticks at fit 60 / 300 / 2000 on iid pairs) and admitted
+  // nothing; the envelope's `admission` carries the numbers. Admitted here only under the caller's
+  // assertion { mMuchGreaterThanN } (fit >> horizon) or { trueBaseline } (a twin with a known offset).
+  contrast_null_mixture: CONTRAST_NULL_ENVELOPE,
+  contrast_null_betting: CONTRAST_NULL_ENVELOPE,
 });
 
 export function envelopeFor(detectorId: string): ValidityEnvelope | undefined {

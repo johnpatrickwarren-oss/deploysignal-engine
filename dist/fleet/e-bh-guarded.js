@@ -26,6 +26,7 @@ const safe_t_e_value_1 = require("../detectors/safe-t-e-value");
 const universal_inference_e_value_1 = require("../detectors/universal-inference-e-value");
 const sequential_ui_1 = require("../detectors/sequential-ui");
 const nuisance_robust_bf_e_value_1 = require("../detectors/nuisance-robust-bf-e-value");
+const contrast_1 = require("../per-shard/contrast");
 /** Detector id → the regime in which that detector's `E[e|H0] ≤ 1` holds.
  *
  *  An id ABSENT from this map is refused, not admitted. `detector-portfolio-current` records the
@@ -42,6 +43,14 @@ exports.DETECTOR_ENVELOPES = Object.freeze({
     // Retracted at v0.6.2-pre; kept so a caller still feeding it gets a NAMED refusal rather than
     // an "unknown detector" one. Its envelope carries validUnderEstimatedBaseline: false.
     nuisance_robust_bf_e_value: nuisance_robust_bf_e_value_1.NUISANCE_ROBUST_BF_ENVELOPE,
+    // C81 (2026-09-05): the contrast null (per-shard/contrast.ts) — the mixture or betting card on the
+    // standardized contrast residual of a treatment/control pair. A NAMED REFUSAL: study
+    // 2026-09-contrast-null measured the estimated OFFSET of the contrast as the plug-in n >> m price
+    // (0.34 / 0.18 / 0.03 false alerts per 1,000 ticks at fit 60 / 300 / 2000 on iid pairs) and admitted
+    // nothing; the envelope's `admission` carries the numbers. Admitted here only under the caller's
+    // assertion { mMuchGreaterThanN } (fit >> horizon) or { trueBaseline } (a twin with a known offset).
+    contrast_null_mixture: contrast_1.CONTRAST_NULL_ENVELOPE,
+    contrast_null_betting: contrast_1.CONTRAST_NULL_ENVELOPE,
 });
 function envelopeFor(detectorId) {
     return exports.DETECTOR_ENVELOPES[detectorId];

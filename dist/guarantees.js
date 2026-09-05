@@ -7,6 +7,7 @@ const validity_envelope_1 = require("./detectors/validity-envelope");
 const safe_t_e_value_1 = require("./detectors/safe-t-e-value");
 const universal_inference_e_value_1 = require("./detectors/universal-inference-e-value");
 const sequential_ui_1 = require("./detectors/sequential-ui");
+const contrast_1 = require("./per-shard/contrast");
 exports.GUARANTEE_TABLE = Object.freeze([
     {
         idPrefixes: ['mSPRT_', 'page_cusum_'],
@@ -66,6 +67,34 @@ exports.GUARANTEE_TABLE = Object.freeze([
             note: 'sigma integrated out exactly: E[e|H0] = 1 at every calibration length with known phi '
                 + '(APPROXIMATE_E_VALUE_BY_CONSTRUCTION.safe_t_e_value carries the out-of-envelope '
                 + 'measurement, mean(e) = 9,710 at estimated phi = 0.9 from 100 samples).',
+        },
+    },
+    {
+        idPrefixes: ['contrast_null_'],
+        family: 'A',
+        detector: 'the contrast null: a mean-shift card on the standardized treatment − control residual of a pair (C81)',
+        implementation: 'per-shard/contrast.ts (fitContrast / applyContrast, ported line for line from Tessera tools/contrast.ts)',
+        validityClass: 'ville_anytime_valid',
+        estimatedBaseline: contrast_1.CONTRAST_NULL_ENVELOPE,
+        alphaPolicy: 'ville_spend',
+        evidence: 'Study 2026-09-contrast-null (registered 2416bef before any code; run-20260905T061348Z, '
+            + '21 cells x 500 replications x 3 variants, 0 exceptions; lockstep against Tessera 139,800 '
+            + 'comparisons, 0 mismatches). REFUSED by the registered ship rule: P1 FAILED in 8 of 21 cells, '
+            + 'P3 FAILED in 14 of 21, both by the estimated OFFSET of the contrast read against a 2,000-tick '
+            + 'horizon (the plug-in n >> m regime), not by the shared component, which cancels exactly '
+            + '(73,500 of 73,500 alert ticks identical between the shared-step and null variants). Mixture '
+            + 'false alerts on iid pairs 0.34 / 0.18 / 0.03 per 1,000 ticks at fit 60 / 300 / 2000 against a '
+            + 'contract of 0.025; the temporal path on the same units with a shared AR(1) component: 0.43 / '
+            + '0.33 / 0.23. Nothing is admitted; the envelope records the numbers and the gate admits only '
+            + 'under { mMuchGreaterThanN } or { trueBaseline }.',
+        approximateEValue: {
+            form: 'epsilon_growing',
+            law: 'the contrast offset is a median of m fit ticks, so the residual carries a persistent '
+                + 'shift of order 1/sqrt(m) in scale units and the mixture wealth grows with the horizon n '
+                + 'as under any plug-in mean: epsilon_n is unbounded in n at fixed m; the false-alert rate on '
+                + 'iid pairs fell 0.34 -> 0.18 -> 0.03 per 1,000 ticks as m went 60 -> 300 -> 2000 at n = 2000, '
+                + 'independent of the fit\'s scale error (0.69 vs 0.65 across the scale split at m = 60).',
+            source: 'validation/contrast-null run-20260905T061348Z (C81); knowledge stats/contrast-null-2026-09-05',
         },
     },
     {
@@ -267,6 +296,14 @@ exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = Object.freeze({
             + 'used as-is; deprecated for safe-t.',
         source: 'engine ADR 0005; knowledge stats/invalid-nuisance-robust-bf-e-value',
     },
+    contrast_null: {
+        form: 'epsilon_growing',
+        law: 'REFUSED by its registered study: the contrast offset is estimated from m fit ticks and '
+            + 'read against the horizon n, so the mixture wealth on the residual grows with n at fixed m '
+            + '(0.34 / 0.18 / 0.03 false alerts per 1,000 ticks at m = 60 / 300 / 2000, n = 2000, iid pairs); '
+            + 'the shared component cancels exactly. Admit only under mMuchGreaterThanN or trueBaseline.',
+        source: 'validation/contrast-null run-20260905T061348Z (C81)',
+    },
 });
 /** Estimated-baseline (axis-2) defaults and the retraction, keyed by construction rather than
  *  registry id — these are inputs a CONSUMER may route to the FDR path, not per-signal detectors. */
@@ -277,6 +314,9 @@ exports.ESTIMATED_BASELINE_GUARANTEES = Object.freeze({
     /** RETRACTED 2026-07-02: E[BF|H0] ~= 1.155 at every calibration length. Kept so the retraction
      *  is visible where the guarantee table lives; see the envelope's own file header. */
     nuisance_robust_bf_e_value: validity_envelope_1.NUISANCE_ROBUST_BF_ENVELOPE,
+    /** REFUSED 2026-09-05 by study 2026-09-contrast-null (C81): the estimated offset is the plug-in
+     *  n >> m price. Kept here so the refusal is visible where the guarantee table lives. */
+    contrast_null: contrast_1.CONTRAST_NULL_ENVELOPE,
 });
 /** The guarantee row for a registry detector id, by prefix match. Returns undefined only for ids
  *  outside DETECTOR_REGISTRY; test/guarantees.test.ts proves totality over the registry. */

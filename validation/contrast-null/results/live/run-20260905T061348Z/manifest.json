@@ -1,0 +1,93 @@
+{
+  "study": "2026-09-contrast-null",
+  "register": "knowledge WORKLIST C81 (Part 1)",
+  "mode": "live",
+  "quick": false,
+  "engine": {
+    "sha": "25ad07ae7433674952a4bc71063e8c573ce24840",
+    "version": "0.6.11-pre",
+    "node": "v25.9.0"
+  },
+  "hashes": {
+    "harness": "55f18a9e882329ffdd40115a9f78c2303934f037524ff0f4ad2dff9f5e5809f0",
+    "registration": "081b048555e57b93d83ebe6846afd0a5e58c523a2eaddef4b34756122a49973c",
+    "report": "fcd4b16bc2956576781ef1e9bf7be97a25188a7067b9a25ca0e619b54d330210",
+    "nulls": "5f6746bfbecaa0159bcc3401e81b699cb14fe4e00096fd719a3f7610bc573e5b",
+    "detectors": "4affa3c9fc7b36bfa5e73d53c15e7c999de9475a9ec1e76e2a631e9e0fbce69d",
+    "contrast_ts": "5dde2511dacf9baf8d86ff00d73fa60d0ff84597e43a7dda07bcf9b4ac63cade",
+    "contrast_js": "d0017901e4401adc190128e16dbffeaff02632fad4edee002ba63dbb11173d04"
+  },
+  "lockstep": {
+    "comparisons": 139800,
+    "mismatches": 0,
+    "tessera_sha": "744e8ad28ef0fc672b05f143354a272ca3c45c48",
+    "dir": "/Users/johnwarren/concord/tessera"
+  },
+  "bounded_esr": "absent",
+  "constants": {
+    "N": 500,
+    "SEED": 20260904,
+    "T_MON": 2000,
+    "NU_OFFSET": 500,
+    "M_LIST": [
+      60,
+      300,
+      2000
+    ],
+    "KAPPA": 1,
+    "DELTA": 1.5,
+    "NULL_IDS": [
+      "N1",
+      "N3-p03",
+      "N3-p06",
+      "N3-p09",
+      "N5",
+      "N6",
+      "N8"
+    ],
+    "ALPHAS": [
+      0.05,
+      0.01
+    ],
+    "ALPHA_ARL": 0.001,
+    "ALPHA_CAL": 0.01,
+    "GAUSS_LAMBDAS": [
+      0.5,
+      1,
+      2,
+      -0.5,
+      -1,
+      -2
+    ],
+    "BOUND_LAMBDAS": [
+      0.1,
+      0.3,
+      0.6,
+      0.9,
+      -0.1,
+      -0.3,
+      -0.6,
+      -0.9
+    ],
+    "BOUND_CLIP": 3
+  },
+  "cells": 21,
+  "replications": 10500,
+  "instrument": {
+    "step3_fires": {
+      "family_A_mixture_supermartingale": 869,
+      "family_A_betting_e_process": 879,
+      "e_sr_mean_shift": 643
+    },
+    "shared_max_abs_residual_diff": 8.881784197001252e-16,
+    "clean_quiet": {
+      "family_A_mixture_supermartingale": -1,
+      "family_A_betting_e_process": 2140
+    },
+    "ok": true
+  },
+  "exceptions": 0,
+  "runtime_ms": 19848,
+  "p1_study": "FAILED",
+  "p3_study": "FAILED"
+}

@@ -387,6 +387,8 @@ const GOLDEN = {
   shape_ecdf_accumulator: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
   // Amendment v1.C69 C69.7's registered golden expectation, pre-run (e-detector-cert PREREGISTRATION §4).
   e_sr_mean_shift: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
+  // Amendment v1.C77 / e-sr-bounded PREREGISTRATION §4's registered golden expectation, pre-run.
+  e_sr_mean_shift_bounded: { verdict: 'USE', tier: 'T1', s1: 'MISSING', s2: 'PASS', s3: 'PASS', s4: 'PASS' },
 };
 
 function runHarness(t) {

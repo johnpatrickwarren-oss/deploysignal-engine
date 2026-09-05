@@ -1,0 +1,77 @@
+{
+  "protocol_version": 1,
+  "detector_id": "e_sr_mean_shift_bounded",
+  "aliases": [
+    "e_sr_bounded",
+    "e-sr-mean-shift-bounded"
+  ],
+  "family": "SR",
+  "class": "e_detector",
+  "engine_pin": {
+    "version": null,
+    "sha": null
+  },
+  "source_files": [
+    { "path": "detectors/e-sr-mean-shift.ts", "sha256": null },
+    { "path": "detectors/validity-envelope.ts", "sha256": null },
+    { "path": "fleet/calibration-monitor.ts", "sha256": null },
+    { "path": "validation/certification/lib/score.mjs", "sha256": null },
+    { "path": "validation/certification/lib/guards.mjs", "sha256": null },
+    { "path": "validation/certification/lib/constants.mjs", "sha256": null },
+    { "path": "validation/certification/verdict.mjs", "sha256": null },
+    { "path": "validation/certification/lib/collect.mjs", "sha256": null },
+    { "path": "validation/e-sr-bounded/harness/run.mjs", "sha256": null }
+  ],
+  "guarantee": {
+    "sentence": "Shiryaev-Roberts mixture e-detector on the bounded-bet increment 1 + lambda*clip(r, +-3)/3 over +-{0.1, 0.3, 0.6, 0.9} (ADR 0031; Shin-Ramdas-Rinaldo 2022 Thm 2.4): E_inf[N*] >= 1/alpha_arl at alpha_arl = 1e-3 for every pre-change law whose AR(1)-whitened, standardized residual is conditionally mean-zero AFTER clipping at +-3 -- symmetric laws at any tail and any scale error, at oracle or estimated (m >= 30) parameters, phi <= 0.9, any changepoint. The heavy-tailed nulls N5 (lognormal), N6 (t3) and N8 (AR(1) with t3 innovations) are CLAIMED inside the regime; the standardized lognormal's clipped mean (about -0.028) is the one known departure from the premise and the S2 cell decides it. Delay after a K1 canonical step is at most D*(alpha_arl, delta_eff) evaluated at the bounded increment's growth rate (Amendment v1.C77: 34.9 ticks at phi = 0), registered as a floor and not claimed as a theorem about the increment mixture.",
+    "quantifiers": [
+      {
+        "text": "every pre-change law with a conditionally mean-zero clipped residual in the claimed regime, any changepoint",
+        "tag": "empirical",
+        "proof_artifact": null
+      },
+      {
+        "text": "delay under the bounded D* at every phi <= 0.9",
+        "tag": "empirical",
+        "proof_artifact": null
+      }
+    ],
+    "regime": {
+      "phi_max": 0.9,
+      "m_min": 30,
+      "null_prefixes": [
+        "N1",
+        "N2",
+        "N3",
+        "N4",
+        "N5",
+        "N6",
+        "N7",
+        "N8"
+      ],
+      "increment": "bounded",
+      "alpha_arl": 0.001,
+      "baseline": "oracle or estimated (m >= 30)",
+      "nulls": "iid-gaussian, ar1-gaussian (phi <= 0.9), estimated moments and phi, lognormal, t3, ar1-t3 (combined stress)"
+    }
+  },
+  "shipped_path": {
+    "kind": "e-detector (SR mixture of bounded-bet increments over 8 lambdas), AR(1) pre-whitened, alarm at M_t >= 1/alpha_arl; exported through ./detectors/* behind ESrMeanShiftParams.increment = 'bounded' (default 'gaussian' unchanged), NO shipped compile path (no engine surface dispatches either e-SR, so S1 is MISSING by construction and the USE, if issued, is USE under the scorer's non-blocking reading of S1)",
+    "estimator": null,
+    "notes": "ADR 0031: ValidityEnvelope.statistic 'e-detector'; assertValidForFdrPath refuses it under every assertion. The increment needs no sub-Gaussian premise: E[g | F] = 1 whenever the clipped residual is conditionally mean-zero. The price is delay: growth rate 0.344 at 1.5 sigma against the Gaussian increment's 1.125 (study 2026-09-e-sr-bounded H2)."
+  },
+  "budget": {
+    "participating": false,
+    "alpha_booked": null,
+    "resolution_claim": null
+  },
+  "falsifier": "an in-regime S2 cell (N1-N8, heavy tails included) with arl0_T + 1.645*arl0_se < 1/alpha_arl, or an in-regime K1-canonical delay cell with delay_canonical + 1.645*delay_se > D*(alpha_arl, delta_eff, 'bounded')",
+  "prior_evidence": [
+    {
+      "stage": "S2+S3",
+      "study": "e-sr-bounded",
+      "runs": "e-sr-bounded/results/live/run-*",
+      "wiki": "stats/e-sr-bounded-2026-09-04"
+    }
+  ]
+}

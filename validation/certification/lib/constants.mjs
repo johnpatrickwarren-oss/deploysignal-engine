@@ -40,15 +40,46 @@ export function effectiveShift(deltaSigma, phi) {
  *  Registered values at alpha_arl = 1e-3, delta = 1.5: phi 0 -> 13.0, 0.3 -> 23.3, 0.6 -> 49.1,
  *  0.9 -> 229.6. A FLOOR for the class, not a theorem about the increment mixture (the theorem
  *  is proved for the mixture of detectors). */
-export function eDetectorDelayBound(alphaArl, deltaEff) {
+export function eDetectorDelayBound(alphaArl, deltaEff, increment = 'gaussian') {
   if (!(alphaArl > 0 && alphaArl < 1)) throw new Error(`eDetectorDelayBound: alpha_arl must be in (0,1), got ${alphaArl}`);
   if (!(deltaEff > 0)) throw new Error(`eDetectorDelayBound: delta_eff must be > 0, got ${deltaEff}`);
+  if (!E_DETECTOR_INCREMENTS.includes(increment)) throw new Error(`eDetectorDelayBound: increment must be one of ${E_DETECTOR_INCREMENTS.join('|')}, got ${increment}`);
   let g = Infinity;
   for (let eta = 1.001; eta <= 8; eta += 0.001) {
     g = Math.min(g, eta * Math.log(1 / alphaArl) + Math.log(1 + E_DETECTOR_LOG_RATIO / Math.log(eta)));
   }
-  const D = (deltaEff * deltaEff) / 2, V = deltaEff * deltaEff;
-  return { g_alpha: g, bound: g / D + V / (D * D) + 1 };
+  const { D, V } = increment === 'bounded' ? boundedIncrementGrowth(deltaEff) : { D: (deltaEff * deltaEff) / 2, V: deltaEff * deltaEff };
+  return { g_alpha: g, bound: g / D + V / (D * D) + 1, increment, D, V };
+}
+
+// Amendment v1.C77 (2026-09-04): the delay floor is evaluated at the card's declared increment
+// family. Absent = 'gaussian' = the v1.C69 arithmetic above, unchanged.
+export const E_DETECTOR_INCREMENTS = ['gaussian', 'bounded'];
+// The bounded-bet increment's grid and clip (fleet/calibration-monitor.ts BOUND_LAMBDAS / BOUND_CLIP,
+// restated here so the scorer's arithmetic is pinned by the cards that pin this file).
+export const E_DETECTOR_BOUNDED_LAMBDAS = [0.1, 0.3, 0.6, 0.9, -0.1, -0.3, -0.6, -0.9];
+export const E_DETECTOR_BOUNDED_CLIP = 3;
+/** D = E[log(1 + lambda*clip(r, +-3)/3)] and V its variance under r ~ N(delta_eff, 1), at the grid
+ *  lambda that maximizes D; midpoint quadrature over z in [-8, 8], 8,001 points (v1.C77 C77.3).
+ *  Registered values at alpha_arl = 1e-3, delta = 1.5: phi 0 -> D* 34.9, 0.3 -> 47.0, 0.6 -> 71.9,
+ *  0.9 -> 239.9 (against the Gaussian 13.0 / 23.3 / 49.1 / 229.6). */
+export function boundedIncrementGrowth(deltaEff) {
+  if (!(deltaEff > 0)) throw new Error(`boundedIncrementGrowth: delta_eff must be > 0, got ${deltaEff}`);
+  const n = 8001, lo = -8, hi = 8, h = (hi - lo) / n, B = E_DETECTOR_BOUNDED_CLIP;
+  let best = null;
+  for (const lam of E_DETECTOR_BOUNDED_LAMBDAS) {
+    let s = 0, s2 = 0, W = 0;
+    for (let i = 0; i < n; i++) {
+      const z = lo + (i + 0.5) * h;
+      const w = Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI) * h;
+      const r = deltaEff + z, c = Math.max(-B, Math.min(B, r));
+      const l = Math.log(1 + (lam * c) / B);
+      s += w * l; s2 += w * l * l; W += w;
+    }
+    const D = s / W, V = s2 / W - D * D;
+    if (best === null || D > best.D) best = { lambda: lam, D, V };
+  }
+  return best;
 }
 // The registered bound a terminal e-value's mean is scored against: E[e|H0] <= 1.
 // Registered 2026-08-07 with the third card freeze; a mechanical-verdict protocol's

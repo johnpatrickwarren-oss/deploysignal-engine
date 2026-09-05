@@ -3,12 +3,21 @@ import type { ValidityEnvelope } from './validity-envelope';
  *  0.25σ (below the smallest registered K1 step, 0.75σ) to 3σ (the largest). Frozen with the study. */
 export declare const E_SR_LAMBDA_GRID: readonly number[];
 export declare const E_SR_DEFAULT_ALPHA_ARL = 0.001;
+/** The bounded increment's default grid: the calibration monitor's eight ±λ (ADR 0031). */
+export declare const E_SR_BOUNDED_LAMBDA_GRID: readonly number[];
+export type ESrIncrement = 'gaussian' | 'bounded';
 export interface ESrMeanShiftParams {
     /** ARL level: alarm threshold 1/alpha_arl; E∞[N*] ≥ 1/alpha_arl. Default 1e-3. */
     alpha_arl?: number;
-    /** Increment grid; default E_SR_LAMBDA_GRID. Any grid is a valid e-detector (Prop. 2.3). */
+    /** Increment grid; default E_SR_LAMBDA_GRID ('gaussian') or E_SR_BOUNDED_LAMBDA_GRID ('bounded').
+     *  Any grid is a valid e-detector (Prop. 2.3); with 'bounded' every |λ| must be < 1. */
     lambdas?: readonly number[];
+    /** 'gaussian' (default): exp(λr − λ²/2), needs a sub-Gaussian(1) residual. 'bounded': the
+     *  clipped linear bet 1 + λ·clip(r, ±3)/3 — any tail, any scale error (ADR 0031). */
+    increment?: ESrIncrement;
 }
+/** The grid a params object resolves to. */
+export declare function eSrLambdaGrid(params?: ESrMeanShiftParams): readonly number[];
 export interface ESrMeanShiftState {
     /** ticks consumed. */
     t: number;
@@ -52,4 +61,10 @@ export declare function evaluateESrMeanShift(r: number, params: ESrMeanShiftPara
 /** The e-SR's envelope: statistic 'e-detector' — refused by assertValidForFdrPath by name. The
  *  baseline/autocorrelation fields describe the residual it expects (plug-in μ̂, AR(1)-whitened). */
 export declare const E_SR_MEAN_SHIFT_ENVELOPE: Readonly<ValidityEnvelope>;
+/** The bounded e-SR's envelope (ADR 0031): the same 'e-detector' statistic, refused by the FDR gate
+ *  by name. Its premise is a conditionally mean-zero CLIPPED residual — symmetric pre-change laws at
+ *  the reference location, any tail, any scale error — not sub-Gaussianity. Registry id
+ *  `e_sr_mean_shift_bounded`; certified under the e_detector class with N5/N6/N8 inside the regime
+ *  (study 2026-09-e-sr-bounded). */
+export declare const E_SR_MEAN_SHIFT_BOUNDED_ENVELOPE: Readonly<ValidityEnvelope>;
 //# sourceMappingURL=e-sr-mean-shift.d.ts.map

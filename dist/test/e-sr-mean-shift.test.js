@@ -132,4 +132,94 @@ function gaussian(rng) { const u1 = Math.max(rng(), 1e-12), u2 = rng(); return M
     strict_1.default.throws(() => (0, e_sr_mean_shift_1.evaluateESrMeanShift)(0, { alpha_arl: 1 }, st), /alpha_arl/);
     strict_1.default.throws(() => (0, e_sr_mean_shift_1.evaluateESrMeanShift)(0, { lambdas: [1] }, st), /components/);
 });
+// ── ADR 0031: the bounded-bet increment (study 2026-09-e-sr-bounded, C77) ──
+const e_sr_mean_shift_2 = require("../detectors/e-sr-mean-shift");
+const calibration_monitor_1 = require("../fleet/calibration-monitor");
+(0, node_test_1.test)('bounded: the default is unchanged — increment absent and increment "gaussian" give byte-identical log_M', () => {
+    const rng = mulberry32(11);
+    const rs = Array.from({ length: 200 }, () => gaussian(rng));
+    const a = (0, e_sr_mean_shift_1.freshESrMeanShiftState)({ alpha_arl: 1e-3 }), b = (0, e_sr_mean_shift_1.freshESrMeanShiftState)({ alpha_arl: 1e-3, increment: 'gaussian' });
+    for (const r of rs) {
+        const x = (0, e_sr_mean_shift_1.evaluateESrMeanShift)(r, { alpha_arl: 1e-3 }, a), y = (0, e_sr_mean_shift_1.evaluateESrMeanShift)(r, { alpha_arl: 1e-3, increment: 'gaussian' }, b);
+        strict_1.default.equal(x.log_M, y.log_M);
+        strict_1.default.equal(x.onset_estimate, y.onset_estimate);
+    }
+    strict_1.default.deepEqual((0, e_sr_mean_shift_2.eSrLambdaGrid)({}), e_sr_mean_shift_1.E_SR_LAMBDA_GRID);
+});
+(0, node_test_1.test)('bounded: the grid is the calibration monitor\'s eight ±λ and every |λ| < 1', () => {
+    strict_1.default.deepEqual([...e_sr_mean_shift_2.E_SR_BOUNDED_LAMBDA_GRID], [...calibration_monitor_1.BOUND_LAMBDAS]);
+    strict_1.default.deepEqual((0, e_sr_mean_shift_2.eSrLambdaGrid)({ increment: 'bounded' }), e_sr_mean_shift_2.E_SR_BOUNDED_LAMBDA_GRID);
+    strict_1.default.ok(e_sr_mean_shift_2.E_SR_BOUNDED_LAMBDA_GRID.every((l) => Math.abs(l) < 1));
+    strict_1.default.throws(() => (0, e_sr_mean_shift_1.freshESrMeanShiftState)({ increment: 'bounded', lambdas: [0.5, 1.0] }), /\|lambda\| < 1/);
+});
+(0, node_test_1.test)('bounded: the increment integrates to exactly 1 under any symmetric law — N(0,1) and a scaled t3 by quadrature', () => {
+    const h = 1e-3;
+    for (const lam of e_sr_mean_shift_2.E_SR_BOUNDED_LAMBDA_GRID) {
+        let sN = 0, sT = 0, wT = 0;
+        for (let z = -12; z <= 12; z += h) {
+            const wN = Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI) * h;
+            const wt = Math.pow(1 + (z * z) / 3, -2) * h; // t3 kernel, unnormalized, at a different scale
+            sN += wN * (0, calibration_monitor_1.gBounded)(z, lam);
+            sT += wt * (0, calibration_monitor_1.gBounded)(2.5 * z, lam);
+            wT += wt;
+        }
+        strict_1.default.ok(Math.abs(sN - 1) < 1e-6, `N(0,1) λ=${lam}: ${sN}`);
+        strict_1.default.ok(Math.abs(sT / wT - 1) < 1e-6, `t3×2.5 λ=${lam}: ${sT / wT}`);
+    }
+});
+(0, node_test_1.test)('bounded: the recursion equals the brute-force SR sum per λ and the mixture is their mean', () => {
+    const rng = mulberry32(5);
+    const rs = Array.from({ length: 40 }, () => 0.5 + 3 * gaussian(rng)); // heavy enough to clip
+    const p = { alpha_arl: 1e-3, increment: 'bounded' };
+    const st = (0, e_sr_mean_shift_1.freshESrMeanShiftState)(p);
+    let last = { log_M: 0 };
+    for (const r of rs)
+        last = (0, e_sr_mean_shift_1.evaluateESrMeanShift)(r, p, st);
+    let mix = 0;
+    e_sr_mean_shift_2.E_SR_BOUNDED_LAMBDA_GRID.forEach((lam, k) => {
+        let sum = 0;
+        for (let j = 0; j < rs.length; j++) {
+            let prod = 1;
+            for (let i = j; i < rs.length; i++)
+                prod *= (0, calibration_monitor_1.gBounded)(rs[i], lam);
+            sum += prod;
+        }
+        strict_1.default.ok(Math.abs(Math.log(sum) - st.log_M_sr[k]) < 1e-9, `λ=${lam}`);
+        mix += sum;
+    });
+    strict_1.default.ok(Math.abs(Math.log(mix / e_sr_mean_shift_2.E_SR_BOUNDED_LAMBDA_GRID.length) - last.log_M) < 1e-9);
+});
+(0, node_test_1.test)('bounded: on an exactly-zero residual M_t = t and the alarm lands at exactly 1/alpha_arl; alarms on a 3σ step; survives a +60 fault in the log domain', () => {
+    const p = { alpha_arl: 1e-3, increment: 'bounded' };
+    // g_λ(0) = 1 for every λ, so the SR recursion is M_t = M_{t−1} + 1 = t: the run-length guarantee
+    // E∞[N*] ≥ 1/α_ARL holds with EQUALITY on a degenerate residual (a stuck signal at the baseline
+    // alarms after 1,000 ticks), where the Gaussian increment exp(−λ²/2) < 1 would never alarm.
+    const flat = (0, e_sr_mean_shift_1.freshESrMeanShiftState)(p);
+    let firstAlarm = -1;
+    for (let t = 0; t < 1200; t++) {
+        const out = (0, e_sr_mean_shift_1.evaluateESrMeanShift)(0, p, flat);
+        strict_1.default.ok(Math.abs(out.log_M - Math.log(t + 1)) < 1e-9, `M_${t + 1} = ${t + 1}`);
+        if (out.fired && firstAlarm < 0)
+            firstAlarm = t + 1;
+    }
+    strict_1.default.equal(firstAlarm, 1000);
+    const rng = mulberry32(3);
+    const st = (0, e_sr_mean_shift_1.freshESrMeanShiftState)(p);
+    let fireAt = -1;
+    for (let t = 0; t < 400 && fireAt < 0; t++)
+        if ((0, e_sr_mean_shift_1.evaluateESrMeanShift)((t >= 100 ? 3 : 0) + gaussian(rng), p, st).fired)
+            fireAt = t;
+    strict_1.default.ok(fireAt >= 100 && fireAt < 200, `fired at ${fireAt}`);
+    const big = (0, e_sr_mean_shift_1.freshESrMeanShiftState)(p);
+    let out = (0, e_sr_mean_shift_1.evaluateESrMeanShift)(60, p, big);
+    for (let t = 0; t < 200; t++)
+        out = (0, e_sr_mean_shift_1.evaluateESrMeanShift)(60, p, big);
+    strict_1.default.ok(Number.isFinite(out.log_M) && out.fired);
+});
+(0, node_test_1.test)('bounded: the envelope is an e-detector and the FDR gate refuses it by name', () => {
+    strict_1.default.equal(e_sr_mean_shift_2.E_SR_MEAN_SHIFT_BOUNDED_ENVELOPE.statistic, 'e-detector');
+    strict_1.default.equal((0, validity_envelope_1.isValidForFdrPath)(e_sr_mean_shift_2.E_SR_MEAN_SHIFT_BOUNDED_ENVELOPE), false);
+    strict_1.default.throws(() => (0, validity_envelope_1.assertValidForFdrPath)(e_sr_mean_shift_2.E_SR_MEAN_SHIFT_BOUNDED_ENVELOPE), /e-DETECTOR/);
+    strict_1.default.throws(() => (0, e_sr_mean_shift_1.evaluateESrMeanShift)(0, { increment: 'cauchy' }, (0, e_sr_mean_shift_1.freshESrMeanShiftState)()), /increment must be/);
+});
 //# sourceMappingURL=e-sr-mean-shift.test.js.map

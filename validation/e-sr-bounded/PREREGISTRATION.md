@@ -145,3 +145,39 @@ module's and the scorer's sha256, `N`, seeds, wall time. Not measured: any consu
 MISSING); onsets other than a K1 step; α_ARL other than 10⁻³; anything at T2 or T3 (C76 takes
 the module to NAB); a centred clip for skewed laws (the fix N5 would want, not built here);
 Tessera's `srEDetector` prototype (not compared).
+
+## Amendment A1 — 2026-09-04, after the unscored N = 20 pilot (`results/sim/`), before any scored run
+
+Three instrument facts the pilot exposed, and one expectation revised on the record before the
+scored run; no floor, rule, grid, seed or golden row moves.
+
+1. **S2 at N = 20,000** (S3 stays at 2,000). On a residual that is exactly zero every bounded
+   increment equals 1 and the SR recursion gives `M_t = t`, so the alarm lands at exactly
+   `1/α_ARL` (asserted in `test/e-sr-mean-shift.test.ts`); the pilot read `arl0_T` 1,015 ± 159
+   on N1 at N = 20, consistent with an oracle ARL that sits at the floor rather than 1.8× above
+   it as the Gaussian's does. At N = 2,000 the rule's `1.645·se` (≈ 26) could not resolve a
+   cell whose truth is within a few percent of 1,000; at N = 20,000 (se ≈ 5) it can. §4's
+   H1 prediction for the oracle cells is unchanged: CLEARED, in `[1,000, 2,000]`, and the number
+   the page will carry is how far above the floor they sit.
+2. **The Gaussian e-SR runs as an identical-draws comparator on every S2 cell** (cells carry
+   `detector_id: 'e_sr_mean_shift'` in `comparison.json`, never `detector`, so they pool into no
+   card). H4 keeps its registered reference (1,148 at N2-m30) and gains the identical-draws ratio
+   on every null.
+3. **H3's standard error is computed across trajectories** (the mean of `g_λ` per trajectory,
+   then the se of those N means), not across `N·T` pairs. The pilot read `z = 12.7` on N2-m30
+   with the pair-level se because a trajectory's calibration error is frozen for its 1,000
+   ticks and the pairs are not independent draws. The 3-se rule and the N5 offset are unchanged.
+4. **Expectation revised, on the record before the scored run.** The pilot read `arl0_T` 261,
+   487, 375 and 284 on N2-m30, N2-m100, N4-p06-m100 and N4-p09-m100 (N = 20), against the
+   Gaussian e-SR's 1,148 / 1,320 / 1,511 / 1,185. §4 predicted the opposite. The mechanism I
+   now expect: the bounded grid's smallest bet, `λ = 0.1`, reads a location error of order
+   `1/√m` in the standardized residual as a persistent shift and drifts up on every stream, while
+   the Gaussian grid starts at `λ = 0.25` and the streams whose error is below ≈ 0.125σ never
+   alarm, carrying its censored mean. Under estimation the increment is a *marginal* e-process
+   (the mean of `g_λ` across streams is 1, H3) and the run length collapses anyway, because the
+   error is frozen per stream — the front-loaded run-length distribution
+   [[stats/arl-delay-2026-09-03]] recorded for the Family A cards. **So H1 is now expected to
+   FAIL on N2-* and N4-*, H4 to FAIL, and the card to read REFUSE under §5**; the golden row
+   stays as registered (a prediction, now expected wrong), and the golden test will carry the
+   measured verdict with the failed prediction named. Nothing is narrowed by hand: the estimated
+   nulls stay in the claimed regime and decide it.

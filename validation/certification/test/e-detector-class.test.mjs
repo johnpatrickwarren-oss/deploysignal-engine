@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { scoreS2, scoreS3, scoreS4, overallVerdict, scoreS1 } from '../lib/score.mjs';
 import { arlRule, internalConsistency } from '../lib/guards.mjs';
-import { CLASSES, CLASS_INSTRUMENTS, effectiveShift, eDetectorDelayBound, E_DETECTOR_Z } from '../lib/constants.mjs';
+import { CLASSES, CLASS_INSTRUMENTS, effectiveShift, eDetectorDelayBound, E_DETECTOR_Z, boundedIncrementGrowth, E_DETECTOR_INCREMENTS } from '../lib/constants.mjs';
 
 const card = {
   detector_id: 'esr', aliases: [], class: 'e_detector',
@@ -129,3 +129,21 @@ test('overall: the registered golden shape, USE at T1 with S1 MISSING named in r
   assert.equal(o.verdict, 'USE'); assert.equal(o.tier, 'T1');
   assert.ok(o.reasons.some((r) => /S1 reachability/.test(r)));
 });
+
+// Amendment v1.C77 (C77.3): the delay floor at the bounded increment, registered before any run.
+test('v1.C77: registered bounded delay bounds at alpha_arl = 1e-3, delta = 1.5: 34.9 / 47.0 / 71.9 / 239.9; the gaussian default is unchanged', () => {
+  const A = 1e-3;
+  const expectBounded = { 0: 34.9, 0.3: 47.0, 0.6: 71.9, 0.9: 239.9 };
+  const expectGaussian = { 0: 13.0, 0.3: 23.3, 0.6: 49.1, 0.9: 229.6 };
+  for (const phi of Object.keys(expectBounded)) {
+    const de = effectiveShift(1.5, Number(phi));
+    assert.ok(Math.abs(eDetectorDelayBound(A, de, 'bounded').bound - expectBounded[phi]) < 0.05, `bounded phi=${phi}`);
+    assert.ok(Math.abs(eDetectorDelayBound(A, de).bound - expectGaussian[phi]) < 0.05, `gaussian phi=${phi}`);
+    assert.equal(eDetectorDelayBound(A, de).bound, eDetectorDelayBound(A, de, 'gaussian').bound);
+  }
+  const g = boundedIncrementGrowth(1.5);
+  assert.equal(g.lambda, 0.9); assert.ok(Math.abs(g.D - 0.3442) < 5e-4 && Math.abs(g.V - 0.0455) < 5e-4);
+  assert.deepEqual(E_DETECTOR_INCREMENTS, ['gaussian', 'bounded']);
+  assert.throws(() => eDetectorDelayBound(A, 1.5, 'cauchy'), /increment must be/);
+});
+

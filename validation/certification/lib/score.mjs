@@ -395,7 +395,8 @@ export function scoreS3(card, cells) {
         continue;
       }
       const delta_eff = effectiveShift(cell.shift_sigma, phi);
-      const { bound } = eDetectorDelayBound(cell.alpha_arl, delta_eff);
+      // v1.C77: the floor at the card's declared increment family (absent = 'gaussian', unchanged).
+      const { bound } = eDetectorDelayBound(cell.alpha_arl, delta_eff, regime.increment ?? 'gaussian');
       const entry = { ...cell, delay_upper95: upper, delta_eff, delay_bound: bound, slow: upper > bound };
       delayCells.push(entry);
       if (entry.slow) slow.push(entry);

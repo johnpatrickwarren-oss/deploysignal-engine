@@ -1,0 +1,43 @@
+{
+  "study": "2026-09-sequencing",
+  "substrate": "engine",
+  "run": "run-20260905T025327Z",
+  "mode": "live",
+  "quick": false,
+  "tier": "T1",
+  "git_sha": "eb3165fbea745805fe9677a7c42b462c42f2aef8",
+  "harness_sha256": "8bd084411065f7e970c3554a5a5031d150ea3a1df069f4553a72350e8e5b7f86",
+  "registration_sha256": "6bdbaa9f48b546a2f31ae38bcf15a6160fe8908d60a46059e80ad2b212014820",
+  "n": 1000,
+  "seed": 20260912,
+  "K": 20,
+  "nu0": 200,
+  "censor": 800,
+  "fs": [
+    3,
+    5
+  ],
+  "deltas": [
+    1.5,
+    3
+  ],
+  "gaps": [
+    5,
+    20,
+    50
+  ],
+  "alpha_run": 0.01,
+  "alpha_arl": 0.001,
+  "null_id": "N1",
+  "detectors": {
+    "mix": "family_A_mixture_supermartingale",
+    "bet": "family_A_betting_e_process",
+    "sr": "e_sr_mean_shift"
+  },
+  "cells": 12,
+  "wall_seconds": 143,
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

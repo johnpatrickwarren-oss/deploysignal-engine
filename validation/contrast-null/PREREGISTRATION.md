@@ -278,3 +278,12 @@ is inside that law. Check (iii) as written tested P2's hypothesis on one seed, n
 The betting card's reading on the check seed stays in the manifest (`instrument.clean_quiet`)
 and is reported; P2 measures it at N = 500. No other check, null, level, seed, bar or prediction
 moves. The quick run was under `results/sim/` and is not scored.
+
+## Amendment A2 — 2026-09-05, before any live run: instrument check (i) for the e-SR
+
+On the same quick run, check (i) failed on the e-SR: on the `treatment` variant of the check seed
+it alerted at tick 643, before `ν = 800`. That is its contract, not the pipeline: at α_ARL = 10⁻³
+an alarm inside 500 quiet ticks is a `1 − e^{−0.5} ≈ 0.39` event, and the first raw crossing
+rule means it has spent its alarm. **(i) now reads, for the e-SR only: alerts at some
+`t* ∈ [m, m + T_mon)`**; the mixture and betting keep `[ν, m + T_mon)`. The e-SR's tick on the
+check seed stays in the manifest. Nothing else moves.

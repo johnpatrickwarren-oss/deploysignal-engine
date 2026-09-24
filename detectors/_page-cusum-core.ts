@@ -12,6 +12,7 @@
 // from here rather than from the page-cusum.ts facade to keep the
 // import-graph acyclic.
 
+import { LEGACY_DEPLOYSIGNAL_SIGNALS } from '../types/audit';
 import type {
   SchemaContinuityRecord,
   MSPRTParams, CompiledConfig, DetectorVerdict, BaselineCell,
@@ -143,10 +144,7 @@ export function trafficGateMin(cfg: CompiledConfig): number {
 
 /** Primary SLIs covered by Week-2 Family A. Kept in one place so health.ts,
  *  the compiler, and the parity test agree on the set. */
-export const FAMILY_A_PRIMARY_SIGNALS = [
-  'p99_latency', 'ttft', 'eval_score', 'tool_success_rate',
-  'downstream_err', 'cost_req',
-] as const;
+export const FAMILY_A_PRIMARY_SIGNALS = LEGACY_DEPLOYSIGNAL_SIGNALS;
 
 export function suppressed(
   signal: string,

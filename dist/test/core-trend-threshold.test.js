@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_test_1 = require("node:test");
 const strict_1 = __importDefault(require("node:assert/strict"));
-const core_1 = require("../core");
+const core_1 = require("../adapters/core");
 function snap(partial) {
     return {
         slope: 0,

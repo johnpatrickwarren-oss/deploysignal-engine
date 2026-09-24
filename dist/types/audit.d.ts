@@ -22,15 +22,18 @@ export interface TrippedEntry {
     label: string;
     gate: 'health_rollback' | 'health_extend';
 }
-/** Canonical detector_ids per family, as shipped in W4. Normative —
- *  audit writers pull from here; readers validate against it. */
-export declare const DETECTOR_REGISTRY: {
-    readonly A: readonly ["mSPRT_p99_latency", "mSPRT_ttft", "mSPRT_eval_score", "mSPRT_tool_success_rate", "mSPRT_downstream_err", "mSPRT_cost_req", "page_cusum_p99_latency", "page_cusum_ttft", "page_cusum_eval_score", "page_cusum_tool_success_rate", "page_cusum_downstream_err", "page_cusum_cost_req", "betting_e_process_p99_latency", "betting_e_process_ttft", "betting_e_process_eval_score", "betting_e_process_tool_success_rate", "betting_e_process_downstream_err", "betting_e_process_cost_req", "safe_t_e_value_p99_latency", "safe_t_e_value_ttft", "safe_t_e_value_eval_score", "safe_t_e_value_tool_success_rate", "safe_t_e_value_downstream_err", "safe_t_e_value_cost_req", "contrast_null_p99_latency", "contrast_null_ttft", "contrast_null_eval_score", "contrast_null_tool_success_rate", "contrast_null_downstream_err", "contrast_null_cost_req"];
-    readonly B: readonly ["kv_saturation", "hbm_elevation", "hbm_spill_roll", "mfu_collapse", "slowbleed", "collective", "capacity", "gpu_eff", "compound_lat", "tok_econ", "behavioral", "eval_quality_drop", "refusal_spike", "output_len_drift", "tool_call_degradation", "quality_warning"];
-    readonly C: readonly ["hotelling_t2_joint_vector", "sequential_mmd", "hotelling_t2_safe", "sequential_mmd_e_process", "sequential_mmd_betting_e_process"];
-    readonly D: readonly ["spectral_peak_acf_kv_cache", "spectral_e_detector_kv_cache"];
-    readonly E: readonly ["mahalanobis_conformal_baseline"];
-};
+export * from './detector-registry';
+/** DeploySignal's six Family A signals. */
+export declare const LEGACY_DEPLOYSIGNAL_SIGNALS: readonly ["p99_latency", "ttft", "eval_score", "tool_success_rate", "downstream_err", "cost_req"];
+/** The one signal DeploySignal's Family D spectral detectors run on. */
+export declare const LEGACY_DEPLOYSIGNAL_FAMILY_D_SIGNALS: readonly ["kv_cache"];
+/** DeploySignal's 16 Family B structural signatures — consumer policy, no engine implementation. */
+export declare const LEGACY_DEPLOYSIGNAL_HEURISTICS: readonly ["kv_saturation", "hbm_elevation", "hbm_spill_roll", "mfu_collapse", "slowbleed", "collective", "capacity", "gpu_eff", "compound_lat", "tok_econ", "behavioral", "eval_quality_drop", "refusal_spike", "output_len_drift", "tool_call_degradation", "quality_warning"];
+/** Canonical detector_ids per family for DeploySignal's signals. Normative for DeploySignal's
+ *  audit writers and readers (audit/SCHEMA.md v2); readers that see an unknown id emit a warning
+ *  and preserve the record. Built by `detectorRegistryFor` in kind-major order, which
+ *  test/guarantees.test.ts holds equal to the literal list this replaced. */
+export declare const DETECTOR_REGISTRY: import("./detector-registry").DetectorRegistry<"p99_latency" | "ttft" | "tool_success_rate" | "eval_score" | "downstream_err" | "cost_req", "kv_cache", "kv_saturation" | "hbm_elevation" | "hbm_spill_roll" | "mfu_collapse" | "slowbleed" | "collective" | "capacity" | "gpu_eff" | "compound_lat" | "tok_econ" | "behavioral" | "eval_quality_drop" | "refusal_spike" | "output_len_drift" | "tool_call_degradation" | "quality_warning">;
 export type DetectorIdA = typeof DETECTOR_REGISTRY.A[number];
 export type DetectorIdB = typeof DETECTOR_REGISTRY.B[number];
 export type DetectorIdC = typeof DETECTOR_REGISTRY.C[number];

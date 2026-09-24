@@ -10,7 +10,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { expandSlurmHostlist } from '../topology/slurm-source';
+import { expandSlurmHostlist } from '../adapters/topology/slurm-source';
 
 test('M2: [1-10] expands without zero-padding across the digit boundary', () => {
   assert.deepEqual(expandSlurmHostlist('node[1-10]'), [

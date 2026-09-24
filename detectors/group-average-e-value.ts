@@ -24,8 +24,8 @@
 // component is safe-t (detectors/safe-t-e-value.ts): valid at known-phi <= 0.95, estimated
 // baseline (SAFE_T_ENVELOPE there). A group read is no more valid than its worst input.
 //
-// AUDITED COMBINER, WRAPPED, NOT RE-DERIVED. fleet/combine.ts's combineAverage already implements
-// this exact reduction (same Vovk-Wang 2021 §4 citation) for the engine's hierarchical fleet-merge
+// AUDITED COMBINER, WRAPPED, NOT RE-DERIVED. fleet/combine.ts's combineAverage implements this
+// exact reduction (since ADR 0033 both call the one primitive detectors/_evidence.ts:logMeanExp) (same Vovk-Wang 2021 §4 citation) for the engine's hierarchical fleet-merge
 // path (Tessera SLICE 3 / R11; PR-F1 evidence matrix at test/q11-hierarchical-e-value-combination.test.ts
 // empirically validates its AoE-iid and AoE-correlated cells against the Wilson-CI FPR bound). This
 // module converts plain e-values to/from that primitive's log-space representation rather than
@@ -38,7 +38,7 @@
 // callers don't need: it throws on empty input and on any component that is negative or NaN (a raw
 // e-value is nonnegative by definition — garbage in must be an error, not a silently-wrong number).
 
-import { combineAverage } from '../fleet/combine';
+import { logMeanExp } from './_evidence';
 
 /**
  * Arithmetic mean of K component e-values. An e-value under arbitrary dependence of the components
@@ -61,6 +61,5 @@ export function groupAverageEValue(eValues: number[]): number {
     return 0;
   }
   const logEValues = eValues.map((e) => Math.log(e));
-  const { log_fleet_e } = combineAverage(logEValues);
-  return Math.exp(log_fleet_e);
+  return Math.exp(logMeanExp(logEValues));
 }

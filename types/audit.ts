@@ -45,64 +45,40 @@ export interface TrippedEntry {
 // entries live in the spec but aren't emitted. Readers that see an
 // unknown_detector_id emit a warning and preserve the record.
 
-/** Canonical detector_ids per family, as shipped in W4. Normative —
- *  audit writers pull from here; readers validate against it. */
-export const DETECTOR_REGISTRY = {
-  A: [
-    // Legacy `mSPRT_*` ids — Page-CUSUM's canonical emission path
-    // through W5. ARCHITECT-REPLY-34 D2 rewrites to `page_cusum_*` at
-    // the REPLY-36 cleanup alongside demo expected_outcome updates;
-    // kept as read-time aliases indefinitely for v1 replay compat.
-    'mSPRT_p99_latency', 'mSPRT_ttft', 'mSPRT_eval_score',
-    'mSPRT_tool_success_rate', 'mSPRT_downstream_err', 'mSPRT_cost_req',
-    // Addition #17 (ARCHITECT-REPLY-34 D2) — forward-compat aliases
-    // for the Page-CUSUM detector. Reserved for the REPLY-36 emission-
-    // side rename; not produced by the audit writer in this PR.
-    'page_cusum_p99_latency', 'page_cusum_ttft', 'page_cusum_eval_score',
-    'page_cusum_tool_success_rate', 'page_cusum_downstream_err', 'page_cusum_cost_req',
-    // Addition #17 — betting-based e-processes (Waudby-Smith & Ramdas
-    // 2024 GRAPA + ONS fallback). Co-shipped alongside Page-CUSUM
-    // under a 50/50 per-signal α split; fires emit
-    // `betting_e_process_{signal}` in audit records.
-    'betting_e_process_p99_latency', 'betting_e_process_ttft',
-    'betting_e_process_eval_score', 'betting_e_process_tool_success_rate',
-    'betting_e_process_downstream_err', 'betting_e_process_cost_req',
-    // C64 (a), 2026-09-03 — the envelope-valid TERMINAL path: the safe two-sample t e-value
-    // (detectors/safe-t-e-value.ts, right-Haar / GROW) read once per signal at the end of a
-    // canary against a caller-supplied calibration series. Emitted by DeploySignal's valid-path
-    // routing as `safe_t_e_value_{signal}`; guarantees.ts carries its row (class
-    // e_value_terminal). Registered here first so the audit path can name it.
-    'safe_t_e_value_p99_latency', 'safe_t_e_value_ttft',
-    'safe_t_e_value_eval_score', 'safe_t_e_value_tool_success_rate',
-    'safe_t_e_value_downstream_err', 'safe_t_e_value_cost_req',
-    // C81 (2026-09-05) — the contrast null (per-shard/contrast.ts): a mean-shift card on the
-    // standardized contrast residual of a treatment/control PAIR for the signal. Emitted by
-    // DeploySignal's control arm as `contrast_null_{signal}`; guarantees.ts carries its row, whose
-    // envelope is a measured REFUSAL (study 2026-09-contrast-null) — the ids exist so the audit path
-    // can name an advisory contrast fire, not because the construction is admitted.
-    'contrast_null_p99_latency', 'contrast_null_ttft',
-    'contrast_null_eval_score', 'contrast_null_tool_success_rate',
-    'contrast_null_downstream_err', 'contrast_null_cost_req',
-  ] as const,
-  B: [
-    'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',
-    'slowbleed', 'collective', 'capacity', 'gpu_eff', 'compound_lat',
-    'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
-    'output_len_drift', 'tool_call_degradation', 'quality_warning',
-  ] as const,
-  C: [
-    'hotelling_t2_joint_vector', 'sequential_mmd', 'hotelling_t2_safe', 'sequential_mmd_e_process',
-    // Q67 v2 canonical Shekhar-Ramdas-2023 betting-e-process (Addition #20),
-    // emitted by detectors/family-c-betting-e-process.ts. Was previously
-    // unregistered — DeploySignal's engine/_audit-families.ts registry-
-    // membership check fell through to the legacy `sequential_mmd` id for
-    // its fires; see deploysignal/engine/guarantees.ts file header for the
-    // finding. Registered upstream 2026-07-18, here 2026-07-31.
-    'sequential_mmd_betting_e_process',
-  ] as const,
-  D: ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache'] as const,
-  E: ['mahalanobis_conformal_baseline'] as const,
-} as const;
+import { detectorRegistryFor } from './detector-registry';
+export * from './detector-registry';
+
+// ── The DeploySignal instance ─────────────────────────────────────
+//
+// ADR 0033: these three lists are DEPLOYSIGNAL'S, not the engine's. They are held here, in one
+// place and under one name, so that `DETECTOR_REGISTRY` / `DetectorId` keep their exact pre-0.7.0
+// shape for DeploySignal's 16 importing files while the registry itself became generic. They leave
+// for DeploySignal's own tree at ADR 0033 step 2; a new consumer builds its own registry with
+// `detectorRegistryFor` and never imports these.
+
+/** DeploySignal's six Family A signals. */
+export const LEGACY_DEPLOYSIGNAL_SIGNALS = Object.freeze([
+  'p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req',
+] as const);
+/** The one signal DeploySignal's Family D spectral detectors run on. */
+export const LEGACY_DEPLOYSIGNAL_FAMILY_D_SIGNALS = Object.freeze(['kv_cache'] as const);
+/** DeploySignal's 16 Family B structural signatures — consumer policy, no engine implementation. */
+export const LEGACY_DEPLOYSIGNAL_HEURISTICS = Object.freeze([
+  'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',
+  'slowbleed', 'collective', 'capacity', 'gpu_eff', 'compound_lat',
+  'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
+  'output_len_drift', 'tool_call_degradation', 'quality_warning',
+] as const);
+
+/** Canonical detector_ids per family for DeploySignal's signals. Normative for DeploySignal's
+ *  audit writers and readers (audit/SCHEMA.md v2); readers that see an unknown id emit a warning
+ *  and preserve the record. Built by `detectorRegistryFor` in kind-major order, which
+ *  test/guarantees.test.ts holds equal to the literal list this replaced. */
+export const DETECTOR_REGISTRY = detectorRegistryFor({
+  signals: LEGACY_DEPLOYSIGNAL_SIGNALS,
+  familyDSignals: LEGACY_DEPLOYSIGNAL_FAMILY_D_SIGNALS,
+  heuristics: LEGACY_DEPLOYSIGNAL_HEURISTICS,
+});
 
 export type DetectorIdA = typeof DETECTOR_REGISTRY.A[number];
 export type DetectorIdB = typeof DETECTOR_REGISTRY.B[number];

@@ -20,6 +20,7 @@ exports.updateCUSUM = updateCUSUM;
 exports.matchCellByHour = matchCellByHour;
 exports.trafficGateMin = trafficGateMin;
 exports.suppressed = suppressed;
+const audit_1 = require("../types/audit");
 exports.DEFAULT_BAKE = {
     min_ticks_before_eligible: 3,
     min_observation_window: 3,
@@ -102,10 +103,7 @@ function trafficGateMin(cfg) {
 }
 /** Primary SLIs covered by Week-2 Family A. Kept in one place so health.ts,
  *  the compiler, and the parity test agree on the set. */
-exports.FAMILY_A_PRIMARY_SIGNALS = [
-    'p99_latency', 'ttft', 'eval_score', 'tool_success_rate',
-    'downstream_err', 'cost_req',
-];
+exports.FAMILY_A_PRIMARY_SIGNALS = audit_1.LEGACY_DEPLOYSIGNAL_SIGNALS;
 function suppressed(signal, reason, state, threshold) {
     // Suppressed verdicts expose the current S_n so the shadow-compare
     // audit output can trace pre-eligibility accumulation. Not a fire, not

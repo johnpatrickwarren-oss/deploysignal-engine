@@ -1,38 +1,10 @@
-import type { FamilyAPerSignalParams } from '../types/families/a';
+import type { FamilyAPerSignalParams, MixtureSupermartingaleState } from '../types/families/a';
+export type { MixtureSupermartingaleState };
 import { type MixtureConfidenceSequence } from './mixture-confidence-sequence';
 /** Per-(signal) mixture-supermartingale state. Persists across ticks
  *  within a window; reset at window boundary. Sticky firing latch
  *  preserves Ville-bound semantic (once threshold crossed, detector
  *  remains in fired state). */
-export interface MixtureSupermartingaleState {
-    /** Running sum of pre-whitened centered observations:
-     *    S_t = Σ (x_s_centered − phi · x_{s-1}_centered)
-     *  When phi=0 (Slice 1 behavior; pre-Phase-3.d.A.b configs), S_t
-     *  reduces to Σ x_s_centered identically. */
-    S_t: number;
-    /** Current mixture-supermartingale value M_t. */
-    M_t: number;
-    /** Sticky firing latch — set true at first tick t where M_t ≥ 1/α;
-     *  remains true until window boundary state reset. */
-    fired: boolean;
-    /** Tick index of first fire (null until threshold crossed). */
-    tick_at_first_fire: number | null;
-    /** Sample count this signal this window. Mirrors classical CUSUM `n`
-     *  for diagnostic + bake-profile parity; not gating. */
-    n: number;
-    /** Q66 Phase-3.d.A.b — last centered observation for AR(1) pre-
-     *  whitening. Persists across ticks within window; reset to 0 at
-     *  window boundary state reset (initialized to 0 by
-     *  freshMixtureSupermartingaleState). When ar1_phi=0 (default), this
-     *  field is unused and pre-whitening reduces to identity. */
-    last_x_centered: number;
-    /** ADR 0027 — the UNCAPPED log of M_t. `M_t` is materialized from a copy capped at 120 nats
-     *  (see computeGaussianMixtureSupermartingale), so this is the only exact record of the
-     *  evidence once a fault runs long. Optional (additive); absence heals to log(M_t). */
-    log_M_t?: number;
-    /** ADR 0027 — running max of log_M_t (anytime p-value). Optional; heals on update. */
-    log_peak_M?: number;
-}
 export declare function freshMixtureSupermartingaleState(): MixtureSupermartingaleState;
 export type MixtureSupermartingaleStates = Record<string, MixtureSupermartingaleState>;
 export declare function getOrCreateMixtureSupermartingaleState(states: MixtureSupermartingaleStates, signal: string): MixtureSupermartingaleState;

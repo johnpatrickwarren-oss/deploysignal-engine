@@ -12,7 +12,7 @@ exports.lookupFamilyDParams = lookupFamilyDParams;
 exports.evaluateFamilyD = evaluateFamilyD;
 exports.freshSpectralEDetectorState = freshSpectralEDetectorState;
 exports.evaluateSpectralEDetector = evaluateSpectralEDetector;
-const schema_continuity_1 = require("../l0/schema-continuity");
+const _suppression_1 = require("./_suppression");
 const _wealth_1 = require("./_wealth");
 const _evidence_1 = require("./_evidence");
 const DEFAULT_ALPHA_D = 1e-4;
@@ -87,7 +87,7 @@ function evaluateFamilyD(cfg, signal, recentSamples, ctx, state) {
     // Addition #8 runtime consumer (W5 §S6): ACF bootstrap null is compiled
     // against the baseline's schema; a breaking change makes the null
     // distribution stale.
-    if (ctx.schemaContinuityClass && (0, schema_continuity_1.shouldSuppress)(ctx.schemaContinuityClass, 'D')) {
+    if (ctx.schemaContinuityClass && (0, _suppression_1.shouldSuppress)(ctx.schemaContinuityClass, 'D')) {
         return {
             verdict: 'suppressed', statistic: null, threshold: params.bootstrap_null_quantile,
             alpha_consumed: 0, alpha_spent: 0,

@@ -44,7 +44,7 @@ export interface VerdictResult {
      *  emissions. Reflects the once-per-deploy emit latches and any
      *  per-family suppression transitions observed. Absent when the
      *  caller did not thread a lifecycle emitter through. */
-    lifecycleState?: import('../o0/lifecycle-events').LifecycleDeployState;
+    lifecycleState?: import('../adapters/o0/lifecycle-events').LifecycleDeployState;
     /** Week-6+ Addition #5: deploy-level reversibility classification set
      *  once at tick 0 (via `classifyReversibility`) and threaded across
      *  ticks. Callers pass it back in on subsequent ticks so the
@@ -57,7 +57,7 @@ export interface VerdictResult {
      *  this deploy's reversibility classification. Real O0 adapters
      *  consume this translation and invoke orchestrator-native actions
      *  (rollback / pause_and_alarm / human_confirmation_required). */
-    finalAction?: import('../o0/reversibility-translator').ReversibilityAction;
+    finalAction?: import('../adapters/o0/reversibility-translator').ReversibilityAction;
     /** Consolidated activation slice — aggregate Promise resolving when
      *  fan-out (topology enrichment + agent proposal) completes for a
      *  closed VerdictGroup this tick. Absent when no group closed on

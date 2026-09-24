@@ -18,7 +18,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_test_1 = require("node:test");
 const strict_1 = __importDefault(require("node:assert/strict"));
-const common_mode_attribution_1 = require("../topology/common-mode-attribution");
+const common_mode_attribution_1 = require("../adapters/topology/common-mode-attribution");
 function lcg(seed) {
     let s = seed >>> 0;
     return () => { s = ((s * 1664525) + 1013904223) >>> 0; return s / 0x100000000; };

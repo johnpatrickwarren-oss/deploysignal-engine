@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { transformPair } from '../l0/counter-rate-transform';
+import { transformPair } from '../adapters/l0/counter-rate-transform';
 
 const COUNTER = { semantic_type: 'counter' } as const;
 const OPTS = { expected_scrape_interval_seconds: 30 } as const;

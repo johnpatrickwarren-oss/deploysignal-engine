@@ -10,7 +10,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { TrendBuffer, trendStrength, effectiveThreshold } from '../core';
+import { TrendBuffer, trendStrength, effectiveThreshold } from '../adapters/core';
 import type { TrendSnapshot } from '../types';
 
 function snap(partial: Partial<TrendSnapshot>): TrendSnapshot {

@@ -8,7 +8,7 @@ import type { FamilyAPerSignalParams } from './families/a';
 import type { FamilyCPerCell } from './families/c';
 import type { FamilyDPerSignal } from './families/d';
 import type { ConformalParams } from './families/e';
-import type { WelfordState } from '../per-shard/welford';
+import type { WelfordState } from './primitives';
 
 // ── Baseline cells + detector types ──────────────────────────────
 // Week 2 scaffolded Family A on a flat `family_A.cells[hour]` map;

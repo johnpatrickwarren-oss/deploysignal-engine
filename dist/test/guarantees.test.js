@@ -42,7 +42,7 @@ const strict_1 = __importDefault(require("node:assert/strict"));
 const guarantees_1 = require("../guarantees");
 const audit_1 = require("../types/audit");
 const guarantees_2 = require("../guarantees");
-const core = __importStar(require("../core"));
+const core = __importStar(require("../adapters/core"));
 const validity_envelope_1 = require("../detectors/validity-envelope");
 const ALL_IDS = [
     ...audit_1.DETECTOR_REGISTRY.A, ...audit_1.DETECTOR_REGISTRY.B, ...audit_1.DETECTOR_REGISTRY.C,
@@ -185,5 +185,54 @@ const ALL_IDS = [
     const parsed = JSON.parse((0, guarantees_2.guaranteeManifest)());
     for (const r of parsed)
         strict_1.default.ok(r.approximateEValue?.form, 'manifest row without axis 3');
+});
+// ── ADR 0033: the registry is generic; the guarantee table is total over any instance ────────
+const audit_2 = require("../types/audit");
+(0, node_test_1.describe)('detector registry (ADR 0033)', () => {
+    (0, node_test_1.test)('the DeploySignal instance is the pre-0.7.0 literal list, id for id, in order', () => {
+        const sig = ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'];
+        const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null']
+            .flatMap((k) => sig.map((s) => `${k}_${s}`));
+        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.A], A);
+        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.B], [
+            'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',
+            'slowbleed', 'collective', 'capacity', 'gpu_eff', 'compound_lat',
+            'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
+            'output_len_drift', 'tool_call_degradation', 'quality_warning',
+        ]);
+        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.C], [
+            'hotelling_t2_joint_vector', 'sequential_mmd', 'hotelling_t2_safe', 'sequential_mmd_e_process',
+            'sequential_mmd_betting_e_process',
+        ]);
+        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.D], ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache']);
+        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.E], ['mahalanobis_conformal_baseline']);
+        strict_1.default.equal(ALL_IDS.length, 30 + 16 + 5 + 2 + 1);
+        strict_1.default.deepEqual([...audit_2.LEGACY_DEPLOYSIGNAL_SIGNALS], sig);
+        strict_1.default.equal(audit_2.LEGACY_DEPLOYSIGNAL_HEURISTICS.length, 16);
+    });
+    (0, node_test_1.test)('a consumer with its own signals gets a registry the guarantee table is total over', () => {
+        const r = (0, audit_2.detectorRegistryFor)({ signals: ['path_loss_7', 'rtt_p99'], familyDSignals: ['hbm_temp'] });
+        strict_1.default.equal(r.A.length, audit_2.DETECTOR_KINDS.A.length * 2);
+        strict_1.default.equal(r.D.length, audit_2.DETECTOR_KINDS.D.length);
+        strict_1.default.deepEqual([...r.B], [], 'no heuristics unless the consumer names them');
+        strict_1.default.equal((0, audit_2.allDetectorIds)(r).length, r.A.length + r.C.length + r.D.length + r.E.length);
+        for (const id of (0, audit_2.allDetectorIds)(r)) {
+            const row = (0, guarantees_2.guaranteeFor)(id);
+            strict_1.default.ok(row, `no guarantee row for '${id}'`);
+            strict_1.default.equal(row.family, (0, audit_2.detectorKindOf)(id).family, `family disagrees for '${id}'`);
+        }
+        // the same kind resolves to the same row whatever the signal is called
+        strict_1.default.equal((0, guarantees_2.guaranteeFor)('betting_e_process_rtt_p99'), (0, guarantees_2.guaranteeFor)('betting_e_process_ttft'));
+        strict_1.default.equal((0, guarantees_2.guaranteeFor)('safe_t_e_value_path_loss_7').validityClass, 'e_value_terminal');
+        strict_1.default.equal(Object.isFrozen(r) && Object.isFrozen(r.A), true);
+    });
+    (0, node_test_1.test)('detectorKindOf: longest kind-prefix wins; heuristics and unknown ids are undefined', () => {
+        strict_1.default.deepEqual((0, audit_2.detectorKindOf)('sequential_mmd_betting_e_process'), { family: 'C', kind: 'sequential_mmd_betting_e_process' });
+        strict_1.default.deepEqual((0, audit_2.detectorKindOf)('sequential_mmd'), { family: 'C', kind: 'sequential_mmd' });
+        strict_1.default.deepEqual((0, audit_2.detectorKindOf)('page_cusum_anything'), { family: 'A', kind: 'page_cusum' });
+        strict_1.default.deepEqual((0, audit_2.detectorKindOf)('spectral_e_detector_x'), { family: 'D', kind: 'spectral_e_detector' });
+        strict_1.default.equal((0, audit_2.detectorKindOf)('kv_saturation'), undefined);
+        strict_1.default.equal((0, audit_2.detectorKindOf)('page_cusum'), undefined, 'a per-signal kind needs a signal');
+    });
 });
 //# sourceMappingURL=guarantees.test.js.map

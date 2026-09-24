@@ -1,5 +1,5 @@
 import type { BettingEProcessState } from './families/a';
-import type { MixtureSupermartingaleState } from '../detectors/family-a-mixture-supermartingale';
+import type { MixtureSupermartingaleState } from './families/a';
 import type { SafeHotellingState } from './families/c';
 import type { SpectralEDetectorState } from './families/d';
 import type { ConformalEValueState } from './families/e';

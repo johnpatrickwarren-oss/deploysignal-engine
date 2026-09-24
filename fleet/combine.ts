@@ -49,6 +49,7 @@
 //     therefore GATED: the caller must assert `{ sequential: true }`.
 
 import type { FleetEProcessState } from '../types/fleet';
+import { logMeanExp } from '../detectors/_evidence';
 
 // Re-exported for caller ergonomic (q11 + future R12+ consumers pull both
 // runtime functions AND the state type from a single module path).
@@ -204,14 +205,8 @@ export function combineAverage(log_e_values: ReadonlyArray<number>): FleetMergeO
   if (log_e_values.length === 0) {
     throw new Error('combineAverage: empty input array (fleet-merge on N=0 shards is undefined)');
   }
-  // logSumExp with max-shift for numerical stability.
-  let max_x = -Infinity;
-  for (const x of log_e_values) if (x > max_x) max_x = x;
-  let sum_exp = 0;
-  for (const x of log_e_values) sum_exp += Math.exp(x - max_x);
-  const log_sum_exp = max_x + Math.log(sum_exp);
-  const log_avg = log_sum_exp - Math.log(log_e_values.length);
-  return { log_fleet_e: log_avg };
+  // logSumExp with max-shift for numerical stability — detectors/_evidence.ts:logMeanExp, verbatim.
+  return { log_fleet_e: logMeanExp(log_e_values) };
 }
 
 /** Fresh fleet-level e-process state. fleet e_0 = 1 ⇒ log_e_0 = 0; no fires yet. */

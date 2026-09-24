@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_test_1 = require("node:test");
 const strict_1 = __importDefault(require("node:assert/strict"));
-const slurm_source_1 = require("../topology/slurm-source");
+const slurm_source_1 = require("../adapters/topology/slurm-source");
 (0, node_test_1.test)('M2: [1-10] expands without zero-padding across the digit boundary', () => {
     strict_1.default.deepEqual((0, slurm_source_1.expandSlurmHostlist)('node[1-10]'), [
         'node1', 'node2', 'node3', 'node4', 'node5',

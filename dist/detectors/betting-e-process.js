@@ -14,7 +14,7 @@ exports.updateBettingState = updateBettingState;
 exports.evaluateBettingEProcess = evaluateBettingEProcess;
 exports.evaluateFamilyABettingShadow = evaluateFamilyABettingShadow;
 const types_1 = require("../types");
-const schema_continuity_1 = require("../l0/schema-continuity");
+const _suppression_1 = require("./_suppression");
 const page_cusum_1 = require("./page-cusum");
 // Q2.A — class-appropriate forward transform on live observation
 // before mean-centering. Runtime resolution honors only what the
@@ -435,7 +435,7 @@ function evaluateBettingSignal(cfg, liveMetrics, states, match, trafficGate, ctx
 function evaluateFamilyABettingShadow(cfg, liveMetrics, states, ctx) {
     if (!cfg.baseline_cells)
         return [];
-    if (ctx.schemaContinuityClass && (0, schema_continuity_1.shouldSuppress)(ctx.schemaContinuityClass, 'A')) {
+    if (ctx.schemaContinuityClass && (0, _suppression_1.shouldSuppress)(ctx.schemaContinuityClass, 'A')) {
         return bettingSchemaContinuitySuppressed(cfg, states, ctx.schemaContinuityClass);
     }
     const trafficGate = (0, page_cusum_1.trafficGateMin)(cfg);

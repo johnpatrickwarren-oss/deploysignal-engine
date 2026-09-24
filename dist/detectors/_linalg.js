@@ -10,6 +10,7 @@ exports.forwardSolve = forwardSolve;
 exports.logDet = logDet;
 exports.findFirstGE = findFirstGE;
 exports.weightedQuantile = weightedQuantile;
+exports.median = median;
 // engine/detectors/_linalg.ts — shared linear-algebra helpers.
 //
 // Cholesky factorization and triangular forward-solve, used by both
@@ -125,5 +126,15 @@ function weightedQuantile(scores, weights, q) {
             return scores[idx[k]];
     }
     return scores[idx[n - 1]];
+}
+/** Median of a sample (0 for empty). Lives here since ADR 0033 so baseline/ and fleet/ share one
+ *  definition without baseline/ importing upward from fleet/; fleet/multi-factor-common-mode.ts
+ *  re-exports it for the detection-oriented common-mode (ADR 0017). */
+function median(xs) {
+    if (xs.length === 0)
+        return 0;
+    const s = [...xs].sort((a, b) => a - b);
+    const n = s.length;
+    return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
 }
 //# sourceMappingURL=_linalg.js.map

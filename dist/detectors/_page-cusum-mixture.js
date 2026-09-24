@@ -22,7 +22,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.evaluateFamilyAShadowMixture = evaluateFamilyAShadowMixture;
 exports.evaluateFamilyA = evaluateFamilyA;
 const types_1 = require("../types");
-const schema_continuity_1 = require("../l0/schema-continuity");
+const _suppression_1 = require("./_suppression");
 const family_a_mixture_supermartingale_1 = require("./family-a-mixture-supermartingale");
 const _page_cusum_core_1 = require("./_page-cusum-core");
 const _evidence_1 = require("./_evidence");
@@ -164,7 +164,7 @@ function mixtureEvidence(state, threshold, logIncrement, confidence_sequence) {
 function evaluateFamilyAShadowMixture(cfg, liveMetrics, states, ctx) {
     if (!cfg.baseline_cells)
         return [];
-    if (ctx.schemaContinuityClass && (0, schema_continuity_1.shouldSuppress)(ctx.schemaContinuityClass, 'A')) {
+    if (ctx.schemaContinuityClass && (0, _suppression_1.shouldSuppress)(ctx.schemaContinuityClass, 'A')) {
         return mixtureSchemaContinuitySuppression(cfg, states, ctx.schemaContinuityClass);
     }
     const trafficGate = (0, _page_cusum_core_1.trafficGateMin)(cfg);

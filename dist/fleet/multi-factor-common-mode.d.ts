@@ -1,5 +1,5 @@
-/** Median of a sample (0 for empty). Exported for the detection-oriented common-mode (ADR 0017). */
-export declare function median(xs: ReadonlyArray<number>): number;
+import { median } from '../detectors/_linalg';
+export { median };
 /** Redescending (Tukey-biweight) robust regression slope through the origin: y_i ≈ b·x_i. IRLS from a
  *  median-ratio start with a MAD scale; gross outliers (in either coordinate) get weight 0. Exported for the
  *  detection-oriented common-mode (ADR 0017). */

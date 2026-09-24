@@ -1,5 +1,10 @@
 # Project state
 
+> **2026-09-23.** The body below is the 2026-06-24 snapshot and has not been maintained since; the
+> current record is `CHANGELOG.md` (releases), `decisions/` (ADRs 0001–0033), and the knowledge
+> wiki's `stats/engine-consumer-charter` and `stats/detector-portfolio-current`. ADR 0033 (v0.7.0-pre)
+> drew the library/adapter boundary and lists the consumer steps that follow it.
+
 **Last updated:** 2026-06-24 · **by:** John Warren (with Claude)
 
 ## What this is

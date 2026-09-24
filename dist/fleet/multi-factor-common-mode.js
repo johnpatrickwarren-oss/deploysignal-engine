@@ -37,23 +37,17 @@
 //     across cal/test (a CHANGE in it is the Barigozzi–Trapani regime, out of scope). In-sample fit
 //     (O(1/N) self-pull, conservative as PR B). Cost O(n·t·passes·IRLS) — heavier than the scalar center.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.median = median;
+exports.median = void 0;
 exports.robustSlope = robustSlope;
 exports.perShardLevel = perShardLevel;
 exports.multiFactorRobustResiduals = multiFactorRobustResiduals;
 exports.factorDeflationEnergy = factorDeflationEnergy;
 const common_mode_1 = require("./common-mode");
+const _linalg_1 = require("../detectors/_linalg");
+Object.defineProperty(exports, "median", { enumerable: true, get: function () { return _linalg_1.median; } });
 const IRLS_MAX_ITER = 40;
 const IRLS_TOL = 1e-8;
 const ALT_PASSES = 6;
-/** Median of a sample (0 for empty). Exported for the detection-oriented common-mode (ADR 0017). */
-function median(xs) {
-    if (xs.length === 0)
-        return 0;
-    const s = [...xs].sort((a, b) => a - b);
-    const n = s.length;
-    return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
-}
 /** Redescending (Tukey-biweight) robust regression slope through the origin: y_i ≈ b·x_i. IRLS from a
  *  median-ratio start with a MAD scale; gross outliers (in either coordinate) get weight 0. Exported for the
  *  detection-oriented common-mode (ADR 0017). */
@@ -63,12 +57,12 @@ function robustSlope(x, y, c = 4.685) {
     for (let i = 0; i < n; i++)
         if (Math.abs(x[i]) > 1e-9)
             ratios.push(y[i] / x[i]);
-    let b = median(ratios);
+    let b = (0, _linalg_1.median)(ratios);
     for (let it = 0; it < IRLS_MAX_ITER; it++) {
         const absRes = [];
         for (let i = 0; i < n; i++)
             absRes.push(Math.abs(y[i] - b * x[i]));
-        const scale = Math.max(median(absRes) * 1.4826, 1e-9);
+        const scale = Math.max((0, _linalg_1.median)(absRes) * 1.4826, 1e-9);
         let a = 0, d = 0;
         for (let i = 0; i < n; i++) {
             const u = (y[i] - b * x[i]) / (c * scale);
@@ -89,7 +83,7 @@ function robustSlope(x, y, c = 4.685) {
 }
 /** Per-shard level ℓ̂_i = median over the healthy calibration window [0, calLen). */
 function perShardLevel(X, calLen) {
-    return X.map((row) => median(row.slice(0, calLen)));
+    return X.map((row) => (0, _linalg_1.median)(row.slice(0, calLen)));
 }
 /** Validate the matrix + calLen; returns [n, t]. */
 function validateMatrix(X, calLen, fn) {

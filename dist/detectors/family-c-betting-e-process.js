@@ -8,7 +8,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.freshFamilyCBettingEProcessState = exports.onsUpdate = exports.computeKernelMMDWitness = exports.computeRffWitness = void 0;
 exports.evaluateFamilyCBettingEProcess = evaluateFamilyCBettingEProcess;
 const types_1 = require("../types");
-const schema_continuity_1 = require("../l0/schema-continuity");
+const _suppression_1 = require("./_suppression");
 const hotelling_1 = require("./hotelling");
 const page_cusum_1 = require("./page-cusum");
 const sequential_mmd_1 = require("./sequential-mmd");
@@ -48,7 +48,7 @@ function setupBettingEval(cfg, liveMetrics, ctx) {
     const log_threshold = -Math.log(bp.alpha); // log(1/α); compare in log-space
     // Schema continuity suppression — same rule as sibling Family C
     // detectors (Family C as a whole suppresses on breaking schema; #8).
-    if (ctx.schemaContinuityClass && (0, schema_continuity_1.shouldSuppress)(ctx.schemaContinuityClass, 'C')) {
+    if (ctx.schemaContinuityClass && (0, _suppression_1.shouldSuppress)(ctx.schemaContinuityClass, 'C')) {
         return { kind: 'verdict', verdict: (0, _family_c_betting_state_1.suppressedVerdict)(ctx.schemaContinuityClass === 'observability_stack'
                 ? 'observability_stack_deploy' : 'schema_continuity_breaking', Math.exp(log_threshold), null) };
     }

@@ -19,7 +19,7 @@ import {
   attributeCommonMode,
   binomialUpperTail,
   type FiredShardEvent,
-} from '../topology/common-mode-attribution';
+} from '../adapters/topology/common-mode-attribution';
 import type { TopologySnapshot } from '../types/verdict';
 
 function lcg(seed: number): () => number {

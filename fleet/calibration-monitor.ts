@@ -57,20 +57,8 @@ export function gInc(r: number): number {
   return Math.min(G_CAP, s / LAMBDAS.length);
 }
 
-/** Clip bound for the bounded-bet increment (residual σ-units). Same B as the Family A betting
- *  path's BOUNDED_SCALE_B (detectors/betting-e-process.ts). */
-export const BOUND_CLIP = 3;
-/** Linear-bet grid: |λ| < 1 keeps every wealth factor strictly positive. */
-export const BOUND_LAMBDAS = [0.1, 0.3, 0.6, 0.9, -0.1, -0.3, -0.6, -0.9];
-
-/** Distribution-robust linear bounded-bet wealth factor g_λ(r) = 1 + λ·c/B, c = clip(r, ±B).
- *  E[g_λ | F] = 1 exactly whenever the clipped residual is conditionally mean-zero — any tail, any
- *  standardizing-scale error. The one surviving nuisance is the CENTER, which is what the monitor
- *  tests best. */
-export function gBounded(r: number, lam: number): number {
-  const c = r > BOUND_CLIP ? BOUND_CLIP : r < -BOUND_CLIP ? -BOUND_CLIP : r;
-  return 1 + (lam * c) / BOUND_CLIP;
-}
+import { BOUND_CLIP, BOUND_LAMBDAS, gBounded } from '../detectors/_bounded-bet';
+export { BOUND_CLIP, BOUND_LAMBDAS, gBounded };
 
 /** 'gaussian' = gInc (max power, needs a genuinely N(0,1) residual); 'bounded' = linear bounded
  *  bets (distribution-robust; the FDR-bearing default in Tessera). */

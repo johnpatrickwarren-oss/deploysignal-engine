@@ -33,7 +33,7 @@ import type {
   CompiledConfig, DetectorVerdict, FamilyDPerSignal,
   SchemaContinuityRecord, SpectralEDetectorState,
 } from '../types';
-import { shouldSuppress } from '../l0/schema-continuity';
+import { shouldSuppress } from './_suppression';
 import { wealthView, healLogWealth, advanceLogWealth } from './_wealth';
 import { buildEvidence, advanceLogPeak } from './_evidence';
 

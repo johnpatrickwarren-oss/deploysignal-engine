@@ -23,4 +23,13 @@ export type CellKey = Record<string, string | number>;
 export interface BaselineCell {
     hour_of_day: number;
 }
+export interface WelfordState {
+    /** Number of samples observed so far (n ≥ 0). */
+    n: number;
+    /** Running mean vector; length d. */
+    mean: number[];
+    /** Running M2 matrix (sum of (x_i − mean)(x_i − mean)^T); shape d × d.
+     *  Sample covariance is M2 / (n − 1) for n ≥ 2. */
+    m2: number[][];
+}
 //# sourceMappingURL=primitives.d.ts.map

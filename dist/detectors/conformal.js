@@ -16,7 +16,7 @@ exports.evaluateConformalWeightedEValue = evaluateConformalWeightedEValue;
 // via evaluateFamilyE's dispatch branch.
 const types_1 = require("../types");
 const hotelling_1 = require("./hotelling");
-const _suppression_1 = require("./_suppression");
+const suppression_1 = require("./suppression");
 const _linalg_1 = require("./_linalg");
 // Pure math primitives live in a sibling leaf module (no cycle). They are
 // re-exported below so the public import surface of this file is unchanged.
@@ -166,7 +166,7 @@ function evaluateFamilyE(cfg, liveMetrics, ctx, state) {
     // under the baseline's schema; a breaking continuity change invalidates
     // the assumed null distribution, so the threshold / conformal p-value
     // is meaningless and we suppress pending rebaseline.
-    if (ctx.schemaContinuityClass && (0, _suppression_1.shouldSuppress)(ctx.schemaContinuityClass, 'E')) {
+    if (ctx.schemaContinuityClass && (0, suppression_1.shouldSuppress)(ctx.schemaContinuityClass, 'E')) {
         return {
             verdict: 'suppressed', statistic: null, threshold: alphaE,
             alpha_consumed: 0, alpha_spent: 0,

@@ -1,10 +1,12 @@
-// detectors/_suppression.ts — the per-family schema-continuity suppression rule.
+// detectors/suppression.ts — the per-family schema-continuity suppression rule.
 //
 // Moved out of l0/schema-continuity.ts on 2026-09-23 (ADR 0033, the library boundary). Seven
 // detectors consulted `shouldSuppress` from the L0 ingestion adapter, which made the detector layer
 // depend on a consumer-shaped adapter. The rule is a pure function of a continuity class and a
 // family id — Addition #8's table, unchanged — so it lives with the detectors that apply it.
 // `adapters/l0/schema-continuity.ts` re-exports both names, so every existing import path holds.
+// Public (no underscore) since ADR 0033 step 3: DeploySignal owns the L0 schema machinery and
+// imports only this rule from the engine.
 
 import type { SchemaContinuityRecord } from '../types';
 

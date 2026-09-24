@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **`detectors/suppression` is the public path for the schema-continuity suppression rule (ADR
+  0033 step 3).** `_suppression.ts` renamed; the seven detectors and `adapters/l0/schema-continuity`
+  import the new name. DeploySignal now owns `core.ts`, `o0/reversibility-*` and the L0 schema
+  machinery in its own tree and imports only this rule from the engine. ADR 0033 gains an addendum
+  correcting the survey for steps 2 and 3.
+
 - **The Tessera lockstep is retired where it has nothing independent to compare (ADR 0033 step 2).**
   Tessera ADR 0030 (Tessera PR #68) turned `tools/contrast.ts` and `tools/per-shard-whitening.ts`
   into re-exports of this engine's `per-shard/contrast`, so `test/contrast.test.ts`'s lockstep

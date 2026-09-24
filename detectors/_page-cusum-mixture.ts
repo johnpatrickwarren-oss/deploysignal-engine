@@ -23,7 +23,7 @@ import type {
   FamilyAPerSignalParams, TenantTier,
 } from '../types';
 import { resolveTenantTier } from '../types';
-import { shouldSuppress } from './_suppression';
+import { shouldSuppress } from './suppression';
 import {
   evaluatePageCusumMixtureSupermartingale,
   freshMixtureSupermartingaleState,

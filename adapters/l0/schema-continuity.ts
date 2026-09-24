@@ -153,7 +153,7 @@ export function makeContinuityRecord(
   };
 }
 
-export { familiesToSuppress, shouldSuppress } from '../../detectors/_suppression';
+export { familiesToSuppress, shouldSuppress } from '../../detectors/suppression';
 
 /** Minimum post-deploy sample count before a rebaseline can complete.
  *  Addition #8 default; SRE policy overrides in production. */

@@ -5,4 +5,4 @@ import type { SchemaContinuityRecord } from '../types';
 export declare function familiesToSuppress(klass: SchemaContinuityRecord['schema_continuity']): Array<'A' | 'B' | 'C' | 'D' | 'E'> | '*';
 /** Convenience: should a specific family suppress given this class? */
 export declare function shouldSuppress(klass: SchemaContinuityRecord['schema_continuity'], family: 'A' | 'B' | 'C' | 'D' | 'E'): boolean;
-//# sourceMappingURL=_suppression.d.ts.map
+//# sourceMappingURL=suppression.d.ts.map

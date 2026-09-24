@@ -130,3 +130,17 @@ a deletion: reconciling DeploySignal's `DETECTOR_GUARANTEES` with `GUARANTEE_TAB
 about the same detectors with different vocabularies — and its eleven diverged type files. That
 is an ADR pair with the wiki's C4 and `detector-portfolio-current` contradictions, registered on
 C83.
+
+## Addendum 2026-09-23 (later) — step 4 and the breaking release
+
+**Step 4 (Tessera PR #69, ADR 0031; then PR #70).** The 21 Tessera-original adapters and the five
+engine tests covering them went home under Tessera's `tools/`; Tessera's last two imports of
+`core` (its `TrendBuffer` rate assertions) were restated against a local rate summary.
+
+**The breaking release, v0.8.0-pre** (under 0.x semver, the minor bump is the "major" this ADR
+named): `adapters/` and its alias paths deleted; the DeploySignal registry instance
+(`DETECTOR_REGISTRY`, `DetectorId`, `LEGACY_DEPLOYSIGNAL_*`) deleted — no consumer imported it;
+the six DeploySignal orchestration hooks removed from `types/orchestration.ts` and
+`types/verdict.ts`; `HEURISTIC_CORE_GUARANTEE` removed. The boundary test's type-only allowlist
+is empty and gone. What remains DeploySignal-shaped inside the library is the list in "What this
+step does not do" above, minus the legacy lists and the hooks; it is a design item, not a move.

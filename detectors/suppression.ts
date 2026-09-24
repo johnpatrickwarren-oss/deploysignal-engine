@@ -4,7 +4,7 @@
 // detectors consulted `shouldSuppress` from the L0 ingestion adapter, which made the detector layer
 // depend on a consumer-shaped adapter. The rule is a pure function of a continuity class and a
 // family id — Addition #8's table, unchanged — so it lives with the detectors that apply it.
-// `adapters/l0/schema-continuity.ts` re-exports both names, so every existing import path holds.
+// DeploySignal's own l0/schema-continuity.ts re-exports both names from here (ADR 0033 step 3).
 // Public (no underscore) since ADR 0033 step 3: DeploySignal owns the L0 schema machinery and
 // imports only this rule from the engine.
 

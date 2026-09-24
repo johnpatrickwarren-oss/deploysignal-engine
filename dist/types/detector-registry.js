@@ -17,8 +17,8 @@
 // resolves any such id by longest kind-prefix, so `guaranteeFor` is total over every registry this
 // function can build (test/guarantees.test.ts proves it for an arbitrary signal set).
 //
-// The DeploySignal instance (`DETECTOR_REGISTRY` in types/audit.ts) is built here too, from the
-// six legacy signal names held in ONE place and marked for migration into DeploySignal.
+// Since v0.8.0-pre the library ships no instance: DeploySignal builds its own in its own tree, as
+// does any other consumer (test/guarantees.test.ts keeps a six-signal fixture to prove totality).
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DETECTOR_KINDS = void 0;
 exports.detectorRegistryFor = detectorRegistryFor;

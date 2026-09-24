@@ -164,7 +164,7 @@ test('the envelope states the premise and carries the fit lengths as its regime'
 
 import { eBenjaminiHochbergGuarded, envelopeFor } from '../fleet/e-bh-guarded';
 import { guaranteeFor, ESTIMATED_BASELINE_GUARANTEES, APPROXIMATE_E_VALUE_BY_CONSTRUCTION } from '../guarantees';
-import { DETECTOR_REGISTRY, type DetectorId } from '../types/audit';
+import { detectorRegistryFor } from '../types/audit';
 import { CONTRAST_NULL_RUN } from '../per-shard/contrast';
 
 test('the envelope\'s admission is exactly the registered run\'s P2 cells (validation/contrast-null)', () => {
@@ -201,8 +201,9 @@ test('the gate REFUSES a contrast e-value by name unless the caller asserts fit 
 
 test('the six contrast_null_{signal} ids are registered and resolve to the refusal row', () => {
   for (const sig of ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req']) {
-    const id = `contrast_null_${sig}` as DetectorId;
-    assert.ok((DETECTOR_REGISTRY.A as readonly string[]).includes(id), `${id} not in DETECTOR_REGISTRY.A`);
+    const id = `contrast_null_${sig}`;
+    const reg = detectorRegistryFor({ signals: ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'] });
+    assert.ok((reg.A as readonly string[]).includes(id), `${id} not in a six-signal registry`);
     const row = guaranteeFor(id)!;
     assert.equal(row.estimatedBaseline, CONTRAST_NULL_ENVELOPE, 'the live envelope object, not a copy');
     assert.equal(row.approximateEValue.form, 'epsilon_growing');

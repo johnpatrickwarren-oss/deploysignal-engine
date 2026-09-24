@@ -111,9 +111,9 @@ function makeContinuityRecord(baseline, observed, baselineRef, opts) {
         schema_baseline_ref: baselineRef,
     };
 }
-var _suppression_1 = require("../../detectors/_suppression");
-Object.defineProperty(exports, "familiesToSuppress", { enumerable: true, get: function () { return _suppression_1.familiesToSuppress; } });
-Object.defineProperty(exports, "shouldSuppress", { enumerable: true, get: function () { return _suppression_1.shouldSuppress; } });
+var suppression_1 = require("../../detectors/suppression");
+Object.defineProperty(exports, "familiesToSuppress", { enumerable: true, get: function () { return suppression_1.familiesToSuppress; } });
+Object.defineProperty(exports, "shouldSuppress", { enumerable: true, get: function () { return suppression_1.shouldSuppress; } });
 /** Minimum post-deploy sample count before a rebaseline can complete.
  *  Addition #8 default; SRE policy overrides in production. */
 exports.MIN_REBASELINE_SAMPLES = 500;

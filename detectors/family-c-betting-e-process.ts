@@ -64,7 +64,7 @@ import type {
   SchemaContinuityRecord, FamilyCBettingEProcessState,
 } from '../types';
 import { resolveTenantTier } from '../types';
-import { shouldSuppress } from './_suppression';
+import { shouldSuppress } from './suppression';
 import { FAMILY_C_SIGNALS, lookupFamilyCParams } from './hotelling';
 import { trafficGateMin } from './page-cusum';
 import {

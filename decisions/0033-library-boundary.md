@@ -97,3 +97,36 @@ recorded here so the next step is a list, not a survey.
 
 Everything in step 1 is a move with a re-export or an alias. Reverting is the reverse move; no
 consumer sees a different number.
+
+## Addendum 2026-09-23 — steps 2 and 3 as executed, with corrections to the survey
+
+**Step 2 (Tessera PR #68, Tessera ADR 0030).** "Seven parallel tools" was an overcount: one was
+already a re-export of the engine (Tessera ADR 0028), two are experiment harnesses that import the
+engine, one is Tessera's validity-class gate (policy under the charter). Three real duplicates —
+`contrast.ts`, `per-shard-whitening.ts`, the increment family in `mixture-evalue.ts` — became
+re-exports after their bodies were verified identical. Engine PR #93 retired the lockstep where
+Tessera re-exports the engine.
+
+**Step 3 (DeploySignal).** The survey's premise — "a 62-file local `engine/` duplicate with its own
+guarantee table" — was wrong in kind. DeploySignal's `engine/` is its runtime (orchestrator, gates,
+audit, recalibration, drift, resamplers); the eleven files whose names coincide with package modules
+have all diverged (85 to 1,070 diff lines each), and its `guarantees.ts` is a different artifact: run-
+time policy constants plus a per-id `DETECTOR_GUARANTEES` table with its own `ValidityClass`
+vocabulary (`heuristic_structural`, `bootstrap_crossing_rate`, `classical_epoch_alpha`) that does
+not map one-to-one onto this engine's. DeploySignal also already owns its registry
+(`engine/types/audit.ts`), which differs from this engine's legacy instance only by the six
+`mSPRT_*` aliases this engine kept; no consumer imports `DETECTOR_REGISTRY`, `DetectorId` or the
+`LEGACY_DEPLOYSIGNAL_*` lists from this engine.
+
+As executed: DeploySignal took `core.ts`, `o0/reversibility-source.ts`,
+`o0/reversibility-translator.ts` and `l0/schema-continuity.ts` into its own tree and repointed its
+sixteen import sites; the per-family suppression RULE stays engine-owned and is now public at
+`detectors/suppression` (this addendum's PR). `loader.ts` had no DeploySignal importer.
+
+Left for the major: delete `adapters/core.ts`, `adapters/o0/`, `adapters/l0/schema-continuity.ts`,
+`adapters/loader.ts` and the `LEGACY_DEPLOYSIGNAL_*` lists with `DETECTOR_REGISTRY` / `DetectorId`
+(the guarantees test then builds its fixture with `detectorRegistryFor`). Left as a design item, not
+a deletion: reconciling DeploySignal's `DETECTOR_GUARANTEES` with `GUARANTEE_TABLE` — two tables
+about the same detectors with different vocabularies — and its eleven diverged type files. That
+is an ADR pair with the wiki's C4 and `detector-portfolio-current` contradictions, registered on
+C83.

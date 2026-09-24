@@ -9,7 +9,7 @@ exports.FAMILY_C_SIGNALS = exports._hotellingVariantForDispatch = exports._HOTEL
 exports.lookupFamilyCParams = lookupFamilyCParams;
 exports.evaluateFamilyC = evaluateFamilyC;
 const types_1 = require("../types");
-const _suppression_1 = require("./_suppression");
+const suppression_1 = require("./suppression");
 const page_cusum_1 = require("./page-cusum");
 const _hotelling_core_1 = require("./_hotelling-core");
 const _hotelling_dispatch_1 = require("./_hotelling-dispatch");
@@ -113,7 +113,7 @@ function familyCSuppressionGate(cfg, ctx, threshold) {
     // Addition #8 runtime consumer (W5 §S6): per-cell covariance is only
     // meaningful against the baseline's original schema. A breaking change
     // invalidates Σ; suppress without evaluating.
-    if (ctx.schemaContinuityClass && (0, _suppression_1.shouldSuppress)(ctx.schemaContinuityClass, 'C')) {
+    if (ctx.schemaContinuityClass && (0, suppression_1.shouldSuppress)(ctx.schemaContinuityClass, 'C')) {
         return {
             verdict: 'suppressed', statistic: null, threshold,
             alpha_consumed: 0, alpha_spent: 0,

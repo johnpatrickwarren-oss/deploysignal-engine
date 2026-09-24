@@ -37,7 +37,7 @@ export declare function classifyContinuity(baseline: SchemaDescriptor, observed:
 export declare function makeContinuityRecord(baseline: SchemaDescriptor, observed: SchemaDescriptor, baselineRef: string, opts?: {
     observabilityStackDeploy?: boolean;
 }): SchemaContinuityRecord;
-export { familiesToSuppress, shouldSuppress } from '../../detectors/_suppression';
+export { familiesToSuppress, shouldSuppress } from '../../detectors/suppression';
 /** Minimum post-deploy sample count before a rebaseline can complete.
  *  Addition #8 default; SRE policy overrides in production. */
 export declare const MIN_REBASELINE_SAMPLES = 500;

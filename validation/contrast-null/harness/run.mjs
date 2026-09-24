@@ -203,7 +203,7 @@ async function main() {
   // ── §4 (iv): the Tessera lockstep, the same comparison as test/contrast.test.ts ──
   const lockstep = lockstepAgainstTessera();
   console.log('lockstep', JSON.stringify(lockstep));
-  if (lockstep !== 'absent' && lockstep.mismatches !== 0) { console.error('NOT-EXECUTABLE: lockstep mismatches'); fs.writeFileSync(path.join(runDir, 'NOT-EXECUTABLE.json'), JSON.stringify({ lockstep }, null, 2) + '\n'); process.exit(3); }
+  if (lockstep !== 'absent' && lockstep.independent !== false && lockstep.mismatches !== 0) { console.error('NOT-EXECUTABLE: lockstep mismatches'); fs.writeFileSync(path.join(runDir, 'NOT-EXECUTABLE.json'), JSON.stringify({ lockstep }, null, 2) + '\n'); process.exit(3); }
 
   // ── §4 (i)–(iii): instrument check on seed SEED, N1, m = 300 ──
   const N1 = ALL_NULLS.find((n) => n.id === 'N1');
@@ -338,9 +338,18 @@ function runCells(cellsDef) {
 
 /** The same comparison as test/contrast.test.ts (same seeds, 200 streams), against Tessera's compiled tools. */
 function lockstepAgainstTessera() {
-  const candidates = [path.resolve(ROOT, '..', 'tessera'), path.resolve(ROOT, '..', '..', '..', 'tessera')];
+  const candidates = [
+    ...(process.env.TESSERA_ROOT ? [path.resolve(process.env.TESSERA_ROOT)] : []),
+    path.resolve(ROOT, '..', 'tessera'), path.resolve(ROOT, '..', '..', '..', 'tessera'),
+  ];
   const dir = candidates.find((d) => fs.existsSync(path.join(d, 'tools/contrast.js')) && fs.existsSync(path.join(d, 'tools/per-shard-whitening.js')));
   if (!dir) return 'absent';
+  // Tessera ADR 0030 (engine ADR 0033 step 2): tools/contrast.ts re-exports this engine, so a lockstep
+  // would compare the engine to itself. Record that as what it is, not as zero mismatches.
+  const src = path.join(dir, 'tools/contrast.ts');
+  if (fs.existsSync(src) && fs.readFileSync(src, 'utf8').includes('deploysignal-engine/per-shard/contrast')) {
+    return { independent: false, reason: 'tessera tools/contrast.ts re-exports the engine (Tessera ADR 0030)', tessera_sha: git(dir), dir };
+  }
   const T = { contrast: require(path.join(dir, 'tools/contrast.js')), whitening: require(path.join(dir, 'tools/per-shard-whitening.js')) };
   const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const gaussian = (r) => { const u1 = Math.max(r(), 1e-12), u2 = r(); return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2); };

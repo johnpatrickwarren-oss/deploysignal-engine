@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **The Tessera lockstep is retired where it has nothing independent to compare (ADR 0033 step 2).**
+  Tessera ADR 0030 (Tessera PR #68) turned `tools/contrast.ts` and `tools/per-shard-whitening.ts`
+  into re-exports of this engine's `per-shard/contrast`, so `test/contrast.test.ts`'s lockstep
+  would compare the engine to itself. `lockstepAgainstTessera` now returns `independent: false`
+  with zero comparisons when Tessera's source re-exports the engine, and the test skips with that
+  reason; the study harness `validation/contrast-null/harness/run.mjs` records the same in its
+  manifest instead of a vacuous zero-mismatch count. Both accept `TESSERA_ROOT` to name a checkout.
+  Against a pre-ADR-0030 Tessera the comparison still runs (200 streams, 0 mismatches). Test and
+  harness only; no library code changed.
+
 ## v0.7.0-pre — 2026-09-23
 
 Cut so every consumer can pin a package whose library and adapter trees are named and enforced,

@@ -74,25 +74,37 @@ function offsetAr1(rng, n, phi, offset, scale) {
     }
     return d;
 }
-/** Tessera's compiled tools, from the first checkout that has them (a sibling of the engine checkout,
- *  or of the worktree root two levels up). */
+/** Tessera's compiled tools, from `TESSERA_ROOT` if set, else the first checkout that has them (a
+ *  sibling of the engine checkout, or of the worktree root two levels up). `independent` is false
+ *  when Tessera's tools/contrast.ts is itself a re-export of this engine (Tessera ADR 0030, engine
+ *  ADR 0033 step 2): a lockstep against a re-export compares the engine to itself and proves
+ *  nothing, so the caller must say so rather than count it. */
 function tesseraTools() {
     const root = path.resolve(__dirname, '..', '..');
-    const candidates = [path.resolve(root, '..', 'tessera'), path.resolve(root, '..', '..', '..', 'tessera')];
+    const candidates = [
+        ...(process.env.TESSERA_ROOT ? [path.resolve(process.env.TESSERA_ROOT)] : []),
+        path.resolve(root, '..', 'tessera'), path.resolve(root, '..', '..', '..', 'tessera'),
+    ];
     for (const dir of candidates) {
         const c = path.join(dir, 'tools', 'contrast.js'), w = path.join(dir, 'tools', 'per-shard-whitening.js');
         if (fs.existsSync(c) && fs.existsSync(w)) {
+            const src = path.join(dir, 'tools', 'contrast.ts');
+            const independent = !(fs.existsSync(src)
+                && fs.readFileSync(src, 'utf8').includes('deploysignal-engine/per-shard/contrast'));
             // eslint-disable-next-line @typescript-eslint/no-var-requires
-            return { contrast: require(c), whitening: require(w), dir };
+            return { contrast: require(c), whitening: require(w), dir, independent };
         }
     }
     return null;
 }
-/** The lockstep comparison, exported for the study harness: counts every compared field/tick. */
+/** The lockstep comparison, exported for the study harness: counts every compared field/tick.
+ *  Returns `independent: false` with zero comparisons when Tessera re-exports the engine. */
 function lockstepAgainstTessera(streams = 200) {
     const T = tesseraTools();
     if (!T)
         return null;
+    if (!T.independent)
+        return { comparisons: 0, mismatches: 0, dir: T.dir, independent: false };
     let comparisons = 0, mismatches = 0;
     const eq = (a, b) => { comparisons++; if (!(a === b || (Number.isNaN(a) && Number.isNaN(b))))
         mismatches++; };
@@ -129,12 +141,17 @@ function lockstepAgainstTessera(streams = 200) {
         eq((0, contrast_1.median)(d), T.contrast.median(d));
         eq((0, contrast_1.madScale)(d), T.contrast.madScale(d));
     }
-    return { comparisons, mismatches, dir: T.dir };
+    return { comparisons, mismatches, dir: T.dir, independent: true };
 }
 (0, node_test_1.test)('LOCKSTEP: every field of fitContrast/fitContrastFast/composeFit and every tick of applyContrast equal Tessera\'s compiled tools (200 streams)', (t) => {
     const r = lockstepAgainstTessera(200);
     if (!r) {
         t.diagnostic('Tessera compiled tools not reachable; lockstep skipped (the study manifest records the count when they are)');
+        t.skip();
+        return;
+    }
+    if (!r.independent) {
+        t.diagnostic(`${r.dir}: tools/contrast.ts re-exports this engine (Tessera ADR 0030); no independent implementation to compare — lockstep retired`);
         t.skip();
         return;
     }

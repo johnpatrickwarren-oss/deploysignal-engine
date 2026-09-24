@@ -29,15 +29,8 @@
 /** Running accumulator for Welford's online mean + covariance algorithm.
  *  R05 (SLICE 2b3) integration: this state is carried on PerShardResidual.welford_state
  *  via engine/per-shard/runtime.ts (function updatePerShardResidual). */
-export interface WelfordState {
-  /** Number of samples observed so far (n ≥ 0). */
-  n: number;
-  /** Running mean vector; length d. */
-  mean: number[];
-  /** Running M2 matrix (sum of (x_i − mean)(x_i − mean)^T); shape d × d.
-   *  Sample covariance is M2 / (n − 1) for n ≥ 2. */
-  m2: number[][];
-}
+import type { WelfordState } from '../types/primitives';
+export type { WelfordState };
 
 /** Initialize a Welford accumulator for d-dimensional samples.
  *  Returns { n: 0, mean: <d zeros>, m2: <d × d zeros> }. Throws if d < 1. */

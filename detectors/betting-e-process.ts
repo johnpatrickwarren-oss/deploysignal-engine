@@ -39,7 +39,7 @@ import type {
   SchemaContinuityRecord, BettingEProcessState, TenantTier,
 } from '../types';
 import { resolveTenantTier } from '../types';
-import { shouldSuppress } from '../l0/schema-continuity';
+import { shouldSuppress } from './_suppression';
 import { FAMILY_A_PRIMARY_SIGNALS, trafficGateMin } from './page-cusum';
 // Q2.A — class-appropriate forward transform on live observation
 // before mean-centering. Runtime resolution honors only what the

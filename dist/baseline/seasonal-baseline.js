@@ -22,15 +22,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.compileSeasonalBaseline = compileSeasonalBaseline;
 exports.seasonalBaselineResidual = seasonalBaselineResidual;
-const multi_factor_common_mode_1 = require("../fleet/multi-factor-common-mode");
+const _linalg_1 = require("../detectors/_linalg");
 /** Robust clean-null of a sample: drop points beyond `zCut` MAD-σ of the median, then mean/variance of the
  *  survivors (with a relative variance floor). Returns the clean count too. */
 function robustCleanNull(xs, zCut, varFloorRel) {
     if (xs.length === 0)
         return { n: 0, mean: 0, variance: 0 };
-    const med = (0, multi_factor_common_mode_1.median)(xs);
+    const med = (0, _linalg_1.median)(xs);
     const dev = xs.map((x) => Math.abs(x - med));
-    const scale = Math.max((0, multi_factor_common_mode_1.median)(dev) * 1.4826, 1e-12);
+    const scale = Math.max((0, _linalg_1.median)(dev) * 1.4826, 1e-12);
     const clean = [];
     for (const x of xs)
         if (Math.abs(x - med) / scale <= zCut)

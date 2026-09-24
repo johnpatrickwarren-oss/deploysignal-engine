@@ -43,9 +43,8 @@
 // Contract-agnostic: Tessera's `EmitterContract` has no engine counterpart, so
 // `applyCalibrationMonitor` is generic over any object carrying `calibrationMonitorPassing`.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BOUND_LAMBDAS = exports.BOUND_CLIP = exports.G_CAP = void 0;
+exports.gBounded = exports.BOUND_LAMBDAS = exports.BOUND_CLIP = exports.G_CAP = void 0;
 exports.gInc = gInc;
-exports.gBounded = gBounded;
 exports.freshCalibrationMonitor = freshCalibrationMonitor;
 exports.updateCalibration = updateCalibration;
 exports.updateCalibrationBatch = updateCalibrationBatch;
@@ -67,19 +66,10 @@ function gInc(r) {
         s += Math.exp(lam * r - 0.5 * lam * lam);
     return Math.min(exports.G_CAP, s / LAMBDAS.length);
 }
-/** Clip bound for the bounded-bet increment (residual σ-units). Same B as the Family A betting
- *  path's BOUNDED_SCALE_B (detectors/betting-e-process.ts). */
-exports.BOUND_CLIP = 3;
-/** Linear-bet grid: |λ| < 1 keeps every wealth factor strictly positive. */
-exports.BOUND_LAMBDAS = [0.1, 0.3, 0.6, 0.9, -0.1, -0.3, -0.6, -0.9];
-/** Distribution-robust linear bounded-bet wealth factor g_λ(r) = 1 + λ·c/B, c = clip(r, ±B).
- *  E[g_λ | F] = 1 exactly whenever the clipped residual is conditionally mean-zero — any tail, any
- *  standardizing-scale error. The one surviving nuisance is the CENTER, which is what the monitor
- *  tests best. */
-function gBounded(r, lam) {
-    const c = r > exports.BOUND_CLIP ? exports.BOUND_CLIP : r < -exports.BOUND_CLIP ? -exports.BOUND_CLIP : r;
-    return 1 + (lam * c) / exports.BOUND_CLIP;
-}
+const _bounded_bet_1 = require("../detectors/_bounded-bet");
+Object.defineProperty(exports, "BOUND_CLIP", { enumerable: true, get: function () { return _bounded_bet_1.BOUND_CLIP; } });
+Object.defineProperty(exports, "BOUND_LAMBDAS", { enumerable: true, get: function () { return _bounded_bet_1.BOUND_LAMBDAS; } });
+Object.defineProperty(exports, "gBounded", { enumerable: true, get: function () { return _bounded_bet_1.gBounded; } });
 function freshCalibrationMonitor(opts = {}) {
     const alpha = opts.alpha ?? 0.01;
     if (!(alpha > 0 && alpha <= 1))
@@ -87,7 +77,7 @@ function freshCalibrationMonitor(opts = {}) {
     const kind = opts.incrementKind ?? 'bounded';
     const bounded = !opts.increment && kind === 'bounded';
     return {
-        logW: 0, logWByLambda: bounded ? exports.BOUND_LAMBDAS.map(() => 0) : null,
+        logW: 0, logWByLambda: bounded ? _bounded_bet_1.BOUND_LAMBDAS.map(() => 0) : null,
         peakLogW: 0, ticks: 0, passing: true,
         threshold: Math.log(1 / alpha), increment: opts.increment ?? gInc,
     };
@@ -109,8 +99,8 @@ function logMeanExp(xs) {
  *  returns the state. */
 function updateCalibration(state, r) {
     if (state.logWByLambda) {
-        for (let i = 0; i < exports.BOUND_LAMBDAS.length; i++) {
-            state.logWByLambda[i] += Math.log(gBounded(r, exports.BOUND_LAMBDAS[i]));
+        for (let i = 0; i < _bounded_bet_1.BOUND_LAMBDAS.length; i++) {
+            state.logWByLambda[i] += Math.log((0, _bounded_bet_1.gBounded)(r, _bounded_bet_1.BOUND_LAMBDAS[i]));
         }
         state.logW = logMeanExp(state.logWByLambda);
     }

@@ -5,6 +5,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildEvidence = buildEvidence;
 exports.advanceLogPeak = advanceLogPeak;
+exports.logMeanExp = logMeanExp;
 function buildEvidence(a) {
     const hasThreshold = a.threshold !== null && Number.isFinite(a.threshold) && a.threshold > 0;
     const log_threshold = hasThreshold ? Math.log(a.threshold) : null;
@@ -28,5 +29,23 @@ function advanceLogPeak(prevPeak, logM) {
     if (prevPeak == null || !Number.isFinite(prevPeak))
         return logM;
     return logM > prevPeak ? logM : prevPeak;
+}
+/** log of the arithmetic mean of exp(x_i): logSumExp with max-shift for numerical stability, minus
+ *  log K. The Vovk–Wang 2021 §4 uniform-average combiner in log space; fleet/combine.ts's
+ *  combineAverage and detectors/group-average-e-value.ts both reduce through this one function
+ *  (ADR 0033 moved the arithmetic here so the detector layer no longer imports from fleet/).
+ *  Throws on empty input. */
+function logMeanExp(xs) {
+    if (xs.length === 0)
+        throw new Error('logMeanExp: empty input array');
+    let max_x = -Infinity;
+    for (const x of xs)
+        if (x > max_x)
+            max_x = x;
+    let sum_exp = 0;
+    for (const x of xs)
+        sum_exp += Math.exp(x - max_x);
+    const log_sum_exp = max_x + Math.log(sum_exp);
+    return log_sum_exp - Math.log(xs.length);
 }
 //# sourceMappingURL=_evidence.js.map

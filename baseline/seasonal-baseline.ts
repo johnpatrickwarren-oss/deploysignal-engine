@@ -19,7 +19,7 @@
 // (Family C covariance/MCD) and adjacency-aware pooling are follow-on ports (ADR 0019 migration). It removes
 // PREDICTABLE (calendar) structure; cross-shard common-mode is a separate layer (instrumented-common-mode).
 
-import { median } from '../fleet/multi-factor-common-mode';
+import { median } from '../detectors/_linalg';
 
 export interface SeasonalBaselineOptions {
   /** Number of context bins; context labels must be integers in `0..nBins-1` (e.g. 24 for hour-of-day, 168

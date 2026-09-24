@@ -15,6 +15,10 @@ exports.computePerSignalAr1Phi = computePerSignalAr1Phi;
 exports.deriveMixtureSupermartingaleParams = deriveMixtureSupermartingaleParams;
 const _evidence_1 = require("./_evidence");
 const mixture_confidence_sequence_1 = require("./mixture-confidence-sequence");
+/** Per-(signal) mixture-supermartingale state. Persists across ticks
+ *  within a window; reset at window boundary. Sticky firing latch
+ *  preserves Ville-bound semantic (once threshold crossed, detector
+ *  remains in fired state). */
 function freshMixtureSupermartingaleState() {
     return {
         S_t: 0, M_t: 1, fired: false, tick_at_first_fire: null, n: 0, last_x_centered: 0,

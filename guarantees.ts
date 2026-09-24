@@ -28,7 +28,8 @@
 //      like exp(kappa·T/m), so epsilon_T is unbounded in T and no constant prices it — only
 //      m >> T does, which is the `mMuchGreaterThanN` assertion stated as a theorem condition.
 //      knowledge stats/pages/ramdas-wang-2025.md §1.
-import { DETECTOR_REGISTRY, type DetectorId } from './types/audit';
+// The table is keyed by detector KIND (types/detector-registry.ts), so it is total over any
+// registry a consumer builds, not only DeploySignal's instance (ADR 0033).
 import {
   BETTING_E_PROCESS_ENVELOPE,
   MIXTURE_SUPERMARTINGALE_ENVELOPE,
@@ -407,9 +408,10 @@ export const ESTIMATED_BASELINE_GUARANTEES = Object.freeze({
   contrast_null: CONTRAST_NULL_ENVELOPE,
 });
 
-/** The guarantee row for a registry detector id, by prefix match. Returns undefined only for ids
- *  outside DETECTOR_REGISTRY; test/guarantees.test.ts proves totality over the registry. */
-export function guaranteeFor(id: DetectorId): GuaranteeRow | undefined {
+/** The guarantee row for a detector id, by longest kind-prefix match. Returns undefined only for
+ *  an id no registry can build; test/guarantees.test.ts proves totality over DeploySignal's
+ *  instance and over a registry built for an arbitrary signal set (ADR 0033). */
+export function guaranteeFor(id: string): GuaranteeRow | undefined {
   // Longest-prefix wins so 'sequential_mmd_betting_e_process' does not fall through to the
   // retired 'sequential_mmd' row.
   let best: GuaranteeRow | undefined;

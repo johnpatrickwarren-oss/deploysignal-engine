@@ -15,8 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const node_test_1 = require("node:test");
 const strict_1 = __importDefault(require("node:assert/strict"));
 const node_http_1 = __importDefault(require("node:http"));
-const event_consumer_1 = require("../ds-integration/event-consumer");
-const event_contract_1 = require("../ds-integration/event-contract");
+const event_consumer_1 = require("../adapters/ds-integration/event-consumer");
+const event_contract_1 = require("../adapters/ds-integration/event-contract");
 function postEvent(port, payload, headers = {}) {
     const raw = typeof payload === 'string' ? payload : JSON.stringify(payload);
     return new Promise((resolve, reject) => {

@@ -40,7 +40,7 @@ import type {
   SchemaContinuityRecord, TenantTier, SafeHotellingState,
 } from '../types';
 import { resolveTenantTier } from '../types';
-import { shouldSuppress } from '../l0/schema-continuity';
+import { shouldSuppress } from './_suppression';
 import { trafficGateMin } from './page-cusum';
 import { chiSquareQuantile, hotellingT2 } from './_hotelling-core';
 import {

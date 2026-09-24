@@ -37,7 +37,7 @@
 // `M` is exp(log_M) and may overflow to Infinity on an enormous fault; `log_M` never does.
 
 import type { ValidityEnvelope } from './validity-envelope';
-import { BOUND_LAMBDAS, gBounded } from '../fleet/calibration-monitor';
+import { BOUND_LAMBDAS, gBounded } from './_bounded-bet';
 
 // ADR 0031 (study 2026-09-e-sr-bounded, WORKLIST C77) — the BOUNDED-BET increment, the heavy-tail
 // fallback the design page names. Same SR recursion, same mixture, same CUSUM companion, on

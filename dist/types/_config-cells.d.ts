@@ -3,7 +3,7 @@ import type { FamilyAPerSignalParams } from './families/a';
 import type { FamilyCPerCell } from './families/c';
 import type { FamilyDPerSignal } from './families/d';
 import type { ConformalParams } from './families/e';
-import type { WelfordState } from '../per-shard/welford';
+import type { WelfordState } from './primitives';
 /** One cell in the `baseline_cells.cells` array. */
 export interface BaselineCellEntry {
     key: CellKey;

@@ -7,7 +7,7 @@ import {
   GUARANTEE_TABLE, guaranteeFor, guaranteeManifest, ESTIMATED_BASELINE_GUARANTEES,
   HEURISTIC_CORE_GUARANTEE,
 } from '../guarantees';
-import * as core from '../core';
+import * as core from '../adapters/core';
 import {
   BETTING_E_PROCESS_ENVELOPE, MIXTURE_SUPERMARTINGALE_ENVELOPE,
 } from '../detectors/validity-envelope';
@@ -167,3 +167,59 @@ test('the manifest carries axis 3 on every row', () => {
   for (const r of parsed) assert.ok(r.approximateEValue?.form, 'manifest row without axis 3');
 });
 
+
+// ── ADR 0033: the registry is generic; the guarantee table is total over any instance ────────
+import {
+  detectorRegistryFor, allDetectorIds, detectorKindOf, DETECTOR_KINDS,
+  LEGACY_DEPLOYSIGNAL_SIGNALS, LEGACY_DEPLOYSIGNAL_HEURISTICS,
+} from '../types/audit';
+
+describe('detector registry (ADR 0033)', () => {
+  test('the DeploySignal instance is the pre-0.7.0 literal list, id for id, in order', () => {
+    const sig = ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'];
+    const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null']
+      .flatMap((k) => sig.map((s) => `${k}_${s}`));
+    assert.deepEqual([...DETECTOR_REGISTRY.A], A);
+    assert.deepEqual([...DETECTOR_REGISTRY.B], [
+      'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',
+      'slowbleed', 'collective', 'capacity', 'gpu_eff', 'compound_lat',
+      'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
+      'output_len_drift', 'tool_call_degradation', 'quality_warning',
+    ]);
+    assert.deepEqual([...DETECTOR_REGISTRY.C], [
+      'hotelling_t2_joint_vector', 'sequential_mmd', 'hotelling_t2_safe', 'sequential_mmd_e_process',
+      'sequential_mmd_betting_e_process',
+    ]);
+    assert.deepEqual([...DETECTOR_REGISTRY.D], ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache']);
+    assert.deepEqual([...DETECTOR_REGISTRY.E], ['mahalanobis_conformal_baseline']);
+    assert.equal(ALL_IDS.length, 30 + 16 + 5 + 2 + 1);
+    assert.deepEqual([...LEGACY_DEPLOYSIGNAL_SIGNALS], sig);
+    assert.equal(LEGACY_DEPLOYSIGNAL_HEURISTICS.length, 16);
+  });
+
+  test('a consumer with its own signals gets a registry the guarantee table is total over', () => {
+    const r = detectorRegistryFor({ signals: ['path_loss_7', 'rtt_p99'], familyDSignals: ['hbm_temp'] });
+    assert.equal(r.A.length, DETECTOR_KINDS.A.length * 2);
+    assert.equal(r.D.length, DETECTOR_KINDS.D.length);
+    assert.deepEqual([...r.B], [], 'no heuristics unless the consumer names them');
+    assert.equal(allDetectorIds(r).length, r.A.length + r.C.length + r.D.length + r.E.length);
+    for (const id of allDetectorIds(r)) {
+      const row = guaranteeFor(id);
+      assert.ok(row, `no guarantee row for '${id}'`);
+      assert.equal(row!.family, detectorKindOf(id)!.family, `family disagrees for '${id}'`);
+    }
+    // the same kind resolves to the same row whatever the signal is called
+    assert.equal(guaranteeFor('betting_e_process_rtt_p99'), guaranteeFor('betting_e_process_ttft'));
+    assert.equal(guaranteeFor('safe_t_e_value_path_loss_7')!.validityClass, 'e_value_terminal');
+    assert.equal(Object.isFrozen(r) && Object.isFrozen(r.A), true);
+  });
+
+  test('detectorKindOf: longest kind-prefix wins; heuristics and unknown ids are undefined', () => {
+    assert.deepEqual(detectorKindOf('sequential_mmd_betting_e_process'), { family: 'C', kind: 'sequential_mmd_betting_e_process' });
+    assert.deepEqual(detectorKindOf('sequential_mmd'), { family: 'C', kind: 'sequential_mmd' });
+    assert.deepEqual(detectorKindOf('page_cusum_anything'), { family: 'A', kind: 'page_cusum' });
+    assert.deepEqual(detectorKindOf('spectral_e_detector_x'), { family: 'D', kind: 'spectral_e_detector' });
+    assert.equal(detectorKindOf('kv_saturation'), undefined);
+    assert.equal(detectorKindOf('page_cusum'), undefined, 'a per-signal kind needs a signal');
+  });
+});

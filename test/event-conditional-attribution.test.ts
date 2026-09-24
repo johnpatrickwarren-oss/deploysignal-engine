@@ -10,7 +10,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { attributeEventConditional } from '../events/event-conditional-attribution';
+import { attributeEventConditional } from '../adapters/events/event-conditional-attribution';
 
 const T = 10_000;
 

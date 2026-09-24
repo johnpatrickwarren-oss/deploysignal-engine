@@ -12,13 +12,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 
-import { DsEventConsumer } from '../ds-integration/event-consumer';
+import { DsEventConsumer } from '../adapters/ds-integration/event-consumer';
 import {
   DEPLOY_EVENT_CLASSES,
   DS_TO_TESSERA_EVENT_ENDPOINT,
   type DeployEventPayload,
   type DsToTesseraEventResponse,
-} from '../ds-integration/event-contract';
+} from '../adapters/ds-integration/event-contract';
 
 interface PostResult {
   status: number;

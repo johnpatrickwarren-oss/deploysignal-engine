@@ -57,7 +57,7 @@ import type {
 // via evaluateFamilyE's dispatch branch.
 import { isWeightedConformal, isWeightedEValueConformal, conformalSampleCount, resolveTenantTier } from '../types';
 import { FAMILY_C_SIGNALS } from './hotelling';
-import { shouldSuppress } from '../l0/schema-continuity';
+import { shouldSuppress } from './_suppression';
 import { weightedQuantile, findFirstGE } from './_linalg';
 // Pure math primitives live in a sibling leaf module (no cycle). They are
 // re-exported below so the public import surface of this file is unchanged.

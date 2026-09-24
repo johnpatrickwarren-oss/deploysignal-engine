@@ -3,6 +3,38 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ESTIMATED_BASELINE_GUARANTEES = exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = exports.HEURISTIC_CORE_GUARANTEE = exports.GUARANTEE_TABLE = void 0;
 exports.guaranteeFor = guaranteeFor;
 exports.guaranteeManifest = guaranteeManifest;
+// guarantees.ts — the engine's own guarantee table, assembled from code.
+//
+// WORKLIST C4 (knowledge wiki): DeploySignal's engine/guarantees.ts classifies detectors for ITS
+// runtime; the engine repo — the package six consumers pin — carried no equivalent, so a consumer
+// had no engine-side answer to "what does this detector guarantee, and under what regime?" This
+// table is that answer. Two rules govern it:
+//
+//   1. ASSEMBLED, NOT ASSERTED. Every axis-2 entry is the live envelope object exported by the
+//      detector's own module (never a copy), and every registry detector id maps to exactly one
+//      row (test/guarantees.test.ts enforces completeness). A claim with no code object behind it
+//      appears as the literal 'unrecorded' — blank means unrecorded, not safe.
+//   2. EVIDENCE-DATED. A validity class that changed after measurement carries the measurement and
+//      its date, not just the label. Family D is the standing example: reclassified after the
+//      2026-08-01 H0 battery (FAR 0.576 at oracle parameters, rolling windows), repaired to
+//      disjoint windows (FAR 0.0005), measured NOT an e-process there under finite-K calibration
+//      (E[M_T|H0] = 1.0636 at T=300, 1.1076 at T=900, K = 400 windows; exact-moment cells read
+//      1.0257 not-refuted / 1.1184 FAIL-marginal — family-d-emean run-20260818T222835Z, C54: a c
+//      without its calibration-window count K is under-specified), and priced by the optional
+//      c-bound: firing
+//      at c/alpha restores FDR <= alpha because E[M/c] <= 1. Absent bound == real, unpriced
+//      inflation.
+//   3. NAMED IN THE LITERATURE'S TERMS (2026-09-02, WORKLIST C61). Axis 3, `approximateEValue`,
+//      states each row as an (epsilon, delta)-approximate e-value in the sense of Ramdas and Wang
+//      2025, Definition 10.1: E[E ∧ t] <= 1 + epsilon + delta·t. The (epsilon, 0) case is exactly
+//      "E/(1+epsilon) is an e-value", so a priced c-bound is epsilon = c − 1, and Theorem 10.24
+//      gives e-BH on such inputs FDR <= alpha·(1+epsilon). The form also says what a plug-in
+//      wealth IS: with a per-tick excess kappa/m from an m-sample calibration, E[M_T|H0] grows
+//      like exp(kappa·T/m), so epsilon_T is unbounded in T and no constant prices it — only
+//      m >> T does, which is the `mMuchGreaterThanN` assertion stated as a theorem condition.
+//      knowledge stats/pages/ramdas-wang-2025.md §1.
+// The table is keyed by detector KIND (types/detector-registry.ts), so it is total over any
+// registry a consumer builds, not only DeploySignal's instance (ADR 0033).
 const validity_envelope_1 = require("./detectors/validity-envelope");
 const safe_t_e_value_1 = require("./detectors/safe-t-e-value");
 const universal_inference_e_value_1 = require("./detectors/universal-inference-e-value");
@@ -318,8 +350,9 @@ exports.ESTIMATED_BASELINE_GUARANTEES = Object.freeze({
      *  n >> m price. Kept here so the refusal is visible where the guarantee table lives. */
     contrast_null: contrast_1.CONTRAST_NULL_ENVELOPE,
 });
-/** The guarantee row for a registry detector id, by prefix match. Returns undefined only for ids
- *  outside DETECTOR_REGISTRY; test/guarantees.test.ts proves totality over the registry. */
+/** The guarantee row for a detector id, by longest kind-prefix match. Returns undefined only for
+ *  an id no registry can build; test/guarantees.test.ts proves totality over DeploySignal's
+ *  instance and over a registry built for an arbitrary signal set (ADR 0033). */
 function guaranteeFor(id) {
     // Longest-prefix wins so 'sequential_mmd_betting_e_process' does not fall through to the
     // retired 'sequential_mmd' row.

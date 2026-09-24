@@ -42,7 +42,7 @@ exports.eSrLambdaGrid = eSrLambdaGrid;
 exports.freshESrMeanShiftState = freshESrMeanShiftState;
 exports.standardizeAr1Residual = standardizeAr1Residual;
 exports.evaluateESrMeanShift = evaluateESrMeanShift;
-const calibration_monitor_1 = require("../fleet/calibration-monitor");
+const _bounded_bet_1 = require("./_bounded-bet");
 // ADR 0031 (study 2026-09-e-sr-bounded, WORKLIST C77) — the BOUNDED-BET increment, the heavy-tail
 // fallback the design page names. Same SR recursion, same mixture, same CUSUM companion, on
 //   g_λ(r) = 1 + λ·clip(r, ±B)/B,   B = BOUND_CLIP = 3,   λ ∈ BOUND_LAMBDAS = ±{0.1, 0.3, 0.6, 0.9}
@@ -57,7 +57,7 @@ const calibration_monitor_1 = require("../fleet/calibration-monitor");
 exports.E_SR_LAMBDA_GRID = Object.freeze(Array.from({ length: 8 }, (_, k) => 0.25 * Math.pow(12, k / 7)).flatMap((l) => [l, -l]));
 exports.E_SR_DEFAULT_ALPHA_ARL = 1e-3;
 /** The bounded increment's default grid: the calibration monitor's eight ±λ (ADR 0031). */
-exports.E_SR_BOUNDED_LAMBDA_GRID = Object.freeze([...calibration_monitor_1.BOUND_LAMBDAS]);
+exports.E_SR_BOUNDED_LAMBDA_GRID = Object.freeze([..._bounded_bet_1.BOUND_LAMBDAS]);
 /** The grid a params object resolves to. */
 function eSrLambdaGrid(params = {}) {
     const inc = params.increment ?? 'gaussian';
@@ -69,7 +69,7 @@ function eSrLambdaGrid(params = {}) {
 }
 /** log of the baseline increment for one residual at one λ. */
 function logIncrement(inc, lam, r) {
-    return inc === 'bounded' ? Math.log((0, calibration_monitor_1.gBounded)(r, lam)) : lam * r - 0.5 * lam * lam;
+    return inc === 'bounded' ? Math.log((0, _bounded_bet_1.gBounded)(r, lam)) : lam * r - 0.5 * lam * lam;
 }
 function freshESrMeanShiftState(params = {}) {
     const K = eSrLambdaGrid(params).length;

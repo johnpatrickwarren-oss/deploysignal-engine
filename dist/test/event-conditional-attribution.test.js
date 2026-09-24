@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_test_1 = require("node:test");
 const strict_1 = __importDefault(require("node:assert/strict"));
-const event_conditional_attribution_1 = require("../events/event-conditional-attribution");
+const event_conditional_attribution_1 = require("../adapters/events/event-conditional-attribution");
 const T = 10000;
 (0, node_test_1.test)('M4: repeat-firing single shard in the pre-window does not suppress a multi-shard post elevation', () => {
     const result = (0, event_conditional_attribution_1.attributeEventConditional)({

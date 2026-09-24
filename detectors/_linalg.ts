@@ -112,3 +112,14 @@ export function weightedQuantile(scores: number[], weights: number[], q: number)
   }
   return scores[idx[n - 1]];
 }
+
+/** Median of a sample (0 for empty). Lives here since ADR 0033 so baseline/ and fleet/ share one
+ *  definition without baseline/ importing upward from fleet/; fleet/multi-factor-common-mode.ts
+ *  re-exports it for the detection-oriented common-mode (ADR 0017). */
+export function median(xs: ReadonlyArray<number>): number {
+  if (xs.length === 0) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  const n = s.length;
+  return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+}
+

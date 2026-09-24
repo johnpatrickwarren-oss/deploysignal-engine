@@ -15,7 +15,7 @@ exports.baselinePoolSeed = baselinePoolSeed;
 exports.freshEMmdState = freshEMmdState;
 exports.evaluateEMmd = evaluateEMmd;
 const types_1 = require("../types");
-const schema_continuity_1 = require("../l0/schema-continuity");
+const _suppression_1 = require("./_suppression");
 const hotelling_1 = require("./hotelling");
 const page_cusum_1 = require("./page-cusum");
 const betting_e_process_1 = require("./betting-e-process");
@@ -241,7 +241,7 @@ function freshEMmdState() {
  *  trips, or `null` to continue evaluation. Block extracted verbatim from
  *  `evaluateEMmd` — same order, same reason codes, same threshold. */
 function eMmdSuppressionGate(cfg, ctx, threshold) {
-    if (ctx.schemaContinuityClass && (0, schema_continuity_1.shouldSuppress)(ctx.schemaContinuityClass, 'C')) {
+    if (ctx.schemaContinuityClass && (0, _suppression_1.shouldSuppress)(ctx.schemaContinuityClass, 'C')) {
         return {
             verdict: 'suppressed', statistic: null, threshold,
             alpha_consumed: 0, alpha_spent: 0,

@@ -38,4 +38,8 @@ export declare function findFirstGE(sorted: number[], target: number): number;
  *    - `scores.length !== weights.length` → throws; invariant violation.
  *    - `Σw ≤ 0` (degenerate weights) → returns the max score. */
 export declare function weightedQuantile(scores: number[], weights: number[], q: number): number;
+/** Median of a sample (0 for empty). Lives here since ADR 0033 so baseline/ and fleet/ share one
+ *  definition without baseline/ importing upward from fleet/; fleet/multi-factor-common-mode.ts
+ *  re-exports it for the detection-oriented common-mode (ADR 0017). */
+export declare function median(xs: ReadonlyArray<number>): number;
 //# sourceMappingURL=_linalg.d.ts.map

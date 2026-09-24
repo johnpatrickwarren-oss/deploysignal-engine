@@ -37,18 +37,12 @@
 //     (O(1/N) self-pull, conservative as PR B). Cost O(n·t·passes·IRLS) — heavier than the scalar center.
 
 import { robustLocation } from './common-mode';
+import { median } from '../detectors/_linalg';
+export { median };
 
 const IRLS_MAX_ITER = 40;
 const IRLS_TOL = 1e-8;
 const ALT_PASSES = 6;
-
-/** Median of a sample (0 for empty). Exported for the detection-oriented common-mode (ADR 0017). */
-export function median(xs: ReadonlyArray<number>): number {
-  if (xs.length === 0) return 0;
-  const s = [...xs].sort((a, b) => a - b);
-  const n = s.length;
-  return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
-}
 
 /** Redescending (Tukey-biweight) robust regression slope through the origin: y_i ≈ b·x_i. IRLS from a
  *  median-ratio start with a MAD scale; gross outliers (in either coordinate) get weight 0. Exported for the

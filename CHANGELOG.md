@@ -1,5 +1,42 @@
 # Changelog
 
+## v0.7.0-pre — 2026-09-23
+
+Cut so every consumer can pin a package whose library and adapter trees are named and enforced,
+and so a consumer with its own signals can build a registry the guarantee table is total over.
+Every pre-0.7.0 import path still resolves; the consumer pin bump is pin-only.
+
+- **The library boundary (ADR 0033).** The consumer-shaped modules — the five topology sources
+  with `topology-overlay.ts` and `hardware-topology-source.ts`, `ds-integration/`, `events/`,
+  `l0/`, `o0/`, `loader.ts`, `core.ts` — moved unchanged to `adapters/`. Old subpaths
+  (`./core`, `./topology/*`, `./l0/*`, `./o0/*`, `./events/*`, `./ds-integration`, `./loader`,
+  `./topology-overlay`, `./hardware-topology-source`) alias the new locations in both `exports`
+  (node16 resolution) and `typesVersions` (classic resolution). `test/library-boundary.test.ts`
+  reads the import graph and fails on a runtime edge from the library into `adapters/`, a
+  type-only edge outside a frozen six-entry allowlist, an import from `detectors/` or `baseline/`
+  into `fleet/`, or an import from `types/` outside `types/`.
+- **Four layering inversions fixed by moving definitions down.** `shouldSuppress` /
+  `familiesToSuppress` → `detectors/_suppression.ts` (seven detectors no longer import the L0
+  adapter); `BOUND_CLIP` / `BOUND_LAMBDAS` / `gBounded` → `detectors/_bounded-bet.ts`;
+  `combineAverage`'s log-mean-exp → `detectors/_evidence.ts:logMeanExp`, shared verbatim with
+  `groupAverageEValue`; `median` → `detectors/_linalg.ts`; `WelfordState` →
+  `types/primitives.ts`; `MixtureSupermartingaleState` → `types/families/a.ts`. Every previous
+  export path re-exports the moved name. No arithmetic changed: 430 tests, same outcomes.
+- **The detector registry is generic.** `types/detector-registry.ts`: `DETECTOR_KINDS` (engine-
+  owned), `detectorRegistryFor({ signals, familyDSignals?, heuristics? })`, `allDetectorIds`,
+  `detectorKindOf`. `guaranteeFor` takes any id a registry can build (signature widened from
+  `DetectorId` to `string`) and is proven total over an arbitrary signal set. `DETECTOR_REGISTRY`
+  and `DetectorId` are now DeploySignal's instance, built from `LEGACY_DEPLOYSIGNAL_SIGNALS` /
+  `LEGACY_DEPLOYSIGNAL_FAMILY_D_SIGNALS` / `LEGACY_DEPLOYSIGNAL_HEURISTICS` in `types/audit.ts`
+  and tested equal to the previous literal list id for id, in order. `FAMILY_A_PRIMARY_SIGNALS`
+  is an alias of the legacy list.
+- **`./guarantees` is exported.** It was absent from the export map, so a node16-resolution
+  consumer could not import the guarantee table at all — one reason `guaranteeFor` had zero
+  consumer callers. `./adapters/*` is exported.
+- **README rewritten** to describe the two trees, the use criteria, and the remaining
+  DeploySignal-shaped surface by name. `STATE.md` carries a dated pointer; its body is the
+  2026-06-24 snapshot.
+
 ## v0.6.12-pre — 2026-09-05
 
 Cut so DeploySignal's control arm (C81 Part 2) can consume the contrast construction and name an

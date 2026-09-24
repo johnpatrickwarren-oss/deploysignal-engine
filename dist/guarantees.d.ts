@@ -1,4 +1,3 @@
-import { type DetectorId } from './types/audit';
 import { type ValidityEnvelope } from './detectors/validity-envelope';
 /** Axis 1 — what the repeated-look guarantee is, if any. */
 export type ValidityClass = 'ville_anytime_valid' | 'bounded_priced' | 'classical_epoch' | 'exact_finite_sample' | 'heuristic' | 'retracted' | 'e_value_terminal';
@@ -127,9 +126,10 @@ export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{
      *  n >> m price. Kept here so the refusal is visible where the guarantee table lives. */
     contrast_null: Readonly<import("./per-shard/contrast").ContrastNullEnvelope>;
 }>;
-/** The guarantee row for a registry detector id, by prefix match. Returns undefined only for ids
- *  outside DETECTOR_REGISTRY; test/guarantees.test.ts proves totality over the registry. */
-export declare function guaranteeFor(id: DetectorId): GuaranteeRow | undefined;
+/** The guarantee row for a detector id, by longest kind-prefix match. Returns undefined only for
+ *  an id no registry can build; test/guarantees.test.ts proves totality over DeploySignal's
+ *  instance and over a registry built for an arbitrary signal set (ADR 0033). */
+export declare function guaranteeFor(id: string): GuaranteeRow | undefined;
 /** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts).
  *  The core.ts heuristic layer (HEURISTIC_CORE_GUARANTEE) is appended as a trailing entry with
  *  `kind: 'heuristic_core'` — it is not a registry detector, so it carries no idPrefixes/family. */

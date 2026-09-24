@@ -122,7 +122,7 @@ export interface OrchestrateParams {
    *  `.finished`. When absent, orchestrator behaves as
    *  `NoOpLifecycleEventEmitter` (zero side effects) — backward compat
    *  hard gate. */
-  lifecycleEmitter?: import('../o0/lifecycle-events').LifecycleEventEmitter;
+  lifecycleEmitter?: import('../adapters/o0/lifecycle-events').LifecycleEventEmitter;
   /** Week 6+ Addition #14 — per-deploy lifecycle state threaded across
    *  ticks. The orchestrator is single-tick; this object carries the
    *  once-per-deploy emit latches (`triggered`/`started`/`finished`) and
@@ -134,7 +134,7 @@ export interface OrchestrateParams {
    *  → orchestrator initializes fresh state locally (fine for one-shot
    *  tests but loses once-per-deploy invariants across separate
    *  `evaluate()` calls). */
-  lifecycleState?: import('../o0/lifecycle-events').LifecycleDeployState;
+  lifecycleState?: import('../adapters/o0/lifecycle-events').LifecycleDeployState;
   /** Week 6+ Addition #5 — platform-annotation source for reversibility
    *  classification. Consulted once per deploy (at tick 0 when no
    *  prior classification is threaded through). Runway ships three
@@ -144,7 +144,7 @@ export interface OrchestrateParams {
    *  `ScenarioReversibilitySource` (scenario-JSON-keyed Record).
    *  Absent → orchestrator uses `NoReversibilitySource` → every
    *  deploy receives the default-fallback `'forward_only'` classification. */
-  reversibilitySource?: import('../o0/reversibility-source').ReversibilityAnnotationSource;
+  reversibilitySource?: import('../adapters/o0/reversibility-source').ReversibilityAnnotationSource;
   /** Week 6+ Addition #5 — pre-classified reversibility for this deploy.
    *  Orchestrator populates at tick 0 via
    *  `classifyReversibility(deployId, reversibilitySource)` and returns
@@ -167,7 +167,7 @@ export interface OrchestrateParams {
   /** Addition #26 — per-deploy TopologyEnricher. Absent → no
    *  enrichment fan-out on group-close. Populated only when
    *  `compiledConfig.topology_ref` is configured. */
-  topologyEnricher?: import('../topology-overlay').TopologyEnricher;
+  topologyEnricher?: import('../adapters/topology-overlay').TopologyEnricher;
   /** Addition #27 — per-deploy AgentProposer. Absent OR
    *  `compiledConfig.agent.enabled === false` → no agent invocation
    *  on group-close. Structural type — the real implementation lives

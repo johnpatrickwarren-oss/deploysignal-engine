@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_test_1 = require("node:test");
 const strict_1 = __importDefault(require("node:assert/strict"));
-const counter_rate_transform_1 = require("../l0/counter-rate-transform");
+const counter_rate_transform_1 = require("../adapters/l0/counter-rate-transform");
 const COUNTER = { semantic_type: 'counter' };
 const OPTS = { expected_scrape_interval_seconds: 30 };
 (0, node_test_1.test)('M3: zero elapsed (duplicate timestamp) returns null value, degraded', () => {

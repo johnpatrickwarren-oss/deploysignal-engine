@@ -26,6 +26,7 @@ import { UI_MEAN_SHIFT_ENVELOPE } from '../detectors/universal-inference-e-value
 import { SEQUENTIAL_UI_ENVELOPE } from '../detectors/sequential-ui';
 import { NUISANCE_ROBUST_BF_ENVELOPE } from '../detectors/nuisance-robust-bf-e-value';
 import { CONTRAST_NULL_ENVELOPE } from '../per-shard/contrast';
+import { ONSET_MIXTURE_GAUSSIAN_ENVELOPE, ONSET_MIXTURE_BOUNDED_ENVELOPE } from '../detectors/onset-mixture-e-value';
 
 /** Detector id → the regime in which that detector's `E[e|H0] ≤ 1` holds.
  *
@@ -51,6 +52,9 @@ export const DETECTOR_ENVELOPES: Readonly<Record<string, ValidityEnvelope>> = Ob
   // assertion { mMuchGreaterThanN } (fit >> horizon) or { trueBaseline } (a twin with a known offset).
   contrast_null_mixture: CONTRAST_NULL_ENVELOPE,
   contrast_null_betting: CONTRAST_NULL_ENVELOPE,
+  /** ADR 0034: Tessera's per-shard e-value object for fleet e-BH, by increment kind. */
+  onset_mixture_gaussian: ONSET_MIXTURE_GAUSSIAN_ENVELOPE,
+  onset_mixture_bounded: ONSET_MIXTURE_BOUNDED_ENVELOPE,
 });
 
 export function envelopeFor(detectorId: string): ValidityEnvelope | undefined {

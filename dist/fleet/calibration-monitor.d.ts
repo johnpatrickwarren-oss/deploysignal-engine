@@ -1,14 +1,5 @@
-/** Cap on the per-tick Gaussian increment: E[min(g, cap)] ≤ E[g] = 1 (conservative). */
-export declare const G_CAP = 100;
-/** Gaussian-LR mixture increment, capped. E[g | N(0,1)] ≤ 1 by construction. Validity needs the
- *  residual to be genuinely N(0,1): a 10% under-estimate of the standardizing scale moves the null
- *  mean from ~0.5 to ~7.6 (Tessera audit F7, measured), and heavy tails break E ≤ 1 outright. */
-export declare function gInc(r: number): number;
-import { BOUND_CLIP, BOUND_LAMBDAS, gBounded } from '../detectors/_bounded-bet';
-export { BOUND_CLIP, BOUND_LAMBDAS, gBounded };
-/** 'gaussian' = gInc (max power, needs a genuinely N(0,1) residual); 'bounded' = linear bounded
- *  bets (distribution-robust; the FDR-bearing default in Tessera). */
-export type IncrementKind = 'gaussian' | 'bounded';
+import { BOUND_CLIP, BOUND_LAMBDAS, gBounded, gInc, G_CAP, type IncrementKind } from '../detectors/_bounded-bet';
+export { BOUND_CLIP, BOUND_LAMBDAS, gBounded, gInc, G_CAP, type IncrementKind };
 export interface CalibrationMonitorOptions {
     /** Anytime-valid level: revoke when W ≥ 1/alpha. Default 0.01 — the false-revocation
      *  probability over ALL time is ≤ 1%. */

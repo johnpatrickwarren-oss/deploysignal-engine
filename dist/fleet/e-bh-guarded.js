@@ -27,6 +27,7 @@ const universal_inference_e_value_1 = require("../detectors/universal-inference-
 const sequential_ui_1 = require("../detectors/sequential-ui");
 const nuisance_robust_bf_e_value_1 = require("../detectors/nuisance-robust-bf-e-value");
 const contrast_1 = require("../per-shard/contrast");
+const onset_mixture_e_value_1 = require("../detectors/onset-mixture-e-value");
 /** Detector id → the regime in which that detector's `E[e|H0] ≤ 1` holds.
  *
  *  An id ABSENT from this map is refused, not admitted. `detector-portfolio-current` records the
@@ -51,6 +52,9 @@ exports.DETECTOR_ENVELOPES = Object.freeze({
     // assertion { mMuchGreaterThanN } (fit >> horizon) or { trueBaseline } (a twin with a known offset).
     contrast_null_mixture: contrast_1.CONTRAST_NULL_ENVELOPE,
     contrast_null_betting: contrast_1.CONTRAST_NULL_ENVELOPE,
+    /** ADR 0034: Tessera's per-shard e-value object for fleet e-BH, by increment kind. */
+    onset_mixture_gaussian: onset_mixture_e_value_1.ONSET_MIXTURE_GAUSSIAN_ENVELOPE,
+    onset_mixture_bounded: onset_mixture_e_value_1.ONSET_MIXTURE_BOUNDED_ENVELOPE,
 });
 function envelopeFor(detectorId) {
     return exports.DETECTOR_ENVELOPES[detectorId];

@@ -147,9 +147,9 @@ const ALL_IDS = (0, audit_1.allDetectorIds)(FIXTURE_REGISTRY);
 // ── ADR 0033: the registry is generic; the guarantee table is total over any instance ────────
 const audit_2 = require("../types/audit");
 (0, node_test_1.describe)('detector registry (ADR 0033)', () => {
-    (0, node_test_1.test)('a six-signal registry is the pre-0.8.0 DeploySignal list, id for id, in order', () => {
+    (0, node_test_1.test)('a six-signal registry: every per-signal kind × every signal, kind-major, plus the joint-vector kinds', () => {
         const sig = [...SIX_SIGNALS];
-        const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null']
+        const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null', 'onset_mixture']
             .flatMap((k) => sig.map((s) => `${k}_${s}`));
         strict_1.default.deepEqual([...FIXTURE_REGISTRY.A], A);
         strict_1.default.deepEqual([...FIXTURE_REGISTRY.B], [...SIXTEEN_HEURISTICS]);
@@ -159,7 +159,7 @@ const audit_2 = require("../types/audit");
         ]);
         strict_1.default.deepEqual([...FIXTURE_REGISTRY.D], ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache']);
         strict_1.default.deepEqual([...FIXTURE_REGISTRY.E], ['mahalanobis_conformal_baseline']);
-        strict_1.default.equal(ALL_IDS.length, 30 + 16 + 5 + 2 + 1);
+        strict_1.default.equal(ALL_IDS.length, 36 + 16 + 5 + 2 + 1);
     });
     (0, node_test_1.test)('a consumer with its own signals gets a registry the guarantee table is total over', () => {
         const r = (0, audit_1.detectorRegistryFor)({ signals: ['path_loss_7', 'rtt_p99'], familyDSignals: ['hbm_temp'] });

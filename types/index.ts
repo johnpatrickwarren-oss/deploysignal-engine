@@ -29,5 +29,4 @@ export * from './verdict';
 export * from './policy';
 export * from './audit';
 export * from './config';
-export * from './orchestration';
 export * from './verdict-extensions/cluster-topology';

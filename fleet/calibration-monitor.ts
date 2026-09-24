@@ -42,27 +42,11 @@
 // Contract-agnostic: Tessera's `EmitterContract` has no engine counterpart, so
 // `applyCalibrationMonitor` is generic over any object carrying `calibrationMonitorPassing`.
 
-// ── Increments (Tessera tools/mixture-evalue.ts, verbatim constants) ───────────────
-
-const LAMBDAS = [0.5, 1, 2, -0.5, -1, -2];
-/** Cap on the per-tick Gaussian increment: E[min(g, cap)] ≤ E[g] = 1 (conservative). */
-export const G_CAP = 100;
-
-/** Gaussian-LR mixture increment, capped. E[g | N(0,1)] ≤ 1 by construction. Validity needs the
- *  residual to be genuinely N(0,1): a 10% under-estimate of the standardizing scale moves the null
- *  mean from ~0.5 to ~7.6 (Tessera audit F7, measured), and heavy tails break E ≤ 1 outright. */
-export function gInc(r: number): number {
-  let s = 0;
-  for (const lam of LAMBDAS) s += Math.exp(lam * r - 0.5 * lam * lam);
-  return Math.min(G_CAP, s / LAMBDAS.length);
-}
-
-import { BOUND_CLIP, BOUND_LAMBDAS, gBounded } from '../detectors/_bounded-bet';
-export { BOUND_CLIP, BOUND_LAMBDAS, gBounded };
-
-/** 'gaussian' = gInc (max power, needs a genuinely N(0,1) residual); 'bounded' = linear bounded
- *  bets (distribution-robust; the FDR-bearing default in Tessera). */
-export type IncrementKind = 'gaussian' | 'bounded';
+// ── Increments: the family lives in detectors/_bounded-bet.ts (ADR 0033 step 2 moved the bounded
+// bet, ADR 0034 the Gaussian increment, so the onset-mixture e-value could use them without an
+// upward import). Re-exported here so every existing import path holds.
+import { BOUND_CLIP, BOUND_LAMBDAS, gBounded, gInc, G_CAP, type IncrementKind } from '../detectors/_bounded-bet';
+export { BOUND_CLIP, BOUND_LAMBDAS, gBounded, gInc, G_CAP, type IncrementKind };
 
 // ── The monitor ─────────────────────────────────────────────────────────────────
 

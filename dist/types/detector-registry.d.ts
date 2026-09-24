@@ -3,7 +3,7 @@
 export declare const DETECTOR_KINDS: Readonly<{
     /** Family A — per signal. `mSPRT` is Page-CUSUM's legacy emission id (ARCHITECT-REPLY-34 D2),
      *  kept as a read-time alias for v1 audit replay; `page_cusum` is the forward id. */
-    A: readonly ["mSPRT", "page_cusum", "betting_e_process", "safe_t_e_value", "contrast_null"];
+    A: readonly ["mSPRT", "page_cusum", "betting_e_process", "safe_t_e_value", "contrast_null", "onset_mixture"];
     /** Family C — joint vector; the id is the kind. `sequential_mmd_betting_e_process` (Q67 v2,
      *  Shekhar–Ramdas 2023) was unregistered until 2026-07-31 — see deploysignal/engine/guarantees.ts. */
     C: readonly ["hotelling_t2_joint_vector", "sequential_mmd", "hotelling_t2_safe", "sequential_mmd_e_process", "sequential_mmd_betting_e_process"];

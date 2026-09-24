@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.9.0-pre — 2026-09-24
+
+Cut so Tessera can take `tools/mixture-evalue.ts` and `supAdjuster` as re-exports (ADR 0034) and
+so the two consumer-less DeploySignal type modules stop shipping.
+
+- **The onset-mixture e-value is promoted (ADR 0034).** `detectors/onset-mixture-e-value.ts`:
+  `normalizedMixtureEValue`, `geometricMixtureEValue`, `GEO_RHOS` and the `√E−1` `supAdjuster`,
+  ported line for line from Tessera's `tools/mixture-evalue.ts` / `tools/supfdr.ts` and held in
+  lockstep by `test/onset-mixture-e-value.test.ts` while Tessera carries an independent copy;
+  Tessera's property tests come with it. Two envelopes (`ONSET_MIXTURE_GAUSSIAN_ENVELOPE`,
+  `ONSET_MIXTURE_BOUNDED_ENVELOPE`, the latter variance-robust), a `ville_anytime_valid` row keyed
+  `onset_mixture_` with the Tessera ADR 0019 evidence and the plug-in ε-growing form, guarded-gate
+  ids `onset_mixture_gaussian` / `onset_mixture_bounded` (refused without a regime assertion),
+  registry kind `onset_mixture`. The engine H0-battery cell is not yet run (C83).
+- **The Gaussian increment joins the bounded bet in `detectors/_bounded-bet.ts`** (`gInc`, `G_CAP`,
+  `IncrementKind`); `fleet/calibration-monitor` re-exports them, every import path holds.
+- **Removed (breaking, zero consumers):** `types/orchestration.ts` (DeploySignal's
+  `OrchestrateParams`) and the DeploySignal audit-record schema in `types/audit.ts`
+  (`AuditRecord`, `AuditRecordV2`, `DetectorTripV2`, the audit-event payloads, `AuditWriter`);
+  `types/audit` now re-exports the registry only. DeploySignal owns both in its own tree.
+- Registry fixture in `test/guarantees.test.ts` counts six per-signal kinds.
+
 ## v0.8.0-pre — 2026-09-23 — the breaking release of ADR 0033
 
 Under 0.x semver this minor bump is the "major" ADR 0033 named: it removes surface. Every consumer

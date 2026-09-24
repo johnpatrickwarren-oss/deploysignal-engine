@@ -95,6 +95,9 @@ export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{
     /** REFUSED 2026-09-05 by study 2026-09-contrast-null (C81): the estimated offset is the plug-in
      *  n >> m price. Kept here so the refusal is visible where the guarantee table lives. */
     contrast_null: Readonly<import("./per-shard/contrast").ContrastNullEnvelope>;
+    /** ADR 0034: the onset-mixture e-value, gaussian increment (the bounded increment's envelope is
+     *  ONSET_MIXTURE_BOUNDED_ENVELOPE, variance-robust; same plug-in centre premise). */
+    onset_mixture: Readonly<ValidityEnvelope>;
 }>;
 /** The guarantee row for a detector id, by longest kind-prefix match. Returns undefined only for
  *  an id no registry can build; test/guarantees.test.ts proves totality over DeploySignal's

@@ -160,9 +160,9 @@ test('the manifest carries axis 3 on every row', () => {
 import { detectorKindOf, DETECTOR_KINDS } from '../types/audit';
 
 describe('detector registry (ADR 0033)', () => {
-  test('a six-signal registry is the pre-0.8.0 DeploySignal list, id for id, in order', () => {
+  test('a six-signal registry: every per-signal kind × every signal, kind-major, plus the joint-vector kinds', () => {
     const sig = [...SIX_SIGNALS];
-    const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null']
+    const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null', 'onset_mixture']
       .flatMap((k) => sig.map((s) => `${k}_${s}`));
     assert.deepEqual([...FIXTURE_REGISTRY.A], A);
     assert.deepEqual([...FIXTURE_REGISTRY.B], [...SIXTEEN_HEURISTICS]);
@@ -172,7 +172,7 @@ describe('detector registry (ADR 0033)', () => {
     ]);
     assert.deepEqual([...FIXTURE_REGISTRY.D], ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache']);
     assert.deepEqual([...FIXTURE_REGISTRY.E], ['mahalanobis_conformal_baseline']);
-    assert.equal(ALL_IDS.length, 30 + 16 + 5 + 2 + 1);
+    assert.equal(ALL_IDS.length, 36 + 16 + 5 + 2 + 1);
   });
 
   test('a consumer with its own signals gets a registry the guarantee table is total over', () => {

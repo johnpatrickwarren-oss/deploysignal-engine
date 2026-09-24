@@ -12,7 +12,6 @@
 // from here rather than from the page-cusum.ts facade to keep the
 // import-graph acyclic.
 
-import { LEGACY_DEPLOYSIGNAL_SIGNALS } from '../types/audit';
 import type {
   SchemaContinuityRecord,
   MSPRTParams, CompiledConfig, DetectorVerdict, BaselineCell,
@@ -144,7 +143,12 @@ export function trafficGateMin(cfg: CompiledConfig): number {
 
 /** Primary SLIs covered by Week-2 Family A. Kept in one place so health.ts,
  *  the compiler, and the parity test agree on the set. */
-export const FAMILY_A_PRIMARY_SIGNALS = LEGACY_DEPLOYSIGNAL_SIGNALS;
+// ADR 0033 residual, named: DeploySignal's six Family A signals are the DEFAULT a detector runs
+// over when a config carries no `family_a_signals`. The registry no longer knows these names
+// (v0.8.0-pre); this list is the last place in the library they appear.
+export const FAMILY_A_PRIMARY_SIGNALS = Object.freeze([
+  'p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req',
+] as const);
 
 export function suppressed(
   signal: string,

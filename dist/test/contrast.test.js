@@ -250,7 +250,8 @@ const contrast_2 = require("../per-shard/contrast");
 (0, node_test_1.test)('the six contrast_null_{signal} ids are registered and resolve to the refusal row', () => {
     for (const sig of ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req']) {
         const id = `contrast_null_${sig}`;
-        strict_1.default.ok(audit_1.DETECTOR_REGISTRY.A.includes(id), `${id} not in DETECTOR_REGISTRY.A`);
+        const reg = (0, audit_1.detectorRegistryFor)({ signals: ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'] });
+        strict_1.default.ok(reg.A.includes(id), `${id} not in a six-signal registry`);
         const row = (0, guarantees_1.guaranteeFor)(id);
         strict_1.default.equal(row.estimatedBaseline, contrast_1.CONTRAST_NULL_ENVELOPE, 'the live envelope object, not a copy');
         strict_1.default.equal(row.approximateEValue.form, 'epsilon_growing');

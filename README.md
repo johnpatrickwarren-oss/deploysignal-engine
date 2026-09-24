@@ -12,10 +12,10 @@ from it, with its validity accounting* belongs here; the domain data-plane and p
 consumer. **The current version is in [`CHANGELOG.md`](CHANGELOG.md)**; prose copies of the number
 have gone stale before.
 
-## Two trees
+## One tree
 
-The package is two trees, and `test/library-boundary.test.ts` enforces the line between them from
-the import graph on every CI run (ADR 0033).
+The package is the library alone since v0.8.0-pre, and `test/library-boundary.test.ts` enforces
+from the import graph on every CI run that it imports nothing outside itself (ADR 0033).
 
 **The library** — consumer-agnostic. Nothing here imports from `adapters/` at runtime.
 
@@ -29,21 +29,16 @@ the import graph on every CI run (ADR 0033).
 | `guarantees.ts` | The guarantee table: every detector kind's validity class, envelope, alpha policy and evidence. |
 | `signal-classes.ts` | The four-class signal taxonomy and its variance-stabilizing transforms. |
 
-**The adapters** — consumer-shaped, shipped unchanged pending migration into the consumer that
-owns each (ADR 0033 steps 2–4). Old import paths still resolve.
-
-| Path | Owner it leaves for | What it is |
-|---|---|---|
-| `adapters/topology/`, `adapters/topology-overlay.ts`, `adapters/hardware-topology-source.ts` | Tessera | Slurm, K8s, NVLink, Neuron and TPU topology sources; BFS common-mode attribution |
-| `adapters/ds-integration/`, `adapters/events/` | Tessera | The Tessera↔DeploySignal contract, freeze hook, event feed |
-| `adapters/l0/counter-rate-transform.ts` | Tessera | L0 ingestion contract |
-| `adapters/l0/schema-continuity.ts`, `adapters/o0/`, `adapters/loader.ts`, `adapters/core.ts` | DeploySignal | Schema continuity, reversibility and lifecycle events, compiled-config loader, the heuristic runtime (`TrendBuffer`, `computeVerdict`) |
+**The adapters left** (v0.8.0-pre). The consumer-shaped modules that shipped beside the library
+until v0.7.0-pre are in their consumers: DeploySignal owns `core.ts`, `o0/reversibility-*` and
+`l0/schema-continuity` (its PR #100); Tessera owns the topology sources with the overlay and
+hardware source, the DS↔Tessera contract, the event feed and freeze hook, the L0 counter transform
+and the compiled-config loader (its PR #69). `adapters/` and its alias import paths are gone.
 
 **DeploySignal-shaped surface still inside the library, by name:** `types/metrics.ts`,
 `types/policy.ts`, the six type-only orchestration hooks on `types/orchestration.ts` and
-`types/verdict.ts` (allowlisted in the boundary test), `signal-classes.ts`'s default class map, the
-detectors' default signal list (`FAMILY_A_PRIMARY_SIGNALS`), `tools/` (the NAB harness), and the
-`LEGACY_DEPLOYSIGNAL_*` lists in `types/audit.ts`. ADR 0033 lists these so the next step is a
+`types/verdict.ts` (gone since v0.8.0-pre), `signal-classes.ts`'s default class map, the
+detectors' default signal list (`FAMILY_A_PRIMARY_SIGNALS`), `tools/` (the NAB harness). ADR 0033 lists these so the next step is a
 list, not a survey.
 
 ## Use criteria — how a consumer decides what to run
@@ -83,8 +78,7 @@ const row = guaranteeFor('betting_e_process_rtt_p99');
 // row.validityClass === 'ville_anytime_valid'; row.estimatedBaseline.validUnderEstimatedBaseline === false
 ```
 
-`DETECTOR_REGISTRY` and `DetectorId` are DeploySignal's instance of the same builder and exist for
-its audit-record compatibility; a new consumer does not import them.
+Since v0.8.0-pre the library ships no registry instance; every consumer builds its own.
 
 ## Install
 
@@ -99,7 +93,7 @@ Consumed via git dependency at a release tag (no npm registry publish):
 ```
 
 Subpath imports are the API: `…/detectors/betting-e-process`, `…/fleet/e-bh-guarded`,
-`…/guarantees`, `…/types/audit`, `…/adapters/topology/slurm-source`. Both `node16` and classic
+`…/guarantees`, `…/types/audit`, `…/per-shard/contrast`. Both `node16` and classic
 `node` module resolution are supported (`exports` and `typesVersions` carry the same map).
 
 ## Build and test

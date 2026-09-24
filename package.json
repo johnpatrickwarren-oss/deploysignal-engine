@@ -1,7 +1,7 @@
 {
   "name": "@johnpatrickwarren-oss/deploysignal-engine",
-  "version": "0.7.0-pre",
-  "description": "Statistical detector library: detectors with their validity envelopes, e-value combination and e-BH/e-BY FDR, per-shard baseline maths, and the guarantee table that says what each detector guarantees and in which regime. Consumer-shaped adapters (topology sources, DS↔Tessera contract, L0/O0, the DeploySignal heuristic core) ship under adapters/ pending migration to their consumers (ADR 0033).",
+  "version": "0.8.0-pre",
+  "description": "Statistical detector library: detectors with their validity envelopes, e-value combination and e-BH/e-BY FDR, per-shard baseline maths, and the guarantee table that says what each detector guarantees and in which regime (ADR 0033).",
   "license": "Apache-2.0",
   "main": "./dist/types/index.js",
   "types": "./dist/types/index.d.ts",
@@ -36,36 +36,6 @@
   },
   "typesVersions": {
     "*": {
-      "core": [
-        "./dist/adapters/core.d.ts"
-      ],
-      "topology-overlay": [
-        "./dist/adapters/topology-overlay.d.ts"
-      ],
-      "hardware-topology-source": [
-        "./dist/adapters/hardware-topology-source.d.ts"
-      ],
-      "loader": [
-        "./dist/adapters/loader.d.ts"
-      ],
-      "topology/*": [
-        "./dist/adapters/topology/*"
-      ],
-      "l0/*": [
-        "./dist/adapters/l0/*"
-      ],
-      "o0/*": [
-        "./dist/adapters/o0/*"
-      ],
-      "events/*": [
-        "./dist/adapters/events/*"
-      ],
-      "ds-integration": [
-        "./dist/adapters/ds-integration/index.d.ts"
-      ],
-      "ds-integration/*": [
-        "./dist/adapters/ds-integration/*"
-      ],
       "*": [
         "./dist/*",
         "./dist/*/index.d.ts"
@@ -149,14 +119,6 @@
       "types": "./dist/types/families/e.d.ts",
       "default": "./dist/types/families/e.js"
     },
-    "./core": {
-      "types": "./dist/adapters/core.d.ts",
-      "default": "./dist/adapters/core.js"
-    },
-    "./topology-overlay": {
-      "types": "./dist/adapters/topology-overlay.d.ts",
-      "default": "./dist/adapters/topology-overlay.js"
-    },
     "./signal-classes": {
       "types": "./dist/signal-classes.d.ts",
       "default": "./dist/signal-classes.js"
@@ -164,14 +126,6 @@
     "./verdict-groups": {
       "types": "./dist/verdict-groups.d.ts",
       "default": "./dist/verdict-groups.js"
-    },
-    "./hardware-topology-source": {
-      "types": "./dist/adapters/hardware-topology-source.d.ts",
-      "default": "./dist/adapters/hardware-topology-source.js"
-    },
-    "./loader": {
-      "types": "./dist/adapters/loader.d.ts",
-      "default": "./dist/adapters/loader.js"
     },
     "./per-detector-resampler-mode": {
       "types": "./dist/per-detector-resampler-mode.d.ts",
@@ -181,10 +135,6 @@
       "types": "./dist/detectors/*.d.ts",
       "default": "./dist/detectors/*.js"
     },
-    "./topology/*": {
-      "types": "./dist/adapters/topology/*.d.ts",
-      "default": "./dist/adapters/topology/*.js"
-    },
     "./fleet/*": {
       "types": "./dist/fleet/*.d.ts",
       "default": "./dist/fleet/*.js"
@@ -193,37 +143,13 @@
       "types": "./dist/baseline/*.d.ts",
       "default": "./dist/baseline/*.js"
     },
-    "./l0/*": {
-      "types": "./dist/adapters/l0/*.d.ts",
-      "default": "./dist/adapters/l0/*.js"
-    },
-    "./o0/*": {
-      "types": "./dist/adapters/o0/*.d.ts",
-      "default": "./dist/adapters/o0/*.js"
-    },
-    "./events/*": {
-      "types": "./dist/adapters/events/*.d.ts",
-      "default": "./dist/adapters/events/*.js"
-    },
     "./per-shard/*": {
       "types": "./dist/per-shard/*.d.ts",
       "default": "./dist/per-shard/*.js"
     },
-    "./adapters/*": {
-      "types": "./dist/adapters/*.d.ts",
-      "default": "./dist/adapters/*.js"
-    },
     "./guarantees": {
       "types": "./dist/guarantees.d.ts",
       "default": "./dist/guarantees.js"
-    },
-    "./ds-integration": {
-      "types": "./dist/adapters/ds-integration/index.d.ts",
-      "default": "./dist/adapters/ds-integration/index.js"
-    },
-    "./ds-integration/*": {
-      "types": "./dist/adapters/ds-integration/*.d.ts",
-      "default": "./dist/adapters/ds-integration/*.js"
     },
     "./package.json": "./package.json"
   },

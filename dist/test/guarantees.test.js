@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -42,12 +9,19 @@ const strict_1 = __importDefault(require("node:assert/strict"));
 const guarantees_1 = require("../guarantees");
 const audit_1 = require("../types/audit");
 const guarantees_2 = require("../guarantees");
-const core = __importStar(require("../adapters/core"));
 const validity_envelope_1 = require("../detectors/validity-envelope");
-const ALL_IDS = [
-    ...audit_1.DETECTOR_REGISTRY.A, ...audit_1.DETECTOR_REGISTRY.B, ...audit_1.DETECTOR_REGISTRY.C,
-    ...audit_1.DETECTOR_REGISTRY.D, ...audit_1.DETECTOR_REGISTRY.E,
+// The DeploySignal-shaped fixture: six Family A signals, one Family D signal, sixteen heuristic
+// ids. Since v0.8.0-pre the library ships no registry instance; this fixture keeps the totality
+// proof concrete (the test 'a consumer with its own signals…' proves it for an arbitrary set).
+const SIX_SIGNALS = ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'];
+const SIXTEEN_HEURISTICS = [
+    'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',
+    'slowbleed', 'collective', 'capacity', 'gpu_eff', 'compound_lat',
+    'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
+    'output_len_drift', 'tool_call_degradation', 'quality_warning',
 ];
+const FIXTURE_REGISTRY = (0, audit_1.detectorRegistryFor)({ signals: SIX_SIGNALS, familyDSignals: ['kv_cache'], heuristics: SIXTEEN_HEURISTICS });
+const ALL_IDS = (0, audit_1.allDetectorIds)(FIXTURE_REGISTRY);
 (0, node_test_1.describe)('guarantee table (WORKLIST C4)', () => {
     (0, node_test_1.test)('total over the registry: every detector id resolves to exactly one row', () => {
         for (const id of ALL_IDS) {
@@ -63,7 +37,7 @@ const ALL_IDS = [
         const signals = ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'];
         for (const sig of signals) {
             const id = `safe_t_e_value_${sig}`;
-            strict_1.default.ok(audit_1.DETECTOR_REGISTRY.A.includes(id), `${id} not in DETECTOR_REGISTRY.A`);
+            strict_1.default.ok(FIXTURE_REGISTRY.A.includes(id), `${id} not in the fixture registry`);
             const row = (0, guarantees_2.guaranteeFor)(id);
             strict_1.default.equal(row.validityClass, 'e_value_terminal');
             strict_1.default.equal(row.alphaPolicy, 'classical_epoch_alpha', 'one look per canary spends alpha once');
@@ -105,29 +79,14 @@ const ALL_IDS = [
     (0, node_test_1.test)('the retraction stays visible where the table lives', () => {
         strict_1.default.equal(guarantees_2.ESTIMATED_BASELINE_GUARANTEES.nuisance_robust_bf_e_value.validUnderEstimatedBaseline, false);
     });
-    (0, node_test_1.test)('manifest round-trips as JSON with one entry per row plus the heuristic core', () => {
-        const parsed = JSON.parse((0, guarantees_2.guaranteeManifest)());
-        strict_1.default.equal(parsed.length, guarantees_2.GUARANTEE_TABLE.length + 1);
-        const core = parsed[parsed.length - 1];
-        strict_1.default.equal(core.kind, 'heuristic_core');
-        strict_1.default.equal(core.validityClass, 'heuristic');
-        strict_1.default.equal(core.alphaPolicy, 'none');
+    (0, node_test_1.test)('manifest round-trips as JSON with one entry per row', () => {
+        const m = JSON.parse((0, guarantees_2.guaranteeManifest)());
+        strict_1.default.equal(m.length, guarantees_2.GUARANTEE_TABLE.length);
     });
-    (0, node_test_1.test)('the core.ts heuristic layer is covered: heuristic, spends no alpha, exports live', () => {
-        strict_1.default.equal(guarantees_2.HEURISTIC_CORE_GUARANTEE.validityClass, 'heuristic');
-        strict_1.default.equal(guarantees_2.HEURISTIC_CORE_GUARANTEE.alphaPolicy, 'none');
-        strict_1.default.ok(Object.isFrozen(guarantees_2.HEURISTIC_CORE_GUARANTEE));
-        // Every export the entry claims to cover actually exists in core.ts, so the entry
-        // cannot drift from the module it describes.
-        for (const name of guarantees_2.HEURISTIC_CORE_GUARANTEE.exports) {
-            strict_1.default.ok(name in core, `HEURISTIC_CORE_GUARANTEE covers '${name}' but core.ts does not export it`);
-        }
-    });
-    (0, node_test_1.test)('the Family B row points at the trend layer that sets its thresholds', () => {
+    (0, node_test_1.test)('the Family B row names the trend layer that sets its thresholds, now DeploySignal\'s own', () => {
         const row = (0, guarantees_2.guaranteeFor)('kv_saturation');
-        strict_1.default.equal(row.family, 'B');
         strict_1.default.ok(row.implementation.includes('core.ts'), 'Family B implementation must name the core.ts trend layer');
-        strict_1.default.ok(row.implementation.includes('HEURISTIC_CORE_GUARANTEE'));
+        strict_1.default.ok(row.implementation.includes('DeploySignal'), 'and say whose it is since v0.8.0-pre');
     });
 });
 // ── Axis 3 (C61, 2026-09-02): the (epsilon, delta)-approximate e-value form ──────────────
@@ -135,7 +94,6 @@ const ALL_IDS = [
     for (const row of guarantees_2.GUARANTEE_TABLE) {
         strict_1.default.ok(row.approximateEValue && row.approximateEValue.form, `${row.detector}: no axis 3`);
     }
-    strict_1.default.equal(guarantees_2.HEURISTIC_CORE_GUARANTEE.approximateEValue.form, 'not_e_value');
 });
 (0, node_test_1.test)('axis 3 is consistent with axes 1 and 2', () => {
     for (const row of guarantees_2.GUARANTEE_TABLE) {
@@ -189,34 +147,27 @@ const ALL_IDS = [
 // ── ADR 0033: the registry is generic; the guarantee table is total over any instance ────────
 const audit_2 = require("../types/audit");
 (0, node_test_1.describe)('detector registry (ADR 0033)', () => {
-    (0, node_test_1.test)('the DeploySignal instance is the pre-0.7.0 literal list, id for id, in order', () => {
-        const sig = ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'];
+    (0, node_test_1.test)('a six-signal registry is the pre-0.8.0 DeploySignal list, id for id, in order', () => {
+        const sig = [...SIX_SIGNALS];
         const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null']
             .flatMap((k) => sig.map((s) => `${k}_${s}`));
-        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.A], A);
-        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.B], [
-            'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',
-            'slowbleed', 'collective', 'capacity', 'gpu_eff', 'compound_lat',
-            'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
-            'output_len_drift', 'tool_call_degradation', 'quality_warning',
-        ]);
-        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.C], [
+        strict_1.default.deepEqual([...FIXTURE_REGISTRY.A], A);
+        strict_1.default.deepEqual([...FIXTURE_REGISTRY.B], [...SIXTEEN_HEURISTICS]);
+        strict_1.default.deepEqual([...FIXTURE_REGISTRY.C], [
             'hotelling_t2_joint_vector', 'sequential_mmd', 'hotelling_t2_safe', 'sequential_mmd_e_process',
             'sequential_mmd_betting_e_process',
         ]);
-        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.D], ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache']);
-        strict_1.default.deepEqual([...audit_1.DETECTOR_REGISTRY.E], ['mahalanobis_conformal_baseline']);
+        strict_1.default.deepEqual([...FIXTURE_REGISTRY.D], ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache']);
+        strict_1.default.deepEqual([...FIXTURE_REGISTRY.E], ['mahalanobis_conformal_baseline']);
         strict_1.default.equal(ALL_IDS.length, 30 + 16 + 5 + 2 + 1);
-        strict_1.default.deepEqual([...audit_2.LEGACY_DEPLOYSIGNAL_SIGNALS], sig);
-        strict_1.default.equal(audit_2.LEGACY_DEPLOYSIGNAL_HEURISTICS.length, 16);
     });
     (0, node_test_1.test)('a consumer with its own signals gets a registry the guarantee table is total over', () => {
-        const r = (0, audit_2.detectorRegistryFor)({ signals: ['path_loss_7', 'rtt_p99'], familyDSignals: ['hbm_temp'] });
+        const r = (0, audit_1.detectorRegistryFor)({ signals: ['path_loss_7', 'rtt_p99'], familyDSignals: ['hbm_temp'] });
         strict_1.default.equal(r.A.length, audit_2.DETECTOR_KINDS.A.length * 2);
         strict_1.default.equal(r.D.length, audit_2.DETECTOR_KINDS.D.length);
         strict_1.default.deepEqual([...r.B], [], 'no heuristics unless the consumer names them');
-        strict_1.default.equal((0, audit_2.allDetectorIds)(r).length, r.A.length + r.C.length + r.D.length + r.E.length);
-        for (const id of (0, audit_2.allDetectorIds)(r)) {
+        strict_1.default.equal((0, audit_1.allDetectorIds)(r).length, r.A.length + r.C.length + r.D.length + r.E.length);
+        for (const id of (0, audit_1.allDetectorIds)(r)) {
             const row = (0, guarantees_2.guaranteeFor)(id);
             strict_1.default.ok(row, `no guarantee row for '${id}'`);
             strict_1.default.equal(row.family, (0, audit_2.detectorKindOf)(id).family, `family disagrees for '${id}'`);

@@ -1,6 +1,31 @@
 # Changelog
 
-## Unreleased
+## v0.8.0-pre — 2026-09-23 — the breaking release of ADR 0033
+
+Under 0.x semver this minor bump is the "major" ADR 0033 named: it removes surface. Every consumer
+re-pins in the same PR that adapts (DeploySignal: `detectors/_suppression` → `detectors/suppression`;
+Tessera and Tessera-RNG: pin only, given Tessera PRs #69 and #70).
+
+- **`adapters/` is deleted**, with its alias export paths (`./core`, `./topology/*`, `./l0/*`,
+  `./o0/*`, `./events/*`, `./ds-integration`, `./loader`, `./topology-overlay`,
+  `./hardware-topology-source`, `./adapters/*`) and the matching `typesVersions` entries. The
+  modules live in their consumers: DeploySignal PR #100 (`core`, `o0/reversibility-*`,
+  `l0/schema-continuity`), Tessera PR #69 (topology, ds-integration, events, counter-rate
+  transform, loader). The six engine tests that exercised them went with them.
+- **The DeploySignal registry instance is deleted**: `DETECTOR_REGISTRY`, the `DetectorId` union
+  and the `LEGACY_DEPLOYSIGNAL_*` lists. No consumer imported them (DeploySignal owns its registry
+  in its own tree). `DetectorTripV2.detector_id` is a `string`; `detectorRegistryFor` and
+  `guaranteeFor` are the API. `FAMILY_A_PRIMARY_SIGNALS` stays in `detectors/_page-cusum-core.ts`
+  as the named residual default.
+- **The six DeploySignal orchestration hooks** on `types/orchestration.ts` and `types/verdict.ts`
+  (`lifecycleEmitter`, `lifecycleState`, `reversibilitySource`, `topologyEnricher`, `finalAction`)
+  are removed; DeploySignal declares them on its own copies of these types.
+- **`HEURISTIC_CORE_GUARANTEE` is removed** from `guarantees.ts` and from the manifest; the Family
+  B row names DeploySignal's own `core.ts` trend layer. No consumer imported it.
+- `test/library-boundary.test.ts` now asserts the library imports only the library and that
+  nothing consumer-shaped is back at the root; the type-only allowlist is gone with the hooks.
+- 414 tests (was 439: the six moved tests and the heuristic-core tests are gone), dist rebuilt
+  from scratch.
 
 - **`detectors/suppression` is the public path for the schema-continuity suppression rule (ADR
   0033 step 3).** `_suppression.ts` renamed; the seven detectors and `adapters/l0/schema-continuity`

@@ -104,35 +104,6 @@ export interface OrchestrateParams {
      *  `{ tripped: false }`. Caller owns the state; orchestrator returns
      *  the updated state on `VerdictResult.failFastState`. */
     failFastState?: FailFastState;
-    /** Week 6+ Addition #14 — optional lifecycle event emitter. When set,
-     *  the orchestrator emits the five event types at gate-lifecycle
-     *  transitions: `evaluation.triggered`/`.started`/`.tick`/`.suppressed`/
-     *  `.finished`. When absent, orchestrator behaves as
-     *  `NoOpLifecycleEventEmitter` (zero side effects) — backward compat
-     *  hard gate. */
-    lifecycleEmitter?: import('../adapters/o0/lifecycle-events').LifecycleEventEmitter;
-    /** Week 6+ Addition #14 — per-deploy lifecycle state threaded across
-     *  ticks. The orchestrator is single-tick; this object carries the
-     *  once-per-deploy emit latches (`triggered`/`started`/`finished`) and
-     *  the per-family suppression state needed so
-     *  `evaluation.suppressed` fires only on non-suppressed → suppressed
-     *  transitions rather than every tick. Caller creates fresh per
-     *  deploy (via `freshLifecycleState()`); orchestrator mutates it
-     *  in-place and returns it on `VerdictResult.lifecycleState`. Absent
-     *  → orchestrator initializes fresh state locally (fine for one-shot
-     *  tests but loses once-per-deploy invariants across separate
-     *  `evaluate()` calls). */
-    lifecycleState?: import('../adapters/o0/lifecycle-events').LifecycleDeployState;
-    /** Week 6+ Addition #5 — platform-annotation source for reversibility
-     *  classification. Consulted once per deploy (at tick 0 when no
-     *  prior classification is threaded through). Runway ships three
-     *  implementations in `engine/o0/reversibility-source.ts`:
-     *  `NoReversibilitySource` (default; every deploy falls back),
-     *  `InlineReversibilitySource` (test fixture), and
-     *  `ScenarioReversibilitySource` (scenario-JSON-keyed Record).
-     *  Absent → orchestrator uses `NoReversibilitySource` → every
-     *  deploy receives the default-fallback `'forward_only'` classification. */
-    reversibilitySource?: import('../adapters/o0/reversibility-source').ReversibilityAnnotationSource;
     /** Week 6+ Addition #5 — pre-classified reversibility for this deploy.
      *  Orchestrator populates at tick 0 via
      *  `classifyReversibility(deployId, reversibilitySource)` and returns
@@ -144,10 +115,6 @@ export interface OrchestrateParams {
      *  path skipped; FusedVerdict emission on `gateResults.fusion` is
      *  unchanged. */
     verdictGrouper?: import('../verdict-groups').VerdictGrouper;
-    /** Addition #26 — per-deploy TopologyEnricher. Absent → no
-     *  enrichment fan-out on group-close. Populated only when
-     *  `compiledConfig.topology_ref` is configured. */
-    topologyEnricher?: import('../adapters/topology-overlay').TopologyEnricher;
     /** Addition #27 — per-deploy AgentProposer. Absent OR
      *  `compiledConfig.agent.enabled === false` → no agent invocation
      *  on group-close. Structural type — the real implementation lives

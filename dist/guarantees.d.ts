@@ -36,7 +36,7 @@ export type ApproximateEValue =
     form: 'unrecorded';
 };
 export interface GuaranteeRow {
-    /** Registry ids this row covers (prefix-matched against types/audit DETECTOR_REGISTRY). */
+    /** Registry ids this row covers (prefix-matched by detector KIND, types/detector-registry.ts). */
     idPrefixes: readonly string[];
     family: 'A' | 'B' | 'C' | 'D' | 'E';
     detector: string;
@@ -53,36 +53,6 @@ export interface GuaranteeRow {
     approximateEValue: ApproximateEValue;
 }
 export declare const GUARANTEE_TABLE: readonly GuaranteeRow[];
-/** The core.ts heuristic layer, covered explicitly (2026-08-22). core.ts ships a second
- *  statistical layer — TrendBuffer window summaries, trendStrength, effectiveThreshold,
- *  computeVerdict, WARMUP_CONFIG — that is NOT a registry detector, so the table above cannot
- *  reach it and test/guarantees.test.ts's totality check does not cover it. This entry is its
- *  guarantee row: heuristic, spends no alpha, and its constants have no derivation trace.
- *
- *  Constants (all hand-tuned): stable = cv < 0.04 && |slopeNorm| > 0.002 (core.ts:90);
- *  slopeScore = rawSlope/0.05, stabilityBonus 0.2 (linear falloff to cv 0.10), noisePenalty
- *  (cv-0.15)/0.15 capped 0.5 (core.ts:162-165, mirrored in summarizeWindow core.ts:145-149).
- *
- *  Provenance: vendored at pin deploysignal main@5a72371 (2026-05-16), sync policy
- *  vendored-at-pin, DO-NOT-modify-without-ADR (core.ts:1-5). No derivation exists in this repo
- *  or the knowledge wiki (checked 2026-08-21).
- *
- *  Production surface (traced 2026-08-21): the ONLY production caller is DeploySignal
- *  engine/gates/_health-defs.ts, i.e. the Family B structural rules — the row above. The layer
- *  does not modulate any alpha-spending detector. In-repo callers are
- *  test/core-trend-threshold.test.ts and type references only. */
-export declare const HEURISTIC_CORE_GUARANTEE: Readonly<{
-    exports: readonly ["TrendBuffer", "trendStrength", "effectiveThreshold", "computeVerdict", "WARMUP_CONFIG"];
-    implementation: "core.ts (vendored from DeploySignal engine/core.ts at main@5a72371, 2026-05-16)";
-    validityClass: "heuristic";
-    estimatedBaseline: "unrecorded";
-    alphaPolicy: "none";
-    evidence: string;
-    approximateEValue: {
-        readonly form: "not_e_value";
-        readonly reason: "heuristic trend layer; no expectation claim.";
-    };
-}>;
 /** Axis 3 for the constructions in ESTIMATED_BASELINE_GUARANTEES, keyed the same way. These are
  *  the portfolio's genuine e-values inside their envelopes, and the one CONSTANT epsilon on the
  *  record. */
@@ -130,8 +100,6 @@ export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{
  *  an id no registry can build; test/guarantees.test.ts proves totality over DeploySignal's
  *  instance and over a registry built for an arbitrary signal set (ADR 0033). */
 export declare function guaranteeFor(id: string): GuaranteeRow | undefined;
-/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts).
- *  The core.ts heuristic layer (HEURISTIC_CORE_GUARANTEE) is appended as a trailing entry with
- *  `kind: 'heuristic_core'` — it is not a registry detector, so it carries no idPrefixes/family. */
+/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts). */
 export declare function guaranteeManifest(): string;
 //# sourceMappingURL=guarantees.d.ts.map

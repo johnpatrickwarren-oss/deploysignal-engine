@@ -45,47 +45,13 @@ export interface TrippedEntry {
 // entries live in the spec but aren't emitted. Readers that see an
 // unknown_detector_id emit a warning and preserve the record.
 
-import { detectorRegistryFor } from './detector-registry';
 export * from './detector-registry';
 
-// ── The DeploySignal instance ─────────────────────────────────────
-//
-// ADR 0033: these three lists are DEPLOYSIGNAL'S, not the engine's. They are held here, in one
-// place and under one name, so that `DETECTOR_REGISTRY` / `DetectorId` keep their exact pre-0.7.0
-// shape for DeploySignal's 16 importing files while the registry itself became generic. They leave
-// for DeploySignal's own tree at ADR 0033 step 2; a new consumer builds its own registry with
-// `detectorRegistryFor` and never imports these.
-
-/** DeploySignal's six Family A signals. */
-export const LEGACY_DEPLOYSIGNAL_SIGNALS = Object.freeze([
-  'p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req',
-] as const);
-/** The one signal DeploySignal's Family D spectral detectors run on. */
-export const LEGACY_DEPLOYSIGNAL_FAMILY_D_SIGNALS = Object.freeze(['kv_cache'] as const);
-/** DeploySignal's 16 Family B structural signatures — consumer policy, no engine implementation. */
-export const LEGACY_DEPLOYSIGNAL_HEURISTICS = Object.freeze([
-  'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',
-  'slowbleed', 'collective', 'capacity', 'gpu_eff', 'compound_lat',
-  'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
-  'output_len_drift', 'tool_call_degradation', 'quality_warning',
-] as const);
-
-/** Canonical detector_ids per family for DeploySignal's signals. Normative for DeploySignal's
- *  audit writers and readers (audit/SCHEMA.md v2); readers that see an unknown id emit a warning
- *  and preserve the record. Built by `detectorRegistryFor` in kind-major order, which
- *  test/guarantees.test.ts holds equal to the literal list this replaced. */
-export const DETECTOR_REGISTRY = detectorRegistryFor({
-  signals: LEGACY_DEPLOYSIGNAL_SIGNALS,
-  familyDSignals: LEGACY_DEPLOYSIGNAL_FAMILY_D_SIGNALS,
-  heuristics: LEGACY_DEPLOYSIGNAL_HEURISTICS,
-});
-
-export type DetectorIdA = typeof DETECTOR_REGISTRY.A[number];
-export type DetectorIdB = typeof DETECTOR_REGISTRY.B[number];
-export type DetectorIdC = typeof DETECTOR_REGISTRY.C[number];
-export type DetectorIdD = typeof DETECTOR_REGISTRY.D[number];
-export type DetectorIdE = typeof DETECTOR_REGISTRY.E[number];
-export type DetectorId = DetectorIdA | DetectorIdB | DetectorIdC | DetectorIdD | DetectorIdE;
+// ADR 0033, v0.8.0-pre: the DeploySignal instance of the registry (its DETECTOR_REGISTRY constant,
+// the DetectorId union, the LEGACY_DEPLOYSIGNAL_* lists) no longer lives here. DeploySignal owns its
+// registry in its own tree (engine/types/audit.ts there), and no other consumer imported the
+// instance. A consumer builds its registry with `detectorRegistryFor({ signals })`; detector ids in
+// records are strings whose guarantee row is `guaranteeFor(id)`.
 
 /** Per-trip provenance (audit/SCHEMA.md v2 §Provenance). Populated from
  *  the cell consulted at detector evaluation time. */
@@ -112,7 +78,8 @@ export interface Provenance {
  *  family-then-detector-ordered). */
 export interface DetectorTripV2 {
   family_id: FamilyId;
-  detector_id: DetectorId;
+  /** A registry id (`detectorRegistryFor`); its guarantee row is `guaranteeFor(detector_id)`. */
+  detector_id: string;
   statistic: number | null;
   threshold: number | null;
   alpha_spent: number;

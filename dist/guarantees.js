@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ESTIMATED_BASELINE_GUARANTEES = exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = exports.HEURISTIC_CORE_GUARANTEE = exports.GUARANTEE_TABLE = void 0;
+exports.ESTIMATED_BASELINE_GUARANTEES = exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = exports.GUARANTEE_TABLE = void 0;
 exports.guaranteeFor = guaranteeFor;
 exports.guaranteeManifest = guaranteeManifest;
 // guarantees.ts — the engine's own guarantee table, assembled from code.
@@ -139,9 +139,9 @@ exports.GUARANTEE_TABLE = Object.freeze([
         family: 'B',
         detector: 'structural signature rules (16)',
         implementation: 'DeploySignal engine/gates/_health-defs.ts (rule bodies; ids here for audit '
-            + 'compat). Threshold machinery is THIS package\'s core.ts trend layer — _health-defs.ts '
-            + 'imports trendStrength/effectiveThreshold from @johnpatrickwarren-oss/deploysignal-engine/core '
-            + 'and sets every rule threshold through it. See HEURISTIC_CORE_GUARANTEE.',
+            + 'compat). Threshold machinery is DeploySignal\'s own core.ts trend layer (engine/core.ts in '
+            + 'DeploySignal since ADR 0033 step 3; it left this package at v0.8.0-pre) — _health-defs.ts '
+            + 'sets every rule threshold through trendStrength/effectiveThreshold there.',
         validityClass: 'heuristic',
         estimatedBaseline: 'unrecorded',
         alphaPolicy: 'none',
@@ -269,35 +269,6 @@ exports.GUARANTEE_TABLE = Object.freeze([
         },
     },
 ]);
-/** The core.ts heuristic layer, covered explicitly (2026-08-22). core.ts ships a second
- *  statistical layer — TrendBuffer window summaries, trendStrength, effectiveThreshold,
- *  computeVerdict, WARMUP_CONFIG — that is NOT a registry detector, so the table above cannot
- *  reach it and test/guarantees.test.ts's totality check does not cover it. This entry is its
- *  guarantee row: heuristic, spends no alpha, and its constants have no derivation trace.
- *
- *  Constants (all hand-tuned): stable = cv < 0.04 && |slopeNorm| > 0.002 (core.ts:90);
- *  slopeScore = rawSlope/0.05, stabilityBonus 0.2 (linear falloff to cv 0.10), noisePenalty
- *  (cv-0.15)/0.15 capped 0.5 (core.ts:162-165, mirrored in summarizeWindow core.ts:145-149).
- *
- *  Provenance: vendored at pin deploysignal main@5a72371 (2026-05-16), sync policy
- *  vendored-at-pin, DO-NOT-modify-without-ADR (core.ts:1-5). No derivation exists in this repo
- *  or the knowledge wiki (checked 2026-08-21).
- *
- *  Production surface (traced 2026-08-21): the ONLY production caller is DeploySignal
- *  engine/gates/_health-defs.ts, i.e. the Family B structural rules — the row above. The layer
- *  does not modulate any alpha-spending detector. In-repo callers are
- *  test/core-trend-threshold.test.ts and type references only. */
-exports.HEURISTIC_CORE_GUARANTEE = Object.freeze({
-    exports: Object.freeze(['TrendBuffer', 'trendStrength', 'effectiveThreshold', 'computeVerdict', 'WARMUP_CONFIG']),
-    implementation: 'core.ts (vendored from DeploySignal engine/core.ts at main@5a72371, 2026-05-16)',
-    validityClass: 'heuristic',
-    estimatedBaseline: 'unrecorded',
-    alphaPolicy: 'none',
-    evidence: 'Hand-tuned constants with no derivation trace; sole production caller is the Family B '
-        + 'row (DeploySignal engine/gates/_health-defs.ts). Coverage added 2026-08-22 after external '
-        + 'review flagged the layer as outside the guarantee table.',
-    approximateEValue: { form: 'not_e_value', reason: 'heuristic trend layer; no expectation claim.' },
-});
 /** Axis 3 for the constructions in ESTIMATED_BASELINE_GUARANTEES, keyed the same way. These are
  *  the portfolio's genuine e-values inside their envelopes, and the one CONSTANT epsilon on the
  *  record. */
@@ -368,14 +339,12 @@ function guaranteeFor(id) {
     }
     return best;
 }
-/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts).
- *  The core.ts heuristic layer (HEURISTIC_CORE_GUARANTEE) is appended as a trailing entry with
- *  `kind: 'heuristic_core'` — it is not a registry detector, so it carries no idPrefixes/family. */
+/** Machine-readable dump (WS2 shape: generated from code, echoable into audit artifacts). */
 function guaranteeManifest() {
     const rows = exports.GUARANTEE_TABLE.map((r) => ({
         ...r,
         estimatedBaseline: r.estimatedBaseline === 'unrecorded' ? 'unrecorded' : { ...r.estimatedBaseline },
     }));
-    return JSON.stringify([...rows, { kind: 'heuristic_core', ...exports.HEURISTIC_CORE_GUARANTEE }], null, 2);
+    return JSON.stringify(rows, null, 2);
 }
 //# sourceMappingURL=guarantees.js.map

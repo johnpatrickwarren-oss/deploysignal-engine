@@ -20,7 +20,6 @@ exports.updateCUSUM = updateCUSUM;
 exports.matchCellByHour = matchCellByHour;
 exports.trafficGateMin = trafficGateMin;
 exports.suppressed = suppressed;
-const audit_1 = require("../types/audit");
 exports.DEFAULT_BAKE = {
     min_ticks_before_eligible: 3,
     min_observation_window: 3,
@@ -103,7 +102,12 @@ function trafficGateMin(cfg) {
 }
 /** Primary SLIs covered by Week-2 Family A. Kept in one place so health.ts,
  *  the compiler, and the parity test agree on the set. */
-exports.FAMILY_A_PRIMARY_SIGNALS = audit_1.LEGACY_DEPLOYSIGNAL_SIGNALS;
+// ADR 0033 residual, named: DeploySignal's six Family A signals are the DEFAULT a detector runs
+// over when a config carries no `family_a_signals`. The registry no longer knows these names
+// (v0.8.0-pre); this list is the last place in the library they appear.
+exports.FAMILY_A_PRIMARY_SIGNALS = Object.freeze([
+    'p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req',
+]);
 function suppressed(signal, reason, state, threshold) {
     // Suppressed verdicts expose the current S_n so the shadow-compare
     // audit output can trace pre-eligibility accumulation. Not a fire, not

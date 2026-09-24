@@ -2,20 +2,26 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { APPROXIMATE_E_VALUE_BY_CONSTRUCTION } from '../guarantees';
-import { DETECTOR_REGISTRY, type DetectorId } from '../types/audit';
+import { detectorRegistryFor, allDetectorIds } from '../types/audit';
 import {
   GUARANTEE_TABLE, guaranteeFor, guaranteeManifest, ESTIMATED_BASELINE_GUARANTEES,
-  HEURISTIC_CORE_GUARANTEE,
 } from '../guarantees';
-import * as core from '../adapters/core';
 import {
   BETTING_E_PROCESS_ENVELOPE, MIXTURE_SUPERMARTINGALE_ENVELOPE,
 } from '../detectors/validity-envelope';
 
-const ALL_IDS: DetectorId[] = [
-  ...DETECTOR_REGISTRY.A, ...DETECTOR_REGISTRY.B, ...DETECTOR_REGISTRY.C,
-  ...DETECTOR_REGISTRY.D, ...DETECTOR_REGISTRY.E,
-];
+// The DeploySignal-shaped fixture: six Family A signals, one Family D signal, sixteen heuristic
+// ids. Since v0.8.0-pre the library ships no registry instance; this fixture keeps the totality
+// proof concrete (the test 'a consumer with its own signals…' proves it for an arbitrary set).
+const SIX_SIGNALS = ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'] as const;
+const SIXTEEN_HEURISTICS = [
+  'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',
+  'slowbleed', 'collective', 'capacity', 'gpu_eff', 'compound_lat',
+  'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
+  'output_len_drift', 'tool_call_degradation', 'quality_warning',
+] as const;
+const FIXTURE_REGISTRY = detectorRegistryFor({ signals: SIX_SIGNALS, familyDSignals: ['kv_cache'], heuristics: SIXTEEN_HEURISTICS });
+const ALL_IDS = allDetectorIds(FIXTURE_REGISTRY);
 
 describe('guarantee table (WORKLIST C4)', () => {
   test('total over the registry: every detector id resolves to exactly one row', () => {
@@ -33,8 +39,8 @@ describe('guarantee table (WORKLIST C4)', () => {
   test('C64 (a): the six safe_t_e_value_* ids are registered and resolve to the terminal e-value row', () => {
     const signals = ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'];
     for (const sig of signals) {
-      const id = `safe_t_e_value_${sig}` as DetectorId;
-      assert.ok((DETECTOR_REGISTRY.A as readonly string[]).includes(id), `${id} not in DETECTOR_REGISTRY.A`);
+      const id = `safe_t_e_value_${sig}`;
+      assert.ok((FIXTURE_REGISTRY.A as readonly string[]).includes(id), `${id} not in the fixture registry`);
       const row = guaranteeFor(id)!;
       assert.equal(row.validityClass, 'e_value_terminal');
       assert.equal(row.alphaPolicy, 'classical_epoch_alpha', 'one look per canary spends alpha once');
@@ -85,32 +91,15 @@ describe('guarantee table (WORKLIST C4)', () => {
       ESTIMATED_BASELINE_GUARANTEES.nuisance_robust_bf_e_value.validUnderEstimatedBaseline, false);
   });
 
-  test('manifest round-trips as JSON with one entry per row plus the heuristic core', () => {
-    const parsed = JSON.parse(guaranteeManifest());
-    assert.equal(parsed.length, GUARANTEE_TABLE.length + 1);
-    const core = parsed[parsed.length - 1];
-    assert.equal(core.kind, 'heuristic_core');
-    assert.equal(core.validityClass, 'heuristic');
-    assert.equal(core.alphaPolicy, 'none');
+  test('manifest round-trips as JSON with one entry per row', () => {
+    const m = JSON.parse(guaranteeManifest());
+    assert.equal(m.length, GUARANTEE_TABLE.length);
   });
 
-  test('the core.ts heuristic layer is covered: heuristic, spends no alpha, exports live', () => {
-    assert.equal(HEURISTIC_CORE_GUARANTEE.validityClass, 'heuristic');
-    assert.equal(HEURISTIC_CORE_GUARANTEE.alphaPolicy, 'none');
-    assert.ok(Object.isFrozen(HEURISTIC_CORE_GUARANTEE));
-    // Every export the entry claims to cover actually exists in core.ts, so the entry
-    // cannot drift from the module it describes.
-    for (const name of HEURISTIC_CORE_GUARANTEE.exports) {
-      assert.ok(name in core, `HEURISTIC_CORE_GUARANTEE covers '${name}' but core.ts does not export it`);
-    }
-  });
-
-  test('the Family B row points at the trend layer that sets its thresholds', () => {
+  test('the Family B row names the trend layer that sets its thresholds, now DeploySignal\'s own', () => {
     const row = guaranteeFor('kv_saturation')!;
-    assert.equal(row.family, 'B');
-    assert.ok(row.implementation.includes('core.ts'),
-      'Family B implementation must name the core.ts trend layer');
-    assert.ok(row.implementation.includes('HEURISTIC_CORE_GUARANTEE'));
+    assert.ok(row.implementation.includes('core.ts'), 'Family B implementation must name the core.ts trend layer');
+    assert.ok(row.implementation.includes('DeploySignal'), 'and say whose it is since v0.8.0-pre');
   });
 });
 
@@ -119,7 +108,6 @@ test('axis 3 is total: every row and the core layer state an approximate-e-value
   for (const row of GUARANTEE_TABLE) {
     assert.ok(row.approximateEValue && row.approximateEValue.form, `${row.detector}: no axis 3`);
   }
-  assert.equal(HEURISTIC_CORE_GUARANTEE.approximateEValue.form, 'not_e_value');
 });
 
 test('axis 3 is consistent with axes 1 and 2', () => {
@@ -169,32 +157,22 @@ test('the manifest carries axis 3 on every row', () => {
 
 
 // ── ADR 0033: the registry is generic; the guarantee table is total over any instance ────────
-import {
-  detectorRegistryFor, allDetectorIds, detectorKindOf, DETECTOR_KINDS,
-  LEGACY_DEPLOYSIGNAL_SIGNALS, LEGACY_DEPLOYSIGNAL_HEURISTICS,
-} from '../types/audit';
+import { detectorKindOf, DETECTOR_KINDS } from '../types/audit';
 
 describe('detector registry (ADR 0033)', () => {
-  test('the DeploySignal instance is the pre-0.7.0 literal list, id for id, in order', () => {
-    const sig = ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req'];
+  test('a six-signal registry is the pre-0.8.0 DeploySignal list, id for id, in order', () => {
+    const sig = [...SIX_SIGNALS];
     const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null']
       .flatMap((k) => sig.map((s) => `${k}_${s}`));
-    assert.deepEqual([...DETECTOR_REGISTRY.A], A);
-    assert.deepEqual([...DETECTOR_REGISTRY.B], [
-      'kv_saturation', 'hbm_elevation', 'hbm_spill_roll', 'mfu_collapse',
-      'slowbleed', 'collective', 'capacity', 'gpu_eff', 'compound_lat',
-      'tok_econ', 'behavioral', 'eval_quality_drop', 'refusal_spike',
-      'output_len_drift', 'tool_call_degradation', 'quality_warning',
-    ]);
-    assert.deepEqual([...DETECTOR_REGISTRY.C], [
+    assert.deepEqual([...FIXTURE_REGISTRY.A], A);
+    assert.deepEqual([...FIXTURE_REGISTRY.B], [...SIXTEEN_HEURISTICS]);
+    assert.deepEqual([...FIXTURE_REGISTRY.C], [
       'hotelling_t2_joint_vector', 'sequential_mmd', 'hotelling_t2_safe', 'sequential_mmd_e_process',
       'sequential_mmd_betting_e_process',
     ]);
-    assert.deepEqual([...DETECTOR_REGISTRY.D], ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache']);
-    assert.deepEqual([...DETECTOR_REGISTRY.E], ['mahalanobis_conformal_baseline']);
+    assert.deepEqual([...FIXTURE_REGISTRY.D], ['spectral_peak_acf_kv_cache', 'spectral_e_detector_kv_cache']);
+    assert.deepEqual([...FIXTURE_REGISTRY.E], ['mahalanobis_conformal_baseline']);
     assert.equal(ALL_IDS.length, 30 + 16 + 5 + 2 + 1);
-    assert.deepEqual([...LEGACY_DEPLOYSIGNAL_SIGNALS], sig);
-    assert.equal(LEGACY_DEPLOYSIGNAL_HEURISTICS.length, 16);
   });
 
   test('a consumer with its own signals gets a registry the guarantee table is total over', () => {

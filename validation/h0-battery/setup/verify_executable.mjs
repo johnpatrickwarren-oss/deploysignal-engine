@@ -4,13 +4,37 @@
 import fs from 'node:fs'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rng, gaussFrom, NULLS } from '../harness/nulls.mjs';
-import { DETECTORS, OUT_OF_SCOPE } from '../harness/detectors.mjs';
+import { DETECTORS, OUT_OF_SCOPE, ONSET_ARM, ONSET_ARM_PIN } from '../harness/detectors.mjs';
 
 const STUDY = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const fail = (m) => { console.error(`NOT EXECUTABLE: ${m}`); process.exit(1); };
 
 const pkg = JSON.parse(fs.readFileSync(path.join(STUDY, '..', '..', 'package.json'), 'utf8'));
-if (pkg.version !== '0.6.6-pre') fail(`engine is ${pkg.version}, pinned to 0.6.6-pre`);
+// Amendment A5: the onset-mixture arm carries its own engine pin (A5.5.3); the original
+// registration's pin is unchanged for full-battery runs.
+const ARM = process.argv.includes('--arm') ? process.argv[process.argv.indexOf('--arm') + 1] : null;
+const PIN = ARM === 'onset-mixture' ? ONSET_ARM_PIN.engine_version : '0.6.6-pre';
+if (pkg.version !== PIN) fail(`engine is ${pkg.version}, pinned to ${PIN}${ARM ? ` for arm ${ARM}` : ''}`);
+if (ARM === 'onset-mixture') {
+  // A5.5.3 — the arm's own smoke checks, on N1 draws, T = 300.
+  const T = 300;
+  for (const d of ONSET_ARM) {
+    const r = rng(3); const src = gaussFrom(r);
+    const cfg = { mu: 0, sigma: 1, phi: 0, alpha: 0.05, windows: 'disjoint', ticks: T };
+    const inst = d.make(cfg); const before = inst.logM();
+    let firedBeforeHorizon = false;
+    for (let t = 0; t < T; t++) { const f = inst.step(src()); if (f && t < T - 1) firedBeforeHorizon = true; }
+    if (inst.logM() === before) fail(`${d.id} never advances its wealth — it would pass every null vacuously`);
+    if (d.id.includes('normalized') && firedBeforeHorizon) fail(`${d.id} is the terminal instrument and fired before t = T−1`);
+  }
+  const geo = ONSET_ARM.find((d) => d.id === 'family_A_onset_mixture_geometric_gaussian');
+  const r = rng(11); const src = gaussFrom(r);
+  const inst = geo.make({ mu: 0, sigma: 1, phi: 0, alpha: 0.05, windows: 'disjoint', ticks: T });
+  let firedAt = -1;
+  for (let t = 0; t < T; t++) { if (inst.step(src() + (t >= 100 ? 3 : 0))) { firedAt = t; break; } }
+  if (firedAt < 100 || firedAt > 300) fail(`geometric gaussian arm did not fire on a 3σ step within 200 ticks (fired at ${firedAt})`);
+  console.log(`  arm smoke: four adapters advance; terminal arms wait for t = T−1; 3σ step fires the geometric arm at t=${firedAt}`);
+}
 
 for (const d of DETECTORS) {
   const r = rng(3); const src = gaussFrom(r);

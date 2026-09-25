@@ -1,0 +1,18 @@
+{
+  "detector": "family_A_onset_mixture_normalized_bounded",
+  "family": "A",
+  "null_id": "N2-m100",
+  "null_label": "iid Gaussian, estimated params m=100",
+  "alpha": 0.01,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 31,
+  "fire_rate": 0.0155,
+  "lower_95": 0.011566915146313113,
+  "verdict": "FAIL",
+  "mean_logM": -2.2124901984414005,
+  "mode": "live",
+  "engine_version": "0.9.0-pre",
+  "git_sha": "2c604f7fb45ccf7dd7a8191c400bdc382807b1c7",
+  "scored": true
+}

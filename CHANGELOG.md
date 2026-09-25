@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **The onset-mixture row's evidence is now the engine's own** (h0-battery Amendment A5,
+  `run-20260925T023228Z`): `guarantees.ts` replaces "Engine H0-battery cell: not yet run" with the
+  measured picture — every Gaussian-oracle null not refuted for all four arms, N2-m30 FAIL for all,
+  estimated φ FAIL for the bounded arms, heavy tails 0.000 for the bounded arms and not refuted on
+  the crossing-rate instrument for the Gaussian arms (registered FAIL expectation not confirmed;
+  the increment mean is the follow-up). Library text only; no arithmetic changed.
+
 ## v0.9.0-pre — 2026-09-24
 
 Cut so Tessera can take `tools/mixture-evalue.ts` and `supAdjuster` as re-exports (ADR 0034) and

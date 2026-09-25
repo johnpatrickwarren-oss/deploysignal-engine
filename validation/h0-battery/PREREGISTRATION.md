@@ -1588,3 +1588,136 @@ immediately after the first live run. Per A4.5: instrument defect, fixed in the 
 manifest in the applied C1.6 array shape (all four detectors). Corpus census arithmetic
 unchanged from A4.4: 2416 → 2428 (the superseded run's 12 drop, the rerun's 12 add); the
 per-study census stays 148.
+
+## Amendment A5 — 2026-09-24, the onset-mixture arm: the promoted e-value object gets its own cell (engine ADR 0034; WORKLIST C83)
+
+Appended before any adapter, harness change or run exists. Engine ADR 0034 (v0.9.0-pre, PR #96)
+promoted Tessera's per-shard e-value object — `normalizedMixtureEValue`, `geometricMixtureEValue`
+with the `gaussian` and `bounded` increments, `√E−1` adjusted — into `detectors/onset-mixture-
+e-value.ts` with two envelopes and a `ville_anytime_valid` guarantee row whose evidence field says,
+verbatim, "Engine H0-battery cell: not yet run (knowledge WORKLIST C83)". This amendment is that
+cell. The row's evidence today is Tessera ADR 0019's measurements on clustersynth and the
+construction's own property tests; this arm measures the construction on the battery's nulls at
+oracle parameters, which is the substrate `knowledge/methodology/test-substrates` routes validity
+questions to.
+
+### A5.1 — The arm: four adapters, two instruments, one class each
+
+The object comes in two mixtures × two increments. Each is a separate adapter, because the class
+of the statistic decides the instrument (Amendment A3; knowledge C26), and the two mixtures are
+different classes:
+
+| adapter id | object | increment | class | instrument |
+|---|---|---|---|---|
+| `family_A_onset_mixture_geometric_gaussian` | `geometricMixtureEValue` | Gaussian-LR | e-process (prefix-monotone; ADR 0034) | **anytime**: at every tick t, e_t = the object on the prefix r₀..r_t; fire iff e_t ≥ 1/α |
+| `family_A_onset_mixture_geometric_bounded` | `geometricMixtureEValue` | linear bounded bet | e-process | anytime, as above |
+| `family_A_onset_mixture_normalized_gaussian` | `normalizedMixtureEValue` | Gaussian-LR | terminal e-value at a fixed horizon (per-look renormalisation; NOT prefix-monotone) | **terminal**: one look at t = T−1; fire iff e_T ≥ 1/α |
+| `family_A_onset_mixture_normalized_bounded` | `normalizedMixtureEValue` | linear bounded bet | terminal e-value | terminal, as above |
+
+The anytime instrument recomputes the promoted function on the growing prefix at every tick
+(O(T²) per trajectory, ≈ 6–8 ms at T = 300, measured before registration) rather than
+re-implementing its recursion in the harness: the harness exercises the shipped code, not a
+transcription of it (knowledge `methodology/harness-discipline`). The terminal instrument reads the
+object once, at the horizon the harness supplies (`cfg.ticks`, A5.5), because re-scoring a growing
+prefix of the normalized mixture is uncovered optional stopping by the object's own documentation.
+
+`logM()` returns log(max(e, 1e-300)) of the arm's last computed value, for S1 as everywhere.
+
+### A5.2 — Registered standardisation, and one comparability note
+
+The object takes a whitened, standardised residual; in Tessera that is `tools/per-shard-whitening`
+(innovation x_t − φ·x_{t−1}, standardised by the fitted innovation scale). The arm standardises
+identically, from the battery's `cfg` (oracle or estimated μ, σ, φ per null):
+
+```
+r_0 = (x_0 − μ) / σ                                      (first tick: no previous value; marginal scale)
+r_t = ((x_t − μ) − φ·(x_{t−1} − μ)) / (σ·√(1 − φ²))     t ≥ 1     (innovation scale)
+```
+
+Under every Gaussian oracle null (N1, N3, N7) this makes r iid N(0,1) exactly, which is the
+envelope's premise; the plug-in nulls (N2, N4) test the centre/scale/φ estimation premise through
+the same formula with hats. **Comparability note, recorded rather than hidden:** the battery's
+`family_A_betting_e_process` adapter lets the engine standardise its whitened residual by the
+*marginal* σ (`betting-e-process.ts:181`, `boundedZ(xWhitened, 0, sigma)`), which under-disperses
+the residual at φ > 0 by √(1−φ²) and makes that arm conservative on N3. This arm does not inherit
+that: its N3 rows are not comparable to the betting arm's N3 rows, and the addendum must say so.
+
+### A5.3 — Sizes, nulls, endpoints
+
+Battery constants unchanged: N = 2000, T = 300, α ∈ {0.05, 0.01} scored + 1e-4 descriptive, the
+registered seed scheme (`SEED = 20260801`, `SEED + i·7919` per trajectory, P2 reusing P1's seeds
+with the 3σ step; `harness/run.mjs:84,138`), disjoint evaluation. **Nulls: N1–N7 and N8** (the
+object is not windowed, so N7 is N1 under another label; reported, not scored twice). **P1
+verbatim** (§4): FAIL iff the exact one-sided 95% lower bound on the fire rate exceeds α. **P2
+verbatim** (§5), for each adapter on N1: 3σ step at tick 100, detect within 200 ticks, FAIL iff
+< 0.50 — unlike A4, P2 runs here, because these are new detectors and a never-firing adapter
+would pass every null vacuously. S1 descriptive.
+
+### A5.4 — Registered expectations
+
+Derived from the envelopes (ADR 0034), the betting row's measured plug-in excess (1.029 / 1.009 /
+1.002 per tick at m = 30 / 100 / 500), and Tessera's property tests. Written before any code.
+
+| null group | gaussian arms (geometric, normalized) | bounded arms (geometric, normalized) | basis |
+|---|---|---|---|
+| N1, N3-p03/p06/p09, N7 (Gaussian, oracle) | **not-refuted**, rate ≤ α | **not-refuted**, rate ≤ α | r is exactly iid N(0,1); E ≤ 1 by construction; Markov (terminal) / Ville on the adjusted running max (anytime) |
+| N2-m30 | **FAIL** | **FAIL** | plug-in centre: a mean-shift the bounded bet is not robust to; scale error compounds the Gaussian increment |
+| N2-m100 | FAIL expected | either | betting row: 1.009 per tick at m = 100 |
+| N2-m500 | either | either | 1.002 per tick |
+| N4-p06/p09-m100 | **FAIL** | either | φ̂ error leaves autocorrelation in r and mis-scales it |
+| N5 (lognormal, oracle) | **FAIL** | **not-refuted** | a standardised lognormal has no finite mgf at any λ > 0, so E[g] = ∞ before the per-tick cap; the bounded bet is exactly mean-one for any mean-zero clipped residual |
+| N6 (t₃, oracle) | **FAIL** | **not-refuted** | t₃ has no mgf; Tessera's test holds the bounded null mean ≤ 1 on t₃ |
+| N8 (AR(1) φ=0.9, t₃ innovations, oracle) | **FAIL** | **not-refuted** | the whitened innovation is t₃ |
+| P2 (3σ, N1) | pass, ≥ 0.95 | pass, ≥ 0.95 | Tessera's tests: 3σ over 300 ticks gives e ≫ 1/α |
+
+Three falsifiers accepted in advance. (i) Any Gaussian-oracle FAIL (N1/N3/N7) is a refutation of
+the construction as ported, scored as such — unless a harness defect is found afterwards, which is
+handled per A4.5 (preserve unscored, fix test-first, rerun), never by re-cutting. (ii) A bounded
+arm FAILing N5 or N6 refutes the bounded envelope's variance-robustness claim. (iii) A P2 FAIL
+makes the arm "not refuted, and not useful" (§5) whatever P1 says. A pass everywhere bounds these
+nulls only; it is not evidence the object is an e-value (§2), and the addendum uses §2's wording.
+
+### A5.5 — Instrument changes, registered
+
+1. `harness/detectors.mjs` gains the four adapters of A5.1, driving `dist/detectors/onset-
+   mixture-e-value.js` — the shipped code — with the standardisation of A5.2.
+2. `harness/run.mjs` gains `--arm onset-mixture`: selects the four adapters, runs N1–N8 and P2
+   for them, and stamps `study: '2026-09-h0-battery-onset-mixture'` with `supersedes: null` —
+   the K6A / A4.6 design, so every registered per-study census (A1.6/A2.4: 148) stays literally
+   true. It also threads `ticks: T` into `cfg` (the terminal instrument's horizon); no existing
+   adapter reads it. Like `--mode` and `--only-null`, the flag selects scope; no generator,
+   detector call, seed or endpoint branches on it.
+3. `setup/verify_executable.mjs` gains `--arm onset-mixture`: the engine pin for this arm is
+   **`v0.9.0-pre` (`f16195b`)**, recorded in the run manifest; the original registration's
+   `0.6.6-pre` pin is unchanged for full-battery runs. The arm's own smoke checks: each adapter
+   advances its wealth on N1 draws; the terminal adapters fire only at t = T−1; the geometric
+   Gaussian adapter fires on a 3σ shift within 200 ticks. Condition §8.3 (the harness reproduces
+   Family D's known N7 failure on the current engine) stays, and stays first.
+4. Report: `ONSET-MIXTURE-ADDENDUM-2026-09-24.md` beside `N8-ADDENDUM-2026-08-18.md`, generated
+   by hand from the run's cell JSON and pinned to it by `tests/test_onset_mixture_addendum.mjs`
+   (every printed rate, bound and verdict; exit non-zero on drift). `analysis/` keeps exactly one
+   script (§8).
+
+### A5.6 — Census and verdict guards
+
+The run appends 156 P1 cells (4 adapters × 13 nulls × 3 α) and 4 P2 cells under study id
+`2026-09-h0-battery-onset-mixture`; the certification corpus census moves **2539 → 2699**, with
+this arithmetic recorded in `collect.test.mjs`. The rows have the same shape as N1–N7 rows, which
+the certification collector filters before any stage, and no card names these adapter ids, so
+**no card verdict, tier or stage token may move**: the re-score after the run must show all 17
+identical; a movement is a stop-and-assess, not a result. No certification card is written by this
+amendment; the card follows the protocol from the run's evidence.
+
+### A5.7 — One attempt
+
+Sim-mode shakedown at small N allowed (git-ignored, never cited); one live run at registered
+size. A mid-run instrument defect: preserve unscored, fix test-first, rerun in full under this
+unchanged amendment.
+
+### A5.8 — Explicitly out of scope
+
+Rack and fleet composition (Tessera-RNG's cascades, Tessera's Mode B on clustersynth); the
+prefix-standardised regime of Tessera's `mode-b/control-contrast` beyond what N2 already measures;
+the per-tick increment estimator (the C26 instrument for test martingales) — the arm's anytime
+instrument is the crossing rate, which is what P1 scores; and the object's power against anything
+but the P2 step.

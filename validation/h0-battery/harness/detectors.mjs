@@ -17,6 +17,7 @@ const spectral = D('spectral');
 const betting = D('betting-e-process');
 const mixture = D('family-a-mixture-supermartingale');
 const hotelling = D('_hotelling-safe');
+const onset = D('onset-mixture-e-value');   // Amendment A5 (engine ADR 0034)
 
 const W = 30, LO = 3, HI = 10;
 
@@ -153,3 +154,57 @@ export const OUT_OF_SCOPE = [
   { id: 'family_E_conformal', reason:
     'The default compiler path emits the `unweighted` kind, which has no wealth process. PREREGISTRATION §3 says report that rather than score it. The forced weighted_e_value kind needs a 20k-draw calibration bundle this harness does not build.' },
 ];
+
+// ── Amendment A5 — the onset-mixture arm (engine ADR 0034; WORKLIST C83) ────────────────────
+//
+// Exported SEPARATELY from DETECTORS, deliberately (the N8_COMBINED pattern): the original
+// registration froze the battery at four detectors, and `--only-null` runs name them. The runner
+// selects this arm with `--arm onset-mixture` (A5.5.2). Each adapter drives the SHIPPED
+// dist/detectors/onset-mixture-e-value.js on the growing prefix — no recursion is transcribed here.
+
+/** A5.2 — the registered standardisation: whiten with the null's phi and scale by the innovation
+ *  sd from the second tick; the first tick has no previous value and takes the marginal scale. */
+function standardiser(cfg) {
+  const phi = cfg.phi ?? 0, mu = cfg.mu, sig = cfg.sigma;
+  const inn = sig * Math.sqrt(Math.max(1 - phi * phi, 1e-12));
+  let prev = null;
+  return (x) => {
+    const c = x - mu;
+    const r = prev === null ? c / sig : (c - phi * prev) / inn;
+    prev = c;
+    return r;
+  };
+}
+
+/** One adapter. `terminal` = the normalized mixture's one look at t = T−1 (A5.1); otherwise the
+ *  anytime instrument on every prefix. `cfg.ticks` is the horizon the runner threads in (A5.5.2). */
+function onsetArm(id, fn, inc, terminal) {
+  return {
+    id, family: 'A', windowed: false,
+    make(cfg) {
+      const std = standardiser(cfg);
+      const r = [];
+      let last = 0;
+      const T = cfg.ticks ?? 300;
+      const thr = 1 / cfg.alpha;
+      return {
+        step(x) {
+          r.push(std(x));
+          if (terminal && r.length < T) return false;
+          last = fn(r, inc);
+          return last >= thr;
+        },
+        logM: () => Math.log(Math.max(last, 1e-300)),
+      };
+    },
+  };
+}
+
+export const ONSET_ARM = [
+  onsetArm('family_A_onset_mixture_geometric_gaussian', onset.geometricMixtureEValue, 'gaussian', false),
+  onsetArm('family_A_onset_mixture_geometric_bounded', onset.geometricMixtureEValue, 'bounded', false),
+  onsetArm('family_A_onset_mixture_normalized_gaussian', onset.normalizedMixtureEValue, 'gaussian', true),
+  onsetArm('family_A_onset_mixture_normalized_bounded', onset.normalizedMixtureEValue, 'bounded', true),
+];
+export const ONSET_ARM_STUDY = '2026-09-h0-battery-onset-mixture';
+export const ONSET_ARM_PIN = { engine_version: '0.9.0-pre', amendment_sha: '81f45d4' };

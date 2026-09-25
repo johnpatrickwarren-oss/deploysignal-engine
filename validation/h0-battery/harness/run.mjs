@@ -11,7 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { rng, gaussFrom, NULLS, N8_COMBINED } from './nulls.mjs';
-import { DETECTORS, OUT_OF_SCOPE } from './detectors.mjs';
+import { DETECTORS, OUT_OF_SCOPE, ONSET_ARM, ONSET_ARM_STUDY, ONSET_ARM_PIN } from './detectors.mjs';
 
 const STUDY = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
@@ -21,6 +21,13 @@ const MODE = arg('--mode', 'sim');
 // original registration and runs on N1). Like --mode, it selects scope; no generator, detector
 // call, seed, or endpoint branches on it. The battery's null set is NULLS + N8 (A4.1).
 const ONLY_NULL = arg('--only-null', null);
+// Amendment A5: --arm onset-mixture selects the four onset-mixture adapters (exported separately
+// from DETECTORS), runs N1–N8 and P2 for them, and stamps the arm's own study id with
+// supersedes: null (the K6A / A4.6 design). Scope only: no generator, detector call, seed or
+// endpoint branches on it.
+const ARM = arg('--arm', null);
+if (ARM !== null && ARM !== 'onset-mixture') { console.error(`unknown --arm ${ARM}`); process.exit(2); }
+const RUN_DETECTORS = ARM === 'onset-mixture' ? ONSET_ARM : DETECTORS;
 // A4.6 — the rerun supersedes the first N8 run (wrong study id), applied C1.6 shape.
 const SUPERSEDES_N8 = [{
   study: '2026-07-h0-battery', run: 'run-20260819T014829Z',
@@ -49,8 +56,9 @@ function trajectory(det, nullSpec, alpha, seed, shift = 0) {
 
   // ORACLE phi is part of "oracle parameters" (§3 N3). Withholding it disables the
   // Q66 AR(1) pre-whitening — the defect that superseded run-20260801T062824Z.
+  // A5.5.2: `ticks` is the terminal instrument's horizon; no pre-A5 adapter reads it.
   const cfg = { mu: 0, sigma: 1, phi: nullSpec.params === 'oracle' ? (nullSpec.phi ?? 0) : 0,
-                alpha, windows: nullSpec.windows };
+                alpha, windows: nullSpec.windows, ticks: T };
 
   if (nullSpec.params === 'estimated') {
     // N4: phi is estimated too, from the same calibration window.
@@ -109,7 +117,7 @@ fs.mkdirSync(path.join(runDir, 'cells'), { recursive: true });
 
 const only = arg('--only', null);
 const cells = [];
-for (const det of DETECTORS) {
+for (const det of RUN_DETECTORS) {
   if (only && det.id !== only) continue;
   for (const nullSpec of BATTERY_NULLS) {
     for (const alpha of [...ALPHAS, SHIPPED_ALPHA]) {
@@ -129,7 +137,7 @@ for (const det of DETECTORS) {
 // ---- P2, the vacuous-pass guard (§5): 3-sigma step at tick 100, detect within 200.
 // A4.3: an --only-null run skips P2 — it belongs to the original registration, on N1.
 const p2 = [];
-for (const det of ONLY_NULL ? [] : DETECTORS) {
+for (const det of ONLY_NULL ? [] : RUN_DETECTORS) {
   if (only && det.id !== only) continue;
   const n1 = NULLS.find((n) => n.id === 'N1');
   let detected = 0;
@@ -149,12 +157,14 @@ for (const det of ONLY_NULL ? [] : DETECTORS) {
 fs.writeFileSync(path.join(runDir, 'manifest.json'), JSON.stringify({
   // A4.6: an --only-null run carries its own study id so the registered per-study censuses
   // (A1.6/A2.4: 148) stay literally true — the K6A class-instrument-arm design.
-  study: ONLY_NULL ? '2026-08-h0-battery-n8' : '2026-07-h0-battery',
+  study: ARM === 'onset-mixture' ? ONSET_ARM_STUDY : ONLY_NULL ? '2026-08-h0-battery-n8' : '2026-07-h0-battery',
+  // A5.5.2/3: the arm's own pin and amendment, so a mismatch is visible in the artifact.
+  ...(ARM === 'onset-mixture' ? { arm: ARM, arm_pin: ONSET_ARM_PIN } : {}),
   mode: MODE, engine_version: engineVersion, git_sha: gitSha,
   registration_sha: '17cc3f8',
   // A4.3: the legacy stamp describes the 2026-08-01 rerun and is wrong provenance for an
   // --only-null run; full-battery runs keep it unchanged.
-  supersedes: ONLY_NULL ? SUPERSEDES_N8 : { priorRun: 'run-20260801T062824Z', defect:
+  supersedes: ARM === 'onset-mixture' ? null : ONLY_NULL ? SUPERSEDES_N8 : { priorRun: 'run-20260801T062824Z', defect:
     'oracle phi was never threaded into the detector config, so N3/N4 ran with AR(1) pre-whitening disabled; and the mixture adapter passed ar1_phi under params where that detector reads it off input, so it never received phi at all. The prior runs measure detectors unaware of phi, not the registered oracle-parameter cell' }, node: process.version, seed: SEED, n: N, ticks: T,
   alphas: ALPHAS, shipped_alpha: SHIPPED_ALPHA, generated_at: stamp,
   out_of_scope: OUT_OF_SCOPE, argv: process.argv.slice(2),

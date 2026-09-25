@@ -194,8 +194,14 @@ export const GUARANTEE_TABLE: readonly GuaranteeRow[] = Object.freeze([
       + 'raw SR sum measured FDP 0.50 / 0.72 at q = 0.1; the convex mixture Mode B FDP 0.099 ≤ q, power '
       + '0.64 on the spatial null. Property tests: empirical E[e|H0] ≤ 1 on iid N(0,1) (both increments), '
       + 'on t3 tails and a 15% scale under-estimate (bounded). The bounded increment carries its own '
-      + 'envelope (ONSET_MIXTURE_BOUNDED_ENVELOPE, variance-robust). Engine H0-battery cell: not yet run '
-      + '(knowledge WORKLIST C83).',
+      + 'envelope (ONSET_MIXTURE_BOUNDED_ENVELOPE, variance-robust). Engine H0 battery, Amendment A5, '
+      + 'run-20260925T023228Z (N = 2000, T = 300, oracle parameters): every Gaussian-oracle null (N1, N3, N7) '
+      + 'not refuted for all four arms at alpha 0.05/0.01 (rates <= 0.001); N2-m30 FAIL for all four (0.21-0.23 '
+      + 'at 0.05, the plug-in centre); estimated phi (N4) FAIL for the bounded arms (0.20 at phi=0.9) and '
+      + 'marginal for the Gaussian; heavy tails (N5 t3-like lognormal, N6, N8): bounded arms 0.000, Gaussian arms '
+      + 'not refuted on the crossing-rate instrument (0.012-0.056) although the registered expectation was FAIL '
+      + '-- the increment mean was not instrumented (A5.8). P2 0.9995-1.0. Not evidence the object is an '
+      + 'e-value (battery section 2).',
     approximateEValue: {
       form: 'epsilon_growing',
       law: 'exact on a true N(0,1) null by construction; under a plug-in centre and scale the SR wealth '

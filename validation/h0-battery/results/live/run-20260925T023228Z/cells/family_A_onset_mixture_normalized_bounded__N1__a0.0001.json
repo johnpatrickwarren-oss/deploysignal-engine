@@ -1,0 +1,18 @@
+{
+  "detector": "family_A_onset_mixture_normalized_bounded",
+  "family": "A",
+  "null_id": "N1",
+  "null_label": "iid Gaussian, oracle params, disjoint windows",
+  "alpha": 0.0001,
+  "n": 2000,
+  "ticks": 300,
+  "fires": 0,
+  "fire_rate": 0,
+  "lower_95": 0,
+  "verdict": "not-refuted",
+  "mean_logM": -2.666531838945974,
+  "mode": "live",
+  "engine_version": "0.9.0-pre",
+  "git_sha": "2c604f7fb45ccf7dd7a8191c400bdc382807b1c7",
+  "scored": false
+}

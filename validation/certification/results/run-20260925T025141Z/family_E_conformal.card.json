@@ -1,0 +1,638 @@
+{
+  "card": {
+    "protocol_version": 1,
+    "detector_id": "family_E_conformal",
+    "aliases": [
+      "mahalanobis_conformal_baseline",
+      "family_E",
+      "family_E_conformal_weighted_e_value"
+    ],
+    "family": "E",
+    "class": "terminal_e_value",
+    "engine_pin": {
+      "version": "0.6.11-pre",
+      "sha": "68b9b2cc548f49986936d7d65a6af9e660bdb864"
+    },
+    "source_files": [
+      {
+        "path": "detectors/conformal.ts",
+        "sha256": "437776bd1b7c2465ea36cfed1297750615c404cbe84d62a3b8ee6c9762a59f7e"
+      },
+      {
+        "path": "../deploysignal/tools/calibrators/family-e.ts",
+        "sha256": "acf8dcd2b217235501e28910edca00a6b4707d0999bfc5c0901cf78b27802ed7"
+      },
+      {
+        "path": "detectors/validity-envelope.ts",
+        "sha256": "c463cefeedd06fc40b383dc8eba3d4996c12b666bb477f62f0f5bf9d9b89ca41"
+      },
+      {
+        "path": "validation/certification/lib/score.mjs",
+        "sha256": "0768c24911219a98f4f6b3c91b76a4e201285abb921add1177232329d392dcda"
+      },
+      {
+        "path": "validation/certification/verdict.mjs",
+        "sha256": "7572c074e60b3b0cefb876660a4073f06a8f8ae29e373ad288259666ee5e720a"
+      },
+      {
+        "path": "validation/certification/lib/collect.mjs",
+        "sha256": "62389a1377c4f3e742c87c17069a4d839ae868e17f152ccef3cb567585e66e37"
+      }
+    ],
+    "guarantee": {
+      "sentence": "weighted_e_value kind: hedged indicator e-value; UNREACHABLE on the shipped path — the auto selector emits the pre-#19 parametric-bootstrap p-value kind because the ESS gate (0.9) never passes (measured 0.86562 at every span)",
+      "quantifiers": [
+        {
+          "text": "P(indicator=1|H0) = alpha_E by construction",
+          "tag": "empirical",
+          "proof_artifact": null
+        }
+      ],
+      "regime": {
+        "phi_max": null,
+        "m_min": null,
+        "baseline": "synthetic chi_p calibration, no real data",
+        "nulls": "gaussian plug-in"
+      }
+    },
+    "shipped_path": {
+      "kind": "p-value (kind: unweighted)",
+      "estimator": null,
+      "notes": "~12.5% of participating budget as a classical path — S4.1 adjudicates this"
+    },
+    "budget": {
+      "participating": true,
+      "alpha_booked": 0.0001,
+      "resolution_claim": null
+    },
+    "falsifier": "the ESS gate passing on a shipped config would falsify the unreachability claim",
+    "prior_evidence": [
+      {
+        "stage": "S1+S2",
+        "study": "detector-audit-arm3",
+        "runs": null,
+        "wiki": "stats/detector-audit-arm3-2026-08-05"
+      },
+      {
+        "stage": "S2",
+        "study": "family-ce-nulls",
+        "runs": "family-ce-nulls/results/live/*",
+        "wiki": "stats/family-ce-nulls-2026-08-03"
+      }
+    ]
+  },
+  "s1": {
+    "status": "DECLARED"
+  },
+  "s2": {
+    "status": "VOID",
+    "perCell": [],
+    "excluded": [
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "run-20260804T054546Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "run-20260804T054812Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "run-20260804T054812Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "run-20260804T054812Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "run-20260804T054842Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "run-20260804T054842Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "run-20260804T054842Z",
+        "reason": "run voided: instrument-class mismatch"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-corr",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-mix-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: ANTI-CONSERVATIVE",
+        "suppressed_verdict": "ANTI-CONSERVATIVE"
+      },
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": "HC-gauss-diag",
+        "__run": "part1-20260804T190210Z",
+        "reason": "run voided: instrument-class mismatch; suppressed verdict: conservative",
+        "suppressed_verdict": "conservative"
+      }
+    ],
+    "missing": [],
+    "mean_rule_overrides": [],
+    "suppressed_verdicts": {
+      "ANTI-CONSERVATIVE": 25,
+      "conservative": 23
+    }
+  },
+  "s3": {
+    "status": "MISSING",
+    "perCell": [],
+    "excluded": [],
+    "missing": [
+      {
+        "detector": "family_E_conformal_weighted_e_value",
+        "null_id": null,
+        "reason": "power cell with no shift_sigma recorded x1: its effect size is unknown, so it cannot be placed at the inertness-floor shift (3) — not scored for INERT"
+      }
+    ],
+    "suppressed_verdicts": {}
+  },
+  "s4": {
+    "status": "REFUSE",
+    "reasons": [
+      "no envelope wiring",
+      "alpha resolution unverifiable",
+      "shipped path is a p-value combination and the budget is participating: unanswered combination question is a refusal, not a pass (C25)"
+    ]
+  },
+  "pairing": [],
+  "overall": {
+    "verdict": "NOT_EXECUTABLE",
+    "tier": null,
+    "regime": {
+      "phi_max": null,
+      "m_min": null,
+      "baseline": "synthetic chi_p calibration, no real data",
+      "nulls": "gaussian plug-in",
+      "excluded_cells": []
+    },
+    "reasons": [
+      "S2 is VOID"
+    ]
+  },
+  "coverage": {
+    "K1": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K2": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K3": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K4": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K5": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    },
+    "K6-slow": {
+      "status": "NO_EVIDENCE",
+      "cells": [],
+      "canonical": null,
+      "excluded": [],
+      "suppressed_verdicts": {}
+    }
+  },
+  "generated_from": {
+    "runs": [
+      "2026-08-family-ce-nulls/run-20260804T054546Z",
+      "2026-08-family-ce-nulls/run-20260804T054812Z",
+      "2026-08-family-ce-nulls/run-20260804T054842Z",
+      "shipped-path-part1/part1-20260804T190210Z"
+    ]
+  }
+}

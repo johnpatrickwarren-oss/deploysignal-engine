@@ -729,7 +729,12 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
   // `detector: 'e_sr_mean_shift_bounded'`; its Gaussian comparator and estimator cells live in
   // comparison.json under `detector_id` and are never loaded. They match no other card, so no
   // existing verdict, stage token or tier moves.
-  assert.equal(ev.cells.length, 2539,
+  // 2539 -> 2699, 2026-09-24, one registered append and its arithmetic (h0-battery Amendment
+  // A5.6): the onset-mixture arm adds 156 P1 cells (4 adapters x 13 nulls x 3 alpha) and 4 P2
+  // cells under study id 2026-09-h0-battery-onset-mixture (the K6A / A4.6 design, so the
+  // per-study censuses above stay literally true). The rows have the N1-N7 shape and no card
+  // names the adapter ids, so no verdict, stage token or tier moves.
+  assert.equal(ev.cells.length, 2699,
     'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12) + the grapa-stability run (6) + the witness-centering run (8) + the e-detector-cert runs (43 + 2) + the e-sr-bounded run (52); no surviving cell is dropped');
   const drops = ev.runs.filter((r) => r.superseded)
     .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);

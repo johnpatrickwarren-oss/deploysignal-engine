@@ -119,11 +119,16 @@ export const ONSET_MIXTURE_GAUSSIAN_ENVELOPE: Readonly<ValidityEnvelope> = Objec
   variance: 'stable',
   validUnderEstimatedBaseline: false,
   statistic: 'e-value',
+  // ADR 0035: the tail premise the gate now asks for. Measured (h0-battery A6): 0.9968 on N(0,1),
+  // 1.61 on t3, 1.91 on a σ-0.75 lognormal.
+  tailPremise: 'mgf',
   notes: 'Convex onset mixture of SR e-processes with Gaussian-LR increments, √E−1 adjusted: an e-value by '
     + 'construction on a valid N(0,1) residual (Tessera ADR 0019: Mode B FDP 0.099 ≤ q = 0.1 on the '
     + 'spatial null; the raw SR sum it replaced measured FDP 0.50 / 0.72). Assumes the residual is '
     + 'already whitened and standardised; does not certify the null. Plug-in centre and scale: valid '
-    + 'only with a TRUE baseline or m ≫ n.',
+    + 'only with a TRUE baseline or m ≫ n. NOT an e-value under heavy tails: the capped increment\'s mean '
+    + 'is 1.61 on t3 and 1.91 on a σ = 0.75 lognormal (engine H0 battery A6), so the gate asks for '
+    + '{ lightTails } or { incrementMonitorPassing } (ADR 0035).',
 });
 
 /** The 'bounded' increment: E[g_λ | F] = 1 for any conditionally mean-zero CLIPPED residual — any
@@ -140,10 +145,14 @@ export const ONSET_MIXTURE_BOUNDED_ENVELOPE: Readonly<ValidityEnvelope> = Object
   variance: 'robust',
   validUnderEstimatedBaseline: false,
   statistic: 'e-value',
+  // ADR 0035: the tail premise the gate now asks for. Measured (h0-battery A6): 1.0000 at every λ on
+  // N(0,1) and t3; 1.0009-1.0083 for λ < 0 on a σ-0.75 lognormal.
+  tailPremise: 'clip-mean-zero',
   notes: 'Convex onset mixture of SR e-processes with linear bounded bets (clip 3, eight ±λ), √E−1 adjusted: '
     + 'mean-one increments for any mean-zero CLIPPED residual — any symmetric tail, any scale error (Tessera '
     + 'ADR 0019 W1; property tests; engine H0 battery A6: 1.0000 at every λ on N(0,1) and t3). A skewed tail '
     + 'is not clip-mean-zero: the wealths betting against the skew have E[g_λ] > 1 (A6: 1.0009–1.0083 on a '
-    + 'σ = 0.75 lognormal) and the mixed capital grows with the horizon. The plug-in CENTRE remains: valid '
-    + 'only with a TRUE baseline or m ≫ n.',
+    + 'σ = 0.75 lognormal) and the mixed capital grows with the horizon; the gate asks for { clipMeanZero } '
+    + 'or { incrementMonitorPassing } (ADR 0035). The plug-in CENTRE remains: valid only with a TRUE '
+    + 'baseline or m ≫ n.',
 });

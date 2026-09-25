@@ -121,3 +121,65 @@ test('every mapped envelope satisfies the type at runtime too', () => {
     assert.ok(env.baseline && env.autocorrelation && env.null && env.variance, `${id}`);
   }
 });
+
+// ── ADR 0035: the tail premise ──────────────────────────────────────────────────────────────────
+
+import { freshCalibrationMonitor, updateCalibration, freshIncrementEstimator, updateIncrementEstimator, incrementEstimate, gInc } from '../fleet/calibration-monitor';
+import { INCREMENT_MEAN_BOUND } from '../detectors/validity-envelope';
+
+test('ADR 0035: an envelope carrying a tail premise refuses fit ≫ horizon alone, names the premise, and admits the matching promise', () => {
+  // h0-battery Amendment A6 (inc-20260925T044059Z): Gaussian increment 1.61 on t3 / 1.91 on the
+  // lognormal; bounded increment 1.0009-1.0083 for the negative-λ wealths on the lognormal.
+  assert.equal(envelopeFor('onset_mixture_gaussian')!.tailPremise, 'mgf');
+  assert.equal(envelopeFor('onset_mixture_bounded')!.tailPremise, 'clip-mean-zero');
+  assert.throws(
+    () => eBenjaminiHochbergGuarded([ok('onset_mixture_gaussian', 50, { assertions: { mMuchGreaterThanN: true } })], 0.1),
+    /mgf exists.*1\.61 on t3.*no increment mean was measured/s, 'the Gaussian premise is named with its measurement');
+  assert.throws(
+    () => eBenjaminiHochbergGuarded([ok('onset_mixture_bounded', 50, { assertions: { mMuchGreaterThanN: true } })], 0.1),
+    /CLIPPED residual.*1\.0009-1\.0083/s, 'the bounded premise is named with its measurement');
+  assert.doesNotThrow(() => eBenjaminiHochbergGuarded([ok('onset_mixture_gaussian', 50, { assertions: { mMuchGreaterThanN: true, lightTails: true } })], 0.1));
+  assert.doesNotThrow(() => eBenjaminiHochbergGuarded([ok('onset_mixture_bounded', 50, { assertions: { mMuchGreaterThanN: true, clipMeanZero: true } })], 0.1));
+  // the wrong premise's promise does not transfer
+  assert.throws(() => eBenjaminiHochbergGuarded([ok('onset_mixture_gaussian', 50, { assertions: { mMuchGreaterThanN: true, clipMeanZero: true } })], 0.1), /mgf exists/);
+  assert.throws(() => eBenjaminiHochbergGuarded([ok('onset_mixture_bounded', 50, { assertions: { mMuchGreaterThanN: true, lightTails: true } })], 0.1), /CLIPPED residual/);
+  // the tail assertion does not replace the baseline one
+  assert.throws(() => eBenjaminiHochbergGuarded([ok('onset_mixture_gaussian', 50, { assertions: { lightTails: true } })], 0.1), /estimated baseline/);
+});
+
+test('ADR 0035: a measured increment mean clears without a promise, refutes over any promise, and falls back to the promise when inconclusive', () => {
+  assert.equal(INCREMENT_MEAN_BOUND, 1.0005);
+  const g = (assertions: object) => () => eBenjaminiHochbergGuarded([ok('onset_mixture_gaussian', 50, { assertions: { mMuchGreaterThanN: true, ...assertions } })], 0.1);
+  assert.doesNotThrow(g({ incrementMean: { lower95: 0.9952, upper95: 0.9983 } }), 'A6 N1: CLEARED');
+  assert.throws(g({ incrementMean: { lower95: 1.5997, upper95: 1.6157 }, lightTails: true }), /REFUTES.*no promise overrides/s, 'A6 N6: REFUTED, the promise does not save it');
+  assert.throws(g({ incrementMean: { lower95: 0.99, upper95: 1.01 } }), /inconclusive/, 'a short feed: inconclusive, no promise');
+  assert.doesNotThrow(g({ incrementMean: { lower95: 0.99, upper95: 1.01 }, lightTails: true }), 'a short feed with the promise');
+  const b = (assertions: object) => () => eBenjaminiHochbergGuarded([ok('onset_mixture_bounded', 50, { assertions: { mMuchGreaterThanN: true, ...assertions } })], 0.1);
+  assert.throws(b({ incrementMean: { lower95: 1.00808, upper95: 1.00858 }, clipMeanZero: true }), /REFUTES/, 'A6 N5 λ = −0.9');
+  assert.doesNotThrow(b({ incrementMean: { lower95: 0.99971, upper95: 1.00021 } }), 'A6 N6 λ = −0.9: CLEARED');
+});
+
+test('ADR 0035: envelopes without a tail premise are unchanged — the premise is unrecorded for them, not waived', () => {
+  for (const id of ['betting_e_process', 'page_cusum_mixture_supermartingale', 'contrast_null_mixture']) {
+    assert.equal(envelopeFor(id)!.tailPremise, undefined, id);
+    assert.doesNotThrow(() => eBenjaminiHochbergGuarded([ok(id, 50, { assertions: { mMuchGreaterThanN: true } })], 0.1), id);
+  }
+});
+
+test('ADR 0035: why the Ville monitor\'s verdict is not a tail assertion — on t3 it barely revokes while the increment estimator refutes', () => {
+  // ∏ g drifts at E[log g], negative under a heavy tail even when E[g] = 1.6. Seeds fixed; 100 feeds × 2000 ticks.
+  const mul = (seed: number) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+  const gaussFrom = (r: () => number) => () => { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const t3 = (g: () => number) => () => { const z = g(); const chi = g() ** 2 + g() ** 2 + g() ** 2; return (z / Math.sqrt(chi / 3)) / Math.sqrt(3); };
+  let revoked = 0;
+  const est = freshIncrementEstimator();
+  for (let i = 0; i < 100; i++) {
+    const src = t3(gaussFrom(mul(1000 + i)));
+    const m = freshCalibrationMonitor({ alpha: 0.01, incrementKind: 'gaussian' });
+    for (let t = 0; t < 2000; t++) { const r = src(); updateCalibration(m, r); updateIncrementEstimator(est, Math.log(gInc(r))); }
+    if (!m.passing) revoked++;
+  }
+  const e = incrementEstimate(est);
+  assert.ok(revoked <= 10, `the monitor revoked ${revoked}/100 t3 feeds — expected a handful (measured 1.25% at 400 feeds)`);
+  assert.ok(e.lower95 > INCREMENT_MEAN_BOUND && e.mean > 1.4, `the estimator on the same 200,000 increments: mean ${e.mean.toFixed(3)}, lower95 ${e.lower95.toFixed(3)} — a refutation`);
+});

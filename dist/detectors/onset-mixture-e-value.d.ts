@@ -26,8 +26,12 @@ export declare function geometricMixtureEValue(r: ReadonlyArray<number>, inc?: I
  *  plug-in, so a 10% under-estimate moves the null increment mean from ~0.5 to ~7.6 (Tessera audit
  *  F7) and E[e|H0] grows with the horizon at fixed calibration like every plug-in wealth here. */
 export declare const ONSET_MIXTURE_GAUSSIAN_ENVELOPE: Readonly<ValidityEnvelope>;
-/** The 'bounded' increment: E[g_λ | F] = 1 for any conditionally mean-zero clipped residual — any
- *  tail, any standardising-scale error (Tessera test: t3 tails and a 15% scale under-estimate both
- *  hold E ≤ 1 where the Gaussian increment breaks). The surviving nuisance is the CENTRE. */
+/** The 'bounded' increment: E[g_λ | F] = 1 for any conditionally mean-zero CLIPPED residual — any
+ *  symmetric tail, any standardising-scale error (Tessera test: t3 tails and a 15% scale
+ *  under-estimate both hold E ≤ 1 where the Gaussian increment breaks). A mean-zero raw residual
+ *  with a skewed tail is NOT clip-mean-zero: clipping at ±3 removes mass from the long side, and
+ *  the wealths betting against the skew then have E[g_λ] > 1 (h0-battery Amendment A6,
+ *  inc-20260925T044059Z: lognormal σ = 0.75 gives 1.0009 to 1.0083 for λ = −0.1 to −0.9). The
+ *  surviving nuisances are the CENTRE and the clip-mean. */
 export declare const ONSET_MIXTURE_BOUNDED_ENVELOPE: Readonly<ValidityEnvelope>;
 //# sourceMappingURL=onset-mixture-e-value.d.ts.map

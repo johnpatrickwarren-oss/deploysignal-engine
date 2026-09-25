@@ -132,9 +132,13 @@ exports.ONSET_MIXTURE_GAUSSIAN_ENVELOPE = Object.freeze({
         + 'already whitened and standardised; does not certify the null. Plug-in centre and scale: valid '
         + 'only with a TRUE baseline or m ≫ n.',
 });
-/** The 'bounded' increment: E[g_λ | F] = 1 for any conditionally mean-zero clipped residual — any
- *  tail, any standardising-scale error (Tessera test: t3 tails and a 15% scale under-estimate both
- *  hold E ≤ 1 where the Gaussian increment breaks). The surviving nuisance is the CENTRE. */
+/** The 'bounded' increment: E[g_λ | F] = 1 for any conditionally mean-zero CLIPPED residual — any
+ *  symmetric tail, any standardising-scale error (Tessera test: t3 tails and a 15% scale
+ *  under-estimate both hold E ≤ 1 where the Gaussian increment breaks). A mean-zero raw residual
+ *  with a skewed tail is NOT clip-mean-zero: clipping at ±3 removes mass from the long side, and
+ *  the wealths betting against the skew then have E[g_λ] > 1 (h0-battery Amendment A6,
+ *  inc-20260925T044059Z: lognormal σ = 0.75 gives 1.0009 to 1.0083 for λ = −0.1 to −0.9). The
+ *  surviving nuisances are the CENTRE and the clip-mean. */
 exports.ONSET_MIXTURE_BOUNDED_ENVELOPE = Object.freeze({
     baseline: 'plug-in',
     autocorrelation: 'iid',
@@ -143,8 +147,10 @@ exports.ONSET_MIXTURE_BOUNDED_ENVELOPE = Object.freeze({
     validUnderEstimatedBaseline: false,
     statistic: 'e-value',
     notes: 'Convex onset mixture of SR e-processes with linear bounded bets (clip 3, eight ±λ), √E−1 adjusted: '
-        + 'mean-one increments for any mean-zero clipped residual, so scale error and heavy tails do not break '
-        + 'E ≤ 1 (Tessera ADR 0019 W1; property tests). The plug-in CENTRE remains: valid only with a TRUE '
-        + 'baseline or m ≫ n.',
+        + 'mean-one increments for any mean-zero CLIPPED residual — any symmetric tail, any scale error (Tessera '
+        + 'ADR 0019 W1; property tests; engine H0 battery A6: 1.0000 at every λ on N(0,1) and t3). A skewed tail '
+        + 'is not clip-mean-zero: the wealths betting against the skew have E[g_λ] > 1 (A6: 1.0009–1.0083 on a '
+        + 'σ = 0.75 lognormal) and the mixed capital grows with the horizon. The plug-in CENTRE remains: valid '
+        + 'only with a TRUE baseline or m ≫ n.',
 });
 //# sourceMappingURL=onset-mixture-e-value.js.map

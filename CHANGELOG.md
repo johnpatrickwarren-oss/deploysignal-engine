@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **The increment mean of the onset-mixture object is measured** (h0-battery Amendment A6,
+  `inc-20260925T044059Z`, 45 cells, 4,000,000 pooled increments each, engine `incrementEstimate`):
+  the Gaussian-LR increment is at mean 0.9968 on N(0,1) and REFUTED on heavy tails (1.608 on t₃,
+  1.912 on a σ = 0.75 lognormal) — the statement A5 registered and could not see on the crossing
+  rate; the bounded increment is 1.0000 at every λ on N(0,1) and t₃ and, on the skewed lognormal,
+  above 1 by 0.0009–0.0083 for the four negative-λ wealths. All 45 cells within the tolerance of
+  the quadrature registered before the harness existed. **Corrections the run forces (A6.7):**
+  `ONSET_MIXTURE_BOUNDED_ENVELOPE`'s note no longer says "any tail" — mean-one holds for any
+  clip-mean-zero residual, which a symmetric tail gives and a skewed one does not; the
+  `onset_mixture_` row's evidence carries the increment means and its axis-3 law states the
+  Gaussian increment's 1.6ᵀ growth under heavy tails and the bounded increment's measured
+  per-tick excess under skew. Certification census 2699 → 2744 under the arm's own study id;
+  no card verdict moves. Library text only; no arithmetic changed.
 - **The onset-mixture row's evidence is now the engine's own** (h0-battery Amendment A5,
   `run-20260925T023228Z`): `guarantees.ts` replaces "Engine H0-battery cell: not yet run" with the
   measured picture — every Gaussian-oracle null not refuted for all four arms, N2-m30 FAIL for all,

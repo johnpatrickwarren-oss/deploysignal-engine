@@ -1,0 +1,45 @@
+{
+  "study": "2026-09-h0-battery-onset-mixture-increment",
+  "arm": "A6",
+  "mode": "live",
+  "engine_version": "0.9.0-pre",
+  "git_sha": "c9de2de7ce38b88e4e586496616a74ab9d07870d",
+  "registration_commit": "126023a",
+  "supersedes": null,
+  "node": "v25.9.0",
+  "seed": 20260924,
+  "n": 2000,
+  "ticks": 2000,
+  "nulls": [
+    "N1",
+    "N3-p09",
+    "N5",
+    "N6",
+    "N8"
+  ],
+  "kinds": [
+    "gaussian",
+    "bounded_lp01",
+    "bounded_lp03",
+    "bounded_lp06",
+    "bounded_lp09",
+    "bounded_lm01",
+    "bounded_lm03",
+    "bounded_lm06",
+    "bounded_lm09"
+  ],
+  "bound": 1.0005,
+  "generator_variances": {
+    "N1": 1.0008641728790633,
+    "N3-p09": 1.000867307196055,
+    "N5": 0.9948216347440209,
+    "N6": 0.9829639187807312,
+    "N8": 0.9829682338456995
+  },
+  "not_executable": null,
+  "generated_at": "20260925T044059Z",
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

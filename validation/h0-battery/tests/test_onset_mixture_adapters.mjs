@@ -3,6 +3,7 @@
 // instrument waits for the horizon, a verified fire on an obvious signal, a verified no-fire on clean
 // data, and the arm drives the shipped module (no transcription).
 import { test } from 'node:test';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { rng, gaussFrom } from '../harness/nulls.mjs';
@@ -18,7 +19,12 @@ test('the arm is four adapters with the registered ids, study id and pin', () =>
     'family_A_onset_mixture_normalized_gaussian', 'family_A_onset_mixture_normalized_bounded',
   ]);
   assert.equal(ONSET_ARM_STUDY, '2026-09-h0-battery-onset-mixture');
-  assert.equal(ONSET_ARM_PIN.engine_version, require('../../../package.json').version);
+  // The pin is the version the arm was registered and run at (A5.4.1), not the live package: a
+  // later engine release does not move a registered run. Compared against the canonical run's
+  // manifest, which the addendum cites.
+  const manifest = JSON.parse(fs.readFileSync(new URL('../results/live/run-20260925T023228Z/manifest.json', import.meta.url), 'utf8'));
+  assert.equal(ONSET_ARM_PIN.engine_version, manifest.engine_version);
+  assert.equal(ONSET_ARM_PIN.engine_version, '0.9.0-pre');
 });
 
 test('A5.2 standardisation: marginal scale on the first tick, innovation scale after, whitened at phi', () => {

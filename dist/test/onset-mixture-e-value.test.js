@@ -208,7 +208,15 @@ function lockstepAgainstTessera(streams = 120) {
     strict_1.default.equal(row.estimatedBaseline, onset_mixture_e_value_1.ONSET_MIXTURE_GAUSSIAN_ENVELOPE, 'the live envelope object, not a copy');
     strict_1.default.equal(row.approximateEValue.form, 'epsilon_growing');
     strict_1.default.throws(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'onset_mixture_gaussian', eValue: 50 }], 0.1), /estimated baseline|regime|assert/i);
-    strict_1.default.doesNotThrow(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'onset_mixture_bounded', eValue: 50, assertions: { mMuchGreaterThanN: true } }], 0.1));
+    // ADR 0035: fit ≫ horizon alone no longer admits either id — the tail premise is asked for.
+    strict_1.default.equal(onset_mixture_e_value_1.ONSET_MIXTURE_GAUSSIAN_ENVELOPE.tailPremise, 'mgf');
+    strict_1.default.equal(onset_mixture_e_value_1.ONSET_MIXTURE_BOUNDED_ENVELOPE.tailPremise, 'clip-mean-zero');
+    strict_1.default.throws(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'onset_mixture_bounded', eValue: 50, assertions: { mMuchGreaterThanN: true } }], 0.1), /CLIPPED residual/);
+    strict_1.default.throws(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'onset_mixture_gaussian', eValue: 50, assertions: { mMuchGreaterThanN: true } }], 0.1), /mgf exists/);
+    strict_1.default.doesNotThrow(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'onset_mixture_bounded', eValue: 50, assertions: { mMuchGreaterThanN: true, clipMeanZero: true } }], 0.1));
+    strict_1.default.doesNotThrow(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'onset_mixture_gaussian', eValue: 50, assertions: { mMuchGreaterThanN: true, lightTails: true } }], 0.1));
+    strict_1.default.doesNotThrow(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'onset_mixture_gaussian', eValue: 50, assertions: { mMuchGreaterThanN: true, incrementMean: { lower95: 0.995, upper95: 0.999 } } }], 0.1));
+    strict_1.default.throws(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'onset_mixture_gaussian', eValue: 50, assertions: { mMuchGreaterThanN: true, lightTails: true, incrementMean: { lower95: 1.60, upper95: 1.62 } } }], 0.1), /REFUTES/);
     strict_1.default.deepEqual([...onset_mixture_e_value_1.GEO_RHOS], [1 / 64, 1 / 1024, 1 / 16384]);
     strict_1.default.equal(_bounded_bet_1.BOUND_LAMBDAS.length, 8);
     strict_1.default.equal((0, _bounded_bet_1.gBounded)(0, 0.5), 1);

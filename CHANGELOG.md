@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## v0.10.0-pre — 2026-09-25 — ADR 0035: the tail premise at the gate
+
+Breaking for the guarded e-BH: `onset_mixture_gaussian` and `onset_mixture_bounded` are refused
+under `mMuchGreaterThanN` alone. Consumers re-pin in the PR that adds the assertion (Tessera) or
+pin only (DeploySignal, Tessera-RNG: `contrast_null_*` is unchanged).
+
+- **`ValidityEnvelope.tailPremise`** (`'mgf'` | `'clip-mean-zero'`): the shape property of the
+  standardised residual an increment's E[g|F] ≤ 1 rests on, beyond centre, scale and φ. Carried by
+  the two onset-mixture envelopes, the ones h0-battery Amendment A6 measured (Gaussian increment
+  1.61 on t₃ / 1.91 on the lognormal; bounded negative-λ wealths 1.0009–1.0083 on the lognormal).
+  Absent elsewhere means unrecorded, not waived.
+- **`FdrPathAssertions.incrementMean`** — the measurement: the engine's increment estimator on a
+  believed-null feed with the same increment family, scored at `INCREMENT_MEAN_BOUND` (1.0005) as
+  A6.2 scores it: a refutation refuses over any promise, a clearance admits, inconclusive falls
+  back to the promise. **`lightTails`** / **`clipMeanZero`** — the promises, one per premise.
+  `tailAdmissible` joins `phiAdmissible` inside `isValidForFdrPath` and `assertValidForFdrPath`.
+- **The Ville monitor's `passing` is deliberately not an assertion:** ∏g drifts at E[log g], and
+  the monitor revoked 1.25% of t₃ feeds over 2000 ticks at oracle scale while the estimator read
+  1.6 on the same increments. Where the record shows the Gaussian monitor revoking under heavy
+  tails (T2, the contrast null) the channel is the MAD scale of the fit — 0.656 on unit-variance
+  t₃, 73.5% revoked against 2.5% at oracle scale — not the tail. Both pinned in
+  `test/e-bh-guarded.test.ts`.
+- Engine suite 427 tests, 425 pass, 2 skipped by design.
+
 - **The increment mean of the onset-mixture object is measured** (h0-battery Amendment A6,
   `inc-20260925T044059Z`, 45 cells, 4,000,000 pooled increments each, engine `incrementEstimate`):
   the Gaussian-LR increment is at mean 0.9968 on N(0,1) and REFUTED on heavy tails (1.608 on t₃,

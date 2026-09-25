@@ -77,6 +77,28 @@ export interface ValidityEnvelope {
    *  The decay is smooth, which is an identifiability limit rather than a defect: as φ→1 an AR(1)
    *  null absorbs a sustained mean shift. */
   maxPhiPowered?: number;
+  /** ADR 0035 — the SHAPE premise of the per-tick increment, beyond centre, scale and φ. An
+   *  increment's E[g|F] ≤ 1 rests on a property of the standardised residual's LAW that whitening
+   *  and standardisation do not deliver:
+   *    'mgf'            — the Gaussian-LR increment exp(θr − θ²/2) needs E[exp(θr)] ≤ exp(θ²/2) at
+   *                       the mixture's θ. A t3 or lognormal residual has no mgf; the shipped cap at
+   *                       100 leaves the mean at 1.61 (t3) / 1.91 (lognormal σ 0.75), so E[M_T|H0]
+   *                       grows like 1.6^T (h0-battery Amendment A6, inc-20260925T044059Z).
+   *    'clip-mean-zero' — the linear bounded bet 1 + λ·clip(r)/3 needs E[clip(r)|F] = 0. Symmetric
+   *                       tails give it exactly (A6: 1.0000 at every λ on t3); a SKEWED residual does
+   *                       not — clipping the long side removes mass, and the wealths betting against
+   *                       the skew carry a per-tick excess (A6: 1.0009 to 1.0083 for λ = −0.1 to
+   *                       −0.9 on the lognormal).
+   *  An envelope carrying a premise REFUSES unless the caller supplies `incrementMean` — the
+   *  engine's increment estimator (fleet/calibration-monitor.ts:incrementEstimate) on a believed-null
+   *  feed of this residual with the SAME increment family — whose interval CLEARS the card bound
+   *  (upper95 < 1.0005), or asserts the premise as a promise (`lightTails` for 'mgf',
+   *  `clipMeanZero` for 'clip-mean-zero') when the interval is inconclusive or absent. A measured
+   *  REFUTATION (lower95 > 1.0005) refuses regardless of any promise.
+   *  Absent ⇒ the premise is UNRECORDED for this envelope, not absent: the plug-in Gaussian
+   *  wealths (betting, mixture supermartingale, contrast) carry the 'mgf' premise structurally and
+   *  no increment-mean cell has measured them (knowledge WORKLIST C83). */
+  tailPremise?: 'mgf' | 'clip-mean-zero';
   /** Free-text regime detail (the conditions, the failure mode, the valid-only-when). */
   notes?: string;
 }
@@ -137,6 +159,46 @@ export interface FdrPathAssertions {
    *  at every site that makes it, rather than a silent default. Use it only where the regime is
    *  known to be far from a unit root by other means. */
   phiUnmeasuredAccepted?: boolean;
+  /** ADR 0035 — the standardised residual is light-tailed enough for the Gaussian-LR increment:
+   *  its mgf exists at the mixture's bets (sub-Gaussian, or known by other means). Satisfies an
+   *  envelope whose `tailPremise` is 'mgf' when `incrementMean` is absent or inconclusive. A
+   *  promise, greppable at the site that makes it; the measurement is `incrementMean`. */
+  lightTails?: boolean;
+  /** ADR 0035 — the CLIPPED residual is conditionally mean-zero (a symmetric tail gives it; a
+   *  skewed tail does not). Satisfies an envelope whose `tailPremise` is 'clip-mean-zero' when
+   *  `incrementMean` is absent or inconclusive. */
+  clipMeanZero?: boolean;
+  /** ADR 0035 — the MEASURED per-tick increment mean on a believed-null feed of this residual, from
+   *  the engine's increment estimator (fleet/calibration-monitor.ts:incrementEstimate) run with the
+   *  SAME increment family as the e-value (Tessera ADR 0027 coherence): the C26 instrument, the one
+   *  h0-battery Amendment A6 used. Scored as A6.2 scores it against the card bound
+   *  INCREMENT_MEAN_BOUND: lower95 above it REFUTES the premise and refuses regardless of any promise;
+   *  upper95 below it CLEARS it; anything else is inconclusive and falls back to the promise.
+   *
+   *  Why the Ville monitor's `passing` is NOT accepted here: ∏g drifts at E[log g], which stays
+   *  negative under a heavy tail even when E[g] = 1.6 — the monitor with the Gaussian increment
+   *  revoked 1.25% of t3 feeds and 4.25% of σ-0.75 lognormal feeds over 2000 ticks at α = 0.01, the
+   *  bounded monitor 4% of lognormal feeds at 2000 ticks and 12% at 5000 (test/e-bh-guarded.test.ts,
+   *  ADR 0035). That is A5's crossing-rate blindness at the monitor. The estimator sees the mean. */
+  incrementMean?: { lower95: number; upper95: number };
+}
+
+/** The card-falsifier bound every certified test-martingale card carries for the increment mean
+ *  (validation/certification/lib/constants.mjs, h0-battery A3.4 / A6.2). */
+export const INCREMENT_MEAN_BOUND = 1.0005;
+
+/** ADR 0035 — does the caller satisfy the envelope's tail premise? An envelope without one is
+ *  unconstrained here (UNRECORDED, not safe — see `tailPremise`). A measured refutation wins over a
+ *  promise; a measured clearance needs no promise; an inconclusive or absent measurement needs the
+ *  promise matching the premise. */
+export function tailAdmissible(env: ValidityEnvelope, assertions: FdrPathAssertions = {}): boolean {
+  if (env.tailPremise === undefined) return true;
+  const m = assertions.incrementMean;
+  if (m !== undefined) {
+    if (m.lower95 > INCREMENT_MEAN_BOUND) return false;
+    if (m.upper95 < INCREMENT_MEAN_BOUND) return true;
+  }
+  return env.tailPremise === 'mgf' ? Boolean(assertions.lightTails) : Boolean(assertions.clipMeanZero);
 }
 
 /** Is an e-value with this envelope admissible to the FDR (e-BH) path? A valid-under-estimated-baseline
@@ -147,6 +209,7 @@ export interface FdrPathAssertions {
 export function isValidForFdrPath(env: ValidityEnvelope, assertions: FdrPathAssertions = {}): boolean {
   if (env.statistic === 'e-detector') return false;
   return phiAdmissible(env, assertions)
+    && tailAdmissible(env, assertions)
     && (env.validUnderEstimatedBaseline
       || Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN));
 }
@@ -177,6 +240,23 @@ export function assertValidForFdrPath(env: ValidityEnvelope, assertions: FdrPath
       + '0.1420 against α=0.05 at φ=0.99. Supply { observedPhi } within the bound, assert '
       + '{ phiUnmeasuredAccepted } if the regime is known far from a unit root by other means, or '
       + 'route this regime to a detector whose envelope covers it. None does above 0.95.',
+    );
+  }
+  if (!tailAdmissible(env, assertions)) {
+    const need = env.tailPremise === 'mgf'
+      ? 'a residual whose mgf exists at the bets (the Gaussian-LR increment): measured 1.61 on t3 and '
+        + '1.91 on a σ-0.75 lognormal, so E[M_T|H0] grows like 1.6^T. Assert { lightTails }'
+      : 'a conditionally mean-zero CLIPPED residual (the bounded bet): a skewed tail leaves the '
+        + 'wealths betting against the skew at 1.0009-1.0083 per tick. Assert { clipMeanZero }';
+    const m = assertions.incrementMean;
+    const measured = m === undefined ? 'no increment mean was measured'
+      : m.lower95 > INCREMENT_MEAN_BOUND
+        ? `the measured increment mean REFUTES it (lower95 ${m.lower95} > ${INCREMENT_MEAN_BOUND}); no promise overrides a measurement`
+        : `the measured interval [${m.lower95}, ${m.upper95}] is inconclusive at ${INCREMENT_MEAN_BOUND}`;
+    throw new Error(
+      `validity-envelope: this increment's E[g|H0] ≤ 1 needs ${need}, or supply { incrementMean } `
+      + 'from the family-coherent increment estimator on a believed-null feed of this residual with '
+      + `upper95 < ${INCREMENT_MEAN_BOUND} — ${measured} (h0-battery Amendment A6, inc-20260925T044059Z; ADR 0035).`,
     );
   }
   if (!isValidForFdrPath(env, assertions)) {

@@ -169,7 +169,15 @@ test('the envelopes are in the guarded map and the guarantee table, and the gate
   assert.equal(row.estimatedBaseline, ONSET_MIXTURE_GAUSSIAN_ENVELOPE, 'the live envelope object, not a copy');
   assert.equal(row.approximateEValue.form, 'epsilon_growing');
   assert.throws(() => eBenjaminiHochbergGuarded([{ detectorId: 'onset_mixture_gaussian', eValue: 50 }], 0.1), /estimated baseline|regime|assert/i);
-  assert.doesNotThrow(() => eBenjaminiHochbergGuarded([{ detectorId: 'onset_mixture_bounded', eValue: 50, assertions: { mMuchGreaterThanN: true } }], 0.1));
+  // ADR 0035: fit ≫ horizon alone no longer admits either id — the tail premise is asked for.
+  assert.equal(ONSET_MIXTURE_GAUSSIAN_ENVELOPE.tailPremise, 'mgf');
+  assert.equal(ONSET_MIXTURE_BOUNDED_ENVELOPE.tailPremise, 'clip-mean-zero');
+  assert.throws(() => eBenjaminiHochbergGuarded([{ detectorId: 'onset_mixture_bounded', eValue: 50, assertions: { mMuchGreaterThanN: true } }], 0.1), /CLIPPED residual/);
+  assert.throws(() => eBenjaminiHochbergGuarded([{ detectorId: 'onset_mixture_gaussian', eValue: 50, assertions: { mMuchGreaterThanN: true } }], 0.1), /mgf exists/);
+  assert.doesNotThrow(() => eBenjaminiHochbergGuarded([{ detectorId: 'onset_mixture_bounded', eValue: 50, assertions: { mMuchGreaterThanN: true, clipMeanZero: true } }], 0.1));
+  assert.doesNotThrow(() => eBenjaminiHochbergGuarded([{ detectorId: 'onset_mixture_gaussian', eValue: 50, assertions: { mMuchGreaterThanN: true, lightTails: true } }], 0.1));
+  assert.doesNotThrow(() => eBenjaminiHochbergGuarded([{ detectorId: 'onset_mixture_gaussian', eValue: 50, assertions: { mMuchGreaterThanN: true, incrementMean: { lower95: 0.995, upper95: 0.999 } } }], 0.1));
+  assert.throws(() => eBenjaminiHochbergGuarded([{ detectorId: 'onset_mixture_gaussian', eValue: 50, assertions: { mMuchGreaterThanN: true, lightTails: true, incrementMean: { lower95: 1.60, upper95: 1.62 } } }], 0.1), /REFUTES/);
   assert.deepEqual([...GEO_RHOS], [1 / 64, 1 / 1024, 1 / 16384]);
   assert.equal(BOUND_LAMBDAS.length, 8);
   assert.equal(gBounded(0, 0.5), 1);

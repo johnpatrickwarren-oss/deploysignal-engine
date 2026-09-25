@@ -52,7 +52,14 @@ export const DETECTOR_ENVELOPES: Readonly<Record<string, ValidityEnvelope>> = Ob
   // assertion { mMuchGreaterThanN } (fit >> horizon) or { trueBaseline } (a twin with a known offset).
   contrast_null_mixture: CONTRAST_NULL_ENVELOPE,
   contrast_null_betting: CONTRAST_NULL_ENVELOPE,
-  /** ADR 0034: Tessera's per-shard e-value object for fleet e-BH, by increment kind. */
+  /** ADR 0034: Tessera's per-shard e-value object for fleet e-BH, by increment kind. ADR 0035: both
+   *  envelopes carry a `tailPremise` ('mgf' / 'clip-mean-zero'), so besides { mMuchGreaterThanN } or
+   *  { trueBaseline } the caller supplies { incrementMean } from the family-coherent increment
+   *  estimator on a believed-null feed (cleared at the card bound), or promises { lightTails } /
+   *  { clipMeanZero } where the measurement is inconclusive or absent. h0-battery A6
+   *  measured the Gaussian increment at 1.61 (t3) / 1.91 (lognormal) and the bounded increment's
+   *  negative-λ wealths at 1.0009-1.0083 on the lognormal; fit ≫ horizon alone said nothing about
+   *  either. */
   onset_mixture_gaussian: ONSET_MIXTURE_GAUSSIAN_ENVELOPE,
   onset_mixture_bounded: ONSET_MIXTURE_BOUNDED_ENVELOPE,
 });

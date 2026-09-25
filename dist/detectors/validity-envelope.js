@@ -14,7 +14,8 @@
 // (SCOPING-MEMO-v0.3 § 9 sync policy). The nuisance-robust BF (ADR 0004 PR A) carries its own envelope
 // in its own file (re-exported below) and is retrofitted onto this shared type.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.NUISANCE_ROBUST_BF_ENVELOPE = exports.MIXTURE_SUPERMARTINGALE_ENVELOPE = exports.BETTING_E_PROCESS_ENVELOPE = void 0;
+exports.INCREMENT_MEAN_BOUND = exports.NUISANCE_ROBUST_BF_ENVELOPE = exports.MIXTURE_SUPERMARTINGALE_ENVELOPE = exports.BETTING_E_PROCESS_ENVELOPE = void 0;
+exports.tailAdmissible = tailAdmissible;
 exports.isValidForFdrPath = isValidForFdrPath;
 exports.phiAdmissible = phiAdmissible;
 exports.assertValidForFdrPath = assertValidForFdrPath;
@@ -50,6 +51,25 @@ exports.MIXTURE_SUPERMARTINGALE_ENVELOPE = Object.freeze({
 // not vice-versa.)
 const _bfEnvelopeSatisfiesShared = nuisance_robust_bf_e_value_1.NUISANCE_ROBUST_BF_ENVELOPE;
 void _bfEnvelopeSatisfiesShared;
+/** The card-falsifier bound every certified test-martingale card carries for the increment mean
+ *  (validation/certification/lib/constants.mjs, h0-battery A3.4 / A6.2). */
+exports.INCREMENT_MEAN_BOUND = 1.0005;
+/** ADR 0035 — does the caller satisfy the envelope's tail premise? An envelope without one is
+ *  unconstrained here (UNRECORDED, not safe — see `tailPremise`). A measured refutation wins over a
+ *  promise; a measured clearance needs no promise; an inconclusive or absent measurement needs the
+ *  promise matching the premise. */
+function tailAdmissible(env, assertions = {}) {
+    if (env.tailPremise === undefined)
+        return true;
+    const m = assertions.incrementMean;
+    if (m !== undefined) {
+        if (m.lower95 > exports.INCREMENT_MEAN_BOUND)
+            return false;
+        if (m.upper95 < exports.INCREMENT_MEAN_BOUND)
+            return true;
+    }
+    return env.tailPremise === 'mgf' ? Boolean(assertions.lightTails) : Boolean(assertions.clipMeanZero);
+}
 /** Is an e-value with this envelope admissible to the FDR (e-BH) path? A valid-under-estimated-baseline
  *  e-value (safe-t, the UI e-value) always is. Anything else — the plug-in betting / mixture e-values,
  *  and since the 2026-07-02 correction the nuisance-robust BF too — is admissible ONLY if the caller
@@ -59,6 +79,7 @@ function isValidForFdrPath(env, assertions = {}) {
     if (env.statistic === 'e-detector')
         return false;
     return phiAdmissible(env, assertions)
+        && tailAdmissible(env, assertions)
         && (env.validUnderEstimatedBaseline
             || Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN));
 }
@@ -86,6 +107,21 @@ function assertValidForFdrPath(env, assertions = {}) {
             + '0.1420 against α=0.05 at φ=0.99. Supply { observedPhi } within the bound, assert '
             + '{ phiUnmeasuredAccepted } if the regime is known far from a unit root by other means, or '
             + 'route this regime to a detector whose envelope covers it. None does above 0.95.');
+    }
+    if (!tailAdmissible(env, assertions)) {
+        const need = env.tailPremise === 'mgf'
+            ? 'a residual whose mgf exists at the bets (the Gaussian-LR increment): measured 1.61 on t3 and '
+                + '1.91 on a σ-0.75 lognormal, so E[M_T|H0] grows like 1.6^T. Assert { lightTails }'
+            : 'a conditionally mean-zero CLIPPED residual (the bounded bet): a skewed tail leaves the '
+                + 'wealths betting against the skew at 1.0009-1.0083 per tick. Assert { clipMeanZero }';
+        const m = assertions.incrementMean;
+        const measured = m === undefined ? 'no increment mean was measured'
+            : m.lower95 > exports.INCREMENT_MEAN_BOUND
+                ? `the measured increment mean REFUTES it (lower95 ${m.lower95} > ${exports.INCREMENT_MEAN_BOUND}); no promise overrides a measurement`
+                : `the measured interval [${m.lower95}, ${m.upper95}] is inconclusive at ${exports.INCREMENT_MEAN_BOUND}`;
+        throw new Error(`validity-envelope: this increment's E[g|H0] ≤ 1 needs ${need}, or supply { incrementMean } `
+            + 'from the family-coherent increment estimator on a believed-null feed of this residual with '
+            + `upper95 < ${exports.INCREMENT_MEAN_BOUND} — ${measured} (h0-battery Amendment A6, inc-20260925T044059Z; ADR 0035).`);
     }
     if (!isValidForFdrPath(env, assertions)) {
         throw new Error(`validity-envelope: a '${env.baseline}' e-value is INVALID under an estimated baseline `

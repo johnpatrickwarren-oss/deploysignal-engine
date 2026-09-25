@@ -164,7 +164,7 @@ export const OUT_OF_SCOPE = [
 
 /** A5.2 — the registered standardisation: whiten with the null's phi and scale by the innovation
  *  sd from the second tick; the first tick has no previous value and takes the marginal scale. */
-function standardiser(cfg) {
+export function standardiser(cfg) {
   const phi = cfg.phi ?? 0, mu = cfg.mu, sig = cfg.sigma;
   const inn = sig * Math.sqrt(Math.max(1 - phi * phi, 1e-12));
   let prev = null;

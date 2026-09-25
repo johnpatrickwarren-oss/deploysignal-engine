@@ -147,15 +147,28 @@ exports.GUARANTEE_TABLE = Object.freeze([
             + 'not refuted for all four arms at alpha 0.05/0.01 (rates <= 0.001); N2-m30 FAIL for all four (0.21-0.23 '
             + 'at 0.05, the plug-in centre); estimated phi (N4) FAIL for the bounded arms (0.20 at phi=0.9) and '
             + 'marginal for the Gaussian; heavy tails (N5 t3-like lognormal, N6, N8): bounded arms 0.000, Gaussian arms '
-            + 'not refuted on the crossing-rate instrument (0.012-0.056) although the registered expectation was FAIL '
-            + '-- the increment mean was not instrumented (A5.8). P2 0.9995-1.0. Not evidence the object is an '
-            + 'e-value (battery section 2).',
+            + 'not refuted on the crossing-rate instrument (0.012-0.056) although the registered expectation was FAIL. '
+            + 'P2 0.9995-1.0. Amendment A6, inc-20260925T044059Z (N = 2000, T = 2000, 4e6 pooled increments per cell, '
+            + 'engine incrementEstimate): the per-tick increment MEAN. Gaussian increment on N(0,1) 0.9968 (the cap at '
+            + '100 costs 0.2%); on t3 (N6, N8) 1.608 and on lognormal sigma 0.75 (N5) 1.912 -- REFUTED, the mgf '
+            + 'argument A5 could not see on the crossing rate: the capped Gaussian-LR increment is not an e-value '
+            + 'under heavy tails. Bounded increment 1.0000 +/- 0.0003 at every lambda on N(0,1) and t3; on the skewed '
+            + 'lognormal the clipped residual has mean -0.0277, so the four negative-lambda wealths carry a per-tick '
+            + 'excess of 0.0009 (lambda -0.1) to 0.0083 (lambda -0.9), REFUTED at the 1.0005 card bound, and the '
+            + 'four positive-lambda wealths sit below 1. All 45 cells within the tolerance of the quadrature registered '
+            + 'before the harness existed. Not evidence the object is an e-value (battery section 2).',
         approximateEValue: {
             form: 'epsilon_growing',
-            law: 'exact on a true N(0,1) null by construction; under a plug-in centre and scale the SR wealth '
-                + 'on the residual grows with the horizon at fixed calibration, the n ≫ m price of every plug-in '
-                + 'wealth in this table. Per-tick rate unmeasured for this construction.',
-            source: 'Tessera ADR 0019; test/onset-mixture-e-value.test.ts',
+            law: 'Gaussian increment: exact on a true N(0,1) null by construction (measured 0.9968 with the cap); '
+                + 'NOT an e-value under heavy tails -- the mean of the capped increment is 1.61 on t3 and 1.91 on a '
+                + 'sigma-0.75 lognormal, so E[M_T|H0] grows like 1.6^T (A6, inc-20260925T044059Z). Bounded increment: '
+                + 'exact on any clip-mean-zero residual (measured 1.0000 on N(0,1) and t3, every lambda); on a skewed '
+                + 'residual the clipped mean is not zero and the negative-lambda wealths carry a measured per-tick excess '
+                + 'epsilon_lambda = 0.0009 to 0.0083 (lognormal sigma 0.75), so their E[M_T|H0] grows like '
+                + '(1 + epsilon_lambda)^T and the capital-level average is about 2.8 at T = 300 -- no constant prices it. '
+                + 'Under a plug-in centre and scale, both: the SR wealth on the residual grows with the horizon at fixed '
+                + 'calibration, the n ≫ m price of every plug-in wealth in this table.',
+            source: 'Tessera ADR 0019; test/onset-mixture-e-value.test.ts; h0-battery INCREMENT-ARM-ADDENDUM-2026-09-24.md',
         },
     },
     {

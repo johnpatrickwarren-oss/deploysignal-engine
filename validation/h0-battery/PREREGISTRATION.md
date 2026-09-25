@@ -1721,3 +1721,110 @@ prefix-standardised regime of Tessera's `mode-b/control-contrast` beyond what N2
 the per-tick increment estimator (the C26 instrument for test martingales) — the arm's anytime
 instrument is the crossing rate, which is what P1 scores; and the object's power against anything
 but the P2 step.
+
+## Amendment A6 — 2026-09-24, the increment arm for the onset-mixture object: the instrument A5 left out (WORKLIST C83)
+
+Appended before any harness or run exists. Amendment A5's run (`run-20260925T023228Z`) registered
+that the Gaussian-increment arms would FAIL N5, N6 and N8 because a standardised lognormal or t₃
+residual has no moment generating function, and on the crossing-rate instrument they did not.
+A5.8 had put the increment's mean out of scope. This arm measures it: the per-tick increment is
+the object's whole validity — a convex mixture of SR e-processes is an e-process exactly when
+each increment has conditional mean ≤ 1 — and its marginal mean is the C26 instrument for the
+test-martingale class (`certification/lib/constants.mjs:13`, `increment_estimator`).
+
+### A6.1 — The estimand and the instrument
+
+For each null and each increment kind, the marginal mean of the shipped increment on the
+standardised residual of A5.2: `gInc(r_t)` for the Gaussian kind and `gBounded(r_t, λ)` for each
+of the eight registered λ (`detectors/_bounded-bet.ts`, the functions the object multiplies), read
+through the engine's own estimator `fleet/calibration-monitor.ts:updateIncrementEstimator` /
+`incrementEstimate` (Welford mean of exp(Δ log M), normal-theory 95% interval, `max/mean` as the
+heavy-tail tell). Increments are pooled across trajectories and ticks; after the A5.2 whitening
+they are iid under every null here, which is what the interval assumes. The bounded kind is
+measured per λ because the object mixes the eight λ-wealths at the capital level: each is an
+e-process iff its own increment has mean ≤ 1.
+
+**Nulls:** N1, N3-p09 (the whitening check: identical to N1 after A5.2), N5, N6, N8 — oracle
+parameters throughout. The plug-in nulls are not re-measured: A5 already refutes the object there
+on the crossing rate, and the plug-in mechanism is the betting row's, measured at C58.
+
+### A6.2 — Sizes, seeds, endpoint
+
+N = 2000 trajectories × **T = 2000 ticks** = 4,000,000 increments per cell (T is not the battery's
+300: the estimand is a marginal mean, not a crossing at a horizon, and 300 ticks would leave the
+bounded cells' intervals wider than the bound below at λ = 0.9). Seeds in the A3.3 house pattern,
+`SEED = 20260924`, `rng(SEED + 7919·i + spec.id.length·104729 + kind.length)`. 45 cells:
+5 nulls × (1 Gaussian + 8 bounded λ).
+
+**Endpoint I1, per cell:** `REFUTED` iff `lower95 > 1.0005`; `CLEARED` iff `upper95 < 1.0005`;
+otherwise `inconclusive`. 1.0005 is the card-falsifier bound every certified test-martingale card
+carries (A3.4); the house rule at 1 (`detector-audit PREREGISTRATION §3`) is recorded beside it
+under a name the scorer cannot read. A cell's `max/mean` is reported; a Gaussian-kind cell whose
+interval is optimistic because the cap binds is still scored — the cap is part of the shipped
+increment.
+
+### A6.3 — Registered predictions, derived before any run
+
+*Derivations, not measurements* (A3.6's discipline): numerical quadrature of the shipped `gInc` /
+`gBounded` against the analytic standardised densities, on 2026-09-24, before this amendment was
+written and before any harness existed. No `results/sim/` directory of this arm exists.
+
+| null | Gaussian `E[min(g,100)]` | bounded `E[g_λ] = 1 + λ·E[clip(r)]/3` | prediction |
+|---|---|---|---|
+| N1, N3-p09 (N(0,1) after whitening) | **0.99775** — exactly 1 uncapped, minus the cap's 0.2% | **1.00000** at every λ (`E[clip] = 0`) | Gaussian **CLEARED** (mean within 0.003 of 0.99775); all eight bounded **CLEARED** |
+| N6, N8 (t₃ innovation) | **1.61281** | **1.00000** at every λ (symmetric ⇒ `E[clip] = 0`) | Gaussian **REFUTED** (mean within 0.05 of 1.613); bounded **CLEARED** |
+| N5 (standardised lognormal, σ = 0.75) | **1.91833** | `E[clip] = −0.02772`: λ = +0.1/+0.3/+0.6/+0.9 → 0.99908 / 0.99723 / 0.99446 / 0.99168; λ = −0.1/−0.3/−0.6/−0.9 → **1.00092 / 1.00277 / 1.00554 / 1.00832** | Gaussian **REFUTED** (mean within 0.05 of 1.918); bounded **positive λ CLEARED, all four negative λ REFUTED** |
+
+**What the N5 bounded prediction says, registered here so it cannot be read as post-hoc.** The
+bounded envelope (ADR 0034) states the surviving nuisance is the centre and claims exact
+mean-one for "any conditionally mean-zero *clipped* residual". A skewed null with a mean-zero raw
+residual has a clipped residual that is not mean-zero: clipping the long right tail at +3 removes
+positive mass. The four negative-λ wealths then have increment mean above 1 — by 0.1% to 0.8% —
+and the object's capital-level average carries that inflation, too slowly to cross 1/α in 300
+ticks (A5: 0.000) but as a real E[e|H₀] > 1. If measured, the bounded envelope's notes must be
+amended from "any tail" to "any symmetric tail, or any clip-mean-zero residual", and the
+guarantee row's axis 3 for the bounded increment moves from "exact on a valid null" to an
+`epsilon` form with the measured excess.
+
+**Falsifiers accepted in advance.** (i) A CLEARED Gaussian cell on N5/N6/N8 refutes the mgf
+argument as applied to the capped increment and vindicates A5's surprise. (ii) A CLEARED
+negative-λ bounded cell on N5 refutes the clipping argument. (iii) A measured mean more than the
+stated tolerance from its derived value, in either direction, is a defect in the derivation or
+the harness — reported as a discrepancy, decided test-first, not scored around.
+
+### A6.4 — Not-executable conditions
+
+1. Engine version `0.9.0-pre` at `bbca37f` (post PR #97); recorded in the manifest.
+2. The N1 Gaussian cell's measured mean lies within 0.003 of 0.99775 and is not REFUTED; the N1
+   bounded λ = 0.1 cell is not REFUTED. These are the standardisation and cap-arithmetic checks:
+   a REFUTED N1 is the harness, not the increment.
+3. The t₃ and lognormal generators' standardised draws have unit variance to within 3% on
+   200,000 draws (the same generators `nulls.mjs` gives the battery).
+
+### A6.5 — Instrument changes, registered
+
+1. `harness/run-increment-arm.mjs`, a separate file (A3's precedent, and for the same reason: its
+   output directory is prefixed `inc-`, not `run-`, so `analysis/run_endpoints.mjs` never
+   selects it). It reuses `nulls.mjs` generators and A5.2's standardiser from `detectors.mjs`
+   (exported for it), and the engine's estimator; it re-implements nothing. It writes
+   `results/live/inc-<UTC>/cells/*.json`, `summary.json` and `manifest.json` with study id
+   `2026-09-h0-battery-onset-mixture-increment`, `supersedes: null`, and refuses an existing
+   directory.
+2. `tests/test_increment_arm.mjs`: the smoke checks of A6.4 and that the cell shape carries
+   `increment_estimator` (scorer-readable, so a future card for the object can read these cells)
+   and no other stage key.
+3. Report: `INCREMENT-ARM-ADDENDUM-2026-09-24.md`, pinned by `tests/test_increment_arm_addendum.mjs`.
+
+### A6.6 — Census and verdict guards
+
+45 cells under the arm's own study id: certification corpus census **2699 → 2744**, arithmetic
+recorded in `collect.test.mjs`. The cells carry `increment_estimator` and are therefore validity
+cells to the collector, but no card names their detector ids, so **no card verdict, tier or stage
+token may move**; the re-score must show all 17 identical.
+
+### A6.7 — One attempt; consequences registered
+
+Sim-mode shakedown allowed; one live run. On the measured outcome: the `onset_mixture_` guarantee
+row's evidence is amended with the increment means; if A6.3's N5 prediction holds, the bounded
+envelope's notes and the row's axis 3 are amended as stated above, in the same PR, as a
+correction the run forces — not as a threshold move.

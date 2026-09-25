@@ -46,15 +46,21 @@ test('gate: a plug-in e-value is gated OUT unless its validity regime is asserte
   assert.equal(isValidForFdrPath(BETTING_E_PROCESS_ENVELOPE), false);
   assert.equal(isValidForFdrPath(MIXTURE_SUPERMARTINGALE_ENVELOPE), false);
   // Asserting a true baseline OR m≫n admits it within its regime.
-  assert.equal(isValidForFdrPath(BETTING_E_PROCESS_ENVELOPE, { trueBaseline: true }), true);
-  assert.equal(isValidForFdrPath(BETTING_E_PROCESS_ENVELOPE, { mMuchGreaterThanN: true }), true);
-  assert.equal(isValidForFdrPath(MIXTURE_SUPERMARTINGALE_ENVELOPE, { mMuchGreaterThanN: true }), true);
+  // h0-battery A7 (2026-09-25): both envelopes now carry a tail premise, so the baseline assertion
+  // alone no longer admits — the premise is asserted or measured beside it (ADR 0035).
+  assert.equal(isValidForFdrPath(BETTING_E_PROCESS_ENVELOPE, { trueBaseline: true }), false);
+  assert.equal(isValidForFdrPath(BETTING_E_PROCESS_ENVELOPE, { trueBaseline: true, clipMeanZero: true }), true);
+  assert.equal(isValidForFdrPath(BETTING_E_PROCESS_ENVELOPE, { mMuchGreaterThanN: true, clipMeanZero: true }), true);
+  assert.equal(isValidForFdrPath(MIXTURE_SUPERMARTINGALE_ENVELOPE, { mMuchGreaterThanN: true }), false);
+  assert.equal(isValidForFdrPath(MIXTURE_SUPERMARTINGALE_ENVELOPE, { mMuchGreaterThanN: true, lightTails: true }), true);
+  assert.equal(isValidForFdrPath(MIXTURE_SUPERMARTINGALE_ENVELOPE, { mMuchGreaterThanN: true, incrementMean: { lower95: 0.9999, upper95: 1.0001 } }), true);
 });
 
 test('gate: assertValidForFdrPath throws for an unasserted plug-in e-value, passes otherwise', () => {
   assert.throws(() => assertValidForFdrPath(BETTING_E_PROCESS_ENVELOPE), /INVALID under an estimated baseline/);
   assert.throws(() => assertValidForFdrPath(MIXTURE_SUPERMARTINGALE_ENVELOPE), /INVALID/);
-  assert.doesNotThrow(() => assertValidForFdrPath(BETTING_E_PROCESS_ENVELOPE, { trueBaseline: true }));
+  assert.doesNotThrow(() => assertValidForFdrPath(BETTING_E_PROCESS_ENVELOPE, { trueBaseline: true, clipMeanZero: true }));
+  assert.throws(() => assertValidForFdrPath(BETTING_E_PROCESS_ENVELOPE, { trueBaseline: true }), /CLIPPED residual/);
   // 2026-07-02 correction: the BF is no longer auto-admissible (E[BF|H0] ≈ 1.155); the safe-t /
   // UI envelopes are the valid-under-estimated-baseline objects now.
   assert.throws(() => assertValidForFdrPath(NUISANCE_ROBUST_BF_ENVELOPE), /INVALID/);
@@ -103,7 +109,7 @@ test('guarantee: a plug-in e-value (unasserted) blocks the by-construction FP/FD
   assert.match(c.summary, /INVALID under an estimated baseline/);
   // Asserting the plug-in's regime restores the by-construction claim.
   const asserted = assembleFleetGuaranteeConditions({
-    eValueEnvelope: BETTING_E_PROCESS_ENVELOPE, assertions: { mMuchGreaterThanN: true },
+    eValueEnvelope: BETTING_E_PROCESS_ENVELOPE, assertions: { mMuchGreaterThanN: true, clipMeanZero: true },
     faultFraction: 0.05, genuineCoupling: true, scalarCommonMode: true,
   });
   assert.equal(asserted.fdrGuaranteedByConstruction, true);

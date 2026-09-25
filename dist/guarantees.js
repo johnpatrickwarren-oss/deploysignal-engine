@@ -50,14 +50,23 @@ exports.GUARANTEE_TABLE = Object.freeze([
         validityClass: 'ville_anytime_valid',
         estimatedBaseline: validity_envelope_1.MIXTURE_SUPERMARTINGALE_ENVELOPE,
         alphaPolicy: 'ville_spend',
-        evidence: 'ADR 0004 PR E envelope; plug-in invalidity Tessera ADR 0014 (E[e|H0] -> ~3e9 at n>>m).',
+        evidence: 'ADR 0004 PR E envelope; plug-in invalidity Tessera ADR 0014 (E[e|H0] -> ~3e9 at n>>m). '
+            + 'Engine H0 battery Amendment A7, inc-20260925T174222Z (N = 2000 x T = 2000, oracle parameters, '
+            + 'the per-tick ratio through the battery adapter): 1.00002 on N(0,1) (CLEARED); 0.9983 on AR(1) '
+            + 'phi = 0.9 whitened at the marginal-sigma convention (conservative: the residual variance is '
+            + '0.19 against a claimed 1); DIVERGENT on t3 (pooled mean 1e25) and on a sigma-0.75 lognormal '
+            + '(8e11) at unit scale, REFUTED under the Markov rule; on t3 innovations under AR(1) at the '
+            + 'marginal convention 2.2, inconclusive, max/mean 1.4e6. The detector-audit N5 reading (NaN) '
+            + 'was a harness defect (every N5 draw NaN), not this construction.',
         approximateEValue: {
             form: 'epsilon_growing',
             law: 'E[M_n|H0] under an m-sample plug-in baseline grows without bound in n '
                 + '(validity-envelope.ts: ~3e9 at n >> m); the per-tick rate is unmeasured for the '
-                + 'mixture (the betting path measures kappa/m). Exact at oracle parameters (H0 battery '
-                + 'N1 CLEARED); NaN on right-skewed and 8.5e46 on t3 increments (C23).',
-            source: 'Tessera ADR 0014; knowledge stats/validity-premise-chain; detector-audit-sequential-2026-08-05',
+                + 'mixture (the betting path measures kappa/m). Exact at oracle parameters on a Gaussian '
+                + 'residual (A7: 1.00002); NOT an e-value under heavy tails — the ratio has no finite mean on '
+                + 't3 or a lognormal (A7: pooled means 1e25 / 8e11 at unit scale), so no constant prices it; '
+                + 'tail premise mgf at the gate.',
+            source: 'Tessera ADR 0014; knowledge stats/validity-premise-chain; h0-battery FAMILY-A-INCREMENT-ADDENDUM-2026-09-25.md',
         },
     },
     {
@@ -68,15 +77,24 @@ exports.GUARANTEE_TABLE = Object.freeze([
         validityClass: 'ville_anytime_valid',
         estimatedBaseline: validity_envelope_1.BETTING_E_PROCESS_ENVELOPE,
         alphaPolicy: 'ville_spend',
-        evidence: 'ADR 0004 PR E envelope; plug-in invalidity Tessera ADR 0008 (E[e|H0] -> ~1e8).',
+        evidence: 'ADR 0004 PR E envelope; plug-in invalidity Tessera ADR 0008 (E[e|H0] -> ~1e8). Engine H0 '
+            + 'battery Amendment A7, inc-20260925T174222Z (N = 2000 x T = 2000, oracle parameters): the '
+            + 'increment 1 + lambda_t z_t is 1.00000 +/- 0.00005 on N(0,1), AR(1) phi = 0.9 and t3 (with and '
+            + 'without AR(1)) — exactly mean-one under any symmetric tail — and 1.00118 [1.00108, 1.00128] on a '
+            + 'sigma-0.75 lognormal at the TRUE centre and scale: the clipped residual has mean -0.0092 and '
+            + 'aGRAPA converges on -0.113 and bets against it (derived 1.00105 before the run). Tail premise '
+            + 'clip-mean-zero at the gate. The detector-audit N5 reading (1.000000, "inert") was a harness '
+            + 'defect (every N5 draw NaN).',
         approximateEValue: {
             form: 'epsilon_growing',
             law: 'per-tick increment excess kappa/m under an m-sample calibration (the GRAPA loop '
                 + 'converges on the calibration bias), so epsilon_T = exp(kappa·T/m) − 1: unbounded in T. '
                 + 'Measured 1.029 / 1.009 / 1.002 per tick at m = 30 / 100 / 500; martingale exact at '
-                + 'oracle parameters (0.9999956).',
+                + 'oracle parameters on symmetric tails (A7: 1.00000). The same loop turns a skewed tail into '
+                + 'a per-tick excess with no m to shrink it: 1.00118 on the lognormal at oracle centre and '
+                + 'scale (A7), E[z]^2/E[z^2] by derivation.',
             kappa: 0.8445,
-            source: 'grapa-stability run-20260819T040000Z (C58); detector-audit-sequential-2026-08-05 (C23)',
+            source: 'grapa-stability run-20260819T040000Z (C58); h0-battery FAMILY-A-INCREMENT-ADDENDUM-2026-09-25.md',
         },
     },
     {
@@ -119,7 +137,9 @@ exports.GUARANTEE_TABLE = Object.freeze([
             + 'false alerts on iid pairs 0.34 / 0.18 / 0.03 per 1,000 ticks at fit 60 / 300 / 2000 against a '
             + 'contract of 0.025; the temporal path on the same units with a shared AR(1) component: 0.43 / '
             + '0.33 / 0.23. Nothing is admitted; the envelope records the numbers and the gate admits only '
-            + 'under { mMuchGreaterThanN } or { trueBaseline }.',
+            + 'under { mMuchGreaterThanN } or { trueBaseline }, and since h0-battery A7 with the construction\'s '
+            + 'tail premise beside it: contrast_null_mixture carries mgf, contrast_null_betting clip-mean-zero '
+            + '(the increments measured on the plain residual at oracle parameters; not re-measured on pairs).',
         approximateEValue: {
             form: 'epsilon_growing',
             law: 'the contrast offset is a median of m fit ticks, so the residual carries a persistent '

@@ -107,4 +107,10 @@ export declare const CONTRAST_NULL_RUN = "run-20260905T061348Z";
  *  regime the study measured as the price) or `trueBaseline` (a twin with a known offset), greppable at
  *  the call site, exactly as for the plug-in cards. */
 export declare const CONTRAST_NULL_ENVELOPE: Readonly<ContrastNullEnvelope>;
+/** ADR 0035 / h0-battery A7 — the contrast null runs the two Family-A constructions on the contrast
+ *  residual and inherits each construction's tail premise by guarded id: the mixture's 'mgf', the
+ *  betting bet's 'clip-mean-zero'. Two frozen views of the one envelope above, one field apart
+ *  (defined after it: CommonJS output reads an exported const before its assignment as undefined). */
+export declare const CONTRAST_NULL_MIXTURE_ENVELOPE: Readonly<ContrastNullEnvelope>;
+export declare const CONTRAST_NULL_BETTING_ENVELOPE: Readonly<ContrastNullEnvelope>;
 //# sourceMappingURL=contrast.d.ts.map

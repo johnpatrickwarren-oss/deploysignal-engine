@@ -72,3 +72,17 @@ sizes, N3-p09 at 0.75σ) and 2 for the mixture (N3-p09 and N4-p09 at 0.75σ).
 - The validity arm this pairs against lives on a different branch; the pairing is against the
   published figures in `knowledge/stats/detector-audit-sequential-2026-08-05`, not against files
   alongside this report.
+
+
+## Correction — 2026-09-25 (h0-battery Amendment A7, Correction 2)
+
+Every harness in this study calls `spec.gen(r, g)`. The battery's N5 generator is
+`lognormal(r, sigma = 0.75)` (`../h0-battery/harness/nulls.mjs:31`), so the second argument became
+σ and every N5 observation was NaN (verified: `NULLS.N5.gen(r, g)()` is `NaN`; N1–N4, N6, N7 take
+one argument and are unaffected). Consequences for this report's N5 rows, all arms: they are void.
+"Family A betting is valid and completely inert at N5" is the betting module skipping NaN ticks
+(`betting-e-process.ts:187`); the mixture's "NaN on N5" and the power arm's NOT-EXECUTABLE at N5
+are the same NaN input. The N5 anomaly the arm-3 report flags is explained by this and nothing
+else. No certification card scored an N5 cell from this study. The betting increment under a
+skewed null was first measured by h0-battery Amendment A7 (1.00118 at oracle parameters,
+`../h0-battery/FAMILY-A-INCREMENT-ADDENDUM-2026-09-25.md`). The rows above are left as printed.

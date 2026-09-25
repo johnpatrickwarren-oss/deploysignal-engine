@@ -191,12 +191,19 @@ test('the envelope\'s admission is exactly the registered run\'s P2 cells (valid
 });
 
 test('the gate REFUSES a contrast e-value by name unless the caller asserts fit >> horizon or a true offset', () => {
-  assert.equal(envelopeFor('contrast_null_mixture'), CONTRAST_NULL_ENVELOPE);
-  assert.equal(envelopeFor('contrast_null_betting'), CONTRAST_NULL_ENVELOPE);
+  // h0-battery A7: each id maps to a frozen view of CONTRAST_NULL_ENVELOPE carrying its construction's
+  // tail premise; every other field is the one envelope's.
+  assert.equal(envelopeFor('contrast_null_mixture')!.tailPremise, 'mgf');
+  assert.equal(envelopeFor('contrast_null_betting')!.tailPremise, 'clip-mean-zero');
+  for (const id of ['contrast_null_mixture', 'contrast_null_betting']) {
+    const { tailPremise: _t, ...rest } = envelopeFor(id)! as unknown as Record<string, unknown>;
+    assert.deepEqual(rest, { ...CONTRAST_NULL_ENVELOPE }, id);
+  }
   assert.throws(() => eBenjaminiHochbergGuarded([{ detectorId: 'contrast_null_mixture', eValue: 50 }], 0.1), /INVALID under an estimated baseline/);
-  const admitted = eBenjaminiHochbergGuarded([{ detectorId: 'contrast_null_mixture', eValue: 50, assertions: { mMuchGreaterThanN: true } }], 0.1);
+  const admitted = eBenjaminiHochbergGuarded([{ detectorId: 'contrast_null_mixture', eValue: 50, assertions: { mMuchGreaterThanN: true, lightTails: true } }], 0.1);
   assert.equal(admitted.selected.length, 1, 'e = 50 against K/(q·k) = 10: selected once the caller asserts the regime');
-  assert.doesNotThrow(() => eBenjaminiHochbergGuarded([{ detectorId: 'contrast_null_betting', eValue: 50, assertions: { trueBaseline: true } }], 0.1));
+  assert.throws(() => eBenjaminiHochbergGuarded([{ detectorId: 'contrast_null_betting', eValue: 50, assertions: { trueBaseline: true } }], 0.1), /CLIPPED residual/);
+  assert.doesNotThrow(() => eBenjaminiHochbergGuarded([{ detectorId: 'contrast_null_betting', eValue: 50, assertions: { trueBaseline: true, clipMeanZero: true } }], 0.1));
 });
 
 test('the six contrast_null_{signal} ids are registered and resolve to the refusal row', () => {

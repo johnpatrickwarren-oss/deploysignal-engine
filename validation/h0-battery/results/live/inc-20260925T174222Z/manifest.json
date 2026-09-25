@@ -1,0 +1,40 @@
+{
+  "study": "2026-09-h0-battery-family-a-increment",
+  "arm": "A7",
+  "mode": "live",
+  "engine_version": "0.10.0-pre",
+  "git_sha": "4f18035e906bafc98276c35425fb9ff5301b425e",
+  "registration_commit": "98f9e88",
+  "supersedes": null,
+  "node": "v25.9.0",
+  "seed": 20260925,
+  "n": 2000,
+  "ticks": 2000,
+  "nulls": [
+    "N1",
+    "N3-p09",
+    "N5",
+    "N6",
+    "N8"
+  ],
+  "constructions": [
+    "family_A_betting_e_process",
+    "family_A_mixture_supermartingale"
+  ],
+  "bound": 1.0005,
+  "divergence_bound": 10000,
+  "generator_variances": {
+    "N1": 1.0008641728790633,
+    "N3-p09": 1.000867307196055,
+    "N5": 0.9948216347440209,
+    "N6": 0.9829639187807312,
+    "N8": 0.9829682338456995
+  },
+  "n5_non_finite_draws": 0,
+  "not_executable": null,
+  "generated_at": "20260925T174222Z",
+  "argv": [
+    "--mode",
+    "live"
+  ]
+}

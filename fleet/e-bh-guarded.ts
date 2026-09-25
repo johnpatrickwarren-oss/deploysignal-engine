@@ -25,7 +25,7 @@ import { SAFE_T_ENVELOPE } from '../detectors/safe-t-e-value';
 import { UI_MEAN_SHIFT_ENVELOPE } from '../detectors/universal-inference-e-value';
 import { SEQUENTIAL_UI_ENVELOPE } from '../detectors/sequential-ui';
 import { NUISANCE_ROBUST_BF_ENVELOPE } from '../detectors/nuisance-robust-bf-e-value';
-import { CONTRAST_NULL_ENVELOPE } from '../per-shard/contrast';
+import { CONTRAST_NULL_MIXTURE_ENVELOPE, CONTRAST_NULL_BETTING_ENVELOPE } from '../per-shard/contrast';
 import { ONSET_MIXTURE_GAUSSIAN_ENVELOPE, ONSET_MIXTURE_BOUNDED_ENVELOPE } from '../detectors/onset-mixture-e-value';
 
 /** Detector id → the regime in which that detector's `E[e|H0] ≤ 1` holds.
@@ -50,8 +50,10 @@ export const DETECTOR_ENVELOPES: Readonly<Record<string, ValidityEnvelope>> = Ob
   // (0.34 / 0.18 / 0.03 false alerts per 1,000 ticks at fit 60 / 300 / 2000 on iid pairs) and admitted
   // nothing; the envelope's `admission` carries the numbers. Admitted here only under the caller's
   // assertion { mMuchGreaterThanN } (fit >> horizon) or { trueBaseline } (a twin with a known offset).
-  contrast_null_mixture: CONTRAST_NULL_ENVELOPE,
-  contrast_null_betting: CONTRAST_NULL_ENVELOPE,
+  // h0-battery A7 / ADR 0035 addendum: each id carries its construction's tail premise ('mgf' for the
+  // mixture, 'clip-mean-zero' for the bet), the same frozen envelope one field apart.
+  contrast_null_mixture: CONTRAST_NULL_MIXTURE_ENVELOPE,
+  contrast_null_betting: CONTRAST_NULL_BETTING_ENVELOPE,
   /** ADR 0034: Tessera's per-shard e-value object for fleet e-BH, by increment kind. ADR 0035: both
    *  envelopes carry a `tailPremise` ('mgf' / 'clip-mean-zero'), so besides { mMuchGreaterThanN } or
    *  { trueBaseline } the caller supplies { incrementMean } from the family-coherent increment

@@ -742,8 +742,15 @@ test('A2 C48(1): every committed declaration in the real corpus names only detec
   // validity cells to isValidityCell and reach the pool, but no card names the
   // family_A_onset_mixture_increment_* detector ids, so no verdict, stage token or tier moves
   // (re-score run-20260925T155116Z: all 17 identical).
-  assert.equal(ev.cells.length, 2744,
-    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12) + the grapa-stability run (6) + the witness-centering run (8) + the e-detector-cert runs (43 + 2) + the e-sr-bounded run (52) + the onset-mixture run (160) + the onset-mixture increment run (45); no surviving cell is dropped');
+  //
+  // 2744 -> 2754, 2026-09-25, one registered append and its arithmetic (h0-battery Amendment
+  // A7.6): the Family-A increment arm adds 10 cells (2 constructions x 5 nulls) under study id
+  // 2026-09-h0-battery-family-a-increment, in an inc- directory. The cells carry
+  // increment_estimator and reach the pool, but their detector ids are the _increment ids, not
+  // the two cards', so no verdict, stage token or tier moves (re-score run-20260925T174544Z: all 17
+  // identical).
+  assert.equal(ev.cells.length, 2754,
+    'the pooled corpus is 2290 + the 2026-08-10 live replication (90) + the c-bound run (24) + the family-d-emean run (12) + the N8 combined-stress run (12) + the grapa-stability run (6) + the witness-centering run (8) + the e-detector-cert runs (43 + 2) + the e-sr-bounded run (52) + the onset-mixture run (160) + the onset-mixture increment run (45) + the Family-A increment run (10); no surviving cell is dropped');
   const drops = ev.runs.filter((r) => r.superseded)
     .map((r) => [r.run, r.superseded.reduce((n, s) => n + s.cells, 0)]);
   assert.deepEqual(Object.fromEntries(drops), {

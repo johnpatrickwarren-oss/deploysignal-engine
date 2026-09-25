@@ -37,7 +37,7 @@ test('a plug-in detector is refused under an estimated baseline', () => {
 
 test('the same detector is admitted once the caller asserts its regime', () => {
   const r = eBenjaminiHochbergGuarded(
-    [ok('betting_e_process', 50, { assertions: { trueBaseline: true } })], 0.1);
+    [ok('betting_e_process', 50, { assertions: { trueBaseline: true, clipMeanZero: true } })], 0.1);
   assert.ok(r.selected.length >= 0, 'admitted with an explicit regime assertion');
 });
 
@@ -159,11 +159,24 @@ test('ADR 0035: a measured increment mean clears without a promise, refutes over
   assert.doesNotThrow(b({ incrementMean: { lower95: 0.99971, upper95: 1.00021 } }), 'A6 N6 λ = −0.9: CLEARED');
 });
 
-test('ADR 0035: envelopes without a tail premise are unchanged — the premise is unrecorded for them, not waived', () => {
-  for (const id of ['betting_e_process', 'page_cusum_mixture_supermartingale', 'contrast_null_mixture']) {
-    assert.equal(envelopeFor(id)!.tailPremise, undefined, id);
-    assert.doesNotThrow(() => eBenjaminiHochbergGuarded([ok(id, 50, { assertions: { mMuchGreaterThanN: true } })], 0.1), id);
+test('h0-battery A7 (2026-09-25): the two Family-A wealths and the contrast ids carry their construction\'s premise — the bet clip-mean-zero, the mixture mgf', () => {
+  // ADR 0035 had said the betting e-process carries 'mgf' structurally; A7 corrected it and measured
+  // both: betting 1.00000 on symmetric tails / 1.00118 on the lognormal; mixture divergent on t3.
+  const premise: Record<string, string> = {
+    betting_e_process: 'clip-mean-zero', page_cusum_mixture_supermartingale: 'mgf',
+    contrast_null_betting: 'clip-mean-zero', contrast_null_mixture: 'mgf',
+  };
+  for (const [id, p] of Object.entries(premise)) {
+    assert.equal(envelopeFor(id)!.tailPremise, p, id);
+    assert.throws(() => eBenjaminiHochbergGuarded([ok(id, 50, { assertions: { mMuchGreaterThanN: true } })], 0.1), p === 'mgf' ? /mgf exists/ : /CLIPPED residual/, id);
+    const promise = p === 'mgf' ? { lightTails: true } : { clipMeanZero: true };
+    assert.doesNotThrow(() => eBenjaminiHochbergGuarded([ok(id, 50, { assertions: { mMuchGreaterThanN: true, ...promise } })], 0.1), id);
+    assert.doesNotThrow(() => eBenjaminiHochbergGuarded([ok(id, 50, { assertions: { mMuchGreaterThanN: true, incrementMean: { lower95: 0.99995, upper95: 1.00005 } } })], 0.1), id);
   }
+  // the contrast views share every other field of the one envelope
+  const { tailPremise: _a, ...mix } = envelopeFor('contrast_null_mixture')! as any;
+  const { tailPremise: _b, ...bet } = envelopeFor('contrast_null_betting')! as any;
+  assert.deepEqual(mix, bet);
 });
 
 test('ADR 0035: why the Ville monitor\'s verdict is not a tail assertion — on t3 it barely revokes while the increment estimator refutes', () => {

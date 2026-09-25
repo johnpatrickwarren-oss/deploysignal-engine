@@ -55,9 +55,11 @@ export interface ValidityEnvelope {
      *  (upper95 < 1.0005), or asserts the premise as a promise (`lightTails` for 'mgf',
      *  `clipMeanZero` for 'clip-mean-zero') when the interval is inconclusive or absent. A measured
      *  REFUTATION (lower95 > 1.0005) refuses regardless of any promise.
-     *  Absent ⇒ the premise is UNRECORDED for this envelope, not absent: the plug-in Gaussian
-     *  wealths (betting, mixture supermartingale, contrast) carry the 'mgf' premise structurally and
-     *  no increment-mean cell has measured them (knowledge WORKLIST C83). */
+     *  Absent ⇒ the premise is UNRECORDED for this envelope, not absent. (ADR 0035 first said the
+     *  betting e-process carries the 'mgf' premise; it does not — its increment 1 + λ_t·z_t is a
+     *  bounded bet, premise 'clip-mean-zero'. Corrected by h0-battery Amendment A7, which measured
+     *  both Family-A wealths: betting 1.00000 on symmetric tails and 1.00118 on a σ-0.75 lognormal
+     *  where aGRAPA bets against the clipped mean; the mixture divergent on t3 and the lognormal.) */
     tailPremise?: 'mgf' | 'clip-mean-zero';
     /** Free-text regime detail (the conditions, the failure mode, the valid-only-when). */
     notes?: string;

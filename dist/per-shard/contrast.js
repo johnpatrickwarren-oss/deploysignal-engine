@@ -38,7 +38,7 @@
 //
 // Study: validation/contrast-null/ (2026-09-contrast-null, registered 2416bef before this file existed).
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CONTRAST_NULL_ENVELOPE = exports.CONTRAST_NULL_RUN = exports.madScale = exports.median = void 0;
+exports.CONTRAST_NULL_BETTING_ENVELOPE = exports.CONTRAST_NULL_MIXTURE_ENVELOPE = exports.CONTRAST_NULL_ENVELOPE = exports.CONTRAST_NULL_RUN = exports.madScale = exports.median = void 0;
 exports.estimateContrastAr1 = estimateContrastAr1;
 exports.whitenContrast = whitenContrast;
 exports.fitContrast = fitContrast;
@@ -205,4 +205,10 @@ exports.CONTRAST_NULL_ENVELOPE = Object.freeze({
         + 'Gaussian-innovation nulls at every m and fails on N5/N6/N8; the bounded monitor revokes the '
         + 'premise at the rate it fails.',
 });
+/** ADR 0035 / h0-battery A7 — the contrast null runs the two Family-A constructions on the contrast
+ *  residual and inherits each construction's tail premise by guarded id: the mixture's 'mgf', the
+ *  betting bet's 'clip-mean-zero'. Two frozen views of the one envelope above, one field apart
+ *  (defined after it: CommonJS output reads an exported const before its assignment as undefined). */
+exports.CONTRAST_NULL_MIXTURE_ENVELOPE = Object.freeze({ ...exports.CONTRAST_NULL_ENVELOPE, tailPremise: 'mgf' });
+exports.CONTRAST_NULL_BETTING_ENVELOPE = Object.freeze({ ...exports.CONTRAST_NULL_ENVELOPE, tailPremise: 'clip-mean-zero' });
 //# sourceMappingURL=contrast.js.map

@@ -86,3 +86,33 @@ Tessera-RNG are unaffected beyond the pin.
 
 Remove the field, the three assertions and `tailAdmissible`; the two envelopes lose their premise
 and the gate returns to the v0.9.0-pre behaviour. The A6 measurement stands either way.
+
+
+## Addendum 1 — 2026-09-25, h0-battery Amendment A7: the betting premise was mis-stated, and the other wealths are measured
+
+Decision 1 said the betting e-process, the mixture supermartingale and the contrast null "carry the
+`'mgf'` premise structurally". **The betting e-process does not.** Its increment is
+`1 + λ_t·z_t` with `z_t = clip((x − μ)/(3σ), −1, 1)` (`detectors/betting-e-process.ts:146-153,
+196`), a linear bounded bet with a predictable λ_t from the running moments of z: the premise is
+`'clip-mean-zero'`. The mixture supermartingale's is `'mgf'`. The contrast null inherits each
+construction's premise by guarded id.
+
+Amendment A7 (`validation/h0-battery/FAMILY-A-INCREMENT-ADDENDUM-2026-09-25.md`,
+`inc-20260925T174222Z`) measured both at oracle parameters on the A6 nulls, nine of ten cells as
+registered before the run: betting 1.00000 ± 0.00005 on every symmetric null and 1.00118 on the
+σ-0.75 lognormal (aGRAPA converges on the clipped mean −0.0092 and bets against it; derived
+1.00105); the mixture 1.00002 on N(0,1), divergent (pooled means 10²⁵ and 8 × 10¹¹, scored REFUTED
+under a Markov rule at level 10⁻⁴) on t₃ and the lognormal at unit scale, and 2.2 inconclusive on
+t₃ innovations under AR(1) because the battery's marginal-σ convention runs the mixture at five
+times the true residual variance. Consequences in the same PR: `BETTING_E_PROCESS_ENVELOPE`
+carries `'clip-mean-zero'`, `MIXTURE_SUPERMARTINGALE_ENVELOPE` `'mgf'`, and the two contrast ids
+map to two frozen views of `CONTRAST_NULL_ENVELOPE` with the premise of their construction. Every
+guarded id in the map now carries a tail premise except the four valid-under-estimated-baseline
+objects (safe-t, the two UI e-values, the retracted BF), which is v0.11.0-pre.
+
+A second finding the arm was registered on: every detector-audit arm called the null generator
+with a second argument that the lognormal read as its σ, so every N5 cell of that study is void
+(betting's 1.000000 "inert" and the mixture's NaN were NaN observations, not the detectors). The
+mixture card's note "NaN on right-skewed (N5)" carries the void reading and is registered for a
+card amendment (knowledge WORKLIST C83); `validation/detector-audit/REPORT.md` carries a dated
+correction.

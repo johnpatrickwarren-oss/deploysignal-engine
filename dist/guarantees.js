@@ -40,6 +40,7 @@ const safe_t_e_value_1 = require("./detectors/safe-t-e-value");
 const universal_inference_e_value_1 = require("./detectors/universal-inference-e-value");
 const sequential_ui_1 = require("./detectors/sequential-ui");
 const contrast_1 = require("./per-shard/contrast");
+const onset_mixture_e_value_1 = require("./detectors/onset-mixture-e-value");
 exports.GUARANTEE_TABLE = Object.freeze([
     {
         idPrefixes: ['mSPRT_', 'page_cusum_'],
@@ -127,6 +128,28 @@ exports.GUARANTEE_TABLE = Object.freeze([
                 + 'iid pairs fell 0.34 -> 0.18 -> 0.03 per 1,000 ticks as m went 60 -> 300 -> 2000 at n = 2000, '
                 + 'independent of the fit\'s scale error (0.69 vs 0.65 across the scale split at m = 60).',
             source: 'validation/contrast-null run-20260905T061348Z (C81); knowledge stats/contrast-null-2026-09-05',
+        },
+    },
+    {
+        idPrefixes: ['onset_mixture_'],
+        family: 'A',
+        detector: 'convex onset-mixture e-value (SR onsets, uniform or geometric prior, √E−1 adjusted; Tessera ADR 0019)',
+        implementation: 'detectors/onset-mixture-e-value.ts',
+        validityClass: 'ville_anytime_valid',
+        estimatedBaseline: onset_mixture_e_value_1.ONSET_MIXTURE_GAUSSIAN_ENVELOPE,
+        alphaPolicy: 'ville_spend',
+        evidence: 'ADR 0034 (promoted from Tessera tools/mixture-evalue.ts, lockstep-tested). Tessera ADR 0019: the '
+            + 'raw SR sum measured FDP 0.50 / 0.72 at q = 0.1; the convex mixture Mode B FDP 0.099 ≤ q, power '
+            + '0.64 on the spatial null. Property tests: empirical E[e|H0] ≤ 1 on iid N(0,1) (both increments), '
+            + 'on t3 tails and a 15% scale under-estimate (bounded). The bounded increment carries its own '
+            + 'envelope (ONSET_MIXTURE_BOUNDED_ENVELOPE, variance-robust). Engine H0-battery cell: not yet run '
+            + '(knowledge WORKLIST C83).',
+        approximateEValue: {
+            form: 'epsilon_growing',
+            law: 'exact on a true N(0,1) null by construction; under a plug-in centre and scale the SR wealth '
+                + 'on the residual grows with the horizon at fixed calibration, the n ≫ m price of every plug-in '
+                + 'wealth in this table. Per-tick rate unmeasured for this construction.',
+            source: 'Tessera ADR 0019; test/onset-mixture-e-value.test.ts',
         },
     },
     {
@@ -307,6 +330,13 @@ exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = Object.freeze({
             + 'the shared component cancels exactly. Admit only under mMuchGreaterThanN or trueBaseline.',
         source: 'validation/contrast-null run-20260905T061348Z (C81)',
     },
+    onset_mixture: {
+        form: 'epsilon_growing',
+        law: 'exact on a true N(0,1) null by construction (convex mixture of SR e-processes, √E−1 adjusted); '
+            + 'under a plug-in centre and scale the wealth grows with the horizon at fixed calibration. '
+            + 'Per-tick rate unmeasured.',
+        source: 'Tessera ADR 0019; ADR 0034',
+    },
 });
 /** Estimated-baseline (axis-2) defaults and the retraction, keyed by construction rather than
  *  registry id — these are inputs a CONSUMER may route to the FDR path, not per-signal detectors. */
@@ -320,6 +350,9 @@ exports.ESTIMATED_BASELINE_GUARANTEES = Object.freeze({
     /** REFUSED 2026-09-05 by study 2026-09-contrast-null (C81): the estimated offset is the plug-in
      *  n >> m price. Kept here so the refusal is visible where the guarantee table lives. */
     contrast_null: contrast_1.CONTRAST_NULL_ENVELOPE,
+    /** ADR 0034: the onset-mixture e-value, gaussian increment (the bounded increment's envelope is
+     *  ONSET_MIXTURE_BOUNDED_ENVELOPE, variance-robust; same plug-in centre premise). */
+    onset_mixture: onset_mixture_e_value_1.ONSET_MIXTURE_GAUSSIAN_ENVELOPE,
 });
 /** The guarantee row for a detector id, by longest kind-prefix match. Returns undefined only for
  *  an id no registry can build; test/guarantees.test.ts proves totality over DeploySignal's

@@ -1,6 +1,6 @@
 {
   "name": "@johnpatrickwarren-oss/deploysignal-engine",
-  "version": "0.8.0-pre",
+  "version": "0.9.0-pre",
   "description": "Statistical detector library: detectors with their validity envelopes, e-value combination and e-BH/e-BY FDR, per-shard baseline maths, and the guarantee table that says what each detector guarantees and in which regime (ADR 0033).",
   "license": "Apache-2.0",
   "main": "./dist/types/index.js",

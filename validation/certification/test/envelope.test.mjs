@@ -19,7 +19,7 @@ test('envelopeKeys reads the real DETECTOR_ENVELOPES keys out of fleet/e-bh-guar
     // C81 (2026-09-05): the contrast null, a named REFUSAL (per-shard/contrast.ts, ADR 0032)
     'contrast_null_betting',
     'contrast_null_mixture',
-    'nuisance_robust_bf_e_value',
+    'nuisance_robust_bf_e_value', 'onset_mixture_bounded', 'onset_mixture_gaussian',
     'page_cusum_mixture_supermartingale',
     'safe_t_e_value',
     'sequential_ui_e_process',

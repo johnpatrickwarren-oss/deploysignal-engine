@@ -43,6 +43,5 @@ __exportStar(require("./verdict"), exports);
 __exportStar(require("./policy"), exports);
 __exportStar(require("./audit"), exports);
 __exportStar(require("./config"), exports);
-__exportStar(require("./orchestration"), exports);
 __exportStar(require("./verdict-extensions/cluster-topology"), exports);
 //# sourceMappingURL=index.js.map

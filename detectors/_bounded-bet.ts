@@ -1,4 +1,5 @@
-// detectors/_bounded-bet.ts — the distribution-robust linear bounded bet g_λ(r) = 1 + λ·clip(r, ±B)/B.
+// detectors/_bounded-bet.ts — the increment family: the Gaussian-LR mixture increment and the
+// distribution-robust linear bounded bet g_λ(r) = 1 + λ·clip(r, ±B)/B.
 //
 // Moved out of fleet/calibration-monitor.ts on 2026-09-23 (ADR 0033, the library boundary): the
 // e-SR detector (detectors/e-sr-mean-shift.ts) took its λ grid and wealth factor from the fleet
@@ -20,3 +21,21 @@ export function gBounded(r: number, lam: number): number {
   return 1 + (lam * c) / BOUND_CLIP;
 }
 
+// ── The Gaussian-LR mixture increment (moved here from fleet/calibration-monitor.ts, ADR 0034) ──
+
+const LAMBDAS = [0.5, 1, 2, -0.5, -1, -2];
+/** Cap on the per-tick Gaussian increment: E[min(g, cap)] ≤ E[g] = 1 (conservative). */
+export const G_CAP = 100;
+
+/** Gaussian-LR mixture increment, capped. E[g | N(0,1)] ≤ 1 by construction. Validity needs the
+ *  residual to be genuinely N(0,1): a 10% under-estimate of the standardizing scale moves the null
+ *  mean from ~0.5 to ~7.6 (Tessera audit F7, measured), and heavy tails break E ≤ 1 outright. */
+export function gInc(r: number): number {
+  let s = 0;
+  for (const lam of LAMBDAS) s += Math.exp(lam * r - 0.5 * lam * lam);
+  return Math.min(G_CAP, s / LAMBDAS.length);
+}
+
+/** 'gaussian' = gInc (max power, needs a genuinely N(0,1) residual); 'bounded' = linear bounded
+ *  bets (distribution-robust; the FDR-bearing default in Tessera). */
+export type IncrementKind = 'gaussian' | 'bounded';

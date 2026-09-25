@@ -43,8 +43,7 @@
 // Contract-agnostic: Tessera's `EmitterContract` has no engine counterpart, so
 // `applyCalibrationMonitor` is generic over any object carrying `calibrationMonitorPassing`.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.gBounded = exports.BOUND_LAMBDAS = exports.BOUND_CLIP = exports.G_CAP = void 0;
-exports.gInc = gInc;
+exports.G_CAP = exports.gInc = exports.gBounded = exports.BOUND_LAMBDAS = exports.BOUND_CLIP = void 0;
 exports.freshCalibrationMonitor = freshCalibrationMonitor;
 exports.updateCalibration = updateCalibration;
 exports.updateCalibrationBatch = updateCalibrationBatch;
@@ -53,23 +52,15 @@ exports.applyCalibrationMonitor = applyCalibrationMonitor;
 exports.freshIncrementEstimator = freshIncrementEstimator;
 exports.updateIncrementEstimator = updateIncrementEstimator;
 exports.incrementEstimate = incrementEstimate;
-// ── Increments (Tessera tools/mixture-evalue.ts, verbatim constants) ───────────────
-const LAMBDAS = [0.5, 1, 2, -0.5, -1, -2];
-/** Cap on the per-tick Gaussian increment: E[min(g, cap)] ≤ E[g] = 1 (conservative). */
-exports.G_CAP = 100;
-/** Gaussian-LR mixture increment, capped. E[g | N(0,1)] ≤ 1 by construction. Validity needs the
- *  residual to be genuinely N(0,1): a 10% under-estimate of the standardizing scale moves the null
- *  mean from ~0.5 to ~7.6 (Tessera audit F7, measured), and heavy tails break E ≤ 1 outright. */
-function gInc(r) {
-    let s = 0;
-    for (const lam of LAMBDAS)
-        s += Math.exp(lam * r - 0.5 * lam * lam);
-    return Math.min(exports.G_CAP, s / LAMBDAS.length);
-}
+// ── Increments: the family lives in detectors/_bounded-bet.ts (ADR 0033 step 2 moved the bounded
+// bet, ADR 0034 the Gaussian increment, so the onset-mixture e-value could use them without an
+// upward import). Re-exported here so every existing import path holds.
 const _bounded_bet_1 = require("../detectors/_bounded-bet");
 Object.defineProperty(exports, "BOUND_CLIP", { enumerable: true, get: function () { return _bounded_bet_1.BOUND_CLIP; } });
 Object.defineProperty(exports, "BOUND_LAMBDAS", { enumerable: true, get: function () { return _bounded_bet_1.BOUND_LAMBDAS; } });
 Object.defineProperty(exports, "gBounded", { enumerable: true, get: function () { return _bounded_bet_1.gBounded; } });
+Object.defineProperty(exports, "gInc", { enumerable: true, get: function () { return _bounded_bet_1.gInc; } });
+Object.defineProperty(exports, "G_CAP", { enumerable: true, get: function () { return _bounded_bet_1.G_CAP; } });
 function freshCalibrationMonitor(opts = {}) {
     const alpha = opts.alpha ?? 0.01;
     if (!(alpha > 0 && alpha <= 1))
@@ -79,7 +70,7 @@ function freshCalibrationMonitor(opts = {}) {
     return {
         logW: 0, logWByLambda: bounded ? _bounded_bet_1.BOUND_LAMBDAS.map(() => 0) : null,
         peakLogW: 0, ticks: 0, passing: true,
-        threshold: Math.log(1 / alpha), increment: opts.increment ?? gInc,
+        threshold: Math.log(1 / alpha), increment: opts.increment ?? _bounded_bet_1.gInc,
     };
 }
 /** log of the mean of exp(xs), max-shifted. */

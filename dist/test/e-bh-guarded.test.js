@@ -131,4 +131,37 @@ const validity_envelope_1 = require("../detectors/validity-envelope");
     strict_1.default.ok(revoked <= 10, `the monitor revoked ${revoked}/100 t3 feeds — expected a handful (measured 1.25% at 400 feeds)`);
     strict_1.default.ok(e.lower95 > validity_envelope_1.INCREMENT_MEAN_BOUND && e.mean > 1.4, `the estimator on the same 200,000 increments: mean ${e.mean.toFixed(3)}, lower95 ${e.lower95.toFixed(3)} — a refutation`);
 });
+(0, node_test_1.test)('ADR 0035: where the monitor does revoke on heavy tails the channel is the MAD scale of the fit, not the tail — 0.656 on unit-variance t3', () => {
+    // knowledge stats/e-by-t2-2026-09-04 and stats/contrast-null-2026-09-05 record the Gaussian monitor
+    // revoking under t3; the contrast fit standardises by MAD (per-shard/contrast.ts:95). Same seeds,
+    // three scales: oracle 2.5%, fit sd 3.5%, fit MAD 73.5% at 200 feeds. 60 feeds here.
+    const mul = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+    const gaussFrom = (r) => () => { let u = 0, v = 0; while (u === 0)
+        u = r(); while (v === 0)
+        v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const t3 = (g) => () => { const z = g(); const chi = g() ** 2 + g() ** 2 + g() ** 2; return (z / Math.sqrt(chi / 3)) / Math.sqrt(3); };
+    const median = (a) => { const s = [...a].sort((x, y) => x - y); const n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
+    const mad = (a) => { const m = median(a); return 1.4826 * median(a.map((x) => Math.abs(x - m))); };
+    let revokedOracle = 0, revokedMad = 0, madSum = 0;
+    for (let i = 0; i < 60; i++) {
+        const src = t3(gaussFrom(mul(5000 + i)));
+        const fit = Array.from({ length: 2000 }, src);
+        const s = mad(fit);
+        madSum += s;
+        const stream = Array.from({ length: 2000 }, src);
+        const mo = (0, calibration_monitor_1.freshCalibrationMonitor)({ alpha: 0.01, incrementKind: 'gaussian' });
+        const mm = (0, calibration_monitor_1.freshCalibrationMonitor)({ alpha: 0.01, incrementKind: 'gaussian' });
+        for (const r of stream) {
+            (0, calibration_monitor_1.updateCalibration)(mo, r);
+            (0, calibration_monitor_1.updateCalibration)(mm, r / s);
+        }
+        if (!mo.passing)
+            revokedOracle++;
+        if (!mm.passing)
+            revokedMad++;
+    }
+    strict_1.default.ok(madSum / 60 < 0.72 && madSum / 60 > 0.60, `MAD of unit-variance t3 reads ${(madSum / 60).toFixed(3)}`);
+    strict_1.default.ok(revokedOracle <= 8, `oracle scale: ${revokedOracle}/60 revoked`);
+    strict_1.default.ok(revokedMad >= 30, `MAD scale: ${revokedMad}/60 revoked — the scale channel`);
+});
 //# sourceMappingURL=e-bh-guarded.test.js.map

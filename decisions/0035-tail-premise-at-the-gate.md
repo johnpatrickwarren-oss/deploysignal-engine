@@ -45,6 +45,20 @@ residual's law. Tessera's two live contracts assert exactly that and nothing els
    `test/e-bh-guarded.test.ts`). That is A5's crossing-rate blindness reproduced at the monitor.
    The estimator on the same 200,000 t₃ increments reads 1.6 with a lower bound far above the
    bound.
+
+   **Those figures are at oracle scale, and the record shows the monitor revoking on heavy
+   tails elsewhere** — knowledge `stats/e-by-t2-2026-09-04` (every replication under t₃
+   innovations) and `stats/contrast-null-2026-09-05` (81–99% on N5). Both are right, and the
+   channel is the scale: the contrast fit standardises by MAD (`per-shard/contrast.ts:95`), which
+   reads a unit-variance t₃ residual at 0.656, and the residual inflated by 1/0.656 trips the
+   Gaussian increment. Measured on the same seeds: revoked 2.5% of t₃ feeds at oracle scale, 3.5%
+   with the fit window's sd, **73.5% with the fit window's MAD** (200 feeds × 2000 ticks, fit
+   2000). So on a MAD-standardised residual the monitor does revoke under heavy tails, for a
+   reason that is not the premise; and where it passes it still has not measured E[g]. Neither
+   the σ̂ channel nor the tail is what `incrementMean` reads, which is why the estimator and not
+   the monitor carries the assertion. The contrast-null page's note that "the pooled estimator
+   understates a tail it cannot see" is a sample-size statement about that study's m ≤ 2000
+   increments per fit; A6's 4,000,000 per cell read the tail at 1.61 ± 0.008.
 4. **Unchanged:** the baseline axis. The tail assertion adds to `mMuchGreaterThanN` /
    `trueBaseline`; it does not replace it. Envelopes without a premise gate exactly as before.
 

@@ -1,0 +1,134 @@
+// test/twin-contrast.test.ts — ADR 0036: rate and sign twin kinds.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import {
+  type TwinMetricSpec,
+  checkTwinMetricSpec, fisherNoncentralMean, twinScore,
+  initTwinMetric, updateTwinMetric, twinMetricEvidence,
+  TWIN_RATE_ENVELOPE, TWIN_SIGN_ENVELOPE,
+} from '../detectors/twin-contrast';
+import { lcg, poisson } from './_seeded';
+
+const ERR: TwinMetricSpec = { id: 'http_5xx', kind: 'rate', worse: 'higher', tolerance: 0.5 };
+const LAT: TwinMetricSpec = { id: 'p99_ms', kind: 'sign', worse: 'higher', tolerance: 0.1 };
+
+test('fisherNoncentralMean: psi = 1 is the central hypergeometric mean', () => {
+  assert.ok(Math.abs(fisherNoncentralMean(300, 700, 10, 1) - 3) < 1e-12);
+});
+
+test('fisherNoncentralMean: 1 + 1 arms with one event is psi / (1 + psi)', () => {
+  assert.ok(Math.abs(fisherNoncentralMean(1, 1, 1, 2) - 2 / 3) < 1e-12);
+});
+
+test('fisherNoncentralMean is increasing in psi', () => {
+  const a = fisherNoncentralMean(500, 500, 20, 1);
+  const b = fisherNoncentralMean(500, 500, 20, 1.5);
+  const c = fisherNoncentralMean(500, 500, 20, 3);
+  assert.ok(a < b && b < c && c < 20, `${a} ${b} ${c}`);
+});
+
+test('rate score: canary share of bad events, null = traffic share', () => {
+  const s = twinScore(ERR, { canaryEvents: 6, canaryTotal: 300, controlEvents: 4, controlTotal: 700 });
+  assert.ok(s !== 'skip' && s !== 'tie');
+  assert.ok(Math.abs(s.x - 0.6) < 1e-12);
+  assert.ok(Math.abs(s.rollbackNull - 0.3) < 1e-12);
+  assert.ok(s.proceedNull > 0.3 && s.proceedNull < 1);
+});
+
+test('rate score with worse = lower counts failures (total − events)', () => {
+  const spec: TwinMetricSpec = { ...ERR, worse: 'lower' };
+  const s = twinScore(spec, { canaryEvents: 990, canaryTotal: 1000, controlEvents: 999, controlTotal: 1000 });
+  assert.ok(s !== 'skip' && s !== 'tie');
+  assert.ok(Math.abs(s.x - 10 / 11) < 1e-12);
+});
+
+test('rate score skips empty arms, zero bad events and a degenerate support', () => {
+  assert.equal(twinScore(ERR, { canaryEvents: 0, canaryTotal: 0, controlEvents: 1, controlTotal: 10 }), 'skip');
+  assert.equal(twinScore(ERR, { canaryEvents: 0, canaryTotal: 10, controlEvents: 0, controlTotal: 10 }), 'skip');
+  assert.equal(twinScore(ERR, { canaryEvents: 5, canaryTotal: 5, controlEvents: 2, controlTotal: 2 }), 'skip');
+  assert.throws(() => twinScore(ERR, { canaryEvents: 11, canaryTotal: 10, controlEvents: 0, controlTotal: 10 }), RangeError);
+});
+
+test('sign score: worse orientation, ties, and missing values', () => {
+  const up = twinScore(LAT, { canary: 120, control: 100 });
+  assert.ok(up !== 'skip' && up !== 'tie' && up.x === 1 && up.rollbackNull === 0.5);
+  assert.ok(Math.abs(up.proceedNull - 0.6) < 1e-12);
+  const lower = twinScore({ ...LAT, worse: 'lower' }, { canary: 120, control: 100 });
+  assert.ok(lower !== 'skip' && lower !== 'tie' && lower.x === 0);
+  assert.equal(twinScore(LAT, { canary: 100, control: 100 }), 'tie');
+  assert.equal(twinScore(LAT, { canary: Number.NaN, control: 100 }), 'skip');
+});
+
+test('tolerance ranges are enforced per kind', () => {
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, tolerance: 0 }), RangeError);
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, tolerance: 11 }), RangeError);
+  assert.throws(() => checkTwinMetricSpec({ ...LAT, tolerance: 0.5 }), RangeError);
+  assert.doesNotThrow(() => checkTwinMetricSpec(LAT));
+});
+
+/** One tick of a rate pair: shared seasonal rate, unequal routing (normal-approximate binomial
+ *  split, to keep the suite fast), per-arm multiplier. */
+function rateTick(rng: () => number, t: number, w: number, canaryMult: number) {
+  const season = 1 + 0.5 * Math.sin((2 * Math.PI * t) / 144);
+  const n = poisson(rng, 1000 * season);
+  const z = Math.sqrt(-2 * Math.log(rng())) * Math.cos(2 * Math.PI * rng());
+  const nc = Math.min(n, Math.max(0, Math.round(n * w + Math.sqrt(n * w * (1 - w)) * z)));
+  const nk = n - nc;
+  const p = 0.01 * season;
+  return {
+    canaryEvents: Math.min(nc, poisson(rng, nc * p * canaryMult)), canaryTotal: nc,
+    controlEvents: Math.min(nk, poisson(rng, nk * p)), controlTotal: nk,
+  };
+}
+
+test('rate H0 (equal rates, w = 0.3, shared seasonality): false rollback within the Ville bound', () => {
+  const rng = lcg(11);
+  const R = 1000, T = 300, alpha = 0.05;
+  let fired = 0;
+  for (let r = 0; r < R; r++) {
+    let st = initTwinMetric();
+    for (let t = 0; t < T; t++) {
+      st = updateTwinMetric(ERR, st, rateTick(rng, t, 0.3, 1));
+      if (twinMetricEvidence(st).rollbackE >= 1 / alpha) { fired++; break; }
+    }
+  }
+  const bar = alpha + 3 * Math.sqrt(alpha * (1 - alpha) / R);
+  assert.ok(fired / R <= bar, `false rollback ${fired / R} > ${bar}`);
+});
+
+test('rate power: canary at twice the bad-event rate rolls back within 300 ticks in >= 95% of runs', () => {
+  const rng = lcg(12);
+  const R = 200, T = 300, alpha = 0.05;
+  let fired = 0;
+  for (let r = 0; r < R; r++) {
+    let st = initTwinMetric();
+    for (let t = 0; t < T; t++) {
+      st = updateTwinMetric(ERR, st, rateTick(rng, t, 0.5, 2));
+      if (twinMetricEvidence(st).rollbackE >= 1 / alpha) { fired++; break; }
+    }
+  }
+  assert.ok(fired / R >= 0.95, `power ${fired / R}`);
+});
+
+test('rate proceed: identical arms clear a 50% odds tolerance within 300 ticks in >= 90% of runs', () => {
+  const rng = lcg(13);
+  const R = 200, T = 300, alpha = 0.05;
+  let cleared = 0;
+  for (let r = 0; r < R; r++) {
+    let st = initTwinMetric();
+    for (let t = 0; t < T; t++) {
+      st = updateTwinMetric(ERR, st, rateTick(rng, t, 0.5, 1));
+      if (twinMetricEvidence(st).proceedE >= 1 / alpha) { cleared++; break; }
+    }
+  }
+  assert.ok(cleared / R >= 0.9, `proceed rate ${cleared / R}`);
+});
+
+test('the envelopes carry their pairing premises and estimate nothing', () => {
+  assert.equal(TWIN_RATE_ENVELOPE.pairingPremise, 'exchangeable-arms');
+  assert.equal(TWIN_SIGN_ENVELOPE.pairingPremise, 'exchangeable-equal-weight-arms');
+  assert.equal(TWIN_RATE_ENVELOPE.baseline, 'randomized-twin');
+  assert.equal(TWIN_RATE_ENVELOPE.validUnderEstimatedBaseline, true);
+});

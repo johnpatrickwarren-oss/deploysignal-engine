@@ -55,6 +55,15 @@ test('config: a sign metric at unequal weights is refused', () => {
   assert.throws(() => checkTwinGateConfig({ ...CFG, canaryWeight: 0.1 }), /equal routing weights/);
 });
 
+test('config: a rate metric at unequal weights is refused unless allowUnequalRateSplit is set', () => {
+  const rateOnly: TwinGateConfig = { ...CFG, metrics: [CFG.metrics[0]], canaryWeight: 0.1 };
+  assert.throws(() => checkTwinGateConfig(rateOnly), /allowUnequalRateSplit/);
+  assert.doesNotThrow(() => checkTwinGateConfig({ ...rateOnly, allowUnequalRateSplit: true }));
+  assert.doesNotThrow(() => checkTwinGateConfig({ ...rateOnly, canaryWeight: 0.5 }));
+  // The opt-in covers rate only: a sign metric at unequal weights is still refused.
+  assert.throws(() => checkTwinGateConfig({ ...CFG, canaryWeight: 0.1, allowUnequalRateSplit: true }), /equal routing weights/);
+});
+
 test('config: empty metric list and duplicate ids are refused', () => {
   assert.throws(() => checkTwinGateConfig({ ...CFG, metrics: [] }), RangeError);
   assert.throws(() => checkTwinGateConfig({ ...CFG, metrics: [CFG.metrics[0], CFG.metrics[0]] }), RangeError);

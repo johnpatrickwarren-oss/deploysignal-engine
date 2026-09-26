@@ -14,7 +14,8 @@
   in the null. Study `2026-09-twin-null` run-20260926T053339Z: ship rule met; persistent arm-level
   state inflates false rollback (0.063–0.83 across the persistent-state cells; every such cell
   except rate w 0.1 φ 0.5 σ 0.1 exceeds B); authority awaits a real-service A/A test; no consumer
-  authority.
+  authority. The gate refuses `rate` at canaryWeight ≠ 0.5 unless `allowUnequalRateSplit` is set
+  (P2: 0.755 false rollback at w 0.1 under per-tick arm shocks).
 
 ## v0.11.0-pre — 2026-09-25 — h0-battery Amendment A7: the two Family-A wealths measured, every plug-in wealth carries its tail premise
 

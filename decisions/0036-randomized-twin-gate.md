@@ -89,3 +89,7 @@ a different null and must not be pooled with them.
 - Deployment topology matters: a CodeDeploy-style canary against the warm production fleet
   violates the premise at start-up (cold canary). A fresh control arm on the old version at the
   canary's weight satisfies it; a warm-up exclusion window is the fallback the study prices.
+- The gate refuses `rate` at canaryWeight ≠ 0.5 unless the caller sets `allowUnequalRateSplit`
+  (2026-09-26, after the study measured 0.755 false rollback at w 0.1 under per-tick arm shocks).
+  The opt-in belongs where an A/A run at that split shows no arm-level effect. `sign` stays
+  refused at unequal weights with no opt-in.

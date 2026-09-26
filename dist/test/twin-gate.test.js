@@ -53,6 +53,14 @@ function run(cfg, rng, mult, shift) {
 (0, node_test_1.test)('config: a sign metric at unequal weights is refused', () => {
     strict_1.default.throws(() => (0, twin_gate_1.checkTwinGateConfig)({ ...CFG, canaryWeight: 0.1 }), /equal routing weights/);
 });
+(0, node_test_1.test)('config: a rate metric at unequal weights is refused unless allowUnequalRateSplit is set', () => {
+    const rateOnly = { ...CFG, metrics: [CFG.metrics[0]], canaryWeight: 0.1 };
+    strict_1.default.throws(() => (0, twin_gate_1.checkTwinGateConfig)(rateOnly), /allowUnequalRateSplit/);
+    strict_1.default.doesNotThrow(() => (0, twin_gate_1.checkTwinGateConfig)({ ...rateOnly, allowUnequalRateSplit: true }));
+    strict_1.default.doesNotThrow(() => (0, twin_gate_1.checkTwinGateConfig)({ ...rateOnly, canaryWeight: 0.5 }));
+    // The opt-in covers rate only: a sign metric at unequal weights is still refused.
+    strict_1.default.throws(() => (0, twin_gate_1.checkTwinGateConfig)({ ...CFG, canaryWeight: 0.1, allowUnequalRateSplit: true }), /equal routing weights/);
+});
 (0, node_test_1.test)('config: empty metric list and duplicate ids are refused', () => {
     strict_1.default.throws(() => (0, twin_gate_1.checkTwinGateConfig)({ ...CFG, metrics: [] }), RangeError);
     strict_1.default.throws(() => (0, twin_gate_1.checkTwinGateConfig)({ ...CFG, metrics: [CFG.metrics[0], CFG.metrics[0]] }), RangeError);

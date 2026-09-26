@@ -56,6 +56,12 @@ function checkTwinGateConfig(cfg) {
         throw new RangeError('twin-gate: a sign metric needs equal routing weights (canaryWeight 0.5): its null is the '
             + `exchangeability of two equal-sized arms (ADR 0036). Got canaryWeight ${cfg.canaryWeight}.`);
     }
+    if (cfg.canaryWeight !== 0.5 && !cfg.allowUnequalRateSplit) {
+        throw new RangeError(`twin-gate: a rate metric at canaryWeight ${cfg.canaryWeight} is refused by default: at an `
+            + 'unequal split per-tick arm-level shocks move its rollback null off the traffic share (study '
+            + '2026-09-twin-null P2: 0.755 false rollback at w 0.1, σ_arm 0.3). Use canaryWeight 0.5, or set '
+            + 'allowUnequalRateSplit where an A/A run at this split shows no arm-level effect (ADR 0036).');
+    }
 }
 function initTwinGate(cfg) {
     checkTwinGateConfig(cfg);

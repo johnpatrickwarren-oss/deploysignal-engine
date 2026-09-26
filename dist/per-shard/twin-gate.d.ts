@@ -8,6 +8,11 @@ export interface TwinGateConfig {
     /** Configured routing share of the canary within the experiment: w_c / (w_c + w_k). */
     canaryWeight: number;
     maxTicks: number;
+    /** Opt in to `rate` metrics at canaryWeight ≠ 0.5. Refused by default: at an unequal split any
+     *  per-tick arm-level shock moves the rollback null off the traffic share (study 2026-09-twin-null
+     *  P2: 0.755 false rollback at w 0.1, σ_arm 0.3). Set it only where the arms are known to carry no
+     *  arm-level effect on any tick, e.g. from an A/A run at the same split. */
+    allowUnequalRateSplit?: boolean;
 }
 export type TwinVerdict = 'rollback' | 'proceed' | 'extend' | 'inconclusive' | 'invalid_experiment';
 export interface TwinGateState {

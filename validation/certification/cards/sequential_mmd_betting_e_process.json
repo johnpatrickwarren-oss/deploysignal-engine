@@ -9,21 +9,21 @@
   "family": "C",
   "class": "test_martingale",
   "engine_pin": {
-    "version": "0.6.11-pre",
-    "sha": "68b9b2cc548f49986936d7d65a6af9e660bdb864"
+    "version": "0.11.0-pre",
+    "sha": "2bbc557759506148682a5c0af8530b21d3beca05"
   },
   "source_files": [
     {
       "path": "detectors/sequential-mmd.ts",
-      "sha256": "4ff309c7ae9ff8bc356a85fe842d8e356290bbdfe33a4775ec7c7dc2a3758750"
+      "sha256": "0c4cf9ab3acac3efdcbf3337ce78127ad4cbb1da7596b6426331f34aefe2ce69"
     },
     {
       "path": "detectors/family-c-betting-e-process.ts",
-      "sha256": "f27d418a5c5fd57cdc70a66d23039a34a9b608de042189fd870e2ed1aeb3e345"
+      "sha256": "f5f8ff9fd53d3a31e07f96a8bfe1c5ea6c0a7bcc55b53e26ae783632d125f404"
     },
     {
       "path": "detectors/validity-envelope.ts",
-      "sha256": "c463cefeedd06fc40b383dc8eba3d4996c12b666bb477f62f0f5bf9d9b89ca41"
+      "sha256": "c235a5e12064ef1efe3831ba146877e5fb88e0f4930ef59e55f0eb5e4198713f"
     },
     {
       "path": "validation/certification/lib/score.mjs",

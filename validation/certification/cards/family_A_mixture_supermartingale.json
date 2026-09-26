@@ -7,21 +7,21 @@
   "family": "A",
   "class": "test_martingale",
   "engine_pin": {
-    "version": "0.6.11-pre",
-    "sha": "68b9b2cc548f49986936d7d65a6af9e660bdb864"
+    "version": "0.11.0-pre",
+    "sha": "2bbc557759506148682a5c0af8530b21d3beca05"
   },
   "source_files": [
     {
       "path": "detectors/_page-cusum-mixture.ts",
-      "sha256": "efb79d4a978a5a58fc830bedfe6ae017efb7d02ebb8090f867142f28c2af0b0e"
+      "sha256": "7c35f2ece8edeed2315d49e44d1016f25e3d35a0504fdc43eb4973b9fcccec68"
     },
     {
       "path": "detectors/family-a-mixture-supermartingale.ts",
-      "sha256": "c27a94e54d7afd39927a473e889d6134d9765794c13565d89c2dc9e61e43873e"
+      "sha256": "98165ee006f0be851b4acc95e5b8fe6ae004d9b9f57f4c70c2f1795d10a52c8b"
     },
     {
       "path": "detectors/validity-envelope.ts",
-      "sha256": "c463cefeedd06fc40b383dc8eba3d4996c12b666bb477f62f0f5bf9d9b89ca41"
+      "sha256": "c235a5e12064ef1efe3831ba146877e5fb88e0f4930ef59e55f0eb5e4198713f"
     },
     {
       "path": "validation/certification/lib/score.mjs",
@@ -55,7 +55,7 @@
   "shipped_path": {
     "kind": "wealth process (Howard-Ramdas mixture), AR(1) pre-whitened",
     "estimator": null,
-    "notes": "known defects: NaN on right-skewed (N5), 8.5e46 on t3 (N6) — non-finite guard applies"
+    "notes": "known defect: 8.5e46 on t3 (N6, detector-audit 2026-08-05) and DIVERGENT on t3 and the lognormal at unit scale (h0-battery A7, 2026-09-25: pooled increment means 1e25 / 8e11) — non-finite guard applies. The former 'NaN on right-skewed (N5)' was a detector-audit harness defect (every N5 draw NaN), retracted 2026-09-25; A7 measured N5 as divergent, not NaN"
   },
   "budget": {
     "participating": true,

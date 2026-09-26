@@ -89,3 +89,10 @@ P1 and P5 cell and the CS W = 150 cells pass. Any failure there: the envelope re
 authority. P2 and P3 results are written into the envelope notes as the premise boundary.
 Authority additionally requires Follow-on Plan D (real-service A/A, T3). A P5 pass does not clear
 the rate proceed side under within-arm heterogeneity; that remains unmeasured.
+
+## Amendment 1 — 2026-09-25, before any harness code (P4-sign prediction; P2 coverage made explicit)
+
+Registered after the review of the registration commit found no §4 prediction for the P4 `sign` cells. No harness exists at this commit; no result beyond §0's disclosure has been seen.
+
+- **P4-sign (added):** per-arm tick noise sd ≈ 30 · 1.15 / √1000 ≈ 1.09 (ℓ is a centered lognormal with σ 0.75, sd ≈ 1.15; n ≈ 1000 per arm at w = 0.5), so the per-tick difference has sd ≈ 1.54. A shift of +0.5 gives P(canary tick worse) ≈ 0.63 (τ-excess ≈ 0.13; `ticksToDetect` sign figure ≈ 89 ticks); +2 gives ≈ 0.90 (≈ 11 ticks). Prediction: both P4-sign cells roll back in ≥ 95% of runs within T; median crossing tick between 1× and 3× those figures. The normal approximation ignores the lognormal's skew, which shifts P(worse) by a small amount in either direction.
+- **P2 cells without a prediction (made explicit):** φ = 0.5 at σ_arm ∈ {0.1, 0.3} (both kinds, both weights); φ ≥ 0.9 at σ_arm = 0.1 (both kinds, both weights); `sign` at w = 0.1 for every φ and σ_arm. No prediction is registered for these; they are reported against B only.

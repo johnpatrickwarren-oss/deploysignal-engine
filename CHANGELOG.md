@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **ADR 0036 — the randomized twin (library only, PROPOSED).** `detectors/_paired-bet.ts` (one-sided
+  bounded-mean betting e-process, per-observation null mean), `detectors/twin-contrast.ts` (`rate`:
+  canary share of bad events vs the observed traffic share, Fisher noncentral proceed null; `sign`:
+  P(canary tick worse) vs 1/2 at equal weights), `per-shard/twin-gate.ts` (rollback / proceed /
+  extend / inconclusive / invalid_experiment; Bonferroni rollback, intersection–union proceed,
+  two-sided sample-ratio guard), `per-shard/twin-planning.ts` (bake length, power only). The FDR gate
+  gains `pairingAdmissible` (`randomizedArms`, `equalWeightArms`). A missing observation multiplies
+  both of a metric's wealths by ½ (valid under any missingness mechanism); the `rate` proceed null
+  additionally assumes one bad-event probability per arm per tick. No estimated baseline anywhere
+  in the null. Study `2026-09-twin-null` registered, not run; no consumer authority.
+
 ## v0.11.0-pre — 2026-09-25 — h0-battery Amendment A7: the two Family-A wealths measured, every plug-in wealth carries its tail premise
 
 Breaking for the guarded e-BH: `betting_e_process`, `page_cusum_mixture_supermartingale`,

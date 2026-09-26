@@ -186,4 +186,15 @@ const audit_2 = require("../types/audit");
         strict_1.default.equal((0, audit_2.detectorKindOf)('page_cusum'), undefined, 'a per-signal kind needs a signal');
     });
 });
+(0, node_test_1.test)('ADR 0036: twin rows resolve by prefix, carry live envelopes, and claim a genuine e-value', () => {
+    const rate = (0, guarantees_2.guaranteeFor)('twin_rate_http_5xx');
+    const sign = (0, guarantees_2.guaranteeFor)('twin_sign_p99_ms');
+    strict_1.default.ok(rate && sign);
+    strict_1.default.equal(rate.estimatedBaseline, guarantees_2.ESTIMATED_BASELINE_GUARANTEES.twin_rate);
+    strict_1.default.equal(sign.estimatedBaseline, guarantees_2.ESTIMATED_BASELINE_GUARANTEES.twin_sign);
+    strict_1.default.equal(rate.validityClass, 'ville_anytime_valid');
+    strict_1.default.equal(guarantees_1.APPROXIMATE_E_VALUE_BY_CONSTRUCTION.twin_rate.form, 'e_value');
+    strict_1.default.equal(guarantees_1.APPROXIMATE_E_VALUE_BY_CONSTRUCTION.twin_sign.form, 'e_value');
+    strict_1.default.match(rate.evidence, /REGISTERED, NOT RUN/);
+});
 //# sourceMappingURL=guarantees.test.js.map

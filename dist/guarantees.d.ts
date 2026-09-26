@@ -98,6 +98,9 @@ export declare const ESTIMATED_BASELINE_GUARANTEES: Readonly<{
     /** ADR 0034: the onset-mixture e-value, gaussian increment (the bounded increment's envelope is
      *  ONSET_MIXTURE_BOUNDED_ENVELOPE, variance-robust; same plug-in centre premise). */
     onset_mixture: Readonly<ValidityEnvelope>;
+    /** ADR 0036: the randomized twin — no baseline at all; validity rests on the pairing premise. */
+    twin_rate: Readonly<ValidityEnvelope>;
+    twin_sign: Readonly<ValidityEnvelope>;
 }>;
 /** The guarantee row for a detector id, by longest kind-prefix match. Returns undefined only for
  *  an id no registry can build; test/guarantees.test.ts proves totality over DeploySignal's

@@ -41,6 +41,7 @@ const universal_inference_e_value_1 = require("./detectors/universal-inference-e
 const sequential_ui_1 = require("./detectors/sequential-ui");
 const contrast_1 = require("./per-shard/contrast");
 const onset_mixture_e_value_1 = require("./detectors/onset-mixture-e-value");
+const twin_contrast_1 = require("./detectors/twin-contrast");
 exports.GUARANTEE_TABLE = Object.freeze([
     {
         idPrefixes: ['mSPRT_', 'page_cusum_'],
@@ -330,6 +331,42 @@ exports.GUARANTEE_TABLE = Object.freeze([
                 + '(unrecorded) and unreachable under the default compiler path.',
         },
     },
+    {
+        idPrefixes: ['twin_rate_'],
+        family: 'A',
+        detector: 'randomized twin, rate kind: canary share of bad events vs traffic share, Fisher noncentral proceed null (ADR 0036)',
+        implementation: 'detectors/twin-contrast.ts over detectors/_paired-bet.ts; fusion per-shard/twin-gate.ts',
+        validityClass: 'ville_anytime_valid',
+        estimatedBaseline: twin_contrast_1.TWIN_RATE_ENVELOPE,
+        alphaPolicy: 'ville_spend',
+        evidence: 'By construction (ADR 0036): a bounded bet against a null mean observed in the same tick; '
+            + 'nothing estimated. Unit and Monte Carlo property tests only (test/paired-bet.test.ts, '
+            + 'test/twin-contrast.test.ts). Study 2026-09-twin-null REGISTERED, NOT RUN. No real-deploy (T3) '
+            + 'measurement.',
+        approximateEValue: {
+            form: 'e_value',
+            note: 'genuine e-process under the pairing premise (randomized routing, no arm-specific persistent '
+                + 'state under H0); the proceed side additionally assumes one bad-event probability per arm per '
+                + 'tick; the premise boundary is what study 2026-09-twin-null measures.',
+        },
+    },
+    {
+        idPrefixes: ['twin_sign_'],
+        family: 'A',
+        detector: 'randomized twin, sign kind: P(canary tick worse) vs 1/2 at equal routing weights (ADR 0036)',
+        implementation: 'detectors/twin-contrast.ts over detectors/_paired-bet.ts; fusion per-shard/twin-gate.ts',
+        validityClass: 'ville_anytime_valid',
+        estimatedBaseline: twin_contrast_1.TWIN_SIGN_ENVELOPE,
+        alphaPolicy: 'ville_spend',
+        evidence: 'By construction (ADR 0036): exchangeability of equal-weight arms fixes the null at 1/2. '
+            + 'Unit tests only (test/twin-contrast.test.ts, test/twin-gate.test.ts). Study 2026-09-twin-null '
+            + 'REGISTERED, NOT RUN. No real-deploy (T3) measurement.',
+        approximateEValue: {
+            form: 'e_value',
+            note: 'genuine e-process under exchangeable equal-weight arms; unequal weights break it for skewed '
+                + 'tick statistics (checkTwinGateConfig refuses them).',
+        },
+    },
 ]);
 /** Axis 3 for the constructions in ESTIMATED_BASELINE_GUARANTEES, keyed the same way. These are
  *  the portfolio's genuine e-values inside their envelopes, and the one CONSTANT epsilon on the
@@ -376,6 +413,14 @@ exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = Object.freeze({
             + 'Per-tick rate unmeasured.',
         source: 'Tessera ADR 0019; ADR 0034',
     },
+    twin_rate: {
+        form: 'e_value',
+        note: 'ADR 0036: no estimated parameter; exact under the pairing premise at any routing split.',
+    },
+    twin_sign: {
+        form: 'e_value',
+        note: 'ADR 0036: no estimated parameter; exact under exchangeable equal-weight arms.',
+    },
 });
 /** Estimated-baseline (axis-2) defaults and the retraction, keyed by construction rather than
  *  registry id — these are inputs a CONSUMER may route to the FDR path, not per-signal detectors. */
@@ -392,6 +437,9 @@ exports.ESTIMATED_BASELINE_GUARANTEES = Object.freeze({
     /** ADR 0034: the onset-mixture e-value, gaussian increment (the bounded increment's envelope is
      *  ONSET_MIXTURE_BOUNDED_ENVELOPE, variance-robust; same plug-in centre premise). */
     onset_mixture: onset_mixture_e_value_1.ONSET_MIXTURE_GAUSSIAN_ENVELOPE,
+    /** ADR 0036: the randomized twin — no baseline at all; validity rests on the pairing premise. */
+    twin_rate: twin_contrast_1.TWIN_RATE_ENVELOPE,
+    twin_sign: twin_contrast_1.TWIN_SIGN_ENVELOPE,
 });
 /** The guarantee row for a detector id, by longest kind-prefix match. Returns undefined only for
  *  an id no registry can build; test/guarantees.test.ts proves totality over DeploySignal's

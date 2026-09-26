@@ -173,6 +173,70 @@ function rateTick(rng, t, w, canaryMult) {
     }
     strict_1.default.ok(cleared / R >= 0.9, `proceed rate ${cleared / R}`);
 });
+/** One tick of Bernoulli-arm rate data: n requests per arm, independent per-request bad-event draws
+ *  at a fixed per-arm probability — the exact Fisher noncentral hypergeometric regime the PROCEED
+ *  null assumes (one bad-event probability per arm per tick, no cross-request dependence). */
+function bernoulliCount(rng, n, p) {
+    let k = 0;
+    for (let i = 0; i < n; i++)
+        if (rng() < p)
+            k++;
+    return k;
+}
+function rateBernoulliTick(rng, n, pCanary, pControl) {
+    return {
+        canaryEvents: bernoulliCount(rng, n, pCanary), canaryTotal: n,
+        controlEvents: bernoulliCount(rng, n, pControl), controlTotal: n,
+    };
+}
+(0, node_test_1.test)('rate proceed H0 (binomial arms at odds ratio 1 + ρ): false proceed within the Ville bound', () => {
+    // ERR.tolerance is 0.5: ρ = 0.5 is exactly the boundary of the proceed null (ψ ≥ 1 + ρ), the
+    // least favorable point — the composite null's type-I rate is tightest there.
+    const rng = (0, _seeded_1.lcg)(21);
+    const R = 500, T = 300, alpha = 0.05, n = 100;
+    const rho = ERR.tolerance;
+    const pControl = 0.05;
+    const oddsControl = pControl / (1 - pControl);
+    const oddsCanary = (1 + rho) * oddsControl;
+    const pCanary = oddsCanary / (1 + oddsCanary);
+    let falseProceed = 0;
+    for (let r = 0; r < R; r++) {
+        let st = (0, twin_contrast_1.initTwinMetric)();
+        for (let t = 0; t < T; t++) {
+            st = (0, twin_contrast_1.updateTwinMetric)(ERR, st, rateBernoulliTick(rng, n, pCanary, pControl));
+            if ((0, twin_contrast_1.twinMetricEvidence)(st).proceedE >= 1 / alpha) {
+                falseProceed++;
+                break;
+            }
+        }
+    }
+    const bar = alpha + 3 * Math.sqrt(alpha * (1 - alpha) / R);
+    strict_1.default.ok(falseProceed / R <= bar, `false proceed rate ${falseProceed / R} > ${bar}`);
+});
+/** One tick of sign data at a fixed, exact P(worse): no ties, so every tick contributes. */
+function signBernoulliTick(rng, pWorse) {
+    const control = 100;
+    return { canary: rng() < pWorse ? control + 1 : control - 1, control };
+}
+(0, node_test_1.test)('sign proceed H0 (P(worse) = 0.5 + τ): false proceed within the Ville bound', () => {
+    // LAT.tolerance is 0.1: τ = 0.1 is exactly the boundary of the proceed null (P(worse) ≥ 0.5 + τ).
+    const rng = (0, _seeded_1.lcg)(22);
+    const R = 1000, T = 300, alpha = 0.05;
+    const pWorse = 0.5 + LAT.tolerance;
+    let falseProceed = 0;
+    for (let r = 0; r < R; r++) {
+        let st = (0, twin_contrast_1.initTwinMetric)();
+        for (let t = 0; t < T; t++) {
+            st = (0, twin_contrast_1.updateTwinMetric)(LAT, st, signBernoulliTick(rng, pWorse));
+            if ((0, twin_contrast_1.twinMetricEvidence)(st).proceedE >= 1 / alpha) {
+                falseProceed++;
+                break;
+            }
+        }
+    }
+    const bar = alpha + 3 * Math.sqrt(alpha * (1 - alpha) / R);
+    strict_1.default.ok(falseProceed / R <= bar, `false proceed rate ${falseProceed / R} > ${bar}`);
+});
 (0, node_test_1.test)('the envelopes carry their pairing premises and estimate nothing', () => {
     strict_1.default.equal(twin_contrast_1.TWIN_RATE_ENVELOPE.pairingPremise, 'exchangeable-arms');
     strict_1.default.equal(twin_contrast_1.TWIN_SIGN_ENVELOPE.pairingPremise, 'exchangeable-equal-weight-arms');

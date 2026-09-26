@@ -57,6 +57,12 @@ function run(cfg, rng, mult, shift) {
     strict_1.default.throws(() => (0, twin_gate_1.checkTwinGateConfig)({ ...CFG, metrics: [] }), RangeError);
     strict_1.default.throws(() => (0, twin_gate_1.checkTwinGateConfig)({ ...CFG, metrics: [CFG.metrics[0], CFG.metrics[0]] }), RangeError);
 });
+(0, node_test_1.test)('config: an unrecognized metric kind or worse direction is refused', () => {
+    const badKind = { ...CFG.metrics[0], kind: 'bogus' };
+    const badWorse = { ...CFG.metrics[0], worse: 'sideways' };
+    strict_1.default.throws(() => (0, twin_gate_1.checkTwinGateConfig)({ ...CFG, metrics: [badKind] }), RangeError);
+    strict_1.default.throws(() => (0, twin_gate_1.checkTwinGateConfig)({ ...CFG, metrics: [badWorse] }), RangeError);
+});
 (0, node_test_1.test)('a canary with 3x the error rate is rolled back', () => {
     const d = run(CFG, (0, _seeded_1.lcg)(21), 3, 0);
     strict_1.default.equal(d.verdict, 'rollback');
@@ -101,5 +107,32 @@ function run(cfg, rng, mult, shift) {
 (0, node_test_1.test)('rollback threshold is Bonferroni over metrics; proceed is not split', () => {
     const d = (0, twin_gate_1.stepTwinGate)(CFG, (0, twin_gate_1.initTwinGate)(CFG), tick((0, _seeded_1.lcg)(26), 1, 0)).decision;
     strict_1.default.ok(d.metrics.every((m) => m.rollbackThreshold === 2 / 0.01 && m.proceedThreshold === 1 / 0.05));
+});
+// Outcome-dependent missingness: the canary is worse on 70% of ticks (right at the proceed
+// tolerance boundary, worse = 0.5 + 0.2), but its observation goes missing on half of exactly the
+// ticks where it was worse. Skipping those ticks would understate the canary's true worse-rate
+// (observed worse-rate among non-missing ticks drops to ~0.35 / 0.65 ≈ 0.54, well under the 0.7
+// proceed null) and clear PROCEED on evidence that was never collected. The ½ penalty in
+// missTwinMetric must prevent that.
+(0, node_test_1.test)('outcome-dependent missingness at the proceed boundary never clears a false proceed', () => {
+    const cfg = {
+        ...CFG,
+        metrics: [{ id: 'p99_ms', kind: 'sign', worse: 'higher', tolerance: 0.2 }],
+        maxTicks: 1000,
+    };
+    const rng = (0, _seeded_1.lcg)(31);
+    let state = (0, twin_gate_1.initTwinGate)(cfg);
+    let verdict = 'extend';
+    for (let t = 0; t < cfg.maxTicks && verdict === 'extend'; t++) {
+        const worse = rng() < 0.7;
+        const dropped = worse && rng() < 0.5;
+        const observations = dropped ? {} : {
+            p99_ms: worse ? { canary: 201, control: 200 } : { canary: 199, control: 200 },
+        };
+        const out = (0, twin_gate_1.stepTwinGate)(cfg, state, { canaryRequests: 1000, controlRequests: 1000, observations });
+        state = out.state;
+        verdict = out.decision.verdict;
+    }
+    strict_1.default.notEqual(verdict, 'proceed');
 });
 //# sourceMappingURL=twin-gate.test.js.map

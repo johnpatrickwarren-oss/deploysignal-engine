@@ -55,7 +55,7 @@ function bruteForceFisherMean(nc, nk, total, psi) {
 });
 (0, node_test_1.test)('rate score: canary share of bad events, null = traffic share', () => {
     const s = (0, twin_contrast_1.twinScore)(ERR, { canaryEvents: 6, canaryTotal: 300, controlEvents: 4, controlTotal: 700 });
-    strict_1.default.ok(s !== 'skip' && s !== 'tie');
+    strict_1.default.ok(s !== 'skip' && s !== 'tie' && s !== 'missing');
     strict_1.default.ok(Math.abs(s.x - 0.6) < 1e-12);
     strict_1.default.ok(Math.abs(s.rollbackNull - 0.3) < 1e-12);
     strict_1.default.ok(s.proceedNull > 0.3 && s.proceedNull < 1);
@@ -63,7 +63,7 @@ function bruteForceFisherMean(nc, nk, total, psi) {
 (0, node_test_1.test)('rate score with worse = lower counts failures (total − events)', () => {
     const spec = { ...ERR, worse: 'lower' };
     const s = (0, twin_contrast_1.twinScore)(spec, { canaryEvents: 990, canaryTotal: 1000, controlEvents: 999, controlTotal: 1000 });
-    strict_1.default.ok(s !== 'skip' && s !== 'tie');
+    strict_1.default.ok(s !== 'skip' && s !== 'tie' && s !== 'missing');
     strict_1.default.ok(Math.abs(s.x - 10 / 11) < 1e-12);
 });
 (0, node_test_1.test)('rate score skips empty arms, zero bad events and a degenerate support', () => {
@@ -78,18 +78,37 @@ function bruteForceFisherMean(nc, nk, total, psi) {
 });
 (0, node_test_1.test)('sign score: worse orientation, ties, and missing values', () => {
     const up = (0, twin_contrast_1.twinScore)(LAT, { canary: 120, control: 100 });
-    strict_1.default.ok(up !== 'skip' && up !== 'tie' && up.x === 1 && up.rollbackNull === 0.5);
+    strict_1.default.ok(up !== 'skip' && up !== 'tie' && up !== 'missing' && up.x === 1 && up.rollbackNull === 0.5);
     strict_1.default.ok(Math.abs(up.proceedNull - 0.6) < 1e-12);
     const lower = (0, twin_contrast_1.twinScore)({ ...LAT, worse: 'lower' }, { canary: 120, control: 100 });
-    strict_1.default.ok(lower !== 'skip' && lower !== 'tie' && lower.x === 0);
+    strict_1.default.ok(lower !== 'skip' && lower !== 'tie' && lower !== 'missing' && lower.x === 0);
     strict_1.default.equal((0, twin_contrast_1.twinScore)(LAT, { canary: 100, control: 100 }), 'tie');
-    strict_1.default.equal((0, twin_contrast_1.twinScore)(LAT, { canary: Number.NaN, control: 100 }), 'skip');
+    strict_1.default.equal((0, twin_contrast_1.twinScore)(LAT, { canary: Number.NaN, control: 100 }), 'missing');
 });
 (0, node_test_1.test)('tolerance ranges are enforced per kind', () => {
     strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, tolerance: 0 }), RangeError);
     strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, tolerance: 11 }), RangeError);
     strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...LAT, tolerance: 0.5 }), RangeError);
     strict_1.default.doesNotThrow(() => (0, twin_contrast_1.checkTwinMetricSpec)(LAT));
+});
+(0, node_test_1.test)('checkTwinMetricSpec rejects an unrecognized kind or worse direction', () => {
+    strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, kind: 'bogus' }), RangeError);
+    strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, worse: 'sideways' }), RangeError);
+});
+(0, node_test_1.test)('a missing sign observation (non-finite either arm) is distinct from a skip', () => {
+    strict_1.default.equal((0, twin_contrast_1.twinScore)(LAT, { canary: Number.NaN, control: 100 }), 'missing');
+    strict_1.default.equal((0, twin_contrast_1.twinScore)(LAT, { canary: 120, control: Number.NaN }), 'missing');
+});
+(0, node_test_1.test)('updateTwinMetric on a missing observation halves both wealths and counts it, leaving used/ties alone', () => {
+    let st = (0, twin_contrast_1.updateTwinMetric)(LAT, (0, twin_contrast_1.initTwinMetric)(), { canary: 120, control: 100 });
+    const before = (0, twin_contrast_1.twinMetricEvidence)(st);
+    st = (0, twin_contrast_1.updateTwinMetric)(LAT, st, { canary: Number.NaN, control: 100 });
+    const after = (0, twin_contrast_1.twinMetricEvidence)(st);
+    strict_1.default.ok(Math.abs(after.rollbackE - before.rollbackE / 2) < 1e-9, `${after.rollbackE} vs ${before.rollbackE / 2}`);
+    strict_1.default.ok(Math.abs(after.proceedE - before.proceedE / 2) < 1e-9, `${after.proceedE} vs ${before.proceedE / 2}`);
+    strict_1.default.equal(after.missing, before.missing + 1);
+    strict_1.default.equal(after.used, before.used);
+    strict_1.default.equal(after.ties, before.ties);
 });
 /** One tick of a rate pair: shared seasonal rate, unequal routing (normal-approximate binomial
  *  split, to keep the suite fast), per-arm multiplier. */

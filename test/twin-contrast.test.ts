@@ -64,7 +64,7 @@ test('fisherNoncentralMean matches a brute-force weighted sum over the support',
 
 test('rate score: canary share of bad events, null = traffic share', () => {
   const s = twinScore(ERR, { canaryEvents: 6, canaryTotal: 300, controlEvents: 4, controlTotal: 700 });
-  assert.ok(s !== 'skip' && s !== 'tie');
+  assert.ok(s !== 'skip' && s !== 'tie' && s !== 'missing');
   assert.ok(Math.abs(s.x - 0.6) < 1e-12);
   assert.ok(Math.abs(s.rollbackNull - 0.3) < 1e-12);
   assert.ok(s.proceedNull > 0.3 && s.proceedNull < 1);
@@ -73,7 +73,7 @@ test('rate score: canary share of bad events, null = traffic share', () => {
 test('rate score with worse = lower counts failures (total − events)', () => {
   const spec: TwinMetricSpec = { ...ERR, worse: 'lower' };
   const s = twinScore(spec, { canaryEvents: 990, canaryTotal: 1000, controlEvents: 999, controlTotal: 1000 });
-  assert.ok(s !== 'skip' && s !== 'tie');
+  assert.ok(s !== 'skip' && s !== 'tie' && s !== 'missing');
   assert.ok(Math.abs(s.x - 10 / 11) < 1e-12);
 });
 
@@ -97,12 +97,12 @@ test('rate score rejects non-integer counts', () => {
 
 test('sign score: worse orientation, ties, and missing values', () => {
   const up = twinScore(LAT, { canary: 120, control: 100 });
-  assert.ok(up !== 'skip' && up !== 'tie' && up.x === 1 && up.rollbackNull === 0.5);
+  assert.ok(up !== 'skip' && up !== 'tie' && up !== 'missing' && up.x === 1 && up.rollbackNull === 0.5);
   assert.ok(Math.abs(up.proceedNull - 0.6) < 1e-12);
   const lower = twinScore({ ...LAT, worse: 'lower' }, { canary: 120, control: 100 });
-  assert.ok(lower !== 'skip' && lower !== 'tie' && lower.x === 0);
+  assert.ok(lower !== 'skip' && lower !== 'tie' && lower !== 'missing' && lower.x === 0);
   assert.equal(twinScore(LAT, { canary: 100, control: 100 }), 'tie');
-  assert.equal(twinScore(LAT, { canary: Number.NaN, control: 100 }), 'skip');
+  assert.equal(twinScore(LAT, { canary: Number.NaN, control: 100 }), 'missing');
 });
 
 test('tolerance ranges are enforced per kind', () => {
@@ -110,6 +110,28 @@ test('tolerance ranges are enforced per kind', () => {
   assert.throws(() => checkTwinMetricSpec({ ...ERR, tolerance: 11 }), RangeError);
   assert.throws(() => checkTwinMetricSpec({ ...LAT, tolerance: 0.5 }), RangeError);
   assert.doesNotThrow(() => checkTwinMetricSpec(LAT));
+});
+
+test('checkTwinMetricSpec rejects an unrecognized kind or worse direction', () => {
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, kind: 'bogus' as unknown as 'rate' }), RangeError);
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, worse: 'sideways' as unknown as 'higher' }), RangeError);
+});
+
+test('a missing sign observation (non-finite either arm) is distinct from a skip', () => {
+  assert.equal(twinScore(LAT, { canary: Number.NaN, control: 100 }), 'missing');
+  assert.equal(twinScore(LAT, { canary: 120, control: Number.NaN }), 'missing');
+});
+
+test('updateTwinMetric on a missing observation halves both wealths and counts it, leaving used/ties alone', () => {
+  let st = updateTwinMetric(LAT, initTwinMetric(), { canary: 120, control: 100 });
+  const before = twinMetricEvidence(st);
+  st = updateTwinMetric(LAT, st, { canary: Number.NaN, control: 100 });
+  const after = twinMetricEvidence(st);
+  assert.ok(Math.abs(after.rollbackE - before.rollbackE / 2) < 1e-9, `${after.rollbackE} vs ${before.rollbackE / 2}`);
+  assert.ok(Math.abs(after.proceedE - before.proceedE / 2) < 1e-9, `${after.proceedE} vs ${before.proceedE / 2}`);
+  assert.equal(after.missing, before.missing + 1);
+  assert.equal(after.used, before.used);
+  assert.equal(after.ties, before.ties);
 });
 
 /** One tick of a rate pair: shared seasonal rate, unequal routing (normal-approximate binomial

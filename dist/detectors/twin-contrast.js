@@ -18,6 +18,13 @@
 //   make this anticonservative (a false clear). Rollback does not need this. Valid at any split.
 // sign — one value per arm per tick. X = 1 if the canary's is worse. Exchangeable equal-weight arms
 //   give P(X = 1 | no tie) = 1/2; the proceed null is 1/2 + tolerance. Ties carry no evidence.
+//
+// A non-finite value (rate: any of the four counts; sign: either arm) is 'missing', distinct from
+// a structural 'skip' (empty arm, zero bad events, degenerate support). Skipping a missing tick
+// outright would let outcome-dependent missingness (the canary's worst ticks come back NaN) bias
+// the wealth toward PROCEED; instead `missTwinMetric` multiplies both wealths by 1/2, the smallest
+// factor any attainable bet can produce, so the ½ is dominated by whatever factor the true value
+// would have given and both Ville bounds hold under any missingness mechanism.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TWIN_SIGN_ENVELOPE = exports.TWIN_RATE_ENVELOPE = void 0;
 exports.checkTwinMetricSpec = checkTwinMetricSpec;
@@ -25,11 +32,19 @@ exports.fisherNoncentralMean = fisherNoncentralMean;
 exports.twinScore = twinScore;
 exports.initTwinMetric = initTwinMetric;
 exports.skipTwinMetric = skipTwinMetric;
+exports.missTwinMetric = missTwinMetric;
 exports.updateTwinMetric = updateTwinMetric;
 exports.twinMetricEvidence = twinMetricEvidence;
 const _paired_bet_1 = require("./_paired-bet");
+const _wealth_1 = require("./_wealth");
 const RATE_MAX_TOLERANCE = 10;
 function checkTwinMetricSpec(spec) {
+    if (spec.kind !== 'rate' && spec.kind !== 'sign') {
+        throw new RangeError(`twin-contrast: ${spec.id}: kind must be 'rate' or 'sign', got '${spec.kind}'`);
+    }
+    if (spec.worse !== 'higher' && spec.worse !== 'lower') {
+        throw new RangeError(`twin-contrast: ${spec.id}: worse must be 'higher' or 'lower', got '${spec.worse}'`);
+    }
     if (spec.kind === 'rate') {
         if (!(spec.tolerance > 0 && spec.tolerance <= RATE_MAX_TOLERANCE)) {
             throw new RangeError(`twin-contrast: ${spec.id}: a rate tolerance is an excess odds ratio in (0, ${RATE_MAX_TOLERANCE}], got ${spec.tolerance}`);
@@ -75,7 +90,7 @@ function twinScore(spec, obs) {
             throw new TypeError(`twin-contrast: ${spec.id}: a rate metric needs a RateObservation`);
         const { canaryEvents, canaryTotal, controlEvents, controlTotal } = obs;
         if (![canaryEvents, canaryTotal, controlEvents, controlTotal].every(Number.isFinite))
-            return 'skip';
+            return 'missing';
         if (![canaryEvents, canaryTotal, controlEvents, controlTotal].every(Number.isInteger)) {
             throw new RangeError(`twin-contrast: ${spec.id}: rate counts must be integers — round per-tick deltas before `
                 + `calling twinScore, got canaryEvents=${canaryEvents} canaryTotal=${canaryTotal} `
@@ -102,7 +117,7 @@ function twinScore(spec, obs) {
     if (isRate(obs))
         throw new TypeError(`twin-contrast: ${spec.id}: a sign metric needs a SignObservation`);
     if (!Number.isFinite(obs.canary) || !Number.isFinite(obs.control))
-        return 'skip';
+        return 'missing';
     if (obs.canary === obs.control)
         return 'tie';
     const canaryHigher = obs.canary > obs.control;
@@ -110,15 +125,34 @@ function twinScore(spec, obs) {
     return { x: worse ? 1 : 0, rollbackNull: 0.5, proceedNull: 0.5 + spec.tolerance };
 }
 function initTwinMetric() {
-    return { rollback: (0, _paired_bet_1.initPairedBet)(), proceed: (0, _paired_bet_1.initPairedBet)(), used: 0, skipped: 0, ties: 0 };
+    return { rollback: (0, _paired_bet_1.initPairedBet)(), proceed: (0, _paired_bet_1.initPairedBet)(), used: 0, skipped: 0, ties: 0, missing: 0 };
 }
 function skipTwinMetric(state) {
     return { ...state, skipped: state.skipped + 1 };
+}
+/** A tick whose observation is missing (outcome-dependent or not) gets a ½ wealth factor on BOTH
+ *  sides rather than being skipped. Every attainable paired-bet factor is ≥ 1/2 (λ ≤ ½/(m − lo)
+ *  caps the factor 1 + λ(x − m) from below at 1 − λmax(m − lo) = 1/2 over x ∈ [lo, hi]), so a ½
+ *  factor is dominated by whatever factor the true, unobserved value would have produced. Both
+ *  Ville bounds therefore hold under ANY missingness mechanism, including one that depends on the
+ *  unobserved outcome itself (ADR 0036) — no missing-at-random premise is needed. */
+function missTwinMetric(state) {
+    const halve = (s) => ({ ...s, log_K: (0, _wealth_1.advanceLogWealth)(s.log_K, Math.log(0.5), -Infinity) });
+    return {
+        rollback: halve(state.rollback),
+        proceed: halve(state.proceed),
+        used: state.used,
+        skipped: state.skipped,
+        ties: state.ties,
+        missing: state.missing + 1,
+    };
 }
 function updateTwinMetric(spec, state, obs) {
     const s = twinScore(spec, obs);
     if (s === 'skip')
         return skipTwinMetric(state);
+    if (s === 'missing')
+        return missTwinMetric(state);
     if (s === 'tie')
         return { ...state, ties: state.ties + 1 };
     return {
@@ -127,6 +161,7 @@ function updateTwinMetric(spec, state, obs) {
         used: state.used + 1,
         skipped: state.skipped,
         ties: state.ties,
+        missing: state.missing,
     };
 }
 function twinMetricEvidence(state) {
@@ -136,6 +171,7 @@ function twinMetricEvidence(state) {
         used: state.used,
         skipped: state.skipped,
         ties: state.ties,
+        missing: state.missing,
     };
 }
 /** ADR 0036 — rate kind. */

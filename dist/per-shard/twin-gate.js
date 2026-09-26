@@ -12,6 +12,18 @@
 //                                                                          wealths is a supermartingale)
 // The guard is checked first: a canary that stops receiving traffic reads as invalid_experiment, and
 // the consumer must treat that as halt-and-shift-back, not as a pass. Terminal verdicts are sticky.
+//
+// Premises the three bounds above rest on:
+//   (i)   randomized per-request routing — both the SRM guard and every metric's ROLLBACK test need
+//         only this: routing independent of outcome.
+//   (ii)  a `rate` metric's PROCEED test needs one more premise, one bad-event probability per arm
+//         per tick (see detectors/twin-contrast.ts TWIN_RATE_ENVELOPE); heterogeneous per-request
+//         probabilities within an arm can make it anticonservative (a false clear). Rollback and the
+//         SRM guard do not need it.
+//   (iii) a missing observation (input.observations[m.id] === undefined while the canary is taking
+//         traffic) is handled by `missTwinMetric`'s ½ wealth penalty on both sides, which dominates
+//         whatever factor the true value would have produced under ANY missingness mechanism — so
+//         no missing-at-random premise is needed, even outcome-dependent missingness is covered.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkTwinGateConfig = checkTwinGateConfig;
 exports.initTwinGate = initTwinGate;
@@ -35,7 +47,7 @@ function checkTwinGateConfig(cfg) {
     if (!(Number.isInteger(cfg.maxTicks) && cfg.maxTicks >= 1)) {
         throw new RangeError(`twin-gate: maxTicks must be a positive integer, got ${cfg.maxTicks}`);
     }
-    if (cfg.metrics.some((m) => m.kind === 'sign') && cfg.canaryWeight !== 0.5) {
+    if (cfg.metrics.some((m) => m.kind !== 'rate') && cfg.canaryWeight !== 0.5) {
         throw new RangeError('twin-gate: a sign metric needs equal routing weights (canaryWeight 0.5): its null is the '
             + `exchangeability of two equal-sized arms (ADR 0036). Got canaryWeight ${cfg.canaryWeight}.`);
     }
@@ -68,6 +80,7 @@ function report(cfg, state, verdict) {
                 used: ev.used,
                 skipped: ev.skipped,
                 ties: ev.ties,
+                missing: ev.missing,
             };
         }),
     };
@@ -101,7 +114,9 @@ function stepTwinGate(cfg, state, input) {
     const metrics = { ...state.metrics };
     for (const m of cfg.metrics) {
         const obs = input.observations[m.id];
-        metrics[m.id] = obs === undefined ? (0, twin_contrast_1.skipTwinMetric)(metrics[m.id]) : (0, twin_contrast_1.updateTwinMetric)(m, metrics[m.id], obs);
+        metrics[m.id] = obs !== undefined ? (0, twin_contrast_1.updateTwinMetric)(m, metrics[m.id], obs)
+            : c > 0 ? (0, twin_contrast_1.missTwinMetric)(metrics[m.id])
+                : (0, twin_contrast_1.skipTwinMetric)(metrics[m.id]);
     }
     const next = { tick: state.tick + 1, terminal: null, metrics, srmUp, srmDown };
     const verdict = decide(cfg, next);

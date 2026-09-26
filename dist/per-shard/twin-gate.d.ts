@@ -31,6 +31,7 @@ export interface TwinMetricReport {
     used: number;
     skipped: number;
     ties: number;
+    missing: number;
 }
 export interface TwinGateDecision {
     verdict: TwinVerdict;

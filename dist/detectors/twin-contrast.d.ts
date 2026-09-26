@@ -35,6 +35,7 @@ export interface TwinMetricState {
     used: number;
     skipped: number;
     ties: number;
+    missing: number;
 }
 export interface TwinMetricEvidence {
     rollbackE: number;
@@ -42,6 +43,7 @@ export interface TwinMetricEvidence {
     used: number;
     skipped: number;
     ties: number;
+    missing: number;
 }
 export declare function checkTwinMetricSpec(spec: TwinMetricSpec): void;
 /** Mean of Fisher's noncentral hypergeometric: X = canary's count of `total` events over arms of
@@ -50,9 +52,16 @@ export declare function checkTwinMetricSpec(spec: TwinMetricSpec): void;
  *  which spreads the whole support onto the call stack and overflows it once the support exceeds
  *  the engine's argument-count limit (observed at N ≈ 5e5 requests per tick with E ≈ N/2). */
 export declare function fisherNoncentralMean(nc: number, nk: number, total: number, psi: number): number;
-export declare function twinScore(spec: TwinMetricSpec, obs: TwinObservation): TwinScore | 'skip' | 'tie';
+export declare function twinScore(spec: TwinMetricSpec, obs: TwinObservation): TwinScore | 'skip' | 'tie' | 'missing';
 export declare function initTwinMetric(): TwinMetricState;
 export declare function skipTwinMetric(state: TwinMetricState): TwinMetricState;
+/** A tick whose observation is missing (outcome-dependent or not) gets a ½ wealth factor on BOTH
+ *  sides rather than being skipped. Every attainable paired-bet factor is ≥ 1/2 (λ ≤ ½/(m − lo)
+ *  caps the factor 1 + λ(x − m) from below at 1 − λmax(m − lo) = 1/2 over x ∈ [lo, hi]), so a ½
+ *  factor is dominated by whatever factor the true, unobserved value would have produced. Both
+ *  Ville bounds therefore hold under ANY missingness mechanism, including one that depends on the
+ *  unobserved outcome itself (ADR 0036) — no missing-at-random premise is needed. */
+export declare function missTwinMetric(state: TwinMetricState): TwinMetricState;
 export declare function updateTwinMetric(spec: TwinMetricSpec, state: TwinMetricState, obs: TwinObservation): TwinMetricState;
 export declare function twinMetricEvidence(state: TwinMetricState): TwinMetricEvidence;
 /** ADR 0036 — rate kind. */

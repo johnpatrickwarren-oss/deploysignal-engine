@@ -38,7 +38,7 @@ function pairedBetLambda(state, spec) {
     const mean = state.sumY / (state.n + 1);
     const second = (quarter * quarter + state.sumY2) / (state.n + 1);
     const lam = mean / second;
-    return lam <= 0 ? 0 : lam >= lamMax ? lamMax : lam;
+    return !(lam > 0) ? 0 : lam >= lamMax ? lamMax : lam;
 }
 /** Consume one observation. NaN carries no evidence and holds the state. Pure. */
 function updatePairedBet(state, spec, x) {

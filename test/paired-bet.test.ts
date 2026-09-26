@@ -17,17 +17,24 @@ function feed(spec: PairedBetSpec, xs: number[]) {
   return s;
 }
 
-test('each factor has conditional mean exactly 1 at the null boundary (two-point law)', () => {
-  const specs: PairedBetSpec[] = [HALF, { lo: 0, hi: 1, nullMean: 0.1 }, { lo: -1, hi: 1, nullMean: -0.3 }];
+test('predictability: each step multiplies wealth by 1 + λ(x − m) with λ from the state before x', () => {
   const rng = lcg(1);
-  for (const spec of specs) {
-    for (let k = 0; k < 50; k++) {
-      const hist = Array.from({ length: 1 + Math.floor(rng() * 40) }, () => spec.lo + rng() * (spec.hi - spec.lo));
-      const lam = pairedBetLambda(feed(spec, hist), spec);
-      const pHi = (spec.nullMean - spec.lo) / (spec.hi - spec.lo);
-      const e = pHi * (1 + lam * (spec.hi - spec.nullMean)) + (1 - pHi) * (1 + lam * (spec.lo - spec.nullMean));
-      assert.ok(Math.abs(e - 1) < 1e-12, `E[factor] = ${e}`);
-    }
+  let prev = initPairedBet();
+  for (let t = 0; t < 200; t++) {
+    const m_t = 0.1 + 0.8 * rng();
+    const spec_t: PairedBetSpec = { lo: 0, hi: 1, nullMean: m_t };
+    const x = rng() < 0.5 ? 0 : 1;
+
+    const lam = pairedBetLambda(prev, spec_t);
+    assert.ok(lam >= 0 && lam <= pairedBetLambdaMax(spec_t), `lambda ${lam} for spec with nullMean ${m_t}`);
+
+    const next = updatePairedBet(prev, spec_t, x);
+    const expectedLogIncrement = Math.log1p(lam * (x - m_t));
+    const actualLogIncrement = next.log_K - prev.log_K;
+    assert.ok(Math.abs(actualLogIncrement - expectedLogIncrement) < 1e-12,
+      `log increment mismatch: expected ${expectedLogIncrement}, got ${actualLogIncrement}`);
+
+    prev = next;
   }
 });
 
@@ -73,10 +80,11 @@ test('power: P(X=1) = 0.7 crosses 1/alpha within 500 ticks in at least 95% of ru
   assert.ok(crossed / R >= 0.95, `power ${crossed / R}`);
 });
 
-test('NaN holds the state; out-of-range throws; a bad spec throws', () => {
+test('NaN holds the state; out-of-range throws; a bad spec throws; NaN sums yield zero lambda', () => {
   const s = feed(HALF, [1, 0, 1]);
   assert.deepEqual(updatePairedBet(s, HALF, Number.NaN), s);
   assert.throws(() => updatePairedBet(s, HALF, 1.5), RangeError);
   assert.throws(() => pairedBetLambdaMax({ lo: 0, hi: 1, nullMean: 0 }), RangeError);
   assert.throws(() => pairedBetLambdaMax({ lo: 0, hi: 1, nullMean: 1.2 }), RangeError);
+  assert.equal(pairedBetLambda({ log_K: 0, n: 1, sumY: Number.NaN, sumY2: 0 }, HALF), 0);
 });

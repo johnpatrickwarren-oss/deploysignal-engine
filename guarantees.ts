@@ -41,6 +41,7 @@ import { UI_MEAN_SHIFT_ENVELOPE } from './detectors/universal-inference-e-value'
 import { SEQUENTIAL_UI_ENVELOPE } from './detectors/sequential-ui';
 import { CONTRAST_NULL_ENVELOPE } from './per-shard/contrast';
 import { ONSET_MIXTURE_GAUSSIAN_ENVELOPE, ONSET_MIXTURE_BOUNDED_ENVELOPE } from './detectors/onset-mixture-e-value';
+import { TWIN_RATE_ENVELOPE, TWIN_SIGN_ENVELOPE } from './detectors/twin-contrast';
 
 /** Axis 1 — what the repeated-look guarantee is, if any. */
 export type ValidityClass =
@@ -382,6 +383,55 @@ export const GUARANTEE_TABLE: readonly GuaranteeRow[] = Object.freeze([
         + '(unrecorded) and unreachable under the default compiler path.',
     },
   },
+  {
+    idPrefixes: ['twin_rate_'],
+    family: 'A',
+    detector: 'randomized twin, rate kind: canary share of bad events vs traffic share, Fisher noncentral proceed null (ADR 0036)',
+    implementation: 'detectors/twin-contrast.ts over detectors/_paired-bet.ts; fusion per-shard/twin-gate.ts',
+    validityClass: 'ville_anytime_valid',
+    estimatedBaseline: TWIN_RATE_ENVELOPE,
+    alphaPolicy: 'ville_spend',
+    evidence: 'By construction (ADR 0036): a bounded bet against a null mean observed in the same tick; '
+      + 'nothing estimated. Unit tests plus Monte Carlo property tests for the rollback and proceed '
+      + 'nulls (test/paired-bet.test.ts, test/twin-contrast.test.ts), then the study. Study '
+      + '2026-09-twin-null run-20260926T053339Z: ship rule MET (P1, '
+      + 'P5, CS W=150 within B = 0.0678) — PROPOSED for consumer authority only after a real-service '
+      + 'A/A test (T3). False rollback 0.026 (w 0.5) / 0.027 (w 0.1) at P1, 0.018 at CS W=150; false '
+      + 'proceed 0.004 (w 0.5) / 0.007 (w 0.1) at P5. Premise boundary: iid arm shocks σ 0.3 at w 0.1 '
+      + '→ 0.755; persistent state φ 0.5 σ 0.1 → 0.075 at w 0.5; cold start without warm-up → 0.289 '
+      + 'rate / 1.000 sign. No real-deploy (T3) measurement.',
+    approximateEValue: {
+      form: 'e_value',
+      note: 'genuine e-process under the pairing premise (randomized routing with no arm-level effect '
+        + 'on any tick: persistent arm-specific state breaks this at any split, a per-tick arm-level '
+        + 'shock cancels exactly when the tick\'s realised arm totals are equal, and to second order '
+        + 'at canaryWeight 0.5 — study P2: 0.028 / 0.030); the proceed side additionally assumes one '
+        + 'bad-event probability per arm per tick; the premise boundary is what study 2026-09-twin-null '
+        + 'measures.',
+    },
+  },
+  {
+    idPrefixes: ['twin_sign_'],
+    family: 'A',
+    detector: 'randomized twin, sign kind: P(canary tick worse) vs 1/2 at equal routing weights (ADR 0036)',
+    implementation: 'detectors/twin-contrast.ts over detectors/_paired-bet.ts; fusion per-shard/twin-gate.ts',
+    validityClass: 'ville_anytime_valid',
+    estimatedBaseline: TWIN_SIGN_ENVELOPE,
+    alphaPolicy: 'ville_spend',
+    evidence: 'By construction (ADR 0036): exchangeability of equal-weight arms fixes the null at 1/2. '
+      + 'Unit tests and Monte Carlo property tests (rollback and proceed nulls) (test/twin-contrast.test.ts, '
+      + 'test/twin-gate.test.ts), then the study. Study 2026-09-twin-null '
+      + 'run-20260926T053339Z: ship rule MET (P1, P5, CS W=150 within B = 0.0678) — PROPOSED for '
+      + 'consumer authority only after a real-service A/A test (T3). False rollback 0.025 at w 0.5 '
+      + '(P1), 0.034 at CS W=150; false proceed 0.025 at P5 (sign-direct). Premise boundary: '
+      + 'persistent state φ 0.5 σ 0.1 → 0.165 at w 0.5; cold start without warm-up → 0.289 rate / '
+      + '1.000 sign. No real-deploy (T3) measurement.',
+    approximateEValue: {
+      form: 'e_value',
+      note: 'genuine e-process under exchangeable equal-weight arms; unequal weights break it for skewed '
+        + 'tick statistics (checkTwinGateConfig refuses them).',
+    },
+  },
 ]);
 
 /** Axis 3 for the constructions in ESTIMATED_BASELINE_GUARANTEES, keyed the same way. These are
@@ -429,6 +479,17 @@ export const APPROXIMATE_E_VALUE_BY_CONSTRUCTION: Readonly<Record<keyof typeof E
       + 'Per-tick rate unmeasured.',
     source: 'Tessera ADR 0019; ADR 0034',
   },
+  twin_rate: {
+    form: 'e_value',
+    note: 'ADR 0036: no estimated parameter; rollback exact under randomized routing with no '
+      + 'arm-level effect on any tick (a per-tick arm-level shock cancels exactly when the tick\'s '
+      + 'realised arm totals are equal, and to second order at canaryWeight 0.5 — study P2: '
+      + '0.028 / 0.030); proceed additionally needs one bad-event probability per arm per tick.',
+  },
+  twin_sign: {
+    form: 'e_value',
+    note: 'ADR 0036: no estimated parameter; exact under exchangeable equal-weight arms.',
+  },
 });
 
 /** Estimated-baseline (axis-2) defaults and the retraction, keyed by construction rather than
@@ -446,6 +507,9 @@ export const ESTIMATED_BASELINE_GUARANTEES = Object.freeze({
   /** ADR 0034: the onset-mixture e-value, gaussian increment (the bounded increment's envelope is
    *  ONSET_MIXTURE_BOUNDED_ENVELOPE, variance-robust; same plug-in centre premise). */
   onset_mixture: ONSET_MIXTURE_GAUSSIAN_ENVELOPE,
+  /** ADR 0036: the randomized twin — no baseline at all; validity rests on the pairing premise. */
+  twin_rate: TWIN_RATE_ENVELOPE,
+  twin_sign: TWIN_SIGN_ENVELOPE,
 });
 
 /** The guarantee row for a detector id, by longest kind-prefix match. Returns undefined only for

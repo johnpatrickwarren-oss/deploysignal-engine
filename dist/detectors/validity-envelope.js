@@ -16,6 +16,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.INCREMENT_MEAN_BOUND = exports.NUISANCE_ROBUST_BF_ENVELOPE = exports.MIXTURE_SUPERMARTINGALE_ENVELOPE = exports.BETTING_E_PROCESS_ENVELOPE = void 0;
 exports.tailAdmissible = tailAdmissible;
+exports.pairingAdmissible = pairingAdmissible;
 exports.isValidForFdrPath = isValidForFdrPath;
 exports.phiAdmissible = phiAdmissible;
 exports.assertValidForFdrPath = assertValidForFdrPath;
@@ -84,6 +85,15 @@ function tailAdmissible(env, assertions = {}) {
     }
     return env.tailPremise === 'mgf' ? Boolean(assertions.lightTails) : Boolean(assertions.clipMeanZero);
 }
+/** ADR 0036 — does the caller satisfy the envelope's pairing premise? An envelope without one is
+ *  unconstrained here. */
+function pairingAdmissible(env, assertions = {}) {
+    if (env.pairingPremise === undefined)
+        return true;
+    if (!assertions.randomizedArms)
+        return false;
+    return env.pairingPremise === 'exchangeable-arms' || Boolean(assertions.equalWeightArms);
+}
 /** Is an e-value with this envelope admissible to the FDR (e-BH) path? A valid-under-estimated-baseline
  *  e-value (safe-t, the UI e-value) always is. Anything else — the plug-in betting / mixture e-values,
  *  and since the 2026-07-02 correction the nuisance-robust BF too — is admissible ONLY if the caller
@@ -94,6 +104,7 @@ function isValidForFdrPath(env, assertions = {}) {
         return false;
     return phiAdmissible(env, assertions)
         && tailAdmissible(env, assertions)
+        && pairingAdmissible(env, assertions)
         && (env.validUnderEstimatedBaseline
             || Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN));
 }
@@ -142,6 +153,15 @@ function assertValidForFdrPath(env, assertions = {}) {
         throw new Error(`validity-envelope: this increment's E[g|H0] ≤ 1 needs ${need}, or supply { incrementMean } `
             + 'from the family-coherent increment estimator on a believed-null feed of this residual with '
             + `upper95 < ${exports.INCREMENT_MEAN_BOUND} — ${measured} (h0-battery Amendment A6, inc-20260925T044059Z; ADR 0035).`);
+    }
+    if (!pairingAdmissible(env, assertions)) {
+        const need = env.pairingPremise === 'exchangeable-equal-weight-arms'
+            ? '{ randomizedArms, equalWeightArms }'
+            : '{ randomizedArms }';
+        throw new Error(`validity-envelope: this twin e-value's null is the design, not an estimate — assert ${need} `
+            + 'only where canary and control receive randomized per-request routing'
+            + (env.pairingPremise === 'exchangeable-equal-weight-arms' ? ' at equal weights' : '')
+            + ' and share everything under H0 but the version under test (ADR 0036).');
     }
 }
 //# sourceMappingURL=validity-envelope.js.map

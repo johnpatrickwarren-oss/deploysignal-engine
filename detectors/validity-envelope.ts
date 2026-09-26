@@ -20,24 +20,28 @@ export type BaselineKind =
   | 'true'                    // a known, exact baseline (no estimation error)
   | 'plug-in'                 // a point estimate μ̂ frozen from a finite calibration window
   | 'unknown-mean-integrated' // the baseline mean is integrated out under a proper prior (right-Haar)
-  | 'unknown-mean-mle';       // the mean is profiled out by an MLE over the null (universal inference)
+  | 'unknown-mean-mle'        // the mean is profiled out by an MLE over the null (universal inference)
+  | 'randomized-twin';        // no baseline: a concurrent control arm under randomized routing (ADR 0036)
 
 export type AutocorrelationKind =
   | 'iid'
   | 'ar1-whitened'
-  | 'ar1-any-phi';            // valid for any φ without whitening (UI / sequential UI)
+  | 'ar1-any-phi'             // valid for any φ without whitening (UI / sequential UI)
+  | 'shared-cancels';         // any dependence SHARED by both arms cancels by conditioning (ADR 0036);
+                              // arm-specific persistence is the pairing premise, not this axis
 //
 // 2026-08-05: 'ar1-any-phi' is a claim about VALIDITY only, and for safe-t it was measured FALSE at
 // the top of the range — exceedance 0.1420 against α=0.05 at φ=0.99
 // (knowledge/stats/power-per-cell-2026-08-05). Two numeric bounds below make the regime explicit
 // rather than leaving it to a union member's name.
 
-export type NullKind = 'mean-shift';
+export type NullKind = 'mean-shift' | 'paired-order';
 
 export type VarianceKind =
   | 'stable'
   | 'robust'
-  | 'unknown-mle';            // σ profiled out rather than plugged in
+  | 'unknown-mle'             // σ profiled out rather than plugged in
+  | 'none';                   // the statistic uses no scale (ADR 0036)
 
 // 2026-08-02: the last member of each union was absent, so UI_MEAN_SHIFT_ENVELOPE and
 // SEQUENTIAL_UI_ENVELOPE could not be passed to isValidForFdrPath at all (TS2345). They escaped
@@ -101,6 +105,28 @@ export interface ValidityEnvelope {
    *  both Family-A wealths: betting 1.00000 on symmetric tails and 1.00118 on a σ-0.75 lognormal
    *  where aGRAPA bets against the clipped mean; the mixture divergent on t3 and the lognormal.) */
   tailPremise?: 'mgf' | 'clip-mean-zero';
+  /** ADR 0036 — the PAIRING premise of a canary-vs-control statistic. Its null mean is observed
+   *  (the traffic share) or fixed (1/2), so nothing is estimated; what validity rests on instead is
+   *  the design:
+   *    'exchangeable-arms'              — randomized per-request routing with no arm-level effect on
+   *                                       any tick. Persistent arm-specific state breaks this at any
+   *                                       split (a cold canary fleet, a control pinned to a degraded
+   *                                       host); a per-tick arm-level shock (iid, zero-mean,
+   *                                       symmetric between arms) cancels exactly when the tick's
+   *                                       realised arm totals are equal, and to second order at
+   *                                       canaryWeight 0.5 (study P2: 0.028 / 0.030); at unequal
+   *                                       weights it moves E[X | E] off the traffic share (measured
+   *                                       0.755 false rollback at w 0.1, σ_arm 0.3). The rate kind's
+   *                                       PROCEED null additionally needs one bad-event probability
+   *                                       per arm per tick;
+   *    'exchangeable-equal-weight-arms' — the above plus equal routing weights (the sign kind: a
+   *                                       skewed tick statistic has different medians in arms of
+   *                                       different size).
+   *  Only ROLLBACK twin e-values are candidates for the FDR (e-BH) path; PROCEED e-values test a
+   *  different null and must not be pooled with them.
+   *  An envelope carrying one REFUSES unless the caller asserts `randomizedArms` (and
+   *  `equalWeightArms` for the second). */
+  pairingPremise?: 'exchangeable-arms' | 'exchangeable-equal-weight-arms';
   /** Free-text regime detail (the conditions, the failure mode, the valid-only-when). */
   notes?: string;
 }
@@ -197,6 +223,14 @@ export interface FdrPathAssertions {
    *  bounded monitor 4% of lognormal feeds at 2000 ticks and 12% at 5000 (test/e-bh-guarded.test.ts,
    *  ADR 0035). That is A5's crossing-rate blindness at the monitor. The estimator sees the mean. */
   incrementMean?: { lower95: number; upper95: number };
+  /** ADR 0036 — canary and control receive requests by randomized per-request routing with no
+   *  arm-level effect on any tick: persistent arm-specific state breaks this at any split, and a
+   *  per-tick arm-level shock cancels exactly when the tick's realised arm totals are equal, and to
+   *  second order at canaryWeight 0.5 (study P2: 0.028 / 0.030); at unequal weights it moves
+   *  E[X | E] off the traffic share (measured 0.755 false rollback at w 0.1, σ_arm 0.3). */
+  randomizedArms?: boolean;
+  /** ADR 0036 — the two arms carry equal routing weight. Needed by the 'sign' twin kind. */
+  equalWeightArms?: boolean;
 }
 
 /** The card-falsifier bound every certified test-martingale card carries for the increment mean
@@ -217,6 +251,14 @@ export function tailAdmissible(env: ValidityEnvelope, assertions: FdrPathAsserti
   return env.tailPremise === 'mgf' ? Boolean(assertions.lightTails) : Boolean(assertions.clipMeanZero);
 }
 
+/** ADR 0036 — does the caller satisfy the envelope's pairing premise? An envelope without one is
+ *  unconstrained here. */
+export function pairingAdmissible(env: ValidityEnvelope, assertions: FdrPathAssertions = {}): boolean {
+  if (env.pairingPremise === undefined) return true;
+  if (!assertions.randomizedArms) return false;
+  return env.pairingPremise === 'exchangeable-arms' || Boolean(assertions.equalWeightArms);
+}
+
 /** Is an e-value with this envelope admissible to the FDR (e-BH) path? A valid-under-estimated-baseline
  *  e-value (safe-t, the UI e-value) always is. Anything else — the plug-in betting / mixture e-values,
  *  and since the 2026-07-02 correction the nuisance-robust BF too — is admissible ONLY if the caller
@@ -226,6 +268,7 @@ export function isValidForFdrPath(env: ValidityEnvelope, assertions: FdrPathAsse
   if (env.statistic === 'e-detector') return false;
   return phiAdmissible(env, assertions)
     && tailAdmissible(env, assertions)
+    && pairingAdmissible(env, assertions)
     && (env.validUnderEstimatedBaseline
       || Boolean(assertions.trueBaseline || assertions.mMuchGreaterThanN));
 }
@@ -281,6 +324,17 @@ export function assertValidForFdrPath(env: ValidityEnvelope, assertions: FdrPath
       `validity-envelope: this increment's E[g|H0] ≤ 1 needs ${need}, or supply { incrementMean } `
       + 'from the family-coherent increment estimator on a believed-null feed of this residual with '
       + `upper95 < ${INCREMENT_MEAN_BOUND} — ${measured} (h0-battery Amendment A6, inc-20260925T044059Z; ADR 0035).`,
+    );
+  }
+  if (!pairingAdmissible(env, assertions)) {
+    const need = env.pairingPremise === 'exchangeable-equal-weight-arms'
+      ? '{ randomizedArms, equalWeightArms }'
+      : '{ randomizedArms }';
+    throw new Error(
+      `validity-envelope: this twin e-value's null is the design, not an estimate — assert ${need} `
+      + 'only where canary and control receive randomized per-request routing'
+      + (env.pairingPremise === 'exchangeable-equal-weight-arms' ? ' at equal weights' : '')
+      + ' and share everything under H0 but the version under test (ADR 0036).',
     );
   }
 }

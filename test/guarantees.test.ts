@@ -201,3 +201,16 @@ describe('detector registry (ADR 0033)', () => {
     assert.equal(detectorKindOf('page_cusum'), undefined, 'a per-signal kind needs a signal');
   });
 });
+
+test('ADR 0036: twin rows resolve by prefix, carry live envelopes, and claim a genuine e-value', () => {
+  const rate = guaranteeFor('twin_rate_http_5xx');
+  const sign = guaranteeFor('twin_sign_p99_ms');
+  assert.ok(rate && sign);
+  assert.equal(rate.estimatedBaseline, ESTIMATED_BASELINE_GUARANTEES.twin_rate);
+  assert.equal(sign.estimatedBaseline, ESTIMATED_BASELINE_GUARANTEES.twin_sign);
+  assert.equal(rate.validityClass, 'ville_anytime_valid');
+  assert.equal(APPROXIMATE_E_VALUE_BY_CONSTRUCTION.twin_rate.form, 'e_value');
+  assert.equal(APPROXIMATE_E_VALUE_BY_CONSTRUCTION.twin_sign.form, 'e_value');
+  assert.match(rate.evidence, /run-20260926T053339Z/);
+  assert.match(sign.evidence, /run-20260926T053339Z/);
+});

@@ -28,8 +28,9 @@ parameter is estimated:
   arms' per-request bad-event probabilities. Rollback null ψ ≤ 1 ⇒ E[X] ≤ n_c / (n_c + n_k), the
   observed traffic share. Proceed null ψ ≥ 1 + ρ ⇒ E[X] ≥ the noncentral mean at 1 + ρ, computed
   exactly from the observed totals. Rollback holds under randomized routing with no arm-level effect
-  on any tick; at canaryWeight 0.5 a per-tick arm-level shock cancels by symmetry, at unequal weights
-  it does not (see "The premise, stated").
+  on any tick; a per-tick arm-level shock cancels exactly when the tick's realised arm totals are
+  equal, and to second order at canaryWeight 0.5 (study P2: 0.028 / 0.030), at unequal weights it
+  moves E[X | E] off the traffic share (see "The premise, stated").
 - `sign` — per tick, S = 1 if the canary's value is worse than the control's. Under exchangeable
   arms of equal routing weight P(S = 1 | no tie) = 1/2. Proceed null P ≥ 1/2 + τ.
 
@@ -50,10 +51,11 @@ cancels by conditioning. Two distinct things break it:
 - ARM-SPECIFIC PERSISTENT STATE under H0 — a cold canary fleet, a control arm pinned to a degraded
   host, an AZ imbalance — breaks validity at ANY routing split.
 - A PER-TICK, ARM-LEVEL SHOCK (pod-level noise: iid across ticks, zero-mean, symmetric between
-  arms, no persistent state) cancels exactly at canaryWeight 0.5 by symmetry, but NOT at an unequal
-  split: the canary's posterior share given the tick's bad-event total is logistic in the shock
-  difference and convex there below w = 0.5, so Jensen's inequality biases E[X] above the traffic
-  share.
+  arms, no persistent state) cancels exactly when the tick's realised arm totals are equal, and to
+  second order at canaryWeight 0.5 (study P2: 0.028 / 0.030 against P1's 0.026, at σ_arm 0.1 and
+  0.3) — at canaryWeight 0.5 with per-request randomization the totals differ by O(√N), so the
+  cancellation is not exact; at an unequal split the shock moves E[X | E] off the traffic share,
+  with a sign that varies with E (measured 0.755 false rollback at w 0.1, σ_arm 0.3).
 
 `sign` additionally needs equal routing weights (`exchangeable-equal-weight-arms`): with unequal arm
 sizes a skewed tick statistic has different medians in the two arms. The study measures these
@@ -75,9 +77,12 @@ a different null and must not be pooled with them.
   unobserved value would have produced — the Ville bounds hold under ANY missingness mechanism,
   including one that depends on the unobserved outcome itself; no missing-at-random premise is
   needed. Consequence: a metric that stops reporting while the canary is taking traffic decays both
-  wealths toward 1 and the gate ends `inconclusive` on that metric alone, never `rollback`. The
-  `missing` counter in `TwinMetricEvidence` reports the count; a consumer policy (DeploySignal, Plan
-  B) should halt on a high missing rate rather than read the resulting inconclusiveness as a pass.
+  wealths toward 0 and the gate ends `inconclusive` on that metric alone, never `rollback`. Each
+  missing tick costs ln 2 ≈ 0.69 nats; at study P4's ×1.2 rate regression (w 0.5) evidence grows at
+  only ≈ ln 20 / 77 ≈ 0.039 nats per tick, so one missing tick erases ≈ 18 ticks of that evidence,
+  and a missing rate near 5% roughly cancels detection of a 20% regression. The `missing` counter in
+  `TwinMetricEvidence` reports the count; a consumer policy (DeploySignal, Plan B) should halt on a
+  high missing rate rather than read the resulting inconclusiveness as a pass.
 - The FDR gate learns a third premise axis (`pairingAdmissible`) beside φ and tails.
 - Rollback authority in DeploySignal is out of scope; it is conditional on the registered study
   and a real-service A/A test.

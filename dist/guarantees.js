@@ -340,8 +340,9 @@ exports.GUARANTEE_TABLE = Object.freeze([
         estimatedBaseline: twin_contrast_1.TWIN_RATE_ENVELOPE,
         alphaPolicy: 'ville_spend',
         evidence: 'By construction (ADR 0036): a bounded bet against a null mean observed in the same tick; '
-            + 'nothing estimated. Unit and Monte Carlo property tests only (test/paired-bet.test.ts, '
-            + 'test/twin-contrast.test.ts). Study 2026-09-twin-null run-20260926T053339Z: ship rule MET (P1, '
+            + 'nothing estimated. Unit tests plus Monte Carlo property tests for the rollback and proceed '
+            + 'nulls (test/paired-bet.test.ts, test/twin-contrast.test.ts), then the study. Study '
+            + '2026-09-twin-null run-20260926T053339Z: ship rule MET (P1, '
             + 'P5, CS W=150 within B = 0.0678) — PROPOSED for consumer authority only after a real-service '
             + 'A/A test (T3). False rollback 0.026 (w 0.5) / 0.027 (w 0.1) at P1, 0.018 at CS W=150; false '
             + 'proceed 0.004 (w 0.5) / 0.007 (w 0.1) at P5. Premise boundary: iid arm shocks σ 0.3 at w 0.1 '
@@ -351,8 +352,10 @@ exports.GUARANTEE_TABLE = Object.freeze([
             form: 'e_value',
             note: 'genuine e-process under the pairing premise (randomized routing with no arm-level effect '
                 + 'on any tick: persistent arm-specific state breaks this at any split, a per-tick arm-level '
-                + 'shock only at canaryWeight 0.5); the proceed side additionally assumes one bad-event '
-                + 'probability per arm per tick; the premise boundary is what study 2026-09-twin-null measures.',
+                + 'shock cancels exactly when the tick\'s realised arm totals are equal, and to second order '
+                + 'at canaryWeight 0.5 — study P2: 0.028 / 0.030); the proceed side additionally assumes one '
+                + 'bad-event probability per arm per tick; the premise boundary is what study 2026-09-twin-null '
+                + 'measures.',
         },
     },
     {
@@ -364,7 +367,8 @@ exports.GUARANTEE_TABLE = Object.freeze([
         estimatedBaseline: twin_contrast_1.TWIN_SIGN_ENVELOPE,
         alphaPolicy: 'ville_spend',
         evidence: 'By construction (ADR 0036): exchangeability of equal-weight arms fixes the null at 1/2. '
-            + 'Unit tests only (test/twin-contrast.test.ts, test/twin-gate.test.ts). Study 2026-09-twin-null '
+            + 'Unit tests and Monte Carlo property tests (rollback and proceed nulls) (test/twin-contrast.test.ts, '
+            + 'test/twin-gate.test.ts), then the study. Study 2026-09-twin-null '
             + 'run-20260926T053339Z: ship rule MET (P1, P5, CS W=150 within B = 0.0678) — PROPOSED for '
             + 'consumer authority only after a real-service A/A test (T3). False rollback 0.025 at w 0.5 '
             + '(P1), 0.034 at CS W=150; false proceed 0.025 at P5 (sign-direct). Premise boundary: '
@@ -425,8 +429,9 @@ exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = Object.freeze({
     twin_rate: {
         form: 'e_value',
         note: 'ADR 0036: no estimated parameter; rollback exact under randomized routing with no '
-            + 'arm-level effect on any tick (a per-tick arm-level shock cancels only at canaryWeight 0.5); '
-            + 'proceed additionally needs one bad-event probability per arm per tick.',
+            + 'arm-level effect on any tick (a per-tick arm-level shock cancels exactly when the tick\'s '
+            + 'realised arm totals are equal, and to second order at canaryWeight 0.5 — study P2: '
+            + '0.028 / 0.030); proceed additionally needs one bad-event probability per arm per tick.',
     },
     twin_sign: {
         form: 'e_value',

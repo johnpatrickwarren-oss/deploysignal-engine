@@ -12,8 +12,9 @@
   both of a metric's wealths by ½ (valid under any missingness mechanism); the `rate` proceed null
   additionally assumes one bad-event probability per arm per tick. No estimated baseline anywhere
   in the null. Study `2026-09-twin-null` run-20260926T053339Z: ship rule met; persistent arm-level
-  state inflates false rollback (0.075–0.8 across the measured grid); authority awaits a
-  real-service A/A test; no consumer authority.
+  state inflates false rollback (0.063–0.83 across the persistent-state cells; every such cell
+  except rate w 0.1 φ 0.5 σ 0.1 exceeds B); authority awaits a real-service A/A test; no consumer
+  authority.
 
 ## v0.11.0-pre — 2026-09-25 — h0-battery Amendment A7: the two Family-A wealths measured, every plug-in wealth carries its tail premise
 

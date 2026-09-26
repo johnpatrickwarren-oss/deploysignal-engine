@@ -112,10 +112,13 @@ export interface ValidityEnvelope {
    *                                       any tick. Persistent arm-specific state breaks this at any
    *                                       split (a cold canary fleet, a control pinned to a degraded
    *                                       host); a per-tick arm-level shock (iid, zero-mean,
-   *                                       symmetric between arms) cancels exactly at canaryWeight
-   *                                       0.5 but not at unequal weights. The rate kind's PROCEED
-   *                                       null additionally needs one bad-event probability per arm
-   *                                       per tick;
+   *                                       symmetric between arms) cancels exactly when the tick's
+   *                                       realised arm totals are equal, and to second order at
+   *                                       canaryWeight 0.5 (study P2: 0.028 / 0.030); at unequal
+   *                                       weights it moves E[X | E] off the traffic share (measured
+   *                                       0.755 false rollback at w 0.1, σ_arm 0.3). The rate kind's
+   *                                       PROCEED null additionally needs one bad-event probability
+   *                                       per arm per tick;
    *    'exchangeable-equal-weight-arms' — the above plus equal routing weights (the sign kind: a
    *                                       skewed tick statistic has different medians in arms of
    *                                       different size).
@@ -222,7 +225,9 @@ export interface FdrPathAssertions {
   incrementMean?: { lower95: number; upper95: number };
   /** ADR 0036 — canary and control receive requests by randomized per-request routing with no
    *  arm-level effect on any tick: persistent arm-specific state breaks this at any split, and a
-   *  per-tick arm-level shock cancels only at canaryWeight 0.5, not at unequal weights. */
+   *  per-tick arm-level shock cancels exactly when the tick's realised arm totals are equal, and to
+   *  second order at canaryWeight 0.5 (study P2: 0.028 / 0.030); at unequal weights it moves
+   *  E[X | E] off the traffic share (measured 0.755 false rollback at w 0.1, σ_arm 0.3). */
   randomizedArms?: boolean;
   /** ADR 0036 — the two arms carry equal routing weight. Needed by the 'sign' twin kind. */
   equalWeightArms?: boolean;

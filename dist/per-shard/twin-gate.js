@@ -17,8 +17,10 @@
 //   (i)   the SRM guard needs only randomized per-request routing (routing independent of outcome).
 //         Every metric's ROLLBACK test needs more: no arm-level effect on any tick either. Persistent
 //         arm-specific state breaks it at any split; a per-tick arm-level shock (pod-level noise: iid
-//         across ticks, zero-mean, symmetric between arms) cancels at canaryWeight 0.5 but not at
-//         unequal weights (see detectors/twin-contrast.ts TWIN_RATE_ENVELOPE).
+//         across ticks, zero-mean, symmetric between arms) cancels exactly when the tick's realised
+//         arm totals are equal, and to second order at canaryWeight 0.5 (study P2: 0.028 / 0.030);
+//         at unequal weights it moves E[X | E] off the traffic share (measured 0.755 false rollback
+//         at w 0.1, σ_arm 0.3) (see detectors/twin-contrast.ts TWIN_RATE_ENVELOPE).
 //   (ii)  a `rate` metric's PROCEED test needs one more premise, one bad-event probability per arm
 //         per tick (see detectors/twin-contrast.ts TWIN_RATE_ENVELOPE); heterogeneous per-request
 //         probabilities within an arm can make it anticonservative (a false clear). Rollback and the

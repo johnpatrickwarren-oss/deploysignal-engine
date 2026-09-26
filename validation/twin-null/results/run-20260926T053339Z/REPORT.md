@@ -95,3 +95,18 @@ Reading: iid per-tick arm noise is harmless at equal weights; ANY persistent arm
 
 ### Not measured by this study
 The gate (sample-ratio guard, Bonferroni split, missingness penalty); within-arm heterogeneity for the rate proceed null; real telemetry (T3).
+
+## Post-run notes (2026-09-26, final review)
+
+- Disclosure, not a design change: the harness's `poisson()` (validation/twin-null/harness/run.mjs)
+  uses a rounded normal approximation when the mean exceeds 30 — hit by the traffic count N on
+  every tick, and by bad-event counts on outage ticks at w 0.5 and on the w 0.1 control arm during
+  the outage. The harness matches the plan text byte for byte; the registration §1 describes
+  Poisson thinning. The rollback impact is rounding-level (for normals with variance equal to the
+  mean, the conditional mean given the sum stays proportional), but P5's "strictly inside the
+  proceed null" is approximate, not exact, on those ticks.
+- Erratum: "§0/§4 amendment E" in the verdict above refers to a controller drafting note, not a
+  registration section. The registration text it means is §4 P5 (added before this run in a97ae39).
+- The rollback cancellation at w 0.5 is second-order, not exact: with per-request randomization the
+  realised arm totals differ by O(√N), so cancellation is exact only when those totals happen to be
+  equal. This is consistent with P2's measured 0.028 / 0.030 (σ_arm 0.1 and 0.3) against P1's 0.026.

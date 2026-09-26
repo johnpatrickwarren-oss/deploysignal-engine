@@ -13,9 +13,11 @@
 //   probabilities vary within the tick, because routing is independent of outcome. Persistent
 //   arm-specific state (a cold canary fleet, a control pinned to a degraded host) breaks this at
 //   ANY split. A per-tick arm-level shock (pod-level noise: iid across ticks, zero-mean, symmetric
-//   between arms) cancels exactly at canaryWeight 0.5 by symmetry; at unequal weights it does not —
-//   the canary's posterior share given E is logistic in the shock difference and convex there below
-//   w = 0.5, so Jensen pushes E[X] above the traffic share. The PROCEED null needs more: ψ ≥
+//   between arms) cancels exactly when the tick's realised arm totals are equal, and to second
+//   order at canaryWeight 0.5 (study P2: 0.028 / 0.030 against P1's 0.026) — with per-request
+//   randomization the totals differ by O(√N), so the cancellation is second-order, not exact; at
+//   unequal weights the shock moves E[X | E] off the traffic share, with a sign that varies with E
+//   (measured 0.755 false rollback at w 0.1, σ_arm 0.3). The PROCEED null needs more: ψ ≥
 //   1 + tolerance gives E[X] ≥ fisherNoncentralMean(n_c, n_k, E, 1 + tolerance) / E only when each
 //   arm's requests share ONE bad-event probability within the tick (b_c is then Fisher noncentral
 //   hypergeometric in ψ, whose mean is increasing in ψ); heterogeneous per-request probabilities
@@ -220,8 +222,10 @@ export const TWIN_RATE_ENVELOPE: Readonly<ValidityEnvelope> = Object.freeze({
     + 'with no arm-level effect on any tick (b_c is central hypergeometric given the tick\'s arm '
     + 'totals and bad-event total, even with heterogeneous per-request bad-event probabilities). '
     + 'Persistent arm-specific state breaks this at any split; a per-tick arm-level shock (iid, '
-    + 'zero-mean, symmetric between arms) cancels exactly at canaryWeight 0.5 but not at unequal '
-    + 'weights. The PROCEED null (Fisher noncentral mean at 1 + tolerance) needs more: each arm\'s '
+    + 'zero-mean, symmetric between arms) cancels exactly when the tick\'s realised arm totals are '
+    + 'equal, and to second order at canaryWeight 0.5 (study P2: 0.028 / 0.030); at unequal weights '
+    + 'it moves E[X | E] off the traffic share (measured 0.755 false rollback at w 0.1, σ_arm 0.3). '
+    + 'The PROCEED null (Fisher noncentral mean at 1 + tolerance) needs more: each arm\'s '
     + 'requests share one bad-event probability within the tick; heterogeneous requests within an '
     + 'arm can make it anticonservative (a false clear). Study 2026-09-twin-null run-20260926T053339Z '
     + '(T1, R = 1000, T = 2000, α = 0.05): false rollback 0.026 (w 0.5) / 0.027 (w 0.1) at P1, 0.018 '
@@ -244,5 +248,6 @@ export const TWIN_SIGN_ENVELOPE: Readonly<ValidityEnvelope> = Object.freeze({
     + 'statistics. Study 2026-09-twin-null run-20260926T053339Z (T1, R = 1000, T = 2000, α = 0.05): '
     + 'false rollback 0.025 at w 0.5 (P1), 0.034 at CS W=150; false proceed 0.025 at P5 (sign-direct). '
     + 'Premise boundary: persistent state φ 0.5 σ 0.1 → 0.165 at w 0.5; cold start without warm-up '
-    + '→ 0.289 rate / 1.000 sign. Real-deploy (T3) validity is unmeasured.',
+    + '→ 0.289 rate / 1.000 sign. Unequal weights measured: P3 (w 0.1, worse = lower) false rollback '
+    + '1.000 — the gate refuses sign at canaryWeight ≠ 0.5. Real-deploy (T3) validity is unmeasured.',
 });

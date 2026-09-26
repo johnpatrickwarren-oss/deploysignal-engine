@@ -195,6 +195,7 @@ const audit_2 = require("../types/audit");
     strict_1.default.equal(rate.validityClass, 'ville_anytime_valid');
     strict_1.default.equal(guarantees_1.APPROXIMATE_E_VALUE_BY_CONSTRUCTION.twin_rate.form, 'e_value');
     strict_1.default.equal(guarantees_1.APPROXIMATE_E_VALUE_BY_CONSTRUCTION.twin_sign.form, 'e_value');
-    strict_1.default.match(rate.evidence, /REGISTERED, NOT RUN/);
+    strict_1.default.match(rate.evidence, /run-20260926T053339Z/);
+    strict_1.default.match(sign.evidence, /run-20260926T053339Z/);
 });
 //# sourceMappingURL=guarantees.test.js.map

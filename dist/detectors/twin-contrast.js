@@ -195,7 +195,11 @@ exports.TWIN_RATE_ENVELOPE = Object.freeze({
         + 'zero-mean, symmetric between arms) cancels exactly at canaryWeight 0.5 but not at unequal '
         + 'weights. The PROCEED null (Fisher noncentral mean at 1 + tolerance) needs more: each arm\'s '
         + 'requests share one bad-event probability within the tick; heterogeneous requests within an '
-        + 'arm can make it anticonservative (a false clear). Study 2026-09-twin-null registered, not run.',
+        + 'arm can make it anticonservative (a false clear). Study 2026-09-twin-null run-20260926T053339Z '
+        + '(T1, R = 1000, T = 2000, α = 0.05): false rollback 0.026 (w 0.5) / 0.027 (w 0.1) at P1, 0.018 '
+        + 'at CS W=150; false proceed 0.004 (w 0.5) / 0.007 (w 0.1) at P5 (×1.5 rate shift). Premise boundary: '
+        + 'iid arm shocks σ 0.3 at w 0.1 → 0.755; persistent state φ 0.5 σ 0.1 → 0.075 at w 0.5; '
+        + 'cold start without warm-up → 0.289 rate / 1.000 sign. Real-deploy (T3) validity is unmeasured.',
 });
 /** ADR 0036 — sign kind. */
 exports.TWIN_SIGN_ENVELOPE = Object.freeze({
@@ -208,6 +212,9 @@ exports.TWIN_SIGN_ENVELOPE = Object.freeze({
     pairingPremise: 'exchangeable-equal-weight-arms',
     notes: 'Null P(canary tick worse | no tie) = 1/2 by exchangeability of equal-weight arms; any '
         + 'scalar tick statistic (a percentile, a gauge, a count). Unequal weights break it for skewed '
-        + 'statistics. Study 2026-09-twin-null registered, not run.',
+        + 'statistics. Study 2026-09-twin-null run-20260926T053339Z (T1, R = 1000, T = 2000, α = 0.05): '
+        + 'false rollback 0.025 at w 0.5 (P1), 0.034 at CS W=150; false proceed 0.025 at P5 (sign-direct). '
+        + 'Premise boundary: persistent state φ 0.5 σ 0.1 → 0.165 at w 0.5; cold start without warm-up '
+        + '→ 0.289 rate / 1.000 sign. Real-deploy (T3) validity is unmeasured.',
 });
 //# sourceMappingURL=twin-contrast.js.map

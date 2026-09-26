@@ -211,5 +211,6 @@ test('ADR 0036: twin rows resolve by prefix, carry live envelopes, and claim a g
   assert.equal(rate.validityClass, 'ville_anytime_valid');
   assert.equal(APPROXIMATE_E_VALUE_BY_CONSTRUCTION.twin_rate.form, 'e_value');
   assert.equal(APPROXIMATE_E_VALUE_BY_CONSTRUCTION.twin_sign.form, 'e_value');
-  assert.match(rate.evidence, /REGISTERED, NOT RUN/);
+  assert.match(rate.evidence, /run-20260926T053339Z/);
+  assert.match(sign.evidence, /run-20260926T053339Z/);
 });

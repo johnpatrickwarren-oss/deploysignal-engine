@@ -393,8 +393,12 @@ export const GUARANTEE_TABLE: readonly GuaranteeRow[] = Object.freeze([
     alphaPolicy: 'ville_spend',
     evidence: 'By construction (ADR 0036): a bounded bet against a null mean observed in the same tick; '
       + 'nothing estimated. Unit and Monte Carlo property tests only (test/paired-bet.test.ts, '
-      + 'test/twin-contrast.test.ts). Study 2026-09-twin-null REGISTERED, NOT RUN. No real-deploy (T3) '
-      + 'measurement.',
+      + 'test/twin-contrast.test.ts). Study 2026-09-twin-null run-20260926T053339Z: ship rule MET (P1, '
+      + 'P5, CS W=150 within B = 0.0678) — PROPOSED for consumer authority only after a real-service '
+      + 'A/A test (T3). False rollback 0.026 (w 0.5) / 0.027 (w 0.1) at P1, 0.018 at CS W=150; false '
+      + 'proceed 0.004 (w 0.5) / 0.007 (w 0.1) at P5. Premise boundary: iid arm shocks σ 0.3 at w 0.1 '
+      + '→ 0.755; persistent state φ 0.5 σ 0.1 → 0.075 at w 0.5; cold start without warm-up → 0.289 '
+      + 'rate / 1.000 sign. No real-deploy (T3) measurement.',
     approximateEValue: {
       form: 'e_value',
       note: 'genuine e-process under the pairing premise (randomized routing with no arm-level effect '
@@ -413,7 +417,11 @@ export const GUARANTEE_TABLE: readonly GuaranteeRow[] = Object.freeze([
     alphaPolicy: 'ville_spend',
     evidence: 'By construction (ADR 0036): exchangeability of equal-weight arms fixes the null at 1/2. '
       + 'Unit tests only (test/twin-contrast.test.ts, test/twin-gate.test.ts). Study 2026-09-twin-null '
-      + 'REGISTERED, NOT RUN. No real-deploy (T3) measurement.',
+      + 'run-20260926T053339Z: ship rule MET (P1, P5, CS W=150 within B = 0.0678) — PROPOSED for '
+      + 'consumer authority only after a real-service A/A test (T3). False rollback 0.025 at w 0.5 '
+      + '(P1), 0.034 at CS W=150; false proceed 0.025 at P5 (sign-direct). Premise boundary: '
+      + 'persistent state φ 0.5 σ 0.1 → 0.165 at w 0.5; cold start without warm-up → 0.289 rate / '
+      + '1.000 sign. No real-deploy (T3) measurement.',
     approximateEValue: {
       form: 'e_value',
       note: 'genuine e-process under exchangeable equal-weight arms; unequal weights break it for skewed '

@@ -1,8 +1,9 @@
 # ADR 0036 — The randomized twin: a deploy null by construction, with nothing estimated
 
 - **Date:** 2026-09-25
-- **Status:** PROPOSED. Library only; no consumer authority. Study `2026-09-twin-null` registered
-  (validation/twin-null/PREREGISTRATION.md), not run.
+- **Status:** PROPOSED. Library only; no consumer authority. Study `2026-09-twin-null` run
+  (run-20260926T053339Z): ship rule met; premise boundary measured — see
+  validation/twin-null/results/run-20260926T053339Z/REPORT.md.
 - **Register:** ADR 0032 (the contrast null, refused on its estimated offset); knowledge
   `stats/contrast-null`, `stats/nab-null-survival-2026-09-04`,
   `methodology/threshold-free-observability` claim (1).

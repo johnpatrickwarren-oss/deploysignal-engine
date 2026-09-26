@@ -50,8 +50,10 @@ exports.DETECTOR_ENVELOPES = Object.freeze({
     // (0.34 / 0.18 / 0.03 false alerts per 1,000 ticks at fit 60 / 300 / 2000 on iid pairs) and admitted
     // nothing; the envelope's `admission` carries the numbers. Admitted here only under the caller's
     // assertion { mMuchGreaterThanN } (fit >> horizon) or { trueBaseline } (a twin with a known offset).
-    contrast_null_mixture: contrast_1.CONTRAST_NULL_ENVELOPE,
-    contrast_null_betting: contrast_1.CONTRAST_NULL_ENVELOPE,
+    // h0-battery A7 / ADR 0035 addendum: each id carries its construction's tail premise ('mgf' for the
+    // mixture, 'clip-mean-zero' for the bet), the same frozen envelope one field apart.
+    contrast_null_mixture: contrast_1.CONTRAST_NULL_MIXTURE_ENVELOPE,
+    contrast_null_betting: contrast_1.CONTRAST_NULL_BETTING_ENVELOPE,
     /** ADR 0034: Tessera's per-shard e-value object for fleet e-BH, by increment kind. ADR 0035: both
      *  envelopes carry a `tailPremise` ('mgf' / 'clip-mean-zero'), so besides { mMuchGreaterThanN } or
      *  { trueBaseline } the caller supplies { incrementMean } from the family-coherent increment

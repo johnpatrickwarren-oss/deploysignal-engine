@@ -1828,3 +1828,150 @@ Sim-mode shakedown allowed; one live run. On the measured outcome: the `onset_mi
 row's evidence is amended with the increment means; if A6.3's N5 prediction holds, the bounded
 envelope's notes and the row's axis 3 are amended as stated above, in the same PR, as a
 correction the run forces — not as a threshold move.
+
+## Amendment A7 — 2026-09-25, the increment arm for the two Family-A wealths: the betting e-process and the mixture supermartingale (WORKLIST C83)
+
+Appended before any harness or run exists. Engine ADR 0035 put a `tailPremise` on the two
+onset-mixture envelopes and left it absent on the other plug-in wealths, calling the absence
+"unrecorded, not waived". This arm measures the two Family-A wealths at oracle parameters on the
+A6 nulls so their envelopes can carry a premise with evidence. Two corrections first, because the
+record this arm extends is wrong in two places.
+
+**Correction 1 (mine, engine ADR 0035 decision 1 and `validity-envelope.ts:99`).** The ADR says the
+betting e-process, the mixture supermartingale and the contrast null "carry the `'mgf'` premise
+structurally". The betting e-process does not. Its increment is `1 + λ_t·z_t` with
+`z_t = clip((x − μ)/(3σ), −1, 1)` (`detectors/betting-e-process.ts:146-153, 196`), a linear bounded
+bet with a predictable λ_t from the running moments of z (aGRAPA, `grapaBet`). Its premise is the
+bounded one, `'clip-mean-zero'`: E[g_t | F_{t−1}] = 1 + λ_t·E[z_t | F_{t−1}], exactly 1 iff the
+clipped residual is conditionally mean-zero, for any tail. The mixture supermartingale
+(`computeGaussianMixtureLogSupermartingale`, a Gaussian mixture over the drift of S_t) is the one
+with the `'mgf'` premise. The contrast null runs both constructions on the contrast residual and
+inherits each construction's premise by id. The ADR is amended in this arm's consequence PR.
+
+**Correction 2 (the detector-audit sequential arm, `stats/detector-audit-sequential-2026-08-05`).**
+Every detector-audit harness calls `spec.gen(r, g)` (`harness/run-sequential.mjs:50,83`,
+`run-sequential-ui.mjs:58`, `run-power.mjs:44,76`). The battery's N5 generator is
+`lognormal(r, sigma = 0.75)` (`harness/nulls.mjs:31`), so the second argument, a Gaussian draw
+function, became σ and every N5 observation was NaN. Verified 2026-09-25: `NULLS.N5.gen(r, g)()` is
+`NaN`; N1 and N6 take one argument and are unaffected. The betting module skips a NaN tick without
+touching its wealth (`betting-e-process.ts:187`), so its N5 cell read exactly 1.000000 with zero
+spread; the mixture's N5 cell has n = 0. The page's two claims — "Family A betting is well-behaved
+on both" and "N5, right-skewed: the increment estimator returns NaN" as a mixture defect — are
+retracted: N5 was never measured by that study, for any detector, and the mixture card's notes
+(`certification/cards/family_A_mixture_supermartingale.json:58`, "NaN on right-skewed (N5)")
+carry the same void reading. The 8.5×10⁴⁶ on N6 stands. The betting increment under a skewed
+null is therefore unmeasured before this arm. The N5 rows of every detector-audit arm are void
+and are recorded as such on the wiki in the consequence PR; no certification card scored an N5
+cell from that study (the betting card's S2 cells are N1–N4, N6, N7).
+
+### A7.1 — The estimand and the instrument
+
+For each of the two constructions and each null, the marginal mean of the shipped per-tick
+wealth ratio `g_t = M_t / M_{t−1}`, read as `exp(Δ log M)` from the battery's own adapters
+(`harness/detectors.mjs`, `family_A_betting_e_process` and `family_A_mixture_supermartingale`,
+each driving the shipped module through `evaluateBettingEProcess` /
+`evaluatePageCusumMixtureSupermartingale` with oracle μ = 0, σ = 1 and the null's φ, the module's
+own AR(1) whitening) — the detector-audit §3 instrument on the A6 nulls. Nothing is standardised
+outside the module; the series is fed raw, as the battery feeds it. The shipped caps are part of
+the shipped increment: the betting log-wealth floor (`LOG_WEALTH_FLOOR`) and the mixture's
+120-nat cap on log M (`family-a-mixture-supermartingale.ts:83`).
+
+**Two estimators, one with verdict authority.** (a) `increment_estimator`: the engine's
+`incrementEstimate` pooled over every tick of every trajectory (A6's field, scorer-readable). Its
+interval assumes iid increments, which these are not — λ_t and S_{t−1} carry the past — so it is
+recorded, not scored. (b) `trajectory_estimator`: the mean increment per trajectory, then the
+normal-theory two-sided 95% interval over the N trajectory means, which are independent by
+construction (the detector-audit instrument, two-sided). **(b) carries the verdict.**
+
+**Nulls:** N1, N3-p09, N5, N6, N8, oracle parameters (A6.1's set). Cell ids are
+`family_A_betting_e_process_increment` and `family_A_mixture_supermartingale_increment`, not the
+card ids, so the two certified cards' S2 stages do not consume them (A6.6's design); a card
+amendment may adopt them later by its own registration.
+
+### A7.2 — Sizes, seeds, endpoint
+
+N = 2000 trajectories × T = 2000 ticks (A6.2). Seeds in the A3.3 pattern, `SEED = 20260925`,
+`rng(SEED + 7919·i + spec.id.length·104729 + construction.id.length)`. 10 cells.
+
+**Endpoint I1, per cell, on the trajectory estimator:** `REFUTED` iff `lower95 > 1.0005`;
+`CLEARED` iff `upper95 < 1.0005`; otherwise `inconclusive`. **Endpoint I2, the divergence rule,
+registered for the mixture's heavy-tail cells where the increment has no finite variance and no
+interval can decide:** `DIVERGENT` iff the pooled mean of the non-negative increment is ≥ 10⁴.
+Under E[g|H₀] ≤ 1, Markov gives P(pooled mean ≥ 10⁴) ≤ 10⁻⁴ with no variance assumption, so a
+DIVERGENT cell refutes the premise at level 10⁻⁴ and is scored `REFUTED`, with `divergent: true`
+beside it. The house rule at 1 is recorded beside each cell as in A6.
+
+### A7.3 — Registered predictions, derived before any run
+
+*Derivations, not measurements.* The clipped moments by quadrature on 2026-09-25 (400,000-point
+trapezoid on the standardised densities; A6's E[clip(r)] = −0.02772 reproduced):
+
+| null | E[z] | E[z²] | aGRAPA λ∞ = E[z]/E[z²] |
+|---|---|---|---|
+| N1, N3-p09, N6, N8 (symmetric) | 0 | 0.11056 (N(0,1)) / 0.08098 (t₃) | 0 |
+| N5 (lognormal σ 0.75) | −0.00924 | 0.08156 | −0.1133 |
+
+**Betting.** E[g_t | F_{t−1}] = 1 + λ_t·E[z] with λ_t predictable and E[λ_t] = E[z]/E[z²] + O(1/t)
+(the running mean is unbiased; the ratio's Jensen bias averages to ~0.4% of λ∞ over T = 2000).
+Symmetric nulls: **1.00000**, CLEARED (tolerance 0.0005). N5: aGRAPA learns the clipped mean the
+skew leaves and bets against it — **1 + E[z]²/E[z²] = 1.00105**, REFUTED (tolerance 0.0003). Not
+the σ̂ channel and not the centre: μ is the true 0; the raw residual is mean-zero and the clipped
+one is not, the same fact A6 measured on the fixed-λ bounded increment (1.0009 to 1.0083), now
+with the bet choosing the sign.
+
+**Mixture.** The Gaussian mixture is a martingale on a whitened Gaussian residual: symmetric
+light-tailed nulls N1, N3-p09 **1.0000**, CLEARED (tolerance 0.003; the unwhitened first tick is
+one ratio in 2000). Heavy tails: E[g_t | S_{t−1}] = ∫ exp((S_{t−1}+r)²/(2d_t) − S_{t−1}²/(2d_{t−1}))
+√(d_{t−1}/d_t) dF(r) diverges for t₃ and for the lognormal because the integrand grows like
+exp(r²/(2d_t)) against a polynomial (t₃) or exp(−(log r)²) (lognormal) tail. The pooled mean at
+4,000,000 draws is finite (the 120-nat cap) but has no finite variance: N5, N6, N8 **DIVERGENT**
+(pooled mean ≥ 10⁴, max/mean ≥ 10³), scored REFUTED under I2; the trajectory interval is expected
+inconclusive and is reported. Detector-audit's 8.5×10⁴⁶ on N6 at T = 300 is the same reading.
+
+**Falsifiers accepted in advance.** (i) A CLEARED betting cell on N5 refutes the aGRAPA argument
+(the bet does not learn the clipped mean, or the clip is not where the code says). (ii) A CLEARED
+mixture cell on N5, N6 or N8 refutes the mgf argument as applied to the capped ratio. (iii) A
+betting reading on a symmetric null outside 1 ± 0.0005 is a harness or module defect (the
+increment is exactly mean-one there), reported test-first. (iv) A mixture cell on N1 or N3-p09
+outside 1 ± 0.003 is a discrepancy, reported; detector-audit's 0.9918 on N3-p09 at T = 300 is
+the one prior reading and this arm decides whether it was the first-tick edge or something else.
+
+### A7.4 — Not-executable conditions
+
+1. Engine `0.10.0-pre` at `64ae892` or later on `main`; recorded in the manifest.
+2. The betting N1 cell reads within 0.0005 of 1 and is not REFUTED; the mixture N1 cell reads
+   within 0.003 of 1 and is not REFUTED. A REFUTED N1 is the harness.
+3. A6.4.3's generator variance check on the same generators, and one added check: every N5 draw
+   is finite (Correction 2's defect cannot recur here).
+
+### A7.5 — Instrument changes, registered
+
+1. `harness/run-increment-arm-a7.mjs`, a separate file (A6.5's precedent), study id
+   `2026-09-h0-battery-family-a-increment`, output `results/live/inc-<UTC>/`, `supersedes: null`,
+   refusing an existing directory; it imports the battery's adapters and the nulls and the
+   engine's estimator, and re-implements nothing but the trajectory-level interval (mean, sd,
+   1.96·se over the N trajectory means).
+2. `tests/test_increment_arm_a7.mjs`: A7.4's checks, the finite-N5 check, and the cell shape
+   (`increment_estimator` plus `trajectory_estimator`, no other stage key).
+3. Report: `FAMILY-A-INCREMENT-ADDENDUM-2026-09-25.md`, pinned by
+   `tests/test_increment_arm_a7_addendum.mjs`.
+
+### A7.6 — Census and verdict guards
+
+10 cells under the arm's study id: certification corpus census **2744 → 2754**, arithmetic in
+`collect.test.mjs`. The cells carry `increment_estimator` and reach the pool as validity cells,
+but no card names the `_increment` ids, so **no card verdict, tier or stage token may move**; the
+re-score must show all 17 identical.
+
+### A7.7 — One attempt; consequences registered
+
+Sim-mode shakedown allowed; one live run. On the measured outcome, in the same PR: (1)
+`BETTING_E_PROCESS_ENVELOPE.tailPremise = 'clip-mean-zero'` and
+`MIXTURE_SUPERMARTINGALE_ENVELOPE.tailPremise = 'mgf'`, each with the measured numbers in its
+notes; the contrast null's two guarded ids get the premise of their construction
+(`contrast_null_betting` → `'clip-mean-zero'`, `contrast_null_mixture` → `'mgf'`) through two
+frozen envelopes sharing `CONTRAST_NULL_ENVELOPE`'s fields; (2) engine ADR 0035 addendum for
+Correction 1; (3) the guarantee rows for the two constructions carry the increment means; (4)
+the wiki: Correction 2 as a dated retraction on the detector-audit pages, and the mixture card's
+note registered as a card amendment (a dedicated freeze commit, not this PR). A prediction that
+fails is reported as A3.6 requires and decides nothing by itself.

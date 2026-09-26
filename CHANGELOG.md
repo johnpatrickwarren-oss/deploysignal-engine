@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## v0.11.0-pre — 2026-09-25 — h0-battery Amendment A7: the two Family-A wealths measured, every plug-in wealth carries its tail premise
+
+Breaking for the guarded e-BH: `betting_e_process`, `page_cusum_mixture_supermartingale`,
+`contrast_null_mixture` and `contrast_null_betting` are refused under `mMuchGreaterThanN` /
+`trueBaseline` alone. DeploySignal's health-contrast gate names `contrast_null_mixture` and
+re-pins with its assertion; Tessera and Tessera-RNG pin only.
+
+- **Correction to ADR 0035 (addendum 1):** the betting e-process's increment is the bounded bet
+  `1 + λ_t·z_t`, premise clip-mean-zero, not mgf. The mixture supermartingale's is mgf.
+- **Amendment A7** (`inc-20260925T174222Z`, N = 2000 × T = 2000, oracle parameters, the per-tick
+  wealth ratio through the battery's own adapters, the trajectory-level interval carrying the
+  verdict and a Markov divergence rule at 10⁻⁴): betting 1.00000 ± 0.00005 on N(0,1), AR(1) φ 0.9
+  and t₃, **1.00118 on the σ-0.75 lognormal** at the true centre and scale — aGRAPA converges on the
+  clipped mean and bets against it, derived 1.00105 before the run; the mixture 1.00002 on N(0,1),
+  **divergent on t₃ and the lognormal** (10²⁵, 8 × 10¹¹), 0.9983 on AR(1) and 2.2 inconclusive on
+  AR(1)-t₃ because the battery's marginal-σ convention runs it at five times the residual variance.
+  Nine of ten cells as registered.
+- `BETTING_E_PROCESS_ENVELOPE.tailPremise = 'clip-mean-zero'`, `MIXTURE_SUPERMARTINGALE_ENVELOPE.tailPremise = 'mgf'`;
+  `CONTRAST_NULL_MIXTURE_ENVELOPE` / `CONTRAST_NULL_BETTING_ENVELOPE`, two frozen views of the
+  contrast envelope, keyed by the two guarded ids. The three guarantee rows carry the numbers.
+- **The detector-audit study's N5 cells are void** (its harness handed the lognormal a function as
+  σ; every N5 draw NaN). Dated correction appended to that study's report; the mixture card's
+  "NaN on right-skewed" note is registered for a card amendment. Certification census 2744 → 2754,
+  all 17 verdicts identical.
+
 ## v0.10.0-pre — 2026-09-25 — ADR 0035: the tail premise at the gate
 
 Breaking for the guarded e-BH: `onset_mixture_gaussian` and `onset_mixture_bounded` are refused

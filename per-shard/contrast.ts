@@ -261,3 +261,10 @@ export const CONTRAST_NULL_ENVELOPE: Readonly<ContrastNullEnvelope> = Object.fre
     + 'Gaussian-innovation nulls at every m and fails on N5/N6/N8; the bounded monitor revokes the '
     + 'premise at the rate it fails.',
 });
+
+/** ADR 0035 / h0-battery A7 — the contrast null runs the two Family-A constructions on the contrast
+ *  residual and inherits each construction's tail premise by guarded id: the mixture's 'mgf', the
+ *  betting bet's 'clip-mean-zero'. Two frozen views of the one envelope above, one field apart
+ *  (defined after it: CommonJS output reads an exported const before its assignment as undefined). */
+export const CONTRAST_NULL_MIXTURE_ENVELOPE: Readonly<ContrastNullEnvelope> = Object.freeze({ ...CONTRAST_NULL_ENVELOPE, tailPremise: 'mgf' as const });
+export const CONTRAST_NULL_BETTING_ENVELOPE: Readonly<ContrastNullEnvelope> = Object.freeze({ ...CONTRAST_NULL_ENVELOPE, tailPremise: 'clip-mean-zero' as const });

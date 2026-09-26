@@ -95,9 +95,11 @@ export interface ValidityEnvelope {
    *  (upper95 < 1.0005), or asserts the premise as a promise (`lightTails` for 'mgf',
    *  `clipMeanZero` for 'clip-mean-zero') when the interval is inconclusive or absent. A measured
    *  REFUTATION (lower95 > 1.0005) refuses regardless of any promise.
-   *  Absent ⇒ the premise is UNRECORDED for this envelope, not absent: the plug-in Gaussian
-   *  wealths (betting, mixture supermartingale, contrast) carry the 'mgf' premise structurally and
-   *  no increment-mean cell has measured them (knowledge WORKLIST C83). */
+   *  Absent ⇒ the premise is UNRECORDED for this envelope, not absent. (ADR 0035 first said the
+   *  betting e-process carries the 'mgf' premise; it does not — its increment 1 + λ_t·z_t is a
+   *  bounded bet, premise 'clip-mean-zero'. Corrected by h0-battery Amendment A7, which measured
+   *  both Family-A wealths: betting 1.00000 on symmetric tails and 1.00118 on a σ-0.75 lognormal
+   *  where aGRAPA bets against the clipped mean; the mixture divergent on t3 and the lognormal.) */
   tailPremise?: 'mgf' | 'clip-mean-zero';
   /** Free-text regime detail (the conditions, the failure mode, the valid-only-when). */
   notes?: string;
@@ -112,9 +114,16 @@ export const BETTING_E_PROCESS_ENVELOPE: Readonly<ValidityEnvelope> = Object.fre
   null: 'mean-shift',
   variance: 'stable',
   validUnderEstimatedBaseline: false,
+  // h0-battery A7 (inc-20260925T174222Z): the increment 1 + λ_t·z_t, z clipped at ±3σ, is exactly
+  // mean-one on every symmetric null (1.00000 ± 0.00005 on N(0,1) and t3) and 1.00118 on a σ-0.75
+  // lognormal — aGRAPA learns the clipped mean the skew leaves (E[z] = −0.0092) and bets against it.
+  tailPremise: 'clip-mean-zero',
   notes: 'Plug-in point baseline μ̂; E[e|H0] ≫ 1 under an estimated baseline (Tessera ADR 0008 → ~1e8). '
     + 'Valid only with a TRUE baseline or m≫n. Use detectors/safe-t-e-value.ts (or the UI e-value for '
-    + 'any-φ validity) in the estimated-baseline regime.',
+    + 'any-φ validity) in the estimated-baseline regime. Tail premise clip-mean-zero (A7): exact under '
+    + 'symmetric tails at oracle parameters (1.00000 on N(0,1) and t3), 1.00118 per tick on a skewed '
+    + 'lognormal because the running-moment bet converges on the clipped mean — the gate asks for '
+    + '{ clipMeanZero } or { incrementMean }.',
 });
 
 /** Family-A Gaussian mixture supermartingale (`detectors/family-a-mixture-supermartingale.ts`). Plugs
@@ -126,8 +135,15 @@ export const MIXTURE_SUPERMARTINGALE_ENVELOPE: Readonly<ValidityEnvelope> = Obje
   null: 'mean-shift',
   variance: 'stable',
   validUnderEstimatedBaseline: false,
+  // h0-battery A7 (inc-20260925T174222Z): the Gaussian mixture's per-tick ratio is exact on N(0,1)
+  // (1.00002) and DIVERGENT on t3 and the lognormal (pooled means 1e25 and 8e11 at unit scale; the
+  // increment has no finite mean there). On an AR(1) null the battery's marginal-σ convention runs it
+  // at five times the true residual variance, where it is conservative (0.9983 at φ = 0.9).
+  tailPremise: 'mgf',
   notes: 'Plug-in null mean; E[e|H0] ≫ 1 in the under-powered regime n≫m (Tessera ADR 0014 → ~3e9). '
-    + 'Valid only with a TRUE baseline or m≫n.',
+    + 'Valid only with a TRUE baseline or m≫n. Tail premise mgf (A7): a Gaussian mixture on a residual '
+    + 'without a moment generating function has an increment with no finite mean — divergent on t3 and '
+    + 'on a σ-0.75 lognormal at unit scale — so the gate asks for { lightTails } or { incrementMean }.',
 });
 
 /** Re-export the nuisance-robust BF envelope (ADR 0004 PR A). ⚠️ CORRECTED (2026-07-02): NO LONGER
@@ -242,6 +258,14 @@ export function assertValidForFdrPath(env: ValidityEnvelope, assertions: FdrPath
       + 'route this regime to a detector whose envelope covers it. None does above 0.95.',
     );
   }
+  // The baseline refusal first (the older, more fundamental one), then the tail premise (ADR 0035).
+  if (!(env.validUnderEstimatedBaseline || assertions.trueBaseline || assertions.mMuchGreaterThanN)) {
+    throw new Error(
+      `validity-envelope: a '${env.baseline}' e-value is INVALID under an estimated baseline `
+      + '(E[e|H0] > 1) and must not enter the FDR path. Assert { trueBaseline } or '
+      + '{ mMuchGreaterThanN }, or use the safe-t / universal-inference e-value instead.',
+    );
+  }
   if (!tailAdmissible(env, assertions)) {
     const need = env.tailPremise === 'mgf'
       ? 'a residual whose mgf exists at the bets (the Gaussian-LR increment): measured 1.61 on t3 and '
@@ -257,13 +281,6 @@ export function assertValidForFdrPath(env: ValidityEnvelope, assertions: FdrPath
       `validity-envelope: this increment's E[g|H0] ≤ 1 needs ${need}, or supply { incrementMean } `
       + 'from the family-coherent increment estimator on a believed-null feed of this residual with '
       + `upper95 < ${INCREMENT_MEAN_BOUND} — ${measured} (h0-battery Amendment A6, inc-20260925T044059Z; ADR 0035).`,
-    );
-  }
-  if (!isValidForFdrPath(env, assertions)) {
-    throw new Error(
-      `validity-envelope: a '${env.baseline}' e-value is INVALID under an estimated baseline `
-      + '(E[e|H0] > 1) and must not enter the FDR path. Assert { trueBaseline } or '
-      + '{ mMuchGreaterThanN }, or use the safe-t / universal-inference e-value instead.',
     );
   }
 }

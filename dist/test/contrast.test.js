@@ -240,12 +240,19 @@ const contrast_2 = require("../per-shard/contrast");
     strict_1.default.ok(contrast_1.CONTRAST_NULL_ENVELOPE.evidence.includes(contrast_2.CONTRAST_NULL_RUN));
 });
 (0, node_test_1.test)('the gate REFUSES a contrast e-value by name unless the caller asserts fit >> horizon or a true offset', () => {
-    strict_1.default.equal((0, e_bh_guarded_1.envelopeFor)('contrast_null_mixture'), contrast_1.CONTRAST_NULL_ENVELOPE);
-    strict_1.default.equal((0, e_bh_guarded_1.envelopeFor)('contrast_null_betting'), contrast_1.CONTRAST_NULL_ENVELOPE);
+    // h0-battery A7: each id maps to a frozen view of CONTRAST_NULL_ENVELOPE carrying its construction's
+    // tail premise; every other field is the one envelope's.
+    strict_1.default.equal((0, e_bh_guarded_1.envelopeFor)('contrast_null_mixture').tailPremise, 'mgf');
+    strict_1.default.equal((0, e_bh_guarded_1.envelopeFor)('contrast_null_betting').tailPremise, 'clip-mean-zero');
+    for (const id of ['contrast_null_mixture', 'contrast_null_betting']) {
+        const { tailPremise: _t, ...rest } = (0, e_bh_guarded_1.envelopeFor)(id);
+        strict_1.default.deepEqual(rest, { ...contrast_1.CONTRAST_NULL_ENVELOPE }, id);
+    }
     strict_1.default.throws(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'contrast_null_mixture', eValue: 50 }], 0.1), /INVALID under an estimated baseline/);
-    const admitted = (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'contrast_null_mixture', eValue: 50, assertions: { mMuchGreaterThanN: true } }], 0.1);
+    const admitted = (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'contrast_null_mixture', eValue: 50, assertions: { mMuchGreaterThanN: true, lightTails: true } }], 0.1);
     strict_1.default.equal(admitted.selected.length, 1, 'e = 50 against K/(q·k) = 10: selected once the caller asserts the regime');
-    strict_1.default.doesNotThrow(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'contrast_null_betting', eValue: 50, assertions: { trueBaseline: true } }], 0.1));
+    strict_1.default.throws(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'contrast_null_betting', eValue: 50, assertions: { trueBaseline: true } }], 0.1), /CLIPPED residual/);
+    strict_1.default.doesNotThrow(() => (0, e_bh_guarded_1.eBenjaminiHochbergGuarded)([{ detectorId: 'contrast_null_betting', eValue: 50, assertions: { trueBaseline: true, clipMeanZero: true } }], 0.1));
 });
 (0, node_test_1.test)('the six contrast_null_{signal} ids are registered and resolve to the refusal row', () => {
     for (const sig of ['p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req']) {

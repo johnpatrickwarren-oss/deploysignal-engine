@@ -345,9 +345,10 @@ exports.GUARANTEE_TABLE = Object.freeze([
             + 'measurement.',
         approximateEValue: {
             form: 'e_value',
-            note: 'genuine e-process under the pairing premise (randomized routing, no arm-specific persistent '
-                + 'state under H0); the proceed side additionally assumes one bad-event probability per arm per '
-                + 'tick; the premise boundary is what study 2026-09-twin-null measures.',
+            note: 'genuine e-process under the pairing premise (randomized routing with no arm-level effect '
+                + 'on any tick: persistent arm-specific state breaks this at any split, a per-tick arm-level '
+                + 'shock only at canaryWeight 0.5); the proceed side additionally assumes one bad-event '
+                + 'probability per arm per tick; the premise boundary is what study 2026-09-twin-null measures.',
         },
     },
     {
@@ -415,7 +416,9 @@ exports.APPROXIMATE_E_VALUE_BY_CONSTRUCTION = Object.freeze({
     },
     twin_rate: {
         form: 'e_value',
-        note: 'ADR 0036: no estimated parameter; exact under the pairing premise at any routing split.',
+        note: 'ADR 0036: no estimated parameter; rollback exact under randomized routing with no '
+            + 'arm-level effect on any tick (a per-tick arm-level shock cancels only at canaryWeight 0.5); '
+            + 'proceed additionally needs one bad-event probability per arm per tick.',
     },
     twin_sign: {
         form: 'e_value',

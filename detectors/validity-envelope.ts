@@ -108,12 +108,19 @@ export interface ValidityEnvelope {
   /** ADR 0036 — the PAIRING premise of a canary-vs-control statistic. Its null mean is observed
    *  (the traffic share) or fixed (1/2), so nothing is estimated; what validity rests on instead is
    *  the design:
-   *    'exchangeable-arms'              — randomized per-request routing and no arm-specific
-   *                                       persistent state under H0 (a cold canary fleet, a control
-   *                                       pinned to a degraded host break it);
+   *    'exchangeable-arms'              — randomized per-request routing with no arm-level effect on
+   *                                       any tick. Persistent arm-specific state breaks this at any
+   *                                       split (a cold canary fleet, a control pinned to a degraded
+   *                                       host); a per-tick arm-level shock (iid, zero-mean,
+   *                                       symmetric between arms) cancels exactly at canaryWeight
+   *                                       0.5 but not at unequal weights. The rate kind's PROCEED
+   *                                       null additionally needs one bad-event probability per arm
+   *                                       per tick;
    *    'exchangeable-equal-weight-arms' — the above plus equal routing weights (the sign kind: a
    *                                       skewed tick statistic has different medians in arms of
    *                                       different size).
+   *  Only ROLLBACK twin e-values are candidates for the FDR (e-BH) path; PROCEED e-values test a
+   *  different null and must not be pooled with them.
    *  An envelope carrying one REFUSES unless the caller asserts `randomizedArms` (and
    *  `equalWeightArms` for the second). */
   pairingPremise?: 'exchangeable-arms' | 'exchangeable-equal-weight-arms';
@@ -213,8 +220,9 @@ export interface FdrPathAssertions {
    *  bounded monitor 4% of lognormal feeds at 2000 ticks and 12% at 5000 (test/e-bh-guarded.test.ts,
    *  ADR 0035). That is A5's crossing-rate blindness at the monitor. The estimator sees the mean. */
   incrementMean?: { lower95: number; upper95: number };
-  /** ADR 0036 — canary and control receive requests by randomized per-request routing and share
-   *  everything under H0 but the version under test (no arm-specific persistent state). */
+  /** ADR 0036 — canary and control receive requests by randomized per-request routing with no
+   *  arm-level effect on any tick: persistent arm-specific state breaks this at any split, and a
+   *  per-tick arm-level shock cancels only at canaryWeight 0.5, not at unequal weights. */
   randomizedArms?: boolean;
   /** ADR 0036 — the two arms carry equal routing weight. Needed by the 'sign' twin kind. */
   equalWeightArms?: boolean;

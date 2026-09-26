@@ -9,13 +9,18 @@
 //
 // rate — bad events b and totals n per arm. X = b_c / (b_c + b_k). Conditional on n_c, n_k and the
 //   bad-event total E, ψ ≤ 1 (canary odds no worse) gives E[X] ≤ n_c / (n_c + n_k) — the observed
-//   traffic share — EXACTLY under randomized per-request routing alone: b_c is central
-//   hypergeometric given n_c, n_k, E even when per-request bad-event probabilities vary within the
-//   tick, because routing is independent of outcome. The PROCEED null needs more: ψ ≥ 1 + tolerance
-//   gives E[X] ≥ fisherNoncentralMean(n_c, n_k, E, 1 + tolerance) / E only when each arm's requests
-//   share ONE bad-event probability within the tick (b_c is then Fisher noncentral hypergeometric in
-//   ψ, whose mean is increasing in ψ); heterogeneous per-request probabilities within an arm can
-//   make this anticonservative (a false clear). Rollback does not need this. Valid at any split.
+//   traffic share — EXACTLY under randomized per-request routing WITH NO ARM-LEVEL EFFECT on any
+//   tick: b_c is then central hypergeometric given n_c, n_k, E even when per-request bad-event
+//   probabilities vary within the tick, because routing is independent of outcome. Persistent
+//   arm-specific state (a cold canary fleet, a control pinned to a degraded host) breaks this at
+//   ANY split. A per-tick arm-level shock (pod-level noise: iid across ticks, zero-mean, symmetric
+//   between arms) cancels exactly at canaryWeight 0.5 by symmetry; at unequal weights it does not —
+//   the canary's posterior share given E is logistic in the shock difference and convex there below
+//   w = 0.5, so Jensen pushes E[X] above the traffic share. The PROCEED null needs more: ψ ≥
+//   1 + tolerance gives E[X] ≥ fisherNoncentralMean(n_c, n_k, E, 1 + tolerance) / E only when each
+//   arm's requests share ONE bad-event probability within the tick (b_c is then Fisher noncentral
+//   hypergeometric in ψ, whose mean is increasing in ψ); heterogeneous per-request probabilities
+//   within an arm can make this anticonservative (a false clear). Rollback does not need this.
 // sign — one value per arm per tick. X = 1 if the canary's is worse. Exchangeable equal-weight arms
 //   give P(X = 1 | no tie) = 1/2; the proceed null is 1/2 + tolerance. Ties carry no evidence.
 //
@@ -184,12 +189,13 @@ exports.TWIN_RATE_ENVELOPE = Object.freeze({
     statistic: 'e-value',
     pairingPremise: 'exchangeable-arms',
     notes: 'Rollback null is the observed traffic share, exact under randomized per-request routing '
-        + 'alone (b_c is central hypergeometric given the tick\'s arm totals and bad-event total, even '
-        + 'with heterogeneous per-request bad-event probabilities). The PROCEED null (Fisher noncentral '
-        + 'mean at 1 + tolerance) needs more: each arm\'s requests share one bad-event probability '
-        + 'within the tick; heterogeneous requests within an arm can make it anticonservative (a false '
-        + 'clear). Also premised: no arm-specific persistent state under H0. Valid at any routing split. '
-        + 'Study 2026-09-twin-null registered, not run.',
+        + 'with no arm-level effect on any tick (b_c is central hypergeometric given the tick\'s arm '
+        + 'totals and bad-event total, even with heterogeneous per-request bad-event probabilities). '
+        + 'Persistent arm-specific state breaks this at any split; a per-tick arm-level shock (iid, '
+        + 'zero-mean, symmetric between arms) cancels exactly at canaryWeight 0.5 but not at unequal '
+        + 'weights. The PROCEED null (Fisher noncentral mean at 1 + tolerance) needs more: each arm\'s '
+        + 'requests share one bad-event probability within the tick; heterogeneous requests within an '
+        + 'arm can make it anticonservative (a false clear). Study 2026-09-twin-null registered, not run.',
 });
 /** ADR 0036 — sign kind. */
 exports.TWIN_SIGN_ENVELOPE = Object.freeze({

@@ -14,8 +14,11 @@
 // the consumer must treat that as halt-and-shift-back, not as a pass. Terminal verdicts are sticky.
 //
 // Premises the three bounds above rest on:
-//   (i)   randomized per-request routing — both the SRM guard and every metric's ROLLBACK test need
-//         only this: routing independent of outcome.
+//   (i)   the SRM guard needs only randomized per-request routing (routing independent of outcome).
+//         Every metric's ROLLBACK test needs more: no arm-level effect on any tick either. Persistent
+//         arm-specific state breaks it at any split; a per-tick arm-level shock (pod-level noise: iid
+//         across ticks, zero-mean, symmetric between arms) cancels at canaryWeight 0.5 but not at
+//         unequal weights (see detectors/twin-contrast.ts TWIN_RATE_ENVELOPE).
 //   (ii)  a `rate` metric's PROCEED test needs one more premise, one bad-event probability per arm
 //         per tick (see detectors/twin-contrast.ts TWIN_RATE_ENVELOPE); heterogeneous per-request
 //         probabilities within an arm can make it anticonservative (a false clear). Rollback and the

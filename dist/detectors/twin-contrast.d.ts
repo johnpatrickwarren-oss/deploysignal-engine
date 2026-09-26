@@ -45,7 +45,10 @@ export interface TwinMetricEvidence {
 }
 export declare function checkTwinMetricSpec(spec: TwinMetricSpec): void;
 /** Mean of Fisher's noncentral hypergeometric: X = canary's count of `total` events over arms of
- *  nc and nk requests, odds ratio psi. Weights by the ratio recurrence, in the log domain. */
+ *  nc and nk requests, odds ratio psi. Weights by the ratio recurrence, in the log domain. The
+ *  running maximum is tracked inside the recurrence loop rather than via `Math.max(...logW)`,
+ *  which spreads the whole support onto the call stack and overflows it once the support exceeds
+ *  the engine's argument-count limit (observed at N ≈ 5e5 requests per tick with E ≈ N/2). */
 export declare function fisherNoncentralMean(nc: number, nk: number, total: number, psi: number): number;
 export declare function twinScore(spec: TwinMetricSpec, obs: TwinObservation): TwinScore | 'skip' | 'tie';
 export declare function initTwinMetric(): TwinMetricState;

@@ -29,6 +29,39 @@ test('fisherNoncentralMean is increasing in psi', () => {
   assert.ok(a < b && b < c && c < 20, `${a} ${b} ${c}`);
 });
 
+test('fisherNoncentralMean does not throw at a large support (N ~ 5e5 requests per tick)', () => {
+  const m = fisherNoncentralMean(500000, 500000, 500000, 1);
+  assert.ok(Math.abs(m - 250000) < 1e-6 * 500000, `${m}`);
+});
+
+/** log-free small-N binomial coefficient (n <= 70 here, k <= 12: well inside double precision). */
+function binom(n: number, k: number): number {
+  if (k < 0 || k > n) return 0;
+  const kk = Math.min(k, n - k);
+  let result = 1;
+  for (let i = 0; i < kk; i++) result = (result * (n - i)) / (i + 1);
+  return result;
+}
+
+function bruteForceFisherMean(nc: number, nk: number, total: number, psi: number): number {
+  const lo = Math.max(0, total - nk);
+  const hi = Math.min(total, nc);
+  let num = 0;
+  let den = 0;
+  for (let x = lo; x <= hi; x++) {
+    const w = binom(nc, x) * binom(nk, total - x) * Math.pow(psi, x);
+    num += x * w;
+    den += w;
+  }
+  return num / den;
+}
+
+test('fisherNoncentralMean matches a brute-force weighted sum over the support', () => {
+  const expected = bruteForceFisherMean(30, 70, 12, 1.7);
+  const got = fisherNoncentralMean(30, 70, 12, 1.7);
+  assert.ok(Math.abs(got - expected) < 1e-9, `${got} vs ${expected}`);
+});
+
 test('rate score: canary share of bad events, null = traffic share', () => {
   const s = twinScore(ERR, { canaryEvents: 6, canaryTotal: 300, controlEvents: 4, controlTotal: 700 });
   assert.ok(s !== 'skip' && s !== 'tie');
@@ -49,6 +82,17 @@ test('rate score skips empty arms, zero bad events and a degenerate support', ()
   assert.equal(twinScore(ERR, { canaryEvents: 0, canaryTotal: 10, controlEvents: 0, controlTotal: 10 }), 'skip');
   assert.equal(twinScore(ERR, { canaryEvents: 5, canaryTotal: 5, controlEvents: 2, controlTotal: 2 }), 'skip');
   assert.throws(() => twinScore(ERR, { canaryEvents: 11, canaryTotal: 10, controlEvents: 0, controlTotal: 10 }), RangeError);
+});
+
+test('rate score rejects non-integer counts', () => {
+  assert.throws(
+    () => twinScore(ERR, { canaryEvents: 2.7, canaryTotal: 300, controlEvents: 4, controlTotal: 700 }),
+    RangeError,
+  );
+  assert.throws(
+    () => twinScore(ERR, { canaryEvents: 2, canaryTotal: 300.5, controlEvents: 4, controlTotal: 700 }),
+    RangeError,
+  );
 });
 
 test('sign score: worse orientation, ties, and missing values', () => {

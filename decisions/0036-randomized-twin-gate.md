@@ -48,6 +48,10 @@ statistic has different medians in the two arms. The study measures both boundar
 
 Not premised: tails, scale, φ of shared components, a baseline, a calibration length.
 
+The proceed null for `rate` rests on more: within a tick, each arm's requests share one bad-event
+probability (the Fisher noncentral mean is the law of a homogeneous arm); heterogeneous requests
+inside a tick can make it anticonservative. Rollback does not need this.
+
 ## Consequences
 
 - The FDR gate learns a third premise axis (`pairingAdmissible`) beside φ and tails.

@@ -22,6 +22,37 @@ const LAT = { id: 'p99_ms', kind: 'sign', worse: 'higher', tolerance: 0.1 };
     const c = (0, twin_contrast_1.fisherNoncentralMean)(500, 500, 20, 3);
     strict_1.default.ok(a < b && b < c && c < 20, `${a} ${b} ${c}`);
 });
+(0, node_test_1.test)('fisherNoncentralMean does not throw at a large support (N ~ 5e5 requests per tick)', () => {
+    const m = (0, twin_contrast_1.fisherNoncentralMean)(500000, 500000, 500000, 1);
+    strict_1.default.ok(Math.abs(m - 250000) < 1e-6 * 500000, `${m}`);
+});
+/** log-free small-N binomial coefficient (n <= 70 here, k <= 12: well inside double precision). */
+function binom(n, k) {
+    if (k < 0 || k > n)
+        return 0;
+    const kk = Math.min(k, n - k);
+    let result = 1;
+    for (let i = 0; i < kk; i++)
+        result = (result * (n - i)) / (i + 1);
+    return result;
+}
+function bruteForceFisherMean(nc, nk, total, psi) {
+    const lo = Math.max(0, total - nk);
+    const hi = Math.min(total, nc);
+    let num = 0;
+    let den = 0;
+    for (let x = lo; x <= hi; x++) {
+        const w = binom(nc, x) * binom(nk, total - x) * Math.pow(psi, x);
+        num += x * w;
+        den += w;
+    }
+    return num / den;
+}
+(0, node_test_1.test)('fisherNoncentralMean matches a brute-force weighted sum over the support', () => {
+    const expected = bruteForceFisherMean(30, 70, 12, 1.7);
+    const got = (0, twin_contrast_1.fisherNoncentralMean)(30, 70, 12, 1.7);
+    strict_1.default.ok(Math.abs(got - expected) < 1e-9, `${got} vs ${expected}`);
+});
 (0, node_test_1.test)('rate score: canary share of bad events, null = traffic share', () => {
     const s = (0, twin_contrast_1.twinScore)(ERR, { canaryEvents: 6, canaryTotal: 300, controlEvents: 4, controlTotal: 700 });
     strict_1.default.ok(s !== 'skip' && s !== 'tie');
@@ -40,6 +71,10 @@ const LAT = { id: 'p99_ms', kind: 'sign', worse: 'higher', tolerance: 0.1 };
     strict_1.default.equal((0, twin_contrast_1.twinScore)(ERR, { canaryEvents: 0, canaryTotal: 10, controlEvents: 0, controlTotal: 10 }), 'skip');
     strict_1.default.equal((0, twin_contrast_1.twinScore)(ERR, { canaryEvents: 5, canaryTotal: 5, controlEvents: 2, controlTotal: 2 }), 'skip');
     strict_1.default.throws(() => (0, twin_contrast_1.twinScore)(ERR, { canaryEvents: 11, canaryTotal: 10, controlEvents: 0, controlTotal: 10 }), RangeError);
+});
+(0, node_test_1.test)('rate score rejects non-integer counts', () => {
+    strict_1.default.throws(() => (0, twin_contrast_1.twinScore)(ERR, { canaryEvents: 2.7, canaryTotal: 300, controlEvents: 4, controlTotal: 700 }), RangeError);
+    strict_1.default.throws(() => (0, twin_contrast_1.twinScore)(ERR, { canaryEvents: 2, canaryTotal: 300.5, controlEvents: 4, controlTotal: 700 }), RangeError);
 });
 (0, node_test_1.test)('sign score: worse orientation, ties, and missing values', () => {
     const up = (0, twin_contrast_1.twinScore)(LAT, { canary: 120, control: 100 });

@@ -7,10 +7,14 @@
 // Each is tested by its own paired-bet wealth (the proceed side on 1 − X against 1 − proceedNull).
 //
 // rate — bad events b and totals n per arm. X = b_c / (b_c + b_k). Conditional on n_c, n_k and the
-//   bad-event total E, b_c is Fisher noncentral hypergeometric in the odds ratio ψ of the arms'
-//   per-request bad-event probabilities, and its mean is increasing in ψ. So ψ ≤ 1 gives
-//   E[X] ≤ n_c / (n_c + n_k) — the observed traffic share — and ψ ≥ 1 + tolerance gives
-//   E[X] ≥ fisherNoncentralMean(n_c, n_k, E, 1 + tolerance) / E. Valid at any routing split.
+//   bad-event total E, ψ ≤ 1 (canary odds no worse) gives E[X] ≤ n_c / (n_c + n_k) — the observed
+//   traffic share — EXACTLY under randomized per-request routing alone: b_c is central
+//   hypergeometric given n_c, n_k, E even when per-request bad-event probabilities vary within the
+//   tick, because routing is independent of outcome. The PROCEED null needs more: ψ ≥ 1 + tolerance
+//   gives E[X] ≥ fisherNoncentralMean(n_c, n_k, E, 1 + tolerance) / E only when each arm's requests
+//   share ONE bad-event probability within the tick (b_c is then Fisher noncentral hypergeometric in
+//   ψ, whose mean is increasing in ψ); heterogeneous per-request probabilities within an arm can
+//   make this anticonservative (a false clear). Rollback does not need this. Valid at any split.
 // sign — one value per arm per tick. X = 1 if the canary's is worse. Exchangeable equal-weight arms
 //   give P(X = 1 | no tie) = 1/2; the proceed null is 1/2 + tolerance. Ties carry no evidence.
 
@@ -64,17 +68,22 @@ export function checkTwinMetricSpec(spec: TwinMetricSpec): void {
 }
 
 /** Mean of Fisher's noncentral hypergeometric: X = canary's count of `total` events over arms of
- *  nc and nk requests, odds ratio psi. Weights by the ratio recurrence, in the log domain. */
+ *  nc and nk requests, odds ratio psi. Weights by the ratio recurrence, in the log domain. The
+ *  running maximum is tracked inside the recurrence loop rather than via `Math.max(...logW)`,
+ *  which spreads the whole support onto the call stack and overflows it once the support exceeds
+ *  the engine's argument-count limit (observed at N ≈ 5e5 requests per tick with E ≈ N/2). */
 export function fisherNoncentralMean(nc: number, nk: number, total: number, psi: number): number {
   const lo = Math.max(0, total - nk);
   const hi = Math.min(total, nc);
   const logPsi = Math.log(psi);
   const logW: number[] = [0];
+  let top = 0;
   for (let x = lo; x < hi; x++) {
     const prev = logW[logW.length - 1];
-    logW.push(prev + Math.log(nc - x) - Math.log(x + 1) + Math.log(total - x) - Math.log(nk - total + x + 1) + logPsi);
+    const next = prev + Math.log(nc - x) - Math.log(x + 1) + Math.log(total - x) - Math.log(nk - total + x + 1) + logPsi;
+    logW.push(next);
+    if (next > top) top = next;
   }
-  const top = Math.max(...logW);
   let z = 0;
   let m = 0;
   for (let i = 0; i < logW.length; i++) {
@@ -94,6 +103,13 @@ export function twinScore(spec: TwinMetricSpec, obs: TwinObservation): TwinScore
     if (!isRate(obs)) throw new TypeError(`twin-contrast: ${spec.id}: a rate metric needs a RateObservation`);
     const { canaryEvents, canaryTotal, controlEvents, controlTotal } = obs;
     if (![canaryEvents, canaryTotal, controlEvents, controlTotal].every(Number.isFinite)) return 'skip';
+    if (![canaryEvents, canaryTotal, controlEvents, controlTotal].every(Number.isInteger)) {
+      throw new RangeError(
+        `twin-contrast: ${spec.id}: rate counts must be integers — round per-tick deltas before `
+        + `calling twinScore, got canaryEvents=${canaryEvents} canaryTotal=${canaryTotal} `
+        + `controlEvents=${controlEvents} controlTotal=${controlTotal}`,
+      );
+    }
     if (canaryEvents < 0 || controlEvents < 0 || canaryEvents > canaryTotal || controlEvents > controlTotal) {
       throw new RangeError(`twin-contrast: ${spec.id}: events must lie in [0, total]`);
     }
@@ -157,9 +173,12 @@ export const TWIN_RATE_ENVELOPE: Readonly<ValidityEnvelope> = Object.freeze({
   validUnderEstimatedBaseline: true,
   statistic: 'e-value',
   pairingPremise: 'exchangeable-arms',
-  notes: 'Null mean is the observed traffic share (rollback) or the Fisher noncentral mean at the '
-    + 'tolerance (proceed), both exact given the tick\'s arm totals and bad-event total. Premise: '
-    + 'randomized per-request routing, no arm-specific persistent state under H0. Valid at any split. '
+  notes: 'Rollback null is the observed traffic share, exact under randomized per-request routing '
+    + 'alone (b_c is central hypergeometric given the tick\'s arm totals and bad-event total, even '
+    + 'with heterogeneous per-request bad-event probabilities). The PROCEED null (Fisher noncentral '
+    + 'mean at 1 + tolerance) needs more: each arm\'s requests share one bad-event probability '
+    + 'within the tick; heterogeneous requests within an arm can make it anticonservative (a false '
+    + 'clear). Also premised: no arm-specific persistent state under H0. Valid at any routing split. '
     + 'Study 2026-09-twin-null registered, not run.',
 });
 

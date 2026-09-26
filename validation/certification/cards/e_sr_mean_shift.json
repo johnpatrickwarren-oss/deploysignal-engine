@@ -8,17 +8,17 @@
   "family": "SR",
   "class": "e_detector",
   "engine_pin": {
-    "version": "0.6.11-pre",
-    "sha": "68b9b2cc548f49986936d7d65a6af9e660bdb864"
+    "version": "0.11.0-pre",
+    "sha": "2bbc557759506148682a5c0af8530b21d3beca05"
   },
   "source_files": [
     {
       "path": "detectors/e-sr-mean-shift.ts",
-      "sha256": "b23aab9c85fd412db5a19c6cbc32d9562b5623d44520362a5d423887fad78e32"
+      "sha256": "d6a8f9b9b017e008eafaad418a930e99604aa51c1475f05cd42228fc1bb8b041"
     },
     {
       "path": "detectors/validity-envelope.ts",
-      "sha256": "c463cefeedd06fc40b383dc8eba3d4996c12b666bb477f62f0f5bf9d9b89ca41"
+      "sha256": "c235a5e12064ef1efe3831ba146877e5fb88e0f4930ef59e55f0eb5e4198713f"
     },
     {
       "path": "validation/certification/lib/score.mjs",

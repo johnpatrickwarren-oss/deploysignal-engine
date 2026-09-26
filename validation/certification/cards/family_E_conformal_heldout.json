@@ -8,8 +8,8 @@
   "family": "E",
   "class": "terminal_e_value",
   "engine_pin": {
-    "version": "0.6.11-pre",
-    "sha": "68b9b2cc548f49986936d7d65a6af9e660bdb864"
+    "version": "0.11.0-pre",
+    "sha": "2bbc557759506148682a5c0af8530b21d3beca05"
   },
   "source_files": [
     {
@@ -18,7 +18,7 @@
     },
     {
       "path": "detectors/conformal.ts",
-      "sha256": "437776bd1b7c2465ea36cfed1297750615c404cbe84d62a3b8ee6c9762a59f7e"
+      "sha256": "47bb34dd4f31ed1a6b6e2710cbb07cc60a9674bbbe7c7894338bc3f96e574f65"
     },
     {
       "path": "validation/certification/lib/collect.mjs",

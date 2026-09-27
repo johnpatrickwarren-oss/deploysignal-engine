@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.12.0-pre — 2026-09-26 — ADR 0036: the randomized twin (library, PROPOSED; PR #102)
+
 - **ADR 0036 — the randomized twin (library only, PROPOSED).** `detectors/_paired-bet.ts` (one-sided
   bounded-mean betting e-process, per-observation null mean), `detectors/twin-contrast.ts` (`rate`:
   canary share of bad events vs the observed traffic share, Fisher noncentral proceed null; `sign`:

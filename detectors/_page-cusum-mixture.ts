@@ -33,7 +33,8 @@ import {
 import {
   matchCellByHour,
   trafficGateMin,
-  FAMILY_A_PRIMARY_SIGNALS,
+  familyASignals,
+  familyABonferroni,
   type CUSUMStates,
 } from './_page-cusum-core';
 import type { FamilyAShadowCtx } from './_page-cusum-core';
@@ -72,7 +73,7 @@ function mixtureSchemaContinuitySuppression(
   const reason = schemaContinuityClass === 'observability_stack'
     ? 'observability_stack_deploy' : 'schema_continuity_breaking';
   const out: DetectorVerdict[] = [];
-  for (const signal of (cfg.family_a_signals ?? FAMILY_A_PRIMARY_SIGNALS)) {
+  for (const signal of familyASignals(cfg)) {
     const state = states[signal] ?? freshMixtureSupermartingaleState();
     states[signal] = state;
     out.push({
@@ -218,9 +219,9 @@ export function evaluateFamilyAShadowMixture(
   const out: DetectorVerdict[] = [];
 
   const alphaFamilyA = cfg.alpha_budget.per_family.A ?? 4e-4;
-  const bonf = cfg.bonferroni_factor ?? 6;
+  const bonf = familyABonferroni(cfg);
 
-  for (const signal of FAMILY_A_PRIMARY_SIGNALS) {
+  for (const signal of familyASignals(cfg)) {
     const v = evaluateMixtureSignal(cfg, liveMetrics, states, ctx, cell, alphaFamilyA, bonf, signal);
     if (v !== null) out.push(v);
   }

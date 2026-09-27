@@ -145,10 +145,26 @@ export function trafficGateMin(cfg: CompiledConfig): number {
  *  the compiler, and the parity test agree on the set. */
 // ADR 0033 residual, named: DeploySignal's six Family A signals are the DEFAULT a detector runs
 // over when a config carries no `family_a_signals`. The registry no longer knows these names
-// (v0.8.0-pre); this list is the last place in the library they appear.
+// (v0.8.0-pre); this list is the last place in the library they appear. Every Family A loop
+// (evaluation and schema-continuity suppression, in both evaluators) reads the set through
+// `familyASignals(cfg)`, so a configured list replaces these six everywhere.
 export const FAMILY_A_PRIMARY_SIGNALS = Object.freeze([
   'p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req',
 ] as const);
+
+/** The Family A signal set a config evaluates: `cfg.family_a_signals` deduplicated in
+ *  first-occurrence order (a repeated name would update one state twice per tick and break the
+ *  Ville bound), else the frozen six defaults. */
+export function familyASignals(cfg: CompiledConfig): readonly string[] {
+  const s = cfg.family_a_signals;
+  return s ? [...new Set(s)] : FAMILY_A_PRIMARY_SIGNALS;
+}
+
+/** Family A Bonferroni factor: explicit `cfg.bonferroni_factor`, else the number of distinct
+ *  signals evaluated (6 when no `family_a_signals` is configured), floored at 1. */
+export function familyABonferroni(cfg: CompiledConfig): number {
+  return cfg.bonferroni_factor ?? Math.max(1, familyASignals(cfg).length);
+}
 
 export function suppressed(
   signal: string,

@@ -19,6 +19,8 @@ exports.getOrCreateCUSUM = getOrCreateCUSUM;
 exports.updateCUSUM = updateCUSUM;
 exports.matchCellByHour = matchCellByHour;
 exports.trafficGateMin = trafficGateMin;
+exports.familyASignals = familyASignals;
+exports.familyABonferroni = familyABonferroni;
 exports.suppressed = suppressed;
 exports.DEFAULT_BAKE = {
     min_ticks_before_eligible: 3,
@@ -104,10 +106,24 @@ function trafficGateMin(cfg) {
  *  the compiler, and the parity test agree on the set. */
 // ADR 0033 residual, named: DeploySignal's six Family A signals are the DEFAULT a detector runs
 // over when a config carries no `family_a_signals`. The registry no longer knows these names
-// (v0.8.0-pre); this list is the last place in the library they appear.
+// (v0.8.0-pre); this list is the last place in the library they appear. Every Family A loop
+// (evaluation and schema-continuity suppression, in both evaluators) reads the set through
+// `familyASignals(cfg)`, so a configured list replaces these six everywhere.
 exports.FAMILY_A_PRIMARY_SIGNALS = Object.freeze([
     'p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req',
 ]);
+/** The Family A signal set a config evaluates: `cfg.family_a_signals` deduplicated in
+ *  first-occurrence order (a repeated name would update one state twice per tick and break the
+ *  Ville bound), else the frozen six defaults. */
+function familyASignals(cfg) {
+    const s = cfg.family_a_signals;
+    return s ? [...new Set(s)] : exports.FAMILY_A_PRIMARY_SIGNALS;
+}
+/** Family A Bonferroni factor: explicit `cfg.bonferroni_factor`, else the number of distinct
+ *  signals evaluated (6 when no `family_a_signals` is configured), floored at 1. */
+function familyABonferroni(cfg) {
+    return cfg.bonferroni_factor ?? Math.max(1, familyASignals(cfg).length);
+}
 function suppressed(signal, reason, state, threshold) {
     // Suppressed verdicts expose the current S_n so the shadow-compare
     // audit output can trace pre-eligibility accumulation. Not a fire, not

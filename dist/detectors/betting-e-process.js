@@ -16,6 +16,7 @@ exports.evaluateFamilyABettingShadow = evaluateFamilyABettingShadow;
 const types_1 = require("../types");
 const suppression_1 = require("./suppression");
 const page_cusum_1 = require("./page-cusum");
+const _page_cusum_core_1 = require("./_page-cusum-core");
 // Q2.A — class-appropriate forward transform on live observation
 // before mean-centering. Runtime resolution honors only what the
 // compiled config declares (perSig.signal_class → cfg.signal_classes
@@ -301,7 +302,7 @@ function buildMSPRTParamsLocal(cfg, cell, signal) {
         return null;
     const bake = cfg.bake_profiles?.[signal] ?? DEFAULT_BAKE;
     const alphaFamilyA = cfg.alpha_budget.per_family.A ?? 4e-4;
-    const bonf = cfg.bonferroni_factor ?? 6;
+    const bonf = (0, _page_cusum_core_1.familyABonferroni)(cfg);
     // Per-signal Bonferroni α; the betting/Page-CUSUM 50/50 split happens
     // in the callers (Page-CUSUM already halves via buildMSPRTParams from
     // page-cusum.ts once Addition #17 lands there; betting halves via the
@@ -349,7 +350,7 @@ function bettingSchemaContinuitySuppressed(cfg, states, schemaContinuityClass) {
     const reason = schemaContinuityClass === 'observability_stack'
         ? 'observability_stack_deploy' : 'schema_continuity_breaking';
     const out = [];
-    for (const signal of (cfg.family_a_signals ?? page_cusum_1.FAMILY_A_PRIMARY_SIGNALS)) {
+    for (const signal of (0, _page_cusum_core_1.familyASignals)(cfg)) {
         const state = getOrCreateBetting(states, signal);
         out.push({
             verdict: 'suppressed',
@@ -448,7 +449,7 @@ function evaluateFamilyABettingShadow(cfg, liveMetrics, states, ctx) {
     if (!match)
         return [];
     const out = [];
-    for (const signal of page_cusum_1.FAMILY_A_PRIMARY_SIGNALS) {
+    for (const signal of (0, _page_cusum_core_1.familyASignals)(cfg)) {
         const v = evaluateBettingSignal(cfg, liveMetrics, states, match, trafficGate, ctx, signal);
         if (v !== undefined)
             out.push(v);

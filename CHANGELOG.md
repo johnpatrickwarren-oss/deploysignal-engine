@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Family A evaluation honours `family_a_signals`; Bonferroni defaults to the list length.**
+  `evaluateFamilyAShadowMixture` and `evaluateFamilyABettingShadow` iterated the hardcoded six
+  `FAMILY_A_PRIMARY_SIGNALS` and ignored `cfg.family_a_signals`; only the schema-continuity
+  suppression paths read it, so a configured list changed which signals were suppressed but never
+  which were evaluated. All four loops now read `familyASignals(cfg)` (`_page-cusum-core.ts`). With
+  `bonferroni_factor` unset, both evaluators split α over the number of signals evaluated
+  (`familyABonferroni(cfg)`) instead of a fixed 6; an explicit `bonferroni_factor` still wins. A
+  config with no `family_a_signals` evaluates the same six at bonferroni 6 as before. A configured
+  list is deduplicated in first-occurrence order (a repeated name updated one state twice per tick,
+  breaking the Ville bound), the default factor counts distinct signals and is floored at 1 (an
+  empty list evaluates nothing). `tools/_nab-validation-dispatch.ts` uses the same default; the NAB
+  configs set 6 explicitly, so NAB results are unchanged. DeploySignal compiled configs stamp
+  `bonferroni_factor = family_a_signals.length`, so their α denominator is unchanged. Profile configs
+  with a custom `sli_list` previously got no Family A evaluation verdicts (the six had no cells) and
+  now get verdicts for their own signals. Test: `test/family-a-signals-config.test.ts`.
+
 ## v0.12.0-pre — 2026-09-26 — ADR 0036: the randomized twin (library, PROPOSED; PR #102)
 
 - **ADR 0036 — the randomized twin (library only, PROPOSED).** `detectors/_paired-bet.ts` (one-sided

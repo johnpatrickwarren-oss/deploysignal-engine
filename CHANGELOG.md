@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.12.1-pre — 2026-09-27 — Family A evaluates the configured signal list (PR #104)
+
 - **Family A evaluation honours `family_a_signals`; Bonferroni defaults to the list length.**
   `evaluateFamilyAShadowMixture` and `evaluateFamilyABettingShadow` iterated the hardcoded six
   `FAMILY_A_PRIMARY_SIGNALS` and ignored `cfg.family_a_signals`; only the schema-continuity

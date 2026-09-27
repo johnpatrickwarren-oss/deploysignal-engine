@@ -49,7 +49,7 @@ function mixtureSchemaContinuitySuppression(cfg, states, schemaContinuityClass) 
     const reason = schemaContinuityClass === 'observability_stack'
         ? 'observability_stack_deploy' : 'schema_continuity_breaking';
     const out = [];
-    for (const signal of (cfg.family_a_signals ?? _page_cusum_core_1.FAMILY_A_PRIMARY_SIGNALS)) {
+    for (const signal of (0, _page_cusum_core_1.familyASignals)(cfg)) {
         const state = states[signal] ?? (0, family_a_mixture_supermartingale_1.freshMixtureSupermartingaleState)();
         states[signal] = state;
         out.push({
@@ -175,8 +175,8 @@ function evaluateFamilyAShadowMixture(cfg, liveMetrics, states, ctx) {
     cell.tenant_tier = (0, types_1.resolveTenantTier)(cfg, ctx.tenantId);
     const out = [];
     const alphaFamilyA = cfg.alpha_budget.per_family.A ?? 4e-4;
-    const bonf = cfg.bonferroni_factor ?? 6;
-    for (const signal of _page_cusum_core_1.FAMILY_A_PRIMARY_SIGNALS) {
+    const bonf = (0, _page_cusum_core_1.familyABonferroni)(cfg);
+    for (const signal of (0, _page_cusum_core_1.familyASignals)(cfg)) {
         const v = evaluateMixtureSignal(cfg, liveMetrics, states, ctx, cell, alphaFamilyA, bonf, signal);
         if (v !== null)
             out.push(v);

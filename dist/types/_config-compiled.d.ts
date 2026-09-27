@@ -18,7 +18,8 @@ export interface CompiledConfig {
         total: number;
         per_family: Record<string, number>;
     };
-    /** Family-A-specific; preserved from W2 for audit provenance. */
+    /** Family-A-specific; preserved from W2 for audit provenance. When absent, the Family A
+     *  evaluators divide α_A by the number of signals evaluated (`familyABonferroni`). */
     bonferroni_factor?: number;
     /** Family B structural-signatures config. REPLY-51b R4-4 relaxed
      *  this from required → optional per strict-additive schema change

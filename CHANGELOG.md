@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Family A evaluation honours `family_a_signals`; Bonferroni defaults to the list length.**
+  `evaluateFamilyAShadowMixture` and `evaluateFamilyABettingShadow` iterated the hardcoded six
+  `FAMILY_A_PRIMARY_SIGNALS` and ignored `cfg.family_a_signals`; only the schema-continuity
+  suppression paths read it, so a configured list changed which signals were suppressed but never
+  which were evaluated. All four loops now read `familyASignals(cfg)` (`_page-cusum-core.ts`). With
+  `bonferroni_factor` unset, both evaluators split α over the number of signals evaluated
+  (`familyABonferroni(cfg)`) instead of a fixed 6; an explicit `bonferroni_factor` still wins. A
+  config with no `family_a_signals` evaluates the same six at bonferroni 6 as before. Behaviour change
+  for consumers whose compiled configs carry a non-default `family_a_signals`: Family A now emits
+  verdicts for those signals and not for the six. Test: `test/family-a-signals-config.test.ts`.
+
 ## v0.12.0-pre — 2026-09-26 — ADR 0036: the randomized twin (library, PROPOSED; PR #102)
 
 - **ADR 0036 — the randomized twin (library only, PROPOSED).** `detectors/_paired-bet.ts` (one-sided

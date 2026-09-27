@@ -152,15 +152,18 @@ export const FAMILY_A_PRIMARY_SIGNALS = Object.freeze([
   'p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req',
 ] as const);
 
-/** The Family A signal set a config evaluates: `cfg.family_a_signals`, else the six defaults. */
+/** The Family A signal set a config evaluates: `cfg.family_a_signals` deduplicated in
+ *  first-occurrence order (a repeated name would update one state twice per tick and break the
+ *  Ville bound), else the frozen six defaults. */
 export function familyASignals(cfg: CompiledConfig): readonly string[] {
-  return cfg.family_a_signals ?? FAMILY_A_PRIMARY_SIGNALS;
+  const s = cfg.family_a_signals;
+  return s ? [...new Set(s)] : FAMILY_A_PRIMARY_SIGNALS;
 }
 
-/** Family A Bonferroni factor: explicit `cfg.bonferroni_factor`, else the number of signals
- *  evaluated (6 when no `family_a_signals` is configured). */
+/** Family A Bonferroni factor: explicit `cfg.bonferroni_factor`, else the number of distinct
+ *  signals evaluated (6 when no `family_a_signals` is configured), floored at 1. */
 export function familyABonferroni(cfg: CompiledConfig): number {
-  return cfg.bonferroni_factor ?? familyASignals(cfg).length;
+  return cfg.bonferroni_factor ?? Math.max(1, familyASignals(cfg).length);
 }
 
 export function suppressed(

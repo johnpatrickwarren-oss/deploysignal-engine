@@ -112,14 +112,17 @@ function trafficGateMin(cfg) {
 exports.FAMILY_A_PRIMARY_SIGNALS = Object.freeze([
     'p99_latency', 'ttft', 'eval_score', 'tool_success_rate', 'downstream_err', 'cost_req',
 ]);
-/** The Family A signal set a config evaluates: `cfg.family_a_signals`, else the six defaults. */
+/** The Family A signal set a config evaluates: `cfg.family_a_signals` deduplicated in
+ *  first-occurrence order (a repeated name would update one state twice per tick and break the
+ *  Ville bound), else the frozen six defaults. */
 function familyASignals(cfg) {
-    return cfg.family_a_signals ?? exports.FAMILY_A_PRIMARY_SIGNALS;
+    const s = cfg.family_a_signals;
+    return s ? [...new Set(s)] : exports.FAMILY_A_PRIMARY_SIGNALS;
 }
-/** Family A Bonferroni factor: explicit `cfg.bonferroni_factor`, else the number of signals
- *  evaluated (6 when no `family_a_signals` is configured). */
+/** Family A Bonferroni factor: explicit `cfg.bonferroni_factor`, else the number of distinct
+ *  signals evaluated (6 when no `family_a_signals` is configured), floored at 1. */
 function familyABonferroni(cfg) {
-    return cfg.bonferroni_factor ?? familyASignals(cfg).length;
+    return cfg.bonferroni_factor ?? Math.max(1, familyASignals(cfg).length);
 }
 function suppressed(signal, reason, state, threshold) {
     // Suppressed verdicts expose the current S_n so the shadow-compare

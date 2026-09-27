@@ -52,10 +52,12 @@ export declare function trafficGateMin(cfg: CompiledConfig): number;
 /** Primary SLIs covered by Week-2 Family A. Kept in one place so health.ts,
  *  the compiler, and the parity test agree on the set. */
 export declare const FAMILY_A_PRIMARY_SIGNALS: readonly ["p99_latency", "ttft", "eval_score", "tool_success_rate", "downstream_err", "cost_req"];
-/** The Family A signal set a config evaluates: `cfg.family_a_signals`, else the six defaults. */
+/** The Family A signal set a config evaluates: `cfg.family_a_signals` deduplicated in
+ *  first-occurrence order (a repeated name would update one state twice per tick and break the
+ *  Ville bound), else the frozen six defaults. */
 export declare function familyASignals(cfg: CompiledConfig): readonly string[];
-/** Family A Bonferroni factor: explicit `cfg.bonferroni_factor`, else the number of signals
- *  evaluated (6 when no `family_a_signals` is configured). */
+/** Family A Bonferroni factor: explicit `cfg.bonferroni_factor`, else the number of distinct
+ *  signals evaluated (6 when no `family_a_signals` is configured), floored at 1. */
 export declare function familyABonferroni(cfg: CompiledConfig): number;
 export declare function suppressed(signal: string, reason: string, state: CUSUMState, threshold: number): DetectorVerdict;
 /** Q69.D (2026-08-18) — relocated from _page-cusum-classical.ts at the classical path's

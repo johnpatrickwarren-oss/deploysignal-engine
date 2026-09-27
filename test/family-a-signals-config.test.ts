@@ -93,3 +93,39 @@ test('(d) an explicit bonferroni_factor wins over the list length', () => {
   for (const v of mixture) approx(v.threshold, 10 / ALPHA_A);
   for (const v of betting) approx(v.threshold, 20 / ALPHA_A);
 });
+
+// ── fix round 1 ──
+import { familyASignals, familyABonferroni } from '../detectors/_page-cusum-core';
+
+test('(e) duplicate names in family_a_signals: one update per tick, one verdict per distinct signal', () => {
+  const cfg = buildConfig({ cellSignals: ['q'], familyASignals: ['q', 'q'] });
+  const mixStates: Record<string, any> = {};
+  const betStates: Record<string, any> = {};
+  const N = 5;
+  for (let t = 0; t < N; t++) {
+    const mixture = evaluateFamilyAShadowMixture(cfg as any, { q: 0.1 }, mixStates as any, CTX as any);
+    const betting = evaluateFamilyABettingShadow(cfg as any, { q: 0.1 }, betStates as any, CTX as any);
+    assert.deepEqual(mixture.map((v) => v.signal), ['q']);
+    assert.deepEqual(betting.map((v) => v.signal), ['q']);
+    // factor = distinct count (1): mixture 1/α_A, betting 2/α_A
+    approx(mixture[0].threshold, 1 / ALPHA_A);
+    approx(betting[0].threshold, 2 / ALPHA_A);
+  }
+  assert.equal(mixStates.q.n, N);
+  assert.equal(betStates.q.n, N);
+});
+
+test('(f) familyASignals dedupes a configured list in first-occurrence order; default is the frozen six', () => {
+  assert.deepEqual([...familyASignals({ family_a_signals: ['b', 'a', 'b', 'c', 'a'] } as any)], ['b', 'a', 'c']);
+  assert.equal(familyASignals({} as any), FAMILY_A_PRIMARY_SIGNALS);
+  assert.equal(familyABonferroni({ family_a_signals: ['q', 'q'] } as any), 1);
+  assert.equal(familyABonferroni({ family_a_signals: ['q', 'q'], bonferroni_factor: 2 } as any), 2);
+});
+
+test('(g) empty family_a_signals: no verdicts and a factor of 1', () => {
+  const cfg = buildConfig({ cellSignals: FAMILY_A_PRIMARY_SIGNALS, familyASignals: [] });
+  const { mixture, betting } = run(cfg, FAMILY_A_PRIMARY_SIGNALS);
+  assert.equal(mixture.length, 0);
+  assert.equal(betting.length, 0);
+  assert.equal(familyABonferroni(cfg as any), 1);
+});

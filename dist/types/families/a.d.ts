@@ -46,6 +46,9 @@ export interface BettingEProcessState {
  *  half of per-signal α that goes to the betting e-process co-shipped
  *  alongside Page-CUSUM. Populated by the compiler as
  *  `(α_A / bonferroni_factor) · 0.5`; not operator-configurable.
+ *  `bonferroni_factor` defaults to the number of distinct Family A signals
+ *  evaluated (`familyABonferroni`: 6 when the config has no `family_a_signals`,
+ *  floored at 1).
  *  Optional in the type so v4-and-earlier configs load unchanged —
  *  the detector falls back to the same derived value when the field is
  *  absent. */

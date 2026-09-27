@@ -10,6 +10,7 @@ import * as fs from 'node:fs';
 
 import { evaluateFamilyABettingShadow, type BettingStates } from '../detectors/betting-e-process.js';
 import { evaluateFamilyD } from '../detectors/spectral.js';
+import { familyABonferroni } from '../detectors/_page-cusum-core.js';
 import {
   evaluatePageCusumMixtureSupermartingale,
   freshMixtureSupermartingaleState,
@@ -173,7 +174,7 @@ function runMixtureSupermartingaleOverDataset(
     return out;
   }
   const alphaFamilyA = cfg.alpha_budget.per_family.A ?? 4e-4;
-  const bonf = cfg.bonferroni_factor ?? 6;
+  const bonf = familyABonferroni(cfg);
   const alpha = alphaFamilyA / bonf;
   const baselineMean = perSig.baseline_mean_raw ?? perSig.baseline_mean;
   const sigmaSquared = perSig.baseline_sigma_squared_raw ?? perSig.baseline_sigma_squared;

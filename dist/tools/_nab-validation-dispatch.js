@@ -44,6 +44,7 @@ exports.runDetectorOverDataset = runDetectorOverDataset;
 const fs = __importStar(require("node:fs"));
 const betting_e_process_js_1 = require("../detectors/betting-e-process.js");
 const spectral_js_1 = require("../detectors/spectral.js");
+const _page_cusum_core_js_1 = require("../detectors/_page-cusum-core.js");
 const family_a_mixture_supermartingale_js_1 = require("../detectors/family-a-mixture-supermartingale.js");
 const ar_p_js_1 = require("../detectors/ar-p.js");
 const seasonal_js_1 = require("../detectors/seasonal.js");
@@ -159,7 +160,7 @@ function runMixtureSupermartingaleOverDataset(cfg, values, calibrationSignal) {
         return out;
     }
     const alphaFamilyA = cfg.alpha_budget.per_family.A ?? 4e-4;
-    const bonf = cfg.bonferroni_factor ?? 6;
+    const bonf = (0, _page_cusum_core_js_1.familyABonferroni)(cfg);
     const alpha = alphaFamilyA / bonf;
     const baselineMean = perSig.baseline_mean_raw ?? perSig.baseline_mean;
     const sigmaSquared = perSig.baseline_sigma_squared_raw ?? perSig.baseline_sigma_squared;

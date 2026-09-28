@@ -46,7 +46,7 @@ Rollback (`pairingPremise: 'exchangeable-arms'`): under H0, requests are routed 
 random, independent of outcome, and neither arm carries an effect on any tick. This holds even when
 per-request bad-event probabilities are heterogeneous within a tick, as long as no arm shifts them.
 What the two arms share — traffic level, seasonality, a shared outage, any shared autocorrelation —
-cancels by conditioning. Two distinct things break it:
+cancels by conditioning. Three distinct things break it:
 
 - ARM-SPECIFIC PERSISTENT STATE under H0 — a cold canary fleet, a control arm pinned to a degraded
   host, an AZ imbalance — breaks validity at ANY routing split.
@@ -56,6 +56,16 @@ cancels by conditioning. Two distinct things break it:
   0.3) — at canaryWeight 0.5 with per-request randomization the totals differ by O(√N), so the
   cancellation is not exact; at an unequal split the shock moves E[X | E] off the traffic share,
   with a sign that varies with E (measured 0.755 false rollback at w 0.1, σ_arm 0.3).
+- A COMMON-CAUSE STALL (added 2026-09-27) — a pause of a shared component while requests are in
+  flight to both arms (host or proxy suspension, GC, CPU throttling, VM live migration) — can end
+  as one correlated burst of bad events that lands mostly on one arm, depending on which arm's
+  responses reach the router before the stalled requests time out. The rate statistic reads that
+  burst as many independent events. Observed once, locally: DeploySignal
+  `studies/twin-aa-local` run 1, AB-rate-x2 run 20 tick 13, 49 canary and 4 control upstream errors
+  from 65 and 63 in-flight requests after a host sleep (rollback e-value 3.61 → 4.96 on that tick;
+  mechanism inferred, not reproduced). No study has measured how often this produces a false
+  rollback; the T3 registration (`studies/twin-aa-real`, Amendment 2) records per-arm stall data to
+  attribute any such rollback, and counts it.
 
 `sign` additionally needs equal routing weights (`exchangeable-equal-weight-arms`): with unequal arm
 sizes a skewed tick statistic has different medians in the two arms. The study measures these

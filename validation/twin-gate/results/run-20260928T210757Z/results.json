@@ -1,0 +1,814 @@
+{
+  "study": "2026-09-twin-gate",
+  "T": 2000,
+  "R": 1000,
+  "ALPHA": 0.05,
+  "BAR": 0.0677814228901964,
+  "node": "v25.9.0",
+  "results": [
+    {
+      "id": "G1-N1",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.016,
+        "se": 0.003967870965643918,
+        "median": 595
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 29
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 1,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 30
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G1-N3",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.022,
+        "se": 0.0046385342512479085,
+        "median": 461
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 191
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0.012,
+          "proceed": 0.988,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 186
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G1-N8",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.023,
+        "se": 0.004740358636221525,
+        "median": 116
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 375
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0.014,
+          "proceed": 0.986,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 373
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G1-N3-dup",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.009,
+        "se": 0.002986469487538756,
+        "median": 769
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 29
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 1,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 30
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G2-null",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.017,
+        "se": 0.004087909000944126,
+        "median": 797
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 29
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 1,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 30
+      },
+      "bar": "guard",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G2-q0.49",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.037,
+        "se": 0.005969170796685248,
+        "median": 631
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 29
+      },
+      "guard": {
+        "rate": 1,
+        "se": 0,
+        "median": 374
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 1,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 30
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G2-q0.45",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.019,
+        "se": 0.004317290817167636,
+        "median": 649
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 31
+      },
+      "guard": {
+        "rate": 1,
+        "se": 0,
+        "median": 76
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 1,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 32
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G2-q0",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "proceed": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "guard": {
+        "rate": 1,
+        "se": 0,
+        "median": 10
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 0,
+          "invalid_experiment": 1,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 11
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G3-mcar0.1",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 85
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 1,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 86
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G3-mcar0.3",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "proceed": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 0,
+          "invalid_experiment": 0,
+          "inconclusive": 1,
+          "extend": 0
+        },
+        "medianTerminalTick": 2000
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G3-mnar-rb",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "proceed": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 0,
+          "invalid_experiment": 0,
+          "inconclusive": 1,
+          "extend": 0
+        },
+        "medianTerminalTick": 2000
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G3-mnar-rb-skip",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "proceed": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": {
+        "rollback": {
+          "rate": 1,
+          "se": 0,
+          "median": 204
+        },
+        "proceed": {
+          "rate": 1,
+          "se": 0,
+          "median": 53
+        }
+      },
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 0,
+          "invalid_experiment": 0,
+          "inconclusive": 1,
+          "extend": 0
+        },
+        "medianTerminalTick": 2000
+      },
+      "bar": null
+    },
+    {
+      "id": "G3-mnar-pr",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "proceed": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 0,
+          "invalid_experiment": 0,
+          "inconclusive": 1,
+          "extend": 0
+        },
+        "medianTerminalTick": 2000
+      },
+      "bar": "proceed",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G3-mnar-pr-skip",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "proceed": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": {
+        "rollback": {
+          "rate": 1,
+          "se": 0,
+          "median": 73
+        },
+        "proceed": {
+          "rate": 0.999,
+          "se": 0.0009994998749374613,
+          "median": 709
+        }
+      },
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 0,
+          "invalid_experiment": 0,
+          "inconclusive": 1,
+          "extend": 0
+        },
+        "medianTerminalTick": 2000
+      },
+      "bar": null
+    },
+    {
+      "id": "G4-m0",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 1,
+        "se": 0,
+        "median": 77
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 55
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0.276,
+          "proceed": 0.724,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 52
+      },
+      "bar": null
+    },
+    {
+      "id": "G4-m0.01",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 1,
+        "se": 0,
+        "median": 94
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 61
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0.222,
+          "proceed": 0.778,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 58
+      },
+      "bar": null
+    },
+    {
+      "id": "G4-m0.02",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 1,
+        "se": 0,
+        "median": 114
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 72
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0.236,
+          "proceed": 0.764,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 66
+      },
+      "bar": null
+    },
+    {
+      "id": "G4-m0.05",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.829,
+        "se": 0.011906258858264422,
+        "median": 295
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 127
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0.118,
+          "proceed": 0.882,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 120
+      },
+      "bar": null
+    },
+    {
+      "id": "G4-m0.1",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.009,
+        "se": 0.002986469487538756,
+        "median": 79
+      },
+      "proceed": {
+        "rate": 0.146,
+        "se": 0.011166198995181842,
+        "median": 153
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0.008,
+          "proceed": 0.143,
+          "invalid_experiment": 0,
+          "inconclusive": 0.849,
+          "extend": 0
+        },
+        "medianTerminalTick": 2000
+      },
+      "bar": null
+    },
+    {
+      "id": "G4-m0.2",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "proceed": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 0,
+          "invalid_experiment": 0,
+          "inconclusive": 1,
+          "extend": 0
+        },
+        "medianTerminalTick": 2000
+      },
+      "bar": null
+    },
+    {
+      "id": "G5-null-het",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 0.015,
+        "se": 0.003843826218756514,
+        "median": 1134
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 27
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0,
+          "proceed": 1,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 28
+      },
+      "bar": "rollback",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G5-hom",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 1,
+        "se": 0,
+        "median": 35
+      },
+      "proceed": {
+        "rate": 0.022,
+        "se": 0.0046385342512479085,
+        "median": 301
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 1,
+          "proceed": 0,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 36
+      },
+      "bar": "proceed",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G5-het0.5",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 1,
+        "se": 0,
+        "median": 45
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 125
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0.96,
+          "proceed": 0.04,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 46
+      },
+      "bar": null
+    },
+    {
+      "id": "G5-het0.95",
+      "failures": 0,
+      "executable": true,
+      "rollback": {
+        "rate": 1,
+        "se": 0,
+        "median": 79
+      },
+      "proceed": {
+        "rate": 1,
+        "se": 0,
+        "median": 46
+      },
+      "guard": {
+        "rate": 0,
+        "se": 0,
+        "median": null
+      },
+      "comparator": null,
+      "gate": {
+        "verdicts": {
+          "rollback": 0.035,
+          "proceed": 0.965,
+          "invalid_experiment": 0,
+          "inconclusive": 0,
+          "extend": 0
+        },
+        "medianTerminalTick": 47
+      },
+      "bar": null
+    }
+  ]
+}

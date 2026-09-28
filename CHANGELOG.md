@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.12.2-pre — 2026-09-28 — twin kinds in the detector registry (PRs #106, #107)
+
+- **`DETECTOR_KINDS.twin = ['twin_rate', 'twin_sign']`** (`types/detector-registry.ts`). A registry
+  built with `twinMetrics: [{ id, kind }]` gets one id per declared metric, `twin_<kind>_<id>`, on
+  `registry.twin` (not crossed with the Family A signals: a twin metric has one kind and runs on the
+  twin path only). `allDetectorIds` appends the twin ids after E; `detectorKindOf` resolves them to
+  family A, matching the guarantee-table rows `twin_rate_` / `twin_sign_`. Additive: a registry
+  without `twinMetrics` is unchanged.
+- **ADR 0036 premise section:** common-cause stalls (a correlated burst on one arm) added as a third
+  boundary for the `rate` kind, from DeploySignal's twin-aa-local run 1. Docs only.
+
 ## v0.12.1-pre — 2026-09-27 — Family A evaluates the configured signal list (PR #104)
 
 - **Family A evaluation honours `family_a_signals`; Bonferroni defaults to the list length.**

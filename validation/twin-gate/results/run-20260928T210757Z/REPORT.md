@@ -124,3 +124,8 @@ Persistent arm-level state and per-tick arm shocks (see `2026-09-twin-null` P2);
 routing faults correlated with outcome; `sign` metrics under missingness; ties; metric dependence
 other than none and identity; traffic below 2000 requests per tick; horizons other than 2000
 ticks; real telemetry (T3).
+
+**Correction (2026-09-28, same day, before merge):** the disclosure above that bad events "in no
+G1–G4 cell reach mean 30" is wrong for the ×1.5 cells: at peak season (s = 1.5) the canary's mean
+is 1500 · 0.015 · 1.5 ≈ 34 in G3-mnar-pr and G3-mnar-pr-skip, so those ticks use the rounded
+normal. G4's ×1.2 peaks at ≈ 27 and G1–G3's ×1 at ≈ 22.5, below 30.

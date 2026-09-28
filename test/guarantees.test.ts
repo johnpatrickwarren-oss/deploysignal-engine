@@ -160,6 +160,20 @@ test('the manifest carries axis 3 on every row', () => {
 import { detectorKindOf, DETECTOR_KINDS } from '../types/audit';
 
 describe('detector registry (ADR 0033)', () => {
+  test('twin metrics (ADR 0036): one id per declared metric, its own kind, each with a guarantee row', () => {
+    const r = detectorRegistryFor({ signals: [], twinMetrics: [{ id: 'errors', kind: 'rate' }, { id: 'p99', kind: 'sign' }] });
+    assert.deepEqual([...r.twin], ['twin_rate_errors', 'twin_sign_p99']);
+    assert.deepEqual([...r.A], [], 'twin kinds are not crossed with Family A signals');
+    assert.deepEqual([...allDetectorIds(r)].slice(-2), ['twin_rate_errors', 'twin_sign_p99']);
+    for (const id of r.twin) {
+      const row = guaranteeFor(id);
+      assert.ok(row, `no guarantee row for '${id}'`);
+      assert.equal(row!.family, detectorKindOf(id)!.family);
+    }
+    assert.notEqual(guaranteeFor('twin_rate_errors'), guaranteeFor('twin_sign_p99'));
+    assert.equal(Object.isFrozen(r.twin), true);
+  });
+
   test('a six-signal registry: every per-signal kind × every signal, kind-major, plus the joint-vector kinds', () => {
     const sig = [...SIX_SIGNALS];
     const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null', 'onset_mixture']
@@ -180,6 +194,7 @@ describe('detector registry (ADR 0033)', () => {
     assert.equal(r.A.length, DETECTOR_KINDS.A.length * 2);
     assert.equal(r.D.length, DETECTOR_KINDS.D.length);
     assert.deepEqual([...r.B], [], 'no heuristics unless the consumer names them');
+    assert.deepEqual([...r.twin], [], 'no twin ids unless the consumer declares twin metrics');
     assert.equal(allDetectorIds(r).length, r.A.length + r.C.length + r.D.length + r.E.length);
     for (const id of allDetectorIds(r)) {
       const row = guaranteeFor(id);
@@ -198,6 +213,8 @@ describe('detector registry (ADR 0033)', () => {
     assert.deepEqual(detectorKindOf('page_cusum_anything'), { family: 'A', kind: 'page_cusum' });
     assert.deepEqual(detectorKindOf('spectral_e_detector_x'), { family: 'D', kind: 'spectral_e_detector' });
     assert.equal(detectorKindOf('kv_saturation'), undefined);
+    assert.deepEqual(detectorKindOf('twin_rate_errors'), { family: 'A', kind: 'twin_rate' });
+    assert.deepEqual(detectorKindOf('twin_sign_p99'), { family: 'A', kind: 'twin_sign' });
     assert.equal(detectorKindOf('page_cusum'), undefined, 'a per-signal kind needs a signal');
   });
 });

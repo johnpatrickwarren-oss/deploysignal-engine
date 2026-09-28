@@ -92,7 +92,28 @@ a different null and must not be pooled with them.
   only ≈ ln 20 / 77 ≈ 0.039 nats per tick, so one missing tick erases ≈ 18 ticks of that evidence,
   and a missing rate near 5% roughly cancels detection of a 20% regression. The `missing` counter in
   `TwinMetricEvidence` reports the count; a consumer policy (DeploySignal, Plan B) should halt on a
-  high missing rate rather than read the resulting inconclusiveness as a pass.
+  high missing rate rather than read the resulting inconclusiveness as a pass. Measured at the gate
+  (study `2026-09-twin-gate`, below): at ×1.2 rollback detection is 1.000 / 1.000 / 1.000 / 0.829 /
+  0.009 / 0.000 at 0 / 1 / 2 / 5 / 10 / 20% missing ticks (median 77 / 94 / 114 / 295 ticks), and
+  at 30% missing the gate ends `inconclusive` in every A/A run.
+- **Gate-level measurements** (study `2026-09-twin-gate`, run-20260928T210757Z, T1, R = 1000,
+  T = 2000, all α 0.05; validation/twin-gate/results/). The three error statements held as a gate:
+  full-horizon rollback crossing 0.016 / 0.022 / 0.023 with 1 / 3 / 8 metrics under A/A; the guard
+  0.000 under correct routing; the ½ penalty at 0.000 under MCAR and outcome-dependent missingness,
+  where treating a hidden tick as a skip gave 1.000 false rollback and 0.999 false proceed; rollback
+  0.015 under within-arm heterogeneity. Three consequences for a consumer:
+  1. **The tolerance is a proceed threshold, and it is honoured.** At a ×1.2 rate regression with
+     ρ 0.5 the proceed test crosses first (median 55 against rollback's 77) and the gate proceeds
+     in 72% of runs. ρ must be the smallest regression the operator would block.
+  2. **The guard is slow on small routing faults.** Its bet is capped at λ ≤ 1 on a share in
+     [0, 1], so a fault of |q − 0.5| grows its wealth by at most ln(1 + |q − 0.5|) per tick: median
+     76 ticks at q 0.45 and 374 at q 0.49; an A/A proceed arrives first (median ≈ 30). The rate test
+     stays valid under an outcome-independent routing fault; one correlated with outcome was not
+     simulated. No canary traffic at all is flagged at tick 11.
+  3. **The rate proceed test compares pooled odds.** With every request's odds ×1.5 and 1% of
+     requests failing at 0.95, the arms' pooled ratio is ×1.18 and the gate proceeds in 96.5% of
+     runs; at 0.5 (pooled ×1.35) the rollback test wins first. A per-request tolerance is not what
+     the proceed side tests.
 - The FDR gate learns a third premise axis (`pairingAdmissible`) beside φ and tails.
 - Rollback authority in DeploySignal is out of scope; it is conditional on the registered study
   and a real-service A/A test.

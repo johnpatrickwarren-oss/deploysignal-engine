@@ -203,7 +203,12 @@ exports.TWIN_RATE_ENVELOPE = Object.freeze({
         + '(T1, R = 1000, T = 2000, α = 0.05): false rollback 0.026 (w 0.5) / 0.027 (w 0.1) at P1, 0.018 '
         + 'at CS W=150; false proceed 0.004 (w 0.5) / 0.007 (w 0.1) at P5 (×1.5 rate shift). Premise boundary: '
         + 'iid arm shocks σ 0.3 at w 0.1 → 0.755; persistent state φ 0.5 σ 0.1 → 0.075 at w 0.5; '
-        + 'cold start without warm-up → 0.289 rate / 1.000 sign. Real-deploy (T3) validity is unmeasured.',
+        + 'cold start without warm-up → 0.289 rate / 1.000 sign. Gate level, study 2026-09-twin-gate '
+        + 'run-20260928T210757Z (T1, R = 1000, T = 2000, α 0.05): Bonferroni, guard and ½ penalty bounds held; '
+        + 'rollback power at ×1.2 falls to 0.829 at 5% missing ticks and 0.009 at 10%; proceed compares POOLED '
+        + 'odds (every request ×1.5 with 1% of requests failing at 0.95 pools to ×1.18 and proceeds in 96.5% of '
+        + 'runs); at a sub-tolerance ×1.2 regression with ρ 0.5 the gate proceeds in 72% of runs. '
+        + 'Real-deploy (T3) validity is unmeasured.',
 });
 /** ADR 0036 — sign kind. */
 exports.TWIN_SIGN_ENVELOPE = Object.freeze({
@@ -220,6 +225,8 @@ exports.TWIN_SIGN_ENVELOPE = Object.freeze({
         + 'false rollback 0.025 at w 0.5 (P1), 0.034 at CS W=150; false proceed 0.025 at P5 (sign-direct). '
         + 'Premise boundary: persistent state φ 0.5 σ 0.1 → 0.165 at w 0.5; cold start without warm-up '
         + '→ 0.289 rate / 1.000 sign. Unequal weights measured: P3 (w 0.1, worse = lower) false rollback '
-        + '1.000 — the gate refuses sign at canaryWeight ≠ 0.5. Real-deploy (T3) validity is unmeasured.',
+        + '1.000 — the gate refuses sign at canaryWeight ≠ 0.5. Gate level (study 2026-09-twin-gate): the '
+        + 'Bonferroni split held with sign beside rate metrics (N 3 / 8: 0.022 / 0.023); sign under missingness '
+        + 'was not measured. Real-deploy (T3) validity is unmeasured.',
 });
 //# sourceMappingURL=twin-contrast.js.map

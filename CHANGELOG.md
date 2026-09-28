@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Study `2026-09-twin-gate` (T1, gate level; validation/twin-gate, PR #109): ship rule MET.** The
+  twin gate's three error statements held as a gate (Bonferroni across 1/3/8 metrics, the guard,
+  the ½ missingness penalty under MCAR and outcome-dependent missingness, rollback under within-arm
+  heterogeneity). Measured costs, now in ADR 0036's consequences and the twin envelopes' notes: the
+  tolerance is honoured as a proceed threshold (×1.2 with ρ 0.5 proceeds in 72% of runs); rollback
+  power collapses between 5% and 10% missing ticks; the guard is slow on small routing faults (λ ≤ 1
+  cap); the rate proceed test compares pooled odds. Notes only; no code path changes.
+
 ## v0.12.2-pre — 2026-09-28 — twin kinds in the detector registry (PRs #106, #107)
 
 - **`DETECTOR_KINDS.twin = ['twin_rate', 'twin_sign']`** (`types/detector-registry.ts`). A registry

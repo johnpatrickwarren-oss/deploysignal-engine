@@ -11,12 +11,18 @@ export declare const DETECTOR_KINDS: Readonly<{
     D: readonly ["spectral_peak_acf", "spectral_e_detector"];
     /** Family E — joint vector; the id is the kind. */
     E: readonly ["mahalanobis_conformal_baseline"];
+    /** Randomized twin (ADR 0036) — per declared twin metric; the id is `${kind}_${metricId}`. The
+     *  guarantee table classes both rows Family A. Kept apart from `A` because a twin kind is not
+     *  crossed with the Family A signals: it runs on the twin path only, and each twin metric has
+     *  exactly one kind (`rate` → `twin_rate`, `sign` → `twin_sign`). */
+    twin: readonly ["twin_rate", "twin_sign"];
 }>;
 export type DetectorKindA = typeof DETECTOR_KINDS.A[number];
 export type DetectorKindC = typeof DETECTOR_KINDS.C[number];
 export type DetectorKindD = typeof DETECTOR_KINDS.D[number];
 export type DetectorKindE = typeof DETECTOR_KINDS.E[number];
-export type DetectorKind = DetectorKindA | DetectorKindC | DetectorKindD | DetectorKindE;
+export type DetectorKindTwin = typeof DETECTOR_KINDS.twin[number];
+export type DetectorKind = DetectorKindA | DetectorKindC | DetectorKindD | DetectorKindE | DetectorKindTwin;
 /** The id of a per-signal kind applied to one signal. */
 export type PerSignalDetectorId<K extends string, S extends string> = `${K}_${S}`;
 /** What a consumer supplies to build its registry. */
@@ -29,6 +35,11 @@ export interface DetectorRegistrySpec<SA extends string, SD extends string, B ex
      *  implementation (engine/consumer charter); they appear in a registry only so audit records
      *  can name them, and the guarantee table classes every one of them `heuristic`. */
     heuristics?: readonly B[];
+    /** The consumer's twin metrics (ADR 0036), each with its one kind. */
+    twinMetrics?: readonly {
+        id: string;
+        kind: 'rate' | 'sign';
+    }[];
 }
 export interface DetectorRegistry<SA extends string = string, SD extends string = string, B extends string = string> {
     readonly A: readonly PerSignalDetectorId<DetectorKindA, SA>[];
@@ -36,10 +47,11 @@ export interface DetectorRegistry<SA extends string = string, SD extends string 
     readonly C: readonly DetectorKindC[];
     readonly D: readonly PerSignalDetectorId<DetectorKindD, SD>[];
     readonly E: readonly DetectorKindE[];
+    readonly twin: readonly string[];
 }
 /** Build the detector registry for a consumer's signal set. Pure; the result is frozen. */
 export declare function detectorRegistryFor<SA extends string, SD extends string = never, B extends string = never>(spec: DetectorRegistrySpec<SA, SD, B>): DetectorRegistry<SA, SD, B>;
-/** Every id in a registry, family order A, B, C, D, E. */
+/** Every id in a registry, family order A, B, C, D, E, then the twin ids. */
 export declare function allDetectorIds(registry: DetectorRegistry): readonly string[];
 /** The kind an id was built from, by longest kind-prefix (so `sequential_mmd_betting_e_process`
  *  resolves to itself, not to `sequential_mmd`). Undefined for a Family B heuristic or an unknown

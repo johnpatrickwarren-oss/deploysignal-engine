@@ -147,6 +147,19 @@ const ALL_IDS = (0, audit_1.allDetectorIds)(FIXTURE_REGISTRY);
 // ── ADR 0033: the registry is generic; the guarantee table is total over any instance ────────
 const audit_2 = require("../types/audit");
 (0, node_test_1.describe)('detector registry (ADR 0033)', () => {
+    (0, node_test_1.test)('twin metrics (ADR 0036): one id per declared metric, its own kind, each with a guarantee row', () => {
+        const r = (0, audit_1.detectorRegistryFor)({ signals: [], twinMetrics: [{ id: 'errors', kind: 'rate' }, { id: 'p99', kind: 'sign' }] });
+        strict_1.default.deepEqual([...r.twin], ['twin_rate_errors', 'twin_sign_p99']);
+        strict_1.default.deepEqual([...r.A], [], 'twin kinds are not crossed with Family A signals');
+        strict_1.default.deepEqual([...(0, audit_1.allDetectorIds)(r)].slice(-2), ['twin_rate_errors', 'twin_sign_p99']);
+        for (const id of r.twin) {
+            const row = (0, guarantees_2.guaranteeFor)(id);
+            strict_1.default.ok(row, `no guarantee row for '${id}'`);
+            strict_1.default.equal(row.family, (0, audit_2.detectorKindOf)(id).family);
+        }
+        strict_1.default.notEqual((0, guarantees_2.guaranteeFor)('twin_rate_errors'), (0, guarantees_2.guaranteeFor)('twin_sign_p99'));
+        strict_1.default.equal(Object.isFrozen(r.twin), true);
+    });
     (0, node_test_1.test)('a six-signal registry: every per-signal kind × every signal, kind-major, plus the joint-vector kinds', () => {
         const sig = [...SIX_SIGNALS];
         const A = ['mSPRT', 'page_cusum', 'betting_e_process', 'safe_t_e_value', 'contrast_null', 'onset_mixture']
@@ -166,6 +179,7 @@ const audit_2 = require("../types/audit");
         strict_1.default.equal(r.A.length, audit_2.DETECTOR_KINDS.A.length * 2);
         strict_1.default.equal(r.D.length, audit_2.DETECTOR_KINDS.D.length);
         strict_1.default.deepEqual([...r.B], [], 'no heuristics unless the consumer names them');
+        strict_1.default.deepEqual([...r.twin], [], 'no twin ids unless the consumer declares twin metrics');
         strict_1.default.equal((0, audit_1.allDetectorIds)(r).length, r.A.length + r.C.length + r.D.length + r.E.length);
         for (const id of (0, audit_1.allDetectorIds)(r)) {
             const row = (0, guarantees_2.guaranteeFor)(id);
@@ -183,6 +197,8 @@ const audit_2 = require("../types/audit");
         strict_1.default.deepEqual((0, audit_2.detectorKindOf)('page_cusum_anything'), { family: 'A', kind: 'page_cusum' });
         strict_1.default.deepEqual((0, audit_2.detectorKindOf)('spectral_e_detector_x'), { family: 'D', kind: 'spectral_e_detector' });
         strict_1.default.equal((0, audit_2.detectorKindOf)('kv_saturation'), undefined);
+        strict_1.default.deepEqual((0, audit_2.detectorKindOf)('twin_rate_errors'), { family: 'A', kind: 'twin_rate' });
+        strict_1.default.deepEqual((0, audit_2.detectorKindOf)('twin_sign_p99'), { family: 'A', kind: 'twin_sign' });
         strict_1.default.equal((0, audit_2.detectorKindOf)('page_cusum'), undefined, 'a per-signal kind needs a signal');
     });
 });

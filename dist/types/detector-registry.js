@@ -40,6 +40,11 @@ exports.DETECTOR_KINDS = Object.freeze({
     D: Object.freeze(['spectral_peak_acf', 'spectral_e_detector']),
     /** Family E — joint vector; the id is the kind. */
     E: Object.freeze(['mahalanobis_conformal_baseline']),
+    /** Randomized twin (ADR 0036) — per declared twin metric; the id is `${kind}_${metricId}`. The
+     *  guarantee table classes both rows Family A. Kept apart from `A` because a twin kind is not
+     *  crossed with the Family A signals: it runs on the twin path only, and each twin metric has
+     *  exactly one kind (`rate` → `twin_rate`, `sign` → `twin_sign`). */
+    twin: Object.freeze(['twin_rate', 'twin_sign']),
 });
 function perSignal(kinds, signals) {
     // Kind-major order: every signal of the first kind, then the next kind — the order the literal
@@ -54,11 +59,12 @@ function detectorRegistryFor(spec) {
         C: exports.DETECTOR_KINDS.C,
         D: perSignal(exports.DETECTOR_KINDS.D, spec.familyDSignals ?? []),
         E: exports.DETECTOR_KINDS.E,
+        twin: Object.freeze((spec.twinMetrics ?? []).map((m) => `twin_${m.kind}_${m.id}`)),
     });
 }
-/** Every id in a registry, family order A, B, C, D, E. */
+/** Every id in a registry, family order A, B, C, D, E, then the twin ids. */
 function allDetectorIds(registry) {
-    return [...registry.A, ...registry.B, ...registry.C, ...registry.D, ...registry.E];
+    return [...registry.A, ...registry.B, ...registry.C, ...registry.D, ...registry.E, ...registry.twin];
 }
 /** The kind an id was built from, by longest kind-prefix (so `sequential_mmd_betting_e_process`
  *  resolves to itself, not to `sequential_mmd`). Undefined for a Family B heuristic or an unknown
@@ -74,6 +80,12 @@ function detectorKindOf(id) {
                 best = { family, kind };
                 bestLen = kind.length;
             }
+        }
+    }
+    for (const kind of exports.DETECTOR_KINDS.twin) {
+        if (id.startsWith(`${kind}_`) && kind.length > bestLen) {
+            best = { family: 'A', kind };
+            bestLen = kind.length;
         }
     }
     return best;

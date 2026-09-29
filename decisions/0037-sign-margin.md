@@ -1,8 +1,13 @@
 # ADR 0037 — A margin in the twin's `sign` kind: the smallest persistent direction that counts as worse
 
 - **Date:** 2026-09-29
-- **Status:** PROPOSED. Library only; no consumer authority. Study `2026-10-twin-sign-margin` (T1)
-  registered at `validation/twin-sign-margin/PREREGISTRATION.md`, not run.
+- **Status:** ACCEPTED 2026-09-29 (library only; no consumer authority). Study
+  `2026-10-twin-sign-margin` (T1 + T3 replay) run `run-20260929T202805Z`: **ship rule MET** — false
+  rollback 0.000–0.037 with a 2% margin under persistent offsets up to 0.9 of the margin and AR(1)
+  arm-level noise that gives the unmargined kind 0.144; the T3 mechanism reproduced at 1.000;
+  power 1.000 by tick 60 at 2× and 4× the margin; sub-margin proceed 1.000; the 44 real p99 runs
+  replayed 12/44 → 2/44 (m 0.10) → 0/44 (m 0.25). See `validation/twin-sign-margin/REPORT.md`,
+  including its stated registration error (cell `V-m0-d0` reproduces twin-null's P2, not P1).
 - **Register:** ADR 0036 (the randomized twin); DeploySignal study `2026-10-twin-aa-real`
   (`studies/twin-aa-real/REPORT.md`, AA cell, 2026-09-29); DeploySignal study
   `2026-09-mini-twin-aa`; knowledge `stats/twin-aa-real-2026-09-29`, `stats/mini-twin-aa-2026-09-29`.

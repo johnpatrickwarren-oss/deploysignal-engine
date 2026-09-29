@@ -259,3 +259,77 @@ test('the envelopes carry their pairing premises and estimate nothing', () => {
   assert.equal(TWIN_RATE_ENVELOPE.baseline, 'randomized-twin');
   assert.equal(TWIN_RATE_ENVELOPE.validUnderEstimatedBaseline, true);
 });
+
+// ADR 0037 — a margin in the sign kind.
+const LAT_M: TwinMetricSpec = { ...LAT, margin: { relative: 0.25 } };
+
+test('ADR 0037: with a margin a tick is worse only beyond the band; inside the band scores 0, never a tie', () => {
+  const beyond = twinScore(LAT_M, { canary: 130, control: 100 });
+  assert.ok(beyond !== 'skip' && beyond !== 'tie' && beyond !== 'missing' && beyond.x === 1 && beyond.rollbackNull === 0.5);
+  const inside = twinScore(LAT_M, { canary: 120, control: 100 });
+  assert.ok(inside !== 'skip' && inside !== 'tie' && inside !== 'missing' && inside.x === 0);
+  const equal = twinScore(LAT_M, { canary: 100, control: 100 });
+  assert.ok(equal !== 'tie' && equal !== 'skip' && equal !== 'missing' && equal.x === 0);
+  const edge = twinScore(LAT_M, { canary: 125, control: 100 });
+  assert.ok(edge !== 'tie' && edge !== 'skip' && edge !== 'missing' && edge.x === 0, 'exactly at the band edge is not beyond it');
+  const lower = twinScore({ ...LAT_M, worse: 'lower' }, { canary: 70, control: 100 });
+  assert.ok(lower !== 'tie' && lower !== 'skip' && lower !== 'missing' && lower.x === 1);
+  const lowerInside = twinScore({ ...LAT_M, worse: 'lower' }, { canary: 80, control: 100 });
+  assert.ok(lowerInside !== 'tie' && lowerInside !== 'skip' && lowerInside !== 'missing' && lowerInside.x === 0);
+  const abs = twinScore({ ...LAT, margin: { absolute: 5 } }, { canary: 104, control: 100 });
+  assert.ok(abs !== 'tie' && abs !== 'skip' && abs !== 'missing' && abs.x === 0);
+  const both = twinScore({ ...LAT, margin: { relative: 0.1, absolute: 5 } }, { canary: 116, control: 100 });
+  assert.ok(both !== 'tie' && both !== 'skip' && both !== 'missing' && both.x === 1, '116 > 100·1.1 + 5');
+  assert.equal(twinScore(LAT_M, { canary: Number.NaN, control: 100 }), 'missing');
+});
+
+test('ADR 0037: margin validation — sign only, at least one component, finite and non-negative', () => {
+  assert.doesNotThrow(() => checkTwinMetricSpec(LAT_M));
+  assert.doesNotThrow(() => checkTwinMetricSpec({ ...LAT, margin: { absolute: 0 } }));
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, margin: { relative: 0.1 } }), /sign kind only/);
+  assert.throws(() => checkTwinMetricSpec({ ...LAT, margin: {} }), /relative or absolute/);
+  assert.throws(() => checkTwinMetricSpec({ ...LAT, margin: { relative: -0.1 } }), RangeError);
+  assert.throws(() => checkTwinMetricSpec({ ...LAT, margin: { absolute: Number.NaN } }), RangeError);
+});
+
+test('ADR 0037: a persistent sub-margin offset is absorbed — no false rollback where the unmargined spec fires', () => {
+  // canary carries a persistent +10% offset on a control of 100 with symmetric noise of sd ~4:
+  // ADR 0036's scoring sees "worse" on ~99% of ticks; a 25% margin sees it on ~0.01%.
+  const R = 200, T = 300, alpha = 0.05;
+  const run = (spec: TwinMetricSpec, seed: number) => {
+    const rng = lcg(seed); let fired = 0;
+    for (let r = 0; r < R; r++) {
+      let st = initTwinMetric();
+      for (let t = 0; t < T; t++) {
+        const z = () => (rng() + rng() + rng() + rng() - 2) * 2 * Math.sqrt(3); // sd ≈ 4, symmetric
+        st = updateTwinMetric(spec, st, { canary: 110 + z(), control: 100 + z() });
+        if (twinMetricEvidence(st).rollbackE >= 1 / alpha) { fired++; break; }
+      }
+    }
+    return fired / R;
+  };
+  const without = run(LAT, 37);
+  const withMargin = run(LAT_M, 37);
+  assert.ok(without >= 0.9, `unmargined false rollback ${without} < 0.9 (the mechanism)`);
+  const bar = alpha + 3 * Math.sqrt(alpha * (1 - alpha) / R);
+  assert.ok(withMargin <= bar, `margined false rollback ${withMargin} > ${bar}`);
+});
+
+test('ADR 0037: a regression well past the margin still fires', () => {
+  const rng = lcg(41); const R = 200, T = 300, alpha = 0.05; let fired = 0;
+  for (let r = 0; r < R; r++) {
+    let st = initTwinMetric();
+    for (let t = 0; t < T; t++) {
+      const z = () => (rng() + rng() + rng() + rng() - 2) * 2 * Math.sqrt(3);
+      st = updateTwinMetric(LAT_M, st, { canary: 160 + z(), control: 100 + z() });
+      if (twinMetricEvidence(st).rollbackE >= 1 / alpha) { fired++; break; }
+    }
+  }
+  assert.ok(fired / R >= 0.95, `power ${fired / R} < 0.95 at a +60% regression against a 25% margin`);
+});
+
+test('ADR 0037: the sign envelope names the T3 measurement and the margin premise', () => {
+  assert.match(TWIN_SIGN_ENVELOPE.notes ?? '', /0\.2727/);
+  assert.match(TWIN_SIGN_ENVELOPE.notes ?? '', /ADR 0037/);
+  assert.match(TWIN_SIGN_ENVELOPE.notes ?? '', /larger than the margin/);
+});

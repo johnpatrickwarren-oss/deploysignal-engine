@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+(nothing yet)
+
+## v0.13.0-pre — 2026-09-29 — a margin in the twin's sign kind (ADR 0037, PR #112)
+
 - **ADR 0037 — a margin in the twin's `sign` kind** (`TwinMetricSpec.margin: { relative?, absolute? }`,
   sign only; validated by `checkTwinMetricSpec`). A tick scores "canary worse" only beyond the band
   (worse 'higher': canary > control·(1+relative) + absolute); inside the band scores 0, never a tie,

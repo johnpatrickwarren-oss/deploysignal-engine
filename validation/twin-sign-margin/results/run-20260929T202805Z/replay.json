@@ -1,0 +1,1394 @@
+{
+ "runs_dir": "/Users/johnwarren/concord/deploysignal/studies/twin-aa-real/results/runs",
+ "files": 44,
+ "margins": {
+  "0": {
+   "rollbacks": 12,
+   "of": 44,
+   "runs": [
+    {
+     "run": 39,
+     "tick": 14,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 59,
+     "tick": 31,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 62,
+     "tick": 23,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 29,
+     "tick": 11,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 44,
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 47,
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 54,
+     "tick": 48,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 35,
+     "tick": 11,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 45,
+     "tick": 33,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 57,
+     "tick": 11,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 26,
+     "tick": 19,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 32,
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    }
+   ],
+   "verdicts": [
+    {
+     "run": 19,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 23,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 28,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 34,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 39,
+     "lane": 0,
+     "verdict": "rollback",
+     "tick": 14,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 41,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 46,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 51,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 55,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 59,
+     "lane": 0,
+     "verdict": "rollback",
+     "tick": 31,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 62,
+     "lane": 0,
+     "verdict": "rollback",
+     "tick": 23,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 20,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 25,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 29,
+     "lane": 1,
+     "verdict": "rollback",
+     "tick": 11,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 31,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 36,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 40,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 44,
+     "lane": 1,
+     "verdict": "rollback",
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 47,
+     "lane": 1,
+     "verdict": "rollback",
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 50,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 54,
+     "lane": 1,
+     "verdict": "rollback",
+     "tick": 48,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 58,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 21,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 24,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 30,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 35,
+     "lane": 2,
+     "verdict": "rollback",
+     "tick": 11,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 37,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 42,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 45,
+     "lane": 2,
+     "verdict": "rollback",
+     "tick": 33,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 49,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 53,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 57,
+     "lane": 2,
+     "verdict": "rollback",
+     "tick": 11,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 60,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 22,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 26,
+     "lane": 3,
+     "verdict": "rollback",
+     "tick": 19,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 27,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 32,
+     "lane": 3,
+     "verdict": "rollback",
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 33,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 38,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 43,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 48,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 52,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 56,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 61,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    }
+   ]
+  },
+  "0.1": {
+   "rollbacks": 2,
+   "of": 44,
+   "runs": [
+    {
+     "run": 44,
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 47,
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    }
+   ],
+   "verdicts": [
+    {
+     "run": 19,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 23,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 28,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 34,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 39,
+     "lane": 0,
+     "verdict": "extend",
+     "tick": 14,
+     "fired": []
+    },
+    {
+     "run": 41,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 46,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 51,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 55,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 59,
+     "lane": 0,
+     "verdict": "extend",
+     "tick": 31,
+     "fired": []
+    },
+    {
+     "run": 62,
+     "lane": 0,
+     "verdict": "extend",
+     "tick": 23,
+     "fired": []
+    },
+    {
+     "run": 20,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 25,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 29,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 11,
+     "fired": []
+    },
+    {
+     "run": 31,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 36,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 40,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 44,
+     "lane": 1,
+     "verdict": "rollback",
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 47,
+     "lane": 1,
+     "verdict": "rollback",
+     "tick": 13,
+     "fired": [
+      "p99_latency"
+     ]
+    },
+    {
+     "run": 50,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 54,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 48,
+     "fired": []
+    },
+    {
+     "run": 58,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 21,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 24,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 30,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 35,
+     "lane": 2,
+     "verdict": "extend",
+     "tick": 11,
+     "fired": []
+    },
+    {
+     "run": 37,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 42,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 45,
+     "lane": 2,
+     "verdict": "extend",
+     "tick": 33,
+     "fired": []
+    },
+    {
+     "run": 49,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 53,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 57,
+     "lane": 2,
+     "verdict": "extend",
+     "tick": 11,
+     "fired": []
+    },
+    {
+     "run": 60,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 22,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 26,
+     "lane": 3,
+     "verdict": "extend",
+     "tick": 19,
+     "fired": []
+    },
+    {
+     "run": 27,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 32,
+     "lane": 3,
+     "verdict": "extend",
+     "tick": 13,
+     "fired": []
+    },
+    {
+     "run": 33,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 38,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 43,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 48,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 52,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 56,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 61,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    }
+   ]
+  },
+  "0.25": {
+   "rollbacks": 0,
+   "of": 44,
+   "runs": [],
+   "verdicts": [
+    {
+     "run": 19,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 23,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 28,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 34,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 39,
+     "lane": 0,
+     "verdict": "extend",
+     "tick": 14,
+     "fired": []
+    },
+    {
+     "run": 41,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 46,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 51,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 55,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 59,
+     "lane": 0,
+     "verdict": "extend",
+     "tick": 31,
+     "fired": []
+    },
+    {
+     "run": 62,
+     "lane": 0,
+     "verdict": "extend",
+     "tick": 23,
+     "fired": []
+    },
+    {
+     "run": 20,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 25,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 29,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 11,
+     "fired": []
+    },
+    {
+     "run": 31,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 36,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 40,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 44,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 13,
+     "fired": []
+    },
+    {
+     "run": 47,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 13,
+     "fired": []
+    },
+    {
+     "run": 50,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 54,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 48,
+     "fired": []
+    },
+    {
+     "run": 58,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 21,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 24,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 30,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 35,
+     "lane": 2,
+     "verdict": "extend",
+     "tick": 11,
+     "fired": []
+    },
+    {
+     "run": 37,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 42,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 45,
+     "lane": 2,
+     "verdict": "extend",
+     "tick": 33,
+     "fired": []
+    },
+    {
+     "run": 49,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 53,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 57,
+     "lane": 2,
+     "verdict": "extend",
+     "tick": 11,
+     "fired": []
+    },
+    {
+     "run": 60,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 22,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 26,
+     "lane": 3,
+     "verdict": "extend",
+     "tick": 19,
+     "fired": []
+    },
+    {
+     "run": 27,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 32,
+     "lane": 3,
+     "verdict": "extend",
+     "tick": 13,
+     "fired": []
+    },
+    {
+     "run": 33,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 38,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 43,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 48,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 52,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 56,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 61,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    }
+   ]
+  },
+  "0.5": {
+   "rollbacks": 0,
+   "of": 44,
+   "runs": [],
+   "verdicts": [
+    {
+     "run": 19,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 23,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 28,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 34,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 39,
+     "lane": 0,
+     "verdict": "extend",
+     "tick": 14,
+     "fired": []
+    },
+    {
+     "run": 41,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 46,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 51,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 55,
+     "lane": 0,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 59,
+     "lane": 0,
+     "verdict": "extend",
+     "tick": 31,
+     "fired": []
+    },
+    {
+     "run": 62,
+     "lane": 0,
+     "verdict": "extend",
+     "tick": 23,
+     "fired": []
+    },
+    {
+     "run": 20,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 25,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 29,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 11,
+     "fired": []
+    },
+    {
+     "run": 31,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 36,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 40,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 44,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 13,
+     "fired": []
+    },
+    {
+     "run": 47,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 13,
+     "fired": []
+    },
+    {
+     "run": 50,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 54,
+     "lane": 1,
+     "verdict": "extend",
+     "tick": 48,
+     "fired": []
+    },
+    {
+     "run": 58,
+     "lane": 1,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 21,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 24,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 30,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 35,
+     "lane": 2,
+     "verdict": "extend",
+     "tick": 11,
+     "fired": []
+    },
+    {
+     "run": 37,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 42,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 45,
+     "lane": 2,
+     "verdict": "extend",
+     "tick": 33,
+     "fired": []
+    },
+    {
+     "run": 49,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 53,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 57,
+     "lane": 2,
+     "verdict": "extend",
+     "tick": 11,
+     "fired": []
+    },
+    {
+     "run": 60,
+     "lane": 2,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 22,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 26,
+     "lane": 3,
+     "verdict": "extend",
+     "tick": 19,
+     "fired": []
+    },
+    {
+     "run": 27,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 32,
+     "lane": 3,
+     "verdict": "extend",
+     "tick": 13,
+     "fired": []
+    },
+    {
+     "run": 33,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 38,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 43,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 48,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 52,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 56,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    },
+    {
+     "run": 61,
+     "lane": 3,
+     "verdict": "inconclusive",
+     "tick": 60,
+     "fired": []
+    }
+   ]
+  }
+ }
+}

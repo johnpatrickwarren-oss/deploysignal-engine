@@ -1,0 +1,107 @@
+{
+ "E1": {
+  "cells": [
+   {
+    "id": "V-m0.02-d0",
+    "rate": 0,
+    "verdict": "PASS"
+   },
+   {
+    "id": "V-m0.02-d0.005",
+    "rate": 0.001,
+    "verdict": "PASS"
+   },
+   {
+    "id": "V-m0.02-d0.01",
+    "rate": 0,
+    "verdict": "PASS"
+   },
+   {
+    "id": "V-m0.02-d0.018",
+    "rate": 0.037,
+    "verdict": "PASS"
+   }
+  ],
+  "verdict": "PASS"
+ },
+ "E2": {
+  "cell": {
+   "id": "M-m0-d0.01",
+   "group": "M",
+   "m": 0,
+   "d": 0.01,
+   "r": 0,
+   "T": 2000,
+   "rollbackRate": 1,
+   "rollbackSE": 0,
+   "medianRollbackTick": 31,
+   "rollbackBy60": 0.769,
+   "proceedRate": 0.011,
+   "proceedSE": 0.003298332912245215,
+   "medianProceedTick": 8,
+   "verdict": "PASS"
+  },
+  "verdict": "PASS"
+ },
+ "E3": {
+  "cell": {
+   "id": "P-m0.02-r0.08",
+   "group": "P",
+   "m": 0.02,
+   "d": 0,
+   "r": 0.08,
+   "T": 300,
+   "rollbackRate": 1,
+   "rollbackSE": 0,
+   "medianRollbackTick": 8,
+   "rollbackBy60": 1,
+   "proceedRate": 0,
+   "proceedSE": 0,
+   "medianProceedTick": null,
+   "verdict": "PASS"
+  },
+  "verdict": "PASS",
+  "reported": [
+   {
+    "id": "P-m0.02-r0.03",
+    "rollbackBy60": 0.782,
+    "rollbackRate": 1,
+    "medianRollbackTick": 31
+   },
+   {
+    "id": "P-m0.02-r0.04",
+    "rollbackBy60": 1,
+    "rollbackRate": 1,
+    "medianRollbackTick": 11
+   }
+  ]
+ },
+ "E4": {
+  "cells": [
+   {
+    "id": "Q-m0.02-r0.01",
+    "proceedRate": 1,
+    "rollbackRate": 0.002,
+    "verdict": "PASS"
+   },
+   {
+    "id": "Q-m0.02-r0.08-proceed",
+    "proceedRate": 0,
+    "rollbackRate": 1,
+    "verdict": "PASS"
+   }
+  ],
+  "verdict": "PASS"
+ },
+ "E5": {
+  "reported": {
+   "0": "12/44",
+   "0.1": "2/44",
+   "0.25": "0/44",
+   "0.5": "0/44"
+  },
+  "verdict": "reported, no verdict"
+ },
+ "twin_null_P1_reproduced": "FAIL",
+ "ship_rule": "MET"
+}

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **ADR 0037 — a margin in the twin's `sign` kind** (`TwinMetricSpec.margin: { relative?, absolute? }`,
+  sign only; validated by `checkTwinMetricSpec`). A tick scores "canary worse" only beyond the band
+  (worse 'higher': canary > control·(1+relative) + absolute); inside the band scores 0, never a tie,
+  which is what absorbs a persistent arm-level offset smaller than the margin. Absent = ADR 0036's
+  scoring. Motivated by DeploySignal study `2026-10-twin-aa-real` (T3, 2026-09-29): 12 of 44 real
+  A/A runs rolled back on p99 latency, every one on direction alone. Study
+  `2026-10-twin-sign-margin` (validation/twin-sign-margin, T1 + replay): ship rule MET — false
+  rollback 0.000–0.037 with a 2% margin under offsets up to 0.9 of the margin; the mechanism
+  reproduced at 1.000 without a margin; power 1.000 by tick 60 at 2× the margin; the 44 real runs
+  replayed 12/44 → 2/44 (10% margin) → 0/44 (25%). `TWIN_SIGN_ENVELOPE.notes` carries the T3
+  measurement and the margin premise ("no arm-level effect larger than the margin"). Nothing
+  changes for the `rate` kind or for a `sign` metric without a margin.
 - **Study `2026-09-twin-gate` (T1, gate level; validation/twin-gate, PR #109): ship rule MET.** The
   twin gate's three error statements held as a gate (Bonferroni across 1/3/8 metrics, the guard,
   the ½ missingness penalty under MCAR and outcome-dependent missingness, rollback under within-arm

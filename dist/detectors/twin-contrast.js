@@ -60,6 +60,17 @@ function checkTwinMetricSpec(spec) {
     else if (!(spec.tolerance > 0 && spec.tolerance < 0.5)) {
         throw new RangeError(`twin-contrast: ${spec.id}: a sign tolerance is an excess probability in (0, 0.5), got ${spec.tolerance}`);
     }
+    if (spec.margin !== undefined) {
+        if (spec.kind !== 'sign')
+            throw new RangeError(`twin-contrast: ${spec.id}: margin applies to the sign kind only (ADR 0037)`);
+        const { relative, absolute } = spec.margin;
+        if (relative === undefined && absolute === undefined)
+            throw new RangeError(`twin-contrast: ${spec.id}: margin needs relative or absolute`);
+        if (relative !== undefined && !(Number.isFinite(relative) && relative >= 0))
+            throw new RangeError(`twin-contrast: ${spec.id}: margin.relative must be a finite number >= 0, got ${relative}`);
+        if (absolute !== undefined && !(Number.isFinite(absolute) && absolute >= 0))
+            throw new RangeError(`twin-contrast: ${spec.id}: margin.absolute must be a finite number >= 0, got ${absolute}`);
+    }
 }
 /** Mean of Fisher's noncentral hypergeometric: X = canary's count of `total` events over arms of
  *  nc and nk requests, odds ratio psi. Weights by the ratio recurrence, in the log domain. The
@@ -125,10 +136,20 @@ function twinScore(spec, obs) {
         throw new TypeError(`twin-contrast: ${spec.id}: a sign metric needs a SignObservation`);
     if (!Number.isFinite(obs.canary) || !Number.isFinite(obs.control))
         return 'missing';
-    if (obs.canary === obs.control)
-        return 'tie';
-    const canaryHigher = obs.canary > obs.control;
-    const worse = spec.worse === 'higher' ? canaryHigher : !canaryHigher;
+    if (spec.margin === undefined) {
+        if (obs.canary === obs.control)
+            return 'tie';
+        const canaryHigher = obs.canary > obs.control;
+        const worse = spec.worse === 'higher' ? canaryHigher : !canaryHigher;
+        return { x: worse ? 1 : 0, rollbackNull: 0.5, proceedNull: 0.5 + spec.tolerance };
+    }
+    // ADR 0037: worse only beyond the margin band; inside the band scores 0, never a tie. Under
+    // exchangeable arms P(beyond the band on the worse side) ≤ 1/2, so the rollback null mean stays 1/2.
+    const rel = spec.margin.relative ?? 0;
+    const abs = spec.margin.absolute ?? 0;
+    const worse = spec.worse === 'higher'
+        ? obs.canary > obs.control * (1 + rel) + abs
+        : obs.canary < obs.control * (1 - rel) - abs;
     return { x: worse ? 1 : 0, rollbackNull: 0.5, proceedNull: 0.5 + spec.tolerance };
 }
 function initTwinMetric() {
@@ -227,6 +248,11 @@ exports.TWIN_SIGN_ENVELOPE = Object.freeze({
         + '→ 0.289 rate / 1.000 sign. Unequal weights measured: P3 (w 0.1, worse = lower) false rollback '
         + '1.000 — the gate refuses sign at canaryWeight ≠ 0.5. Gate level (study 2026-09-twin-gate): the '
         + 'Bonferroni split held with sign beside rate metrics (N 3 / 8: 0.022 / 0.023); sign under missingness '
-        + 'was not measured. Real-deploy (T3) validity is unmeasured.',
+        + 'was not measured. Real-deploy (T3) WITHOUT a margin: DeploySignal study 2026-10-twin-aa-real '
+        + '(2026-09-29, 44 A/A runs on an ALB service, two Fargate tasks per arm, CloudWatch p99) measured '
+        + 'false rollback 0.2727 — fresh task pairs carry a persistent 0.01–2 ms offset at a 1 ms p99 and '
+        + 'direction alone scores it as worse. ADR 0037: with `margin` declared, a tick is worse only beyond '
+        + 'the band, so the premise becomes "no arm-level effect larger than the margin"; its study '
+        + '2026-10-twin-sign-margin is registered, not run, and T3 validity with a margin is unmeasured.',
 });
 //# sourceMappingURL=twin-contrast.js.map

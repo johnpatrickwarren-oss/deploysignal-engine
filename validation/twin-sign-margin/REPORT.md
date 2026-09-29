@@ -1,7 +1,7 @@
 # Report — the sign kind with a margin (`2026-10-twin-sign-margin`, ADR 0037, T1 + T3 replay)
 
 - **Run:** `results/run-20260929T202805Z/` (`harness/run.mjs`, R = 1000, α = 0.05, B = 0.0678),
-  engine `1685402` on `wt/sign-margin` (0.12.2-pre + ADR 0037 unreleased), Node v25.9.0, replay
+  engine `1685402` on `wt/sign-margin` (0.12.2-pre + ADR 0037 unreleased; on `main` after the rebase-merge of PR #112 the same tree is `faab27f`, the registration `7f4ad91`, the dist commit `a435580`, the run commit `9fd994a`), Node v25.9.0, replay
   input DeploySignal `studies/twin-aa-real/results/runs/` (44 files, main `a9c2aa1`). Smoke at
   R = 20 in `results/smoke-20260929T202743Z/` before the sweep. Registered before code
   (`23454c1`), no amendment. Verdicts as computed; no bar moved.

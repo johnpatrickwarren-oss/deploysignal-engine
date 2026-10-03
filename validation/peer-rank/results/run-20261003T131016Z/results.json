@@ -1,0 +1,224 @@
+{
+  "study": "2026-10-peer-rank",
+  "R": 10000,
+  "ALPHA": 0.05,
+  "BAR": 0.055622979637167475,
+  "SEED0": 20261003,
+  "engine": {
+    "version": "0.14.0-pre",
+    "sha": "af805e8a085a961528816853f123c5bf43f28d7b",
+    "dirty": []
+  },
+  "node": "v25.9.0",
+  "generated": "2026-10-03T13:12:33.566Z",
+  "endpoints": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "PASS",
+    "E4": "PASS"
+  },
+  "ship_rule": "MET",
+  "results": [
+    {
+      "cell": "S2-rep",
+      "N": 2,
+      "m": 0.02,
+      "d": 0,
+      "r": 0,
+      "T": 300,
+      "R": 10000,
+      "rollback": 0,
+      "rollback_by_60": 0,
+      "proceed": 1,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null
+      },
+      "proceed_tick_median": 9,
+      "rep_max_rel_diff": 0,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "V4-m0.02",
+      "N": 4,
+      "m": 0.02,
+      "d": 0,
+      "r": 0,
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0,
+      "rollback_by_60": 0,
+      "proceed": 1,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null
+      },
+      "proceed_tick_median": 8,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "V16-m0.02",
+      "N": 16,
+      "m": 0.02,
+      "d": 0,
+      "r": 0,
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0,
+      "rollback_by_60": 0,
+      "proceed": 1,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null
+      },
+      "proceed_tick_median": 9,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "V4-d0.01",
+      "N": 4,
+      "m": 0.02,
+      "d": 0.01,
+      "r": 0,
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0.0001,
+      "rollback_by_60": 0.0001,
+      "proceed": 0.9999,
+      "tick": {
+        "median": 22,
+        "q25": 22,
+        "q75": 22,
+        "p90": 22
+      },
+      "proceed_tick_median": 14,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "V4-d0.018",
+      "N": 4,
+      "m": 0.02,
+      "d": 0.018,
+      "r": 0,
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0.0405,
+      "rollback_by_60": 0.0356,
+      "proceed": 0.9595,
+      "tick": {
+        "median": 25,
+        "q25": 17,
+        "q75": 41,
+        "p90": 70
+      },
+      "proceed_tick_median": 39,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "M4-m0-d0.01",
+      "N": 4,
+      "m": 0,
+      "d": 0.01,
+      "r": 0,
+      "T": 2000,
+      "R": 10000,
+      "rollback": 1,
+      "rollback_by_60": 0.9129,
+      "proceed": 0,
+      "tick": {
+        "median": 23,
+        "q25": 15,
+        "q75": 37,
+        "p90": 58
+      },
+      "proceed_tick_median": 15,
+      "verdict": "reported"
+    },
+    {
+      "cell": "P4-r0.04",
+      "N": 4,
+      "m": 0.02,
+      "d": 0,
+      "r": 0.04,
+      "T": 300,
+      "R": 10000,
+      "rollback": 0.9999,
+      "rollback_by_60": 0.9999,
+      "proceed": 0.0001,
+      "tick": {
+        "median": 12,
+        "q25": 10,
+        "q75": 15,
+        "p90": 20
+      },
+      "proceed_tick_median": 15,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "P16-r0.04",
+      "N": 16,
+      "m": 0.02,
+      "d": 0,
+      "r": 0.04,
+      "T": 300,
+      "R": 10000,
+      "rollback": 1,
+      "rollback_by_60": 1,
+      "proceed": 0,
+      "tick": {
+        "median": 12,
+        "q25": 11,
+        "q75": 14,
+        "p90": 17
+      },
+      "proceed_tick_median": null,
+      "verdict": "reported"
+    },
+    {
+      "cell": "P4-r0.03",
+      "N": 4,
+      "m": 0.02,
+      "d": 0,
+      "r": 0.03,
+      "T": 300,
+      "R": 10000,
+      "rollback": 1,
+      "rollback_by_60": 0.9139,
+      "proceed": 0,
+      "tick": {
+        "median": 24,
+        "q25": 16,
+        "q75": 38,
+        "p90": 57
+      },
+      "proceed_tick_median": 13,
+      "verdict": "reported"
+    },
+    {
+      "cell": "Q4-r0.01",
+      "N": 4,
+      "m": 0.02,
+      "d": 0,
+      "r": 0.01,
+      "T": 300,
+      "R": 10000,
+      "rollback": 0.0003,
+      "rollback_by_60": 0.0003,
+      "proceed": 0.9997,
+      "tick": {
+        "median": 12,
+        "q25": 10,
+        "q75": 14,
+        "p90": 14
+      },
+      "proceed_tick_median": 14,
+      "verdict": "PASS"
+    }
+  ]
+}

@@ -141,4 +141,17 @@ const gaussian = (rng) => Math.sqrt(-2 * Math.log(rng())) * Math.cos(2 * Math.PI
     strict_1.default.ok(firedWith / R <= 0.05 + 2.58 * Math.sqrt(0.05 * 0.95 / R), `with offsets ${firedWith}/${R}`);
     strict_1.default.ok(firedWithout / R >= 0.9, `without offsets ${firedWithout}/${R}`);
 });
+// ── ADR 0041: per-peer margin floors ────────────────────────────────────────────────────────────
+(0, node_test_1.test)('ADR 0041: a per-peer margin floor widens the band for that peer only; zeros reproduce ADR 0039/0040', () => {
+    // unit 110 vs peers 100, 100 at a 2% spec margin: worse than both
+    strict_1.default.deepEqual((0, peer_rank_1.peerRankScore)(SPEC, { unit: 110, peers: [100, 100] }), { x: 1, peersScored: 2 });
+    // a 15% floor on the first peer: inside its band; the second still counts
+    strict_1.default.deepEqual((0, peer_rank_1.peerRankScore)(SPEC, { unit: 110, peers: [100, 100], margins: [0.15, 0] }), { x: 0.5, peersScored: 2 });
+    // a floor smaller than the spec margin changes nothing
+    strict_1.default.deepEqual((0, peer_rank_1.peerRankScore)(SPEC, { unit: 110, peers: [100, 100], margins: [0.01, 0.01] }), { x: 1, peersScored: 2 });
+    strict_1.default.deepEqual((0, peer_rank_1.peerRankScore)(SPEC, { unit: 110, peers: [100, 100], margins: [0, 0], offsets: [0, 0] }), (0, peer_rank_1.peerRankScore)(SPEC, { unit: 110, peers: [100, 100] }));
+    strict_1.default.throws(() => (0, peer_rank_1.peerRankScore)(SPEC, { unit: 1, peers: [1, 2], margins: [0] }), /margins/);
+    // offsets and floors compose: peer 50 at offset +1.0 sits at 100; floor 0.15 puts 110 inside its band
+    strict_1.default.deepEqual((0, peer_rank_1.peerRankScore)(SPEC, { unit: 110, peers: [50, 100], offsets: [1.0, 0], margins: [0.15, 0] }), { x: 0.5, peersScored: 2 });
+});
 //# sourceMappingURL=peer-rank.test.js.map

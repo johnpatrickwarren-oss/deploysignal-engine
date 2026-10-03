@@ -1,4 +1,4 @@
-// detectors/peer-rank.ts — ADR 0039: the rank-among-peers kind; ADR 0040: declared per-peer offsets. A unit against N − 1 peers observed on
+// detectors/peer-rank.ts — ADR 0039: the rank-among-peers kind; ADR 0040/0041: declared per-peer offsets and margin floors. A unit against N − 1 peers observed on
 // the same signal at the same tick. Under exchangeability of the unit with its peers, for each peer j
 // P(unit worse than j) = ½, and with a margin P(worse by more than the margin) ≤ ½ (the ADR 0037
 // argument). x_t = (peers the unit is worse than, beyond the margin) / (finite peers) ∈ [0, 1];
@@ -26,6 +26,11 @@ export interface PeerRankObservation {
    *  which unit and peers ran concurrently, or known). Peer j's reference becomes peers[j] · (1 + offsets[j])
    *  before the band. Absent or 0 is ADR 0039. Length must equal peers.length when present. */
   offsets?: readonly number[];
+  /** ADR 0041: one relative margin per peer, derived by the caller from the same pre-window as `offsets`
+   *  (a declared quantile of |unit/peer − 1 − median|). The band for peer j is max(spec.margin.relative,
+   *  margins[j]); widening the band can only lower x, so the spec's null stays valid. Length must equal
+   *  peers.length when present; a non-finite or negative entry is treated as 0. */
+  margins?: readonly number[];
 }
 
 export interface PeerRankState { rollback: PairedBetState; proceed: PairedBetState; used: number; skipped: number; missing: number; fired: boolean; firedAt: number | null }
@@ -50,10 +55,13 @@ export function initPeerRank(spec: PeerRankSpec): PeerRankState {
   return { rollback: initPairedBet(), proceed: initPairedBet(), used: 0, skipped: 0, missing: 0, fired: false, firedAt: null };
 }
 
-/** Is the unit worse than one peer, beyond the band? Exported for the N = 2 reproduction check. */
-export function worseThanPeer(spec: PeerRankSpec, unit: number, peer: number): boolean {
-  const rel = spec.margin?.relative ?? 0, abs = spec.margin?.absolute ?? 0;
-  if (spec.margin === undefined) return spec.worse === 'higher' ? unit > peer : unit < peer;
+/** Is the unit worse than one peer, beyond the band? `extraRel` (ADR 0041) is a per-peer relative
+ *  margin floor; the band uses the larger of it and the spec's relative margin. Exported for the N = 2
+ *  reproduction check. */
+export function worseThanPeer(spec: PeerRankSpec, unit: number, peer: number, extraRel = 0): boolean {
+  const floor = Number.isFinite(extraRel) && extraRel > 0 ? extraRel : 0;
+  if (spec.margin === undefined && floor === 0) return spec.worse === 'higher' ? unit > peer : unit < peer;
+  const rel = Math.max(spec.margin?.relative ?? 0, floor), abs = spec.margin?.absolute ?? 0;
   return spec.worse === 'higher' ? unit > peer * (1 + rel) + abs : unit < peer * (1 - rel) - abs;
 }
 
@@ -65,6 +73,9 @@ export function peerRankScore(spec: PeerRankSpec, obs: PeerRankObservation): { x
   if (obs.offsets !== undefined && obs.offsets.length !== obs.peers.length) {
     throw new RangeError(`peer-rank: ${spec.id}: offsets (${obs.offsets.length}) must match peers (${obs.peers.length})`);
   }
+  if (obs.margins !== undefined && obs.margins.length !== obs.peers.length) {
+    throw new RangeError(`peer-rank: ${spec.id}: margins (${obs.margins.length}) must match peers (${obs.peers.length})`);
+  }
   let worse = 0, n = 0;
   for (let j = 0; j < obs.peers.length; j++) {
     const raw = obs.peers[j];
@@ -72,8 +83,9 @@ export function peerRankScore(spec: PeerRankSpec, obs: PeerRankObservation): { x
     if (!Number.isFinite(raw) || !Number.isFinite(off) || off <= -1) continue; // an unusable offset drops the peer for the tick
     const p = raw * (1 + off); // ADR 0040: the peer on the unit's scale
     n++;
-    if (worseThanPeer(spec, obs.unit, p)) worse += 1;
-    else if (spec.margin === undefined && obs.unit === p) worse += 0.5;
+    const floor = obs.margins?.[j] ?? 0;
+    if (worseThanPeer(spec, obs.unit, p, floor)) worse += 1;
+    else if (spec.margin === undefined && !(floor > 0) && obs.unit === p) worse += 0.5;
   }
   if (n === 0) return null;
   return { x: worse / n, peersScored: n };

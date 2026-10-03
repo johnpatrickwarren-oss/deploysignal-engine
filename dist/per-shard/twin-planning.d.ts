@@ -7,6 +7,8 @@ export interface RatePlanInput {
     /** Expected bad events per tick across both arms, > 0. */
     badEventsPerTick: number;
     alpha: number;
+    /** ADR 0038: the rollback null's odds ratio, 1 + margin.relative. Default 1 (ADR 0036). */
+    marginOddsRatio?: number;
 }
 export interface SignPlanInput {
     kind: 'sign';

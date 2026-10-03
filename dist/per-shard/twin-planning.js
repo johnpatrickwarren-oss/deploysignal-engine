@@ -33,11 +33,16 @@ function ticksToDetect(input) {
         throw new RangeError(`twin-planning: oddsRatio ${oddsRatio}`);
     if (!(e > 0))
         throw new RangeError(`twin-planning: badEventsPerTick ${e}`);
-    // Rare-event limit: the canary's share of bad events under the alternative.
+    const psi0 = input.marginOddsRatio ?? 1;
+    if (!(psi0 >= 1 && psi0 <= oddsRatio))
+        throw new RangeError(`twin-planning: marginOddsRatio ${psi0} must lie in [1, oddsRatio ${oddsRatio}]`);
+    // Rare-event limit: the canary's share of bad events under the alternative, against the null's
+    // share at ψ = marginOddsRatio (ADR 0038; the traffic share pi when the margin is 1).
     const share = (pi * oddsRatio) / (pi * oddsRatio + 1 - pi);
-    const mu = share - pi;
+    const nullShare = (pi * psi0) / (pi * psi0 + 1 - pi);
+    const mu = share - nullShare;
     const m2 = (share * (1 - share)) / e + mu * mu;
-    const g = growthPerTick(mu, m2, 0.5 / pi);
+    const g = growthPerTick(mu, m2, 0.5 / nullShare);
     return g > 0 ? target / g : Infinity;
 }
 //# sourceMappingURL=twin-planning.js.map

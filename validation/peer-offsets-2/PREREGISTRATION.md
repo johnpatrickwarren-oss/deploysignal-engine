@@ -48,3 +48,18 @@ g 0.5 about 0.03–0.05, g 2.0 about 0.07–0.11.
 
 Other quantiles than 0.90 and 0.75; other wander amplitudes; a pre-window shorter than 576 ticks; a
 gap that changes regime between pre-window and scored window (the GWDG risk, carried by the companion).
+
+## Amendment 1 — 2026-10-03, before run 0 (the generator's second peer; the power cells' sizes)
+
+At the harness smoke (20 replications, discarded) the floor for the second peer at g = 2.0 came out
+at 82 and at g = 0.5 at 0.106: the inherited gaps G = (g, −g/2, 0) scale the second peer by 1 + G = 0
+at g = 2.0 (a degenerate peer; this is also what rejected ADR 0040, corrected in its report), and my
+predicted floors (0.03–0.05 at g 0.5) were wrong. Two changes, no bar moves:
+
+- **Gaps become G = (g, 1/(1 + g) − 1, 0):** the second peer sits below the unit by the same factor
+  the first sits above it (at g 2.0, one peer at 3× and one at ⅓).
+- **Power cells re-sized** to be clearly above the floors a ±10% wander produces under the corrected
+  gaps (about 0.09 at g 0.5, about 0.15 at g 2.0): `P-g0.5-n-r0.20` (Δ 0.20) and `P-g2.0-n-r0.30`
+  (Δ 0.30) replace the registered Δ 0.08 and 0.20 as the E3 cells; `P-g0.5-n-r0.10` (Δ 0.10, near the
+  floor) replaces `P-g2.0-n-r0.10` as the reported one. Realized floors are reported per cell; the
+  prediction for them is 0.07–0.11 at g 0.5 and 0.12–0.18 at g 2.0.

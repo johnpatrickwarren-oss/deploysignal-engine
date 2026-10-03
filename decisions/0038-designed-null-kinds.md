@@ -51,9 +51,13 @@ system at any load, with or without a twin.
 
 **Decision.** `detectors/invariant.ts`: `InvariantSpec { id, tolerance, alpha }` and
 `stepInvariant(spec, state, { total, accounted })`. Per tick x = clamp((total − accounted) / total,
-0, 1), the unaccounted fraction; a tick with total = 0 is skipped. The e-process is the paired bet
-(`detectors/_paired-bet.ts`) on x with `lo 0, hi 1, nullMean = tolerance`: H0 "the mean unaccounted
-fraction is at most the declared tolerance". It fires at wealth ≥ 1/α. No proceed side: an
+0, ceiling), the unaccounted fraction clamped at a declared `ceiling` (default min(1, 10 · tolerance);
+clamping down preserves H0 since E[min(x, c)] ≤ E[x]); a tick with total = 0 is skipped. The
+e-process is the paired bet (`detectors/_paired-bet.ts`) on x with `lo 0, hi ceiling, nullMean =
+tolerance`: H0 "the mean unaccounted fraction is at most the declared tolerance". It fires at wealth
+≥ 1/α. The ceiling exists because at `hi 1` the GRAPA pseudo-observation's second moment (1/16)
+swamps fractions of order 1e-3 and the bet has no power inside a bake (first unit test: 0 of 200 at
+2.5× the tolerance); the study's Amendment 1 records it. No proceed side: an
 invariant is a veto. `tolerance` ∈ (0, 1) is declared by the operator from the measurement's own
 boundary noise (for a one-minute ALB window, in-flight requests over requests per minute).
 

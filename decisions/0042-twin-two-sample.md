@@ -1,9 +1,15 @@
 # ADR 0042 — Designed-null kinds, part 4: a two-sample betting kind between the twin's arms (Family C re-homed)
 
 - **Date:** 2026-10-03
-- **Status:** PROPOSED. ACCEPTED only if study `2026-10-twin-two-sample` (T1, registered beside this file
-  before implementation) meets its ship rule. The real-data companion is DeploySignal
-  `2026-10-twin-two-sample-replay` (T3 replay over the stored twin runs), registered separately.
+- **Status:** REJECTED 2026-10-03. Study `2026-10-twin-two-sample` run `run-20261003T144656Z`: **ship rule NOT
+  MET** — under the registered per-arm AR(1) memory (σ 0.1) the kind rolled back 13.5% of healthy pairs over
+  2,000 ticks, 41% at σ 0.3, and 100% under a persistent offset at 0.9 of the margin; correlation and variance
+  patterns were caught in 3.4% and 53% by tick 300; a supra-margin mean shift in 100% by tick 23 against the
+  sign kind's tick 9. The DeploySignal replay over the stored real A/A runs (`2026-10-twin-two-sample-replay`)
+  gave 7 of 44 at two tasks and 12 of 100 at four, where the per-metric kinds gave 12 and 0. Structural, not
+  a defect: arms carry memory and a predictable witness learns it; a whole-distribution test cannot be given
+  the sign kind's direction-only margin property. `detectors/twin-two-sample.ts` is retained as the study's
+  instrument, header marked, not a kind of the gate, in no release. See `validation/twin-two-sample/REPORT.md`.
 - **Register:** ADR 0036 (the twin), ADR 0037 (the margin), ADRs 0038–0041 (parts 1–3); knowledge
   `methodology/detector-selection-history` (Family C: a Shekhar–Ramdas betting two-sample test shipped
   against a synthesized Gaussian reference); the May 2026 claim that the portfolio finds patterns a

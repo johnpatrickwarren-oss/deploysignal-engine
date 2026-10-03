@@ -1,0 +1,21 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+const HERE = dirname(fileURLToPath(import.meta.url)); const STUDY = join(HERE, '..');
+const RUN = 'run-20261003T144656Z';
+const report = readFileSync(join(STUDY, 'REPORT.md'), 'utf8');
+const J = JSON.parse(readFileSync(join(STUDY, 'results', RUN, 'results.json'), 'utf8'));
+let failed = 0; const check = (n, ok) => { if (!ok) { console.error(`FAIL ${n}`); failed++; } };
+const by = Object.fromEntries(J.results.map((r) => [r.cell, r]));
+const X = { 'V-iid': [0.1345, 962, 'FAIL'], 'V-ar': [0.411, 747, 'FAIL'], 'V-d0.018': [1, 52, 'FAIL'], 'V-miss': [0.1068, 980, 'FAIL'], 'M-m0-d0.01': [1, 65, 'PASS'], 'P-rho0.8': [0.0343, 132, 'FAIL'], 'P-var2': [0.5301, 195, 'FAIL'], 'P-r0.08': [1, 23, 'PASS'], 'P-r0.04': [1, 30, 'reported'], 'P-rho0.8-m0': [0.1258, 142, 'reported'], 'P-var2-m0': [0.7118, 191, 'reported'] };
+check('run pinned', report.includes(RUN) && J.R === 10000 && J.engine.sha.startsWith('b78c152') && J.engine.dirty.length === 0 && report.includes('`b78c152`'));
+check('cells in order', J.results.map((r) => r.cell).join() === Object.keys(X).join());
+for (const [c, [f, med, v]] of Object.entries(X)) check(`${c}`, Math.abs(by[c].fired - f) < 5e-5 && by[c].tick.median === med && by[c].verdict === v);
+check('sign kind beside', by['P-r0.08'].sign_by_60 === 1 && by['P-r0.08'].sign_tick_median === 9 && Math.abs(by['P-r0.04'].sign_by_60 - 0.8946) < 5e-5 && by['P-r0.04'].sign_tick_median === 13 && Math.abs(by['P-r0.04'].by_60 - 0.9342) < 5e-5);
+check('by-300 figures', Math.abs(by['P-rho0.8'].by_300 - 0.0343) < 5e-5 && Math.abs(by['P-var2'].by_300 - 0.5301) < 5e-5 && Math.abs(by['V-ar'].by_300 - 0.1261) < 5e-5);
+check('V-d0.018 by60', Math.abs(by['V-d0.018'].by_60 - 0.6206) < 5e-5 && by['V-d0.018'].tick.q25 === 39 && by['V-d0.018'].tick.q75 === 73);
+check('missing counted', by['V-miss'].mean_missing > 180 && by['V-iid'].mean_missing === 0);
+check('endpoints', J.endpoints.E1 === 'FAIL' && J.endpoints.E2 === 'PASS' && J.endpoints.E3 === 'FAIL' && J.endpoints.E4 === 'PASS' && J.ship_rule === 'NOT MET' && report.includes('Ship rule NOT MET') && report.includes('ADR 0042 is REJECTED'));
+for (const q of ['is not iid', 'wrong in every cell', '13.5% of healthy pairs', 'no designed null on arms that carry memory']) check(`quotes ${q}`, report.includes(q));
+if (failed) { console.error(`${failed} check(s) failed`); process.exit(1); }
+console.log('check_report: all checks passed');

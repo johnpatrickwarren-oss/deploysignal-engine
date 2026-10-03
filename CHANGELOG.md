@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-(nothing yet)
+- **ADR 0042 REJECTED — the two-sample betting kind between the twin's arms** (`detectors/twin-two-sample.ts`,
+  study `2026-10-twin-two-sample`, T1, ship rule NOT MET; DeploySignal replay `2026-10-twin-two-sample-replay`
+  7/44 and 12/100 false rollbacks on real A/A runs). Under per-arm memory the predictable witness learns the
+  arms' identities and the null fails (13.5% at σ 0.1 over 2,000 ticks); a sub-margin persistent offset
+  rolls back every run; correlation patterns are caught in 3.4%. The module is retained as the study's
+  instrument, header marked, and is not a kind of the gate. The designed-null programme's step 4 closes
+  with a negative result; the May 2026 pattern-finding claim has no real-data support.
 
 ## v0.16.0-pre — 2026-10-03 — designed-null kinds, part 3: per-peer offsets and margin floors on the rank kind (ADRs 0040, 0041)
 

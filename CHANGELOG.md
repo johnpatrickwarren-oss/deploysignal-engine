@@ -4,6 +4,31 @@
 
 (nothing yet)
 
+## v0.14.0-pre — 2026-10-03 — designed-null kinds, part 1 (ADR 0038)
+
+- **ADR 0038 §1 — a rollback margin for the twin's `rate` kind.** `TwinMetricSpec.margin.relative` is
+  accepted for `kind: 'rate'` as an excess odds ratio m in [0, tolerance); the rollback null becomes
+  ψ ≤ 1 + m with the per-tick null mean `fisherNoncentralMean(canaryTotal, controlTotal, e, 1 + m) / e`
+  (the proceed side's function at ψ = 1 + m). `margin.absolute` is refused for rates. m = 0 keeps ADR
+  0036's closed form and reproduces it score for score. `RatePlanInput.marginOddsRatio` (default 1)
+  lets `ticksToDetect` measure drift from the margined null.
+- **ADR 0038 §2 — `detectors/invariant.ts`, an e-process on an identity.** `InvariantSpec { id,
+  tolerance, alpha, ceiling? }`, `initInvariant`, `stepInvariant(spec, state, { total, accounted })`:
+  the paired bet on the unaccounted fraction x = clamp((total − accounted)/total, 0, ceiling) against
+  H0 "mean x ≤ tolerance", firing at wealth ≥ 1/α; no proceed side, no history. The ceiling
+  (default min(1, 10·tolerance)) sets the bet's range to the fraction's scale; at `[0, 1]` the GRAPA
+  pseudo-observation left the bet powerless inside a bake (0 of 200 at 2.5× the tolerance; study
+  Amendment 1). Motivated by DeploySignal `2026-10-twin-fault-shapes` (`AB-reset` 0 of 20 on
+  target-side metrics; `AB-reset-nr` 20 of 20 with requests-minus-responses).
+- **Study `2026-10-designed-null-kinds` (validation/designed-null-kinds, T1): ship rule MET.** See the
+  ADR's status line and `REPORT.md` (predictions P3 and P4 were too pessimistic on the invariant's
+  power; the proceed side truncated three validity cells, with a post-hoc no-proceed rerun identical).
+- Why: three real-telemetry substrates gave the estimated-null temporal path false-rollback rates of
+  0.909, 0.149 and 0.000 (knowledge `stats/gwdg-gate-2026-09-29`, `stats/burstgpt-gate-2026-09-29`,
+  `stats/temporal-null-real-2026-10-03`). Every authority-bearing kind is to rest on a designed null
+  or an identity with a declared margin; later parts: a rank-among-peers kind, the two-sample
+  multivariate test between randomized arms.
+
 ## v0.13.0-pre — 2026-09-29 — a margin in the twin's sign kind (ADR 0037, PR #112)
 
 - **ADR 0037 — a margin in the twin's `sign` kind** (`TwinMetricSpec.margin: { relative?, absolute? }`,

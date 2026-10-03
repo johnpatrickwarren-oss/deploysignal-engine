@@ -61,9 +61,16 @@ function checkTwinMetricSpec(spec) {
         throw new RangeError(`twin-contrast: ${spec.id}: a sign tolerance is an excess probability in (0, 0.5), got ${spec.tolerance}`);
     }
     if (spec.margin !== undefined) {
-        if (spec.kind !== 'sign')
-            throw new RangeError(`twin-contrast: ${spec.id}: margin applies to the sign kind only (ADR 0037)`);
         const { relative, absolute } = spec.margin;
+        if (spec.kind === 'rate') {
+            // ADR 0038: a rate margin is a relative excess odds ratio below the proceed tolerance.
+            if (absolute !== undefined)
+                throw new RangeError(`twin-contrast: ${spec.id}: a rate margin is relative only (an excess odds ratio); absolute is refused (ADR 0038)`);
+            if (!(Number.isFinite(relative) && relative >= 0 && relative < spec.tolerance)) {
+                throw new RangeError(`twin-contrast: ${spec.id}: a rate margin.relative is an excess odds ratio in [0, tolerance ${spec.tolerance}), got ${relative}`);
+            }
+            return;
+        }
         if (relative === undefined && absolute === undefined)
             throw new RangeError(`twin-contrast: ${spec.id}: margin needs relative or absolute`);
         if (relative !== undefined && !(Number.isFinite(relative) && relative >= 0))
@@ -126,9 +133,13 @@ function twinScore(spec, obs) {
             return 'skip';
         if (Math.max(0, e - controlTotal) === Math.min(e, canaryTotal))
             return 'skip';
+        // ADR 0038: with a rate margin m the rollback null is ψ ≤ 1 + m; its per-tick mean is the Fisher
+        // noncentral mean at ψ = 1 + m, increasing in ψ, so it bounds E[X] for every ψ ≤ 1 + m. At m = 0
+        // it is the traffic share (ADR 0036) — kept as the closed form so m = 0 reproduces it exactly.
+        const m = spec.margin?.relative ?? 0;
         return {
             x: bc / e,
-            rollbackNull: canaryTotal / (canaryTotal + controlTotal),
+            rollbackNull: m > 0 ? fisherNoncentralMean(canaryTotal, controlTotal, e, 1 + m) / e : canaryTotal / (canaryTotal + controlTotal),
             proceedNull: fisherNoncentralMean(canaryTotal, controlTotal, e, 1 + spec.tolerance) / e,
         };
     }

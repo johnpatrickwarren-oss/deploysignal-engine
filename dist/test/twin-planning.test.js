@@ -1,6 +1,39 @@
 "use strict";
 // test/twin-planning.test.ts — ADR 0036: the bake-length planning figure. It is a POWER statement;
 // validity never reads it.
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -48,5 +81,14 @@ const _seeded_1 = require("./_seeded");
 (0, node_test_1.test)('inputs out of range throw', () => {
     strict_1.default.throws(() => (0, twin_planning_1.ticksToDetect)({ kind: 'sign', excessProbability: 0.6, tieRate: 0, alpha: 0.05 }), RangeError);
     strict_1.default.throws(() => (0, twin_planning_1.ticksToDetect)({ kind: 'rate', canaryShare: 0, oddsRatio: 2, badEventsPerTick: 20, alpha: 0.05 }), RangeError);
+});
+(0, node_test_1.test)('ADR 0038: marginOddsRatio moves the null share; 1 reproduces ADR 0036; it must lie in [1, oddsRatio)', async () => {
+    const { ticksToDetect } = await Promise.resolve().then(() => __importStar(require('../per-shard/twin-planning')));
+    const base = { kind: 'rate', canaryShare: 0.5, oddsRatio: 2, badEventsPerTick: 12.2, alpha: 0.025 };
+    strict_1.default.equal(ticksToDetect(base), ticksToDetect({ ...base, marginOddsRatio: 1 }));
+    strict_1.default.ok(ticksToDetect({ ...base, marginOddsRatio: 1.2 }) > ticksToDetect(base));
+    strict_1.default.equal(ticksToDetect({ ...base, marginOddsRatio: 2 }), Infinity); // no effect beyond the margin
+    strict_1.default.throws(() => ticksToDetect({ ...base, marginOddsRatio: 2.5 }), /marginOddsRatio/);
+    strict_1.default.throws(() => ticksToDetect({ ...base, marginOddsRatio: 0.9 }), /marginOddsRatio/);
 });
 //# sourceMappingURL=twin-planning.test.js.map

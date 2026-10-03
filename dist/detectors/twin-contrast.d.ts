@@ -12,13 +12,16 @@ export interface TwinMetricSpec {
      *  rate: excess odds ratio ρ in (0, 10] (0.2 = 20% more bad events per request).
      *  sign: excess probability τ in (0, 0.5) that the canary's tick is worse (0.1 = 60% of ticks). */
     tolerance: number;
-    /** ADR 0037, sign only. A tick scores "canary worse" only when the canary exceeds the control by
+    /** ADR 0037 (sign) and ADR 0038 (rate). A tick scores "canary worse" only when the canary exceeds the control by
      *  MORE than this margin in the worse direction: worse 'higher' → canary > control · (1 + relative)
      *  + absolute; worse 'lower' → canary < control · (1 − relative) − absolute. At least one of the
      *  two when present; relative ≥ 0, absolute ≥ 0 in the metric's unit. A tick inside the band
      *  scores 0 (not a tie): that one-sidedness is what absorbs a persistent arm-level offset smaller
      *  than the margin (ADR 0037, "Rejected"). Absent = ADR 0036's scoring, which the real-service
-     *  A/A (DeploySignal 2026-10-twin-aa-real) measured at 0.2727 false rollback on p99 latency. */
+     *  A/A (DeploySignal 2026-10-twin-aa-real) measured at 0.2727 false rollback on p99 latency.
+     *  rate (ADR 0038): `relative` only, an excess odds ratio m in [0, tolerance): the rollback null
+     *  becomes ψ ≤ 1 + m, with the per-tick null mean the Fisher noncentral mean at ψ = 1 + m over
+     *  the tick's bad-event total (the proceed side's function at a different ψ). m = 0 is ADR 0036. */
     margin?: {
         relative?: number;
         absolute?: number;

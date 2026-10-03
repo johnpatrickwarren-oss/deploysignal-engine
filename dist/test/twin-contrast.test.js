@@ -267,7 +267,7 @@ const LAT_M = { ...LAT, margin: { relative: 0.25 } };
 (0, node_test_1.test)('ADR 0037: margin validation — sign only, at least one component, finite and non-negative', () => {
     strict_1.default.doesNotThrow(() => (0, twin_contrast_1.checkTwinMetricSpec)(LAT_M));
     strict_1.default.doesNotThrow(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...LAT, margin: { absolute: 0 } }));
-    strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, margin: { relative: 0.1 } }), /sign kind only/);
+    strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, margin: { absolute: 1 } }), /relative only/); // ADR 0038: a rate margin exists, relative only
     strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...LAT, margin: {} }), /relative or absolute/);
     strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...LAT, margin: { relative: -0.1 } }), RangeError);
     strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...LAT, margin: { absolute: Number.NaN } }), RangeError);
@@ -319,5 +319,51 @@ const LAT_M = { ...LAT, margin: { relative: 0.25 } };
     strict_1.default.match(twin_contrast_1.TWIN_SIGN_ENVELOPE.notes ?? '', /0\.2727/);
     strict_1.default.match(twin_contrast_1.TWIN_SIGN_ENVELOPE.notes ?? '', /ADR 0037/);
     strict_1.default.match(twin_contrast_1.TWIN_SIGN_ENVELOPE.notes ?? '', /larger than the margin/);
+});
+// ── ADR 0038: a rollback margin for the rate kind ───────────────────────────────────────────────
+(0, node_test_1.test)('ADR 0038: a rate margin is relative only, in [0, tolerance)', () => {
+    (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, margin: { relative: 0.2 } });
+    (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, margin: { relative: 0 } });
+    strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, margin: { relative: 0.5 } }), /\[0, tolerance 0\.5\)/);
+    strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, margin: { relative: -0.1 } }), /\[0, tolerance/);
+    strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, margin: { absolute: 1 } }), /relative only/);
+    strict_1.default.throws(() => (0, twin_contrast_1.checkTwinMetricSpec)({ ...ERR, margin: { relative: 0.1, absolute: 1 } }), /relative only/);
+});
+(0, node_test_1.test)('ADR 0038: m = 0 reproduces ADR 0036 score for score (closed-form traffic share)', () => {
+    const obs = { canaryEvents: 7, canaryTotal: 1200, controlEvents: 6, controlTotal: 1240 };
+    const a = (0, twin_contrast_1.twinScore)(ERR, obs);
+    const b = (0, twin_contrast_1.twinScore)({ ...ERR, margin: { relative: 0 } }, obs);
+    strict_1.default.equal(a.rollbackNull, b.rollbackNull);
+    strict_1.default.equal(a.proceedNull, b.proceedNull);
+    strict_1.default.equal(a.x, b.x);
+});
+(0, node_test_1.test)('ADR 0038: with m > 0 the rollback null is the Fisher noncentral mean at ψ = 1 + m, between the traffic share and the proceed null', () => {
+    const obs = { canaryEvents: 9, canaryTotal: 1200, controlEvents: 6, controlTotal: 1240 };
+    const s = (0, twin_contrast_1.twinScore)({ ...ERR, margin: { relative: 0.2 } }, obs);
+    const share = 1200 / 2440;
+    const expected = (0, twin_contrast_1.fisherNoncentralMean)(1200, 1240, 15, 1.2) / 15;
+    strict_1.default.ok(Math.abs(s.rollbackNull - expected) < 1e-12);
+    strict_1.default.ok(share < s.rollbackNull && s.rollbackNull < s.proceedNull, `${share} ${s.rollbackNull} ${s.proceedNull}`);
+});
+(0, node_test_1.test)('ADR 0038: rate H0 at a persistent excess equal to the margin (ψ = 1.2, m = 0.2): false rollback within the Ville bound', () => {
+    const spec = { ...ERR, margin: { relative: 0.2 } };
+    const rng = (0, _seeded_1.lcg)(20261003);
+    const R = 400, T = 300, alpha = 0.05;
+    const oddsShift = (p, psi) => (psi * p) / (1 - p + psi * p);
+    const pc = oddsShift(0.005, 1.2), pk = 0.005;
+    let fired = 0;
+    for (let r = 0; r < R; r++) {
+        let st = (0, twin_contrast_1.initTwinMetric)();
+        for (let t = 0; t < T; t++) {
+            const nc = (0, _seeded_1.poisson)(rng, 1220), nk = (0, _seeded_1.poisson)(rng, 1220);
+            const obs = { canaryEvents: Math.min(nc, (0, _seeded_1.poisson)(rng, nc * pc)), canaryTotal: nc, controlEvents: Math.min(nk, (0, _seeded_1.poisson)(rng, nk * pk)), controlTotal: nk };
+            st = (0, twin_contrast_1.updateTwinMetric)(spec, st, obs);
+            if ((0, twin_contrast_1.twinMetricEvidence)(st).rollbackE >= 1 / alpha) {
+                fired++;
+                break;
+            }
+        }
+    }
+    strict_1.default.ok(fired / R <= alpha + 2.58 * Math.sqrt((alpha * (1 - alpha)) / R), `false rollback ${fired}/${R}`);
 });
 //# sourceMappingURL=twin-contrast.test.js.map

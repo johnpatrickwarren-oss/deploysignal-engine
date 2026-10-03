@@ -1,3 +1,6 @@
+// ADR 0042 REJECTED 2026-10-03 (validation/twin-two-sample/REPORT.md): this construction has no designed null on arms
+// that carry memory and cannot be given the sign kind's margin property. Retained as the study's instrument only;
+// not a kind the twin gate offers; not consumed by DeploySignal. Do not wire into a gate.
 // detectors/twin-two-sample.ts — ADR 0042: a two-sample betting kind between the twin's arms (Family C's
 // Shekhar–Ramdas construction re-homed on a designed null). Per tick one vector per arm; a swap-equivariant
 // coordinate-wise margin shrinks the pair toward each other by the declared band; standardization and the

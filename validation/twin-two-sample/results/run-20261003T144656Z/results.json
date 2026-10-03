@@ -1,0 +1,302 @@
+{
+  "study": "2026-10-twin-two-sample",
+  "R": 10000,
+  "ALPHA": 0.05,
+  "BAR": 0.055622979637167475,
+  "SEED0": 20261003,
+  "engine": {
+    "version": "0.16.0-pre",
+    "sha": "b78c1529dc577b879702a20cd73574f98f281a42",
+    "dirty": []
+  },
+  "node": "v25.9.0",
+  "generated": "2026-10-03T17:25:28.076Z",
+  "endpoints": {
+    "E1": "FAIL",
+    "E2": "PASS",
+    "E3": "FAIL",
+    "E4": "PASS"
+  },
+  "ship_rule": "NOT MET",
+  "results": [
+    {
+      "cell": "V-iid",
+      "params": {
+        "m": 0.02,
+        "d": 0,
+        "r": 0,
+        "rho": 0,
+        "v": 1,
+        "arSigma": 0.1,
+        "miss": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "fired": 0.1345,
+      "by_60": 0.0052,
+      "by_300": 0.0175,
+      "tick": {
+        "median": 962,
+        "q25": 797,
+        "q75": 1129,
+        "p90": 1289
+      },
+      "mean_missing": 0,
+      "verdict": "FAIL"
+    },
+    {
+      "cell": "V-ar",
+      "params": {
+        "m": 0.02,
+        "d": 0,
+        "r": 0,
+        "rho": 0,
+        "v": 1,
+        "arSigma": 0.3,
+        "miss": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "fired": 0.411,
+      "by_60": 0.044,
+      "by_300": 0.1261,
+      "tick": {
+        "median": 747,
+        "q25": 192,
+        "q75": 1121,
+        "p90": 1454
+      },
+      "mean_missing": 0,
+      "verdict": "FAIL"
+    },
+    {
+      "cell": "V-d0.018",
+      "params": {
+        "m": 0.02,
+        "d": 0.018,
+        "r": 0,
+        "rho": 0,
+        "v": 1,
+        "arSigma": 0.1,
+        "miss": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "fired": 1,
+      "by_60": 0.6206,
+      "by_300": 0.9987,
+      "tick": {
+        "median": 52,
+        "q25": 39,
+        "q75": 73,
+        "p90": 108
+      },
+      "mean_missing": 0,
+      "verdict": "FAIL"
+    },
+    {
+      "cell": "V-miss",
+      "params": {
+        "m": 0.02,
+        "d": 0,
+        "r": 0,
+        "rho": 0,
+        "v": 1,
+        "arSigma": 0.1,
+        "miss": 0.1
+      },
+      "T": 2000,
+      "R": 10000,
+      "fired": 0.1068,
+      "by_60": 0.0024,
+      "by_300": 0.014,
+      "tick": {
+        "median": 980,
+        "q25": 813,
+        "q75": 1151,
+        "p90": 1333
+      },
+      "mean_missing": 188.5894,
+      "verdict": "FAIL"
+    },
+    {
+      "cell": "M-m0-d0.01",
+      "params": {
+        "m": 0,
+        "d": 0.01,
+        "r": 0,
+        "rho": 0,
+        "v": 1,
+        "arSigma": 0.1,
+        "miss": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "fired": 1,
+      "by_60": 0.4529,
+      "by_300": 0.9999,
+      "tick": {
+        "median": 65,
+        "q25": 44,
+        "q75": 95,
+        "p90": 128
+      },
+      "mean_missing": 0,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "P-rho0.8",
+      "params": {
+        "m": 0.02,
+        "d": 0,
+        "r": 0,
+        "rho": 0.8,
+        "v": 1,
+        "arSigma": 0.1,
+        "miss": 0
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0.0343,
+      "by_60": 0.0057,
+      "by_300": 0.0343,
+      "tick": {
+        "median": 132,
+        "q25": 76,
+        "q75": 200,
+        "p90": 254
+      },
+      "mean_missing": 0,
+      "verdict": "FAIL"
+    },
+    {
+      "cell": "P-var2",
+      "params": {
+        "m": 0.02,
+        "d": 0,
+        "r": 0,
+        "rho": 0,
+        "v": 2,
+        "arSigma": 0.1,
+        "miss": 0
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0.5301,
+      "by_60": 0.0166,
+      "by_300": 0.5301,
+      "tick": {
+        "median": 195,
+        "q25": 137,
+        "q75": 242,
+        "p90": 275
+      },
+      "mean_missing": 0,
+      "verdict": "FAIL"
+    },
+    {
+      "cell": "P-r0.08",
+      "params": {
+        "m": 0.02,
+        "d": 0,
+        "r": 0.08,
+        "rho": 0,
+        "v": 1,
+        "arSigma": 0.1,
+        "miss": 0
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 1,
+      "by_60": 1,
+      "by_300": 1,
+      "tick": {
+        "median": 23,
+        "q25": 20,
+        "q75": 30,
+        "p90": 37
+      },
+      "mean_missing": 0,
+      "sign_by_60": 1,
+      "sign_tick_median": 9,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "P-r0.04",
+      "params": {
+        "m": 0.02,
+        "d": 0,
+        "r": 0.04,
+        "rho": 0,
+        "v": 1,
+        "arSigma": 0.1,
+        "miss": 0
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 1,
+      "by_60": 0.9342,
+      "by_300": 1,
+      "tick": {
+        "median": 30,
+        "q25": 25,
+        "q75": 41,
+        "p90": 55
+      },
+      "mean_missing": 0,
+      "sign_by_60": 0.8946,
+      "sign_tick_median": 13,
+      "verdict": "reported"
+    },
+    {
+      "cell": "P-rho0.8-m0",
+      "params": {
+        "m": 0,
+        "d": 0,
+        "r": 0,
+        "rho": 0.8,
+        "v": 1,
+        "arSigma": 0.1,
+        "miss": 0
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0.1258,
+      "by_60": 0.026,
+      "by_300": 0.1258,
+      "tick": {
+        "median": 142,
+        "q25": 71,
+        "q75": 236,
+        "p90": 277
+      },
+      "mean_missing": 0,
+      "verdict": "reported"
+    },
+    {
+      "cell": "P-var2-m0",
+      "params": {
+        "m": 0,
+        "d": 0,
+        "r": 0,
+        "rho": 0,
+        "v": 2,
+        "arSigma": 0.1,
+        "miss": 0
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0.7118,
+      "by_60": 0.0422,
+      "by_300": 0.7118,
+      "tick": {
+        "median": 191,
+        "q25": 128,
+        "q75": 240,
+        "p90": 273
+      },
+      "mean_missing": 0,
+      "verdict": "reported"
+    }
+  ]
+}

@@ -59,3 +59,12 @@ Peer heterogeneity (peers that differ among themselves by more than the margin);
 degrade together (a node-level fault); missing peers at random or by outcome; Bonferroni across
 signals (the GWDG replay carries that); unequal peer counts over time; any real telemetry (the
 DeploySignal companion).
+
+## Amendment 1 — 2026-10-03, before run 0 (the proceed side in validity cells)
+
+Found at the harness smoke (20 replications, discarded): with τ = 0.1 the proceed side ends every
+exchangeable replication within a few hundred ticks, so a V or M cell that stops at proceed measures
+false rollback over a truncated path, not over T = 2000 (`2026-10-designed-null-kinds` met the same
+effect and reported it post hoc). In V, M and S2-rep cells the proceed verdict is **recorded and not
+terminal**: the rollback bet runs to T and a rollback at any tick counts. P and Q cells stop at the
+first terminal verdict as registered (Q's endpoint is the proceed). No bar or prediction changes.

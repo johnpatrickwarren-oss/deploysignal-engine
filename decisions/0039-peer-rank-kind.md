@@ -1,9 +1,13 @@
 # ADR 0039 — Designed-null kinds, part 2: the rank-among-peers kind
 
 - **Date:** 2026-10-03
-- **Status:** PROPOSED. Becomes ACCEPTED only if study `2026-10-peer-rank` (T1, registered beside this
-  file before any implementation) meets its ship rule; its real-telemetry companion is DeploySignal
-  study `2026-10-peer-rank-gwdg` (T3 replay), registered separately and carrying no authority.
+- **Status:** ACCEPTED 2026-10-03 (library only). Study `2026-10-peer-rank` run `run-20261003T131016Z`:
+  **ship rule MET** — 0.000 false rollback over 2,000 ticks at N = 4 and 16 under exchangeable peers,
+  0.0001 at an offset of half the margin, 0.0405 at 0.9 of the margin (bar 0.0556); the sign kind
+  reproduced wealth for wealth at N = 2; power 0.9999 by tick 60 at twice the margin (median 12);
+  sub-margin proceed 0.9997; without a margin a half-margin offset rolls back 1.000. See
+  `validation/peer-rank/REPORT.md`, including its stated harness error. The real-telemetry companion is
+  DeploySignal study `2026-10-peer-rank-gwdg` (T3 replay), registered separately and carrying no authority.
 - **Register:** ADR 0036 (the twin's `sign` kind, which this generalizes), ADR 0037 (the margin), ADR
   0038 (part 1); knowledge `stats/gwdg-gate-2026-09-29` (Family A alone rolled back 40 of 44 healthy
   GPU windows against each GPU's own history); the 2026-10-03 note: peers at the same time are a

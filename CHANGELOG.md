@@ -4,6 +4,21 @@
 
 (nothing yet)
 
+## v0.15.0-pre — 2026-10-03 — designed-null kinds, part 2: the rank-among-peers kind (ADR 0039)
+
+- **`detectors/peer-rank.ts`.** `PeerRankSpec { id, worse, tolerance, margin?, alpha }`, `initPeerRank`,
+  `stepPeerRank(spec, state, { unit, peers })`: per tick x = (finite peers the unit is worse than,
+  beyond ADR 0037's band) / (finite peers); two paired bets with null means ½ and ½ + τ, as the twin's
+  `sign` kind, of which N = 2 is a wealth-for-wealth reproduction. Under exchangeability of the unit
+  with its peers E[x] ≤ ½. No missingness penalty; unscoreable ticks are counted. The caller applies
+  Bonferroni across signals.
+- **Study `2026-10-peer-rank` (validation/peer-rank, T1): ship rule MET** (see the ADR's status line;
+  Amendment 1 made the proceed side non-terminal in validity cells, and the report states the commit
+  whose harness failed to carry it).
+- Why: peers observed at the same time are a stronger null than a unit's own history (knowledge
+  `stats/gwdg-gate-2026-09-29`: 0.909 false rollback against history). The DeploySignal companion
+  study replays this kind on the same GWDG units with their node-mates as peers.
+
 ## v0.14.0-pre — 2026-10-03 — designed-null kinds, part 1 (ADR 0038)
 
 - **ADR 0038 §1 — a rollback margin for the twin's `rate` kind.** `TwinMetricSpec.margin.relative` is

@@ -1,5 +1,5 @@
 "use strict";
-// detectors/peer-rank.ts — ADR 0039: the rank-among-peers kind. A unit against N − 1 peers observed on
+// detectors/peer-rank.ts — ADR 0039: the rank-among-peers kind; ADR 0040: declared per-peer offsets. A unit against N − 1 peers observed on
 // the same signal at the same tick. Under exchangeability of the unit with its peers, for each peer j
 // P(unit worse than j) = ½, and with a margin P(worse by more than the margin) ≤ ½ (the ADR 0037
 // argument). x_t = (peers the unit is worse than, beyond the margin) / (finite peers) ∈ [0, 1];
@@ -50,10 +50,16 @@ function worseThanPeer(spec, unit, peer) {
 function peerRankScore(spec, obs) {
     if (!Number.isFinite(obs.unit))
         return null;
+    if (obs.offsets !== undefined && obs.offsets.length !== obs.peers.length) {
+        throw new RangeError(`peer-rank: ${spec.id}: offsets (${obs.offsets.length}) must match peers (${obs.peers.length})`);
+    }
     let worse = 0, n = 0;
-    for (const p of obs.peers) {
-        if (!Number.isFinite(p))
-            continue;
+    for (let j = 0; j < obs.peers.length; j++) {
+        const raw = obs.peers[j];
+        const off = obs.offsets?.[j] ?? 0;
+        if (!Number.isFinite(raw) || !Number.isFinite(off) || off <= -1)
+            continue; // an unusable offset drops the peer for the tick
+        const p = raw * (1 + off); // ADR 0040: the peer on the unit's scale
         n++;
         if (worseThanPeer(spec, obs.unit, p))
             worse += 1;

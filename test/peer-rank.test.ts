@@ -74,3 +74,31 @@ test('after a fire the state is terminal', () => {
   for (let t = 0; t < 200; t++) { s = stepPeerRank(SPEC, st, { unit: 120, peers: [100, 100, 100] }); st = s.state; if (s.fire) break; }
   assert.ok(s!.fire); const after = stepPeerRank(SPEC, st, { unit: 50, peers: [100, 100, 100] }); assert.ok(after.fire); assert.equal(after.x, null);
 });
+
+// ── ADR 0040: declared per-peer offsets ─────────────────────────────────────────────────────────
+
+test('ADR 0040: offsets map peers onto the unit\'s scale; absent or zero is ADR 0039; length must match', () => {
+  // unit 60 against peers 100 and 30: raw, the unit is worse than the 30 only
+  assert.deepEqual(peerRankScore(SPEC, { unit: 60, peers: [100, 30] }), { x: 0.5, peersScored: 2 });
+  // with the gaps declared (unit runs at 0.6 of peer 0 and 2× peer 1), both peers sit at 60 → inside the band → 0
+  assert.deepEqual(peerRankScore(SPEC, { unit: 60, peers: [100, 30], offsets: [-0.4, 1.0] }), { x: 0, peersScored: 2 });
+  assert.deepEqual(peerRankScore(SPEC, { unit: 60, peers: [100, 30], offsets: [0, 0] }), peerRankScore(SPEC, { unit: 60, peers: [100, 30] }));
+  assert.throws(() => peerRankScore(SPEC, { unit: 1, peers: [1, 2], offsets: [0] }), /offsets/);
+  // an unusable offset (≤ −1 or non-finite) drops that peer for the tick
+  assert.deepEqual(peerRankScore(SPEC, { unit: 60, peers: [100, 30], offsets: [-1, 1.0] }), { x: 0, peersScored: 1 });
+});
+
+test('ADR 0040: H0 with persistent gaps (the unit 1.4–2.5× every peer) and exact offsets: false rollback within the Ville bound; without offsets it rolls back', () => {
+  const rng = lcg(20261003); const R = 300, T = 300; let firedWith = 0, firedWithout = 0;
+  const G = [-0.5, -0.3, -0.6]; const off = G.map((g) => 1 / (1 + g) - 1); // the unit runs 1.4–2.5× every peer: the GWDG 'hot GPU'
+  for (let r = 0; r < R; r++) {
+    let a = initPeerRank(SPEC), b = initPeerRank(SPEC); let doneA = false, doneB = false;
+    for (let t = 0; t < T && !(doneA && doneB); t++) {
+      const base = 100 + 3 * gaussian(rng); const peers = G.map((g) => (100 + 3 * gaussian(rng)) * (1 + g));
+      if (!doneA) { const s = stepPeerRank(SPEC, a, { unit: base, peers, offsets: off }); a = s.state; if (s.fire) { firedWith++; doneA = true; } }
+      if (!doneB) { const s = stepPeerRank(SPEC, b, { unit: base, peers }); b = s.state; if (s.fire) { firedWithout++; doneB = true; } }
+    }
+  }
+  assert.ok(firedWith / R <= 0.05 + 2.58 * Math.sqrt(0.05 * 0.95 / R), `with offsets ${firedWith}/${R}`);
+  assert.ok(firedWithout / R >= 0.9, `without offsets ${firedWithout}/${R}`);
+});

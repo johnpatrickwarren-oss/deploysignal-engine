@@ -14,6 +14,10 @@ export interface PeerRankSpec {
 export interface PeerRankObservation {
     unit: number;
     peers: readonly number[];
+    /** ADR 0040: one relative offset per peer, declared by the caller (estimated from a pre-change window in
+     *  which unit and peers ran concurrently, or known). Peer j's reference becomes peers[j] · (1 + offsets[j])
+     *  before the band. Absent or 0 is ADR 0039. Length must equal peers.length when present. */
+    offsets?: readonly number[];
 }
 export interface PeerRankState {
     rollback: PairedBetState;

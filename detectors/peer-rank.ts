@@ -1,4 +1,4 @@
-// detectors/peer-rank.ts — ADR 0039: the rank-among-peers kind. A unit against N − 1 peers observed on
+// detectors/peer-rank.ts — ADR 0039: the rank-among-peers kind; ADR 0040: declared per-peer offsets. A unit against N − 1 peers observed on
 // the same signal at the same tick. Under exchangeability of the unit with its peers, for each peer j
 // P(unit worse than j) = ½, and with a margin P(worse by more than the margin) ≤ ½ (the ADR 0037
 // argument). x_t = (peers the unit is worse than, beyond the margin) / (finite peers) ∈ [0, 1];
@@ -19,7 +19,14 @@ export interface PeerRankSpec {
   alpha: number;
 }
 
-export interface PeerRankObservation { unit: number; peers: readonly number[] }
+export interface PeerRankObservation {
+  unit: number;
+  peers: readonly number[];
+  /** ADR 0040: one relative offset per peer, declared by the caller (estimated from a pre-change window in
+   *  which unit and peers ran concurrently, or known). Peer j's reference becomes peers[j] · (1 + offsets[j])
+   *  before the band. Absent or 0 is ADR 0039. Length must equal peers.length when present. */
+  offsets?: readonly number[];
+}
 
 export interface PeerRankState { rollback: PairedBetState; proceed: PairedBetState; used: number; skipped: number; missing: number; fired: boolean; firedAt: number | null }
 
@@ -55,9 +62,15 @@ export function worseThanPeer(spec: PeerRankSpec, unit: number, peer: number): b
  *  at N > 2 a tie with one peer of many is a half-comparison, which keeps E[x] = ½ under exchange). */
 export function peerRankScore(spec: PeerRankSpec, obs: PeerRankObservation): { x: number; peersScored: number } | null {
   if (!Number.isFinite(obs.unit)) return null;
+  if (obs.offsets !== undefined && obs.offsets.length !== obs.peers.length) {
+    throw new RangeError(`peer-rank: ${spec.id}: offsets (${obs.offsets.length}) must match peers (${obs.peers.length})`);
+  }
   let worse = 0, n = 0;
-  for (const p of obs.peers) {
-    if (!Number.isFinite(p)) continue;
+  for (let j = 0; j < obs.peers.length; j++) {
+    const raw = obs.peers[j];
+    const off = obs.offsets?.[j] ?? 0;
+    if (!Number.isFinite(raw) || !Number.isFinite(off) || off <= -1) continue; // an unusable offset drops the peer for the tick
+    const p = raw * (1 + off); // ADR 0040: the peer on the unit's scale
     n++;
     if (worseThanPeer(spec, obs.unit, p)) worse += 1;
     else if (spec.margin === undefined && obs.unit === p) worse += 0.5;

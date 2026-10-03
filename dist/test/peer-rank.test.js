@@ -97,4 +97,48 @@ const gaussian = (rng) => Math.sqrt(-2 * Math.log(rng())) * Math.cos(2 * Math.PI
     strict_1.default.ok(after.fire);
     strict_1.default.equal(after.x, null);
 });
+// ── ADR 0040: declared per-peer offsets ─────────────────────────────────────────────────────────
+(0, node_test_1.test)('ADR 0040: offsets map peers onto the unit\'s scale; absent or zero is ADR 0039; length must match', () => {
+    // unit 60 against peers 100 and 30: raw, the unit is worse than the 30 only
+    strict_1.default.deepEqual((0, peer_rank_1.peerRankScore)(SPEC, { unit: 60, peers: [100, 30] }), { x: 0.5, peersScored: 2 });
+    // with the gaps declared (unit runs at 0.6 of peer 0 and 2× peer 1), both peers sit at 60 → inside the band → 0
+    strict_1.default.deepEqual((0, peer_rank_1.peerRankScore)(SPEC, { unit: 60, peers: [100, 30], offsets: [-0.4, 1.0] }), { x: 0, peersScored: 2 });
+    strict_1.default.deepEqual((0, peer_rank_1.peerRankScore)(SPEC, { unit: 60, peers: [100, 30], offsets: [0, 0] }), (0, peer_rank_1.peerRankScore)(SPEC, { unit: 60, peers: [100, 30] }));
+    strict_1.default.throws(() => (0, peer_rank_1.peerRankScore)(SPEC, { unit: 1, peers: [1, 2], offsets: [0] }), /offsets/);
+    // an unusable offset (≤ −1 or non-finite) drops that peer for the tick
+    strict_1.default.deepEqual((0, peer_rank_1.peerRankScore)(SPEC, { unit: 60, peers: [100, 30], offsets: [-1, 1.0] }), { x: 0, peersScored: 1 });
+});
+(0, node_test_1.test)('ADR 0040: H0 with persistent gaps (the unit 1.4–2.5× every peer) and exact offsets: false rollback within the Ville bound; without offsets it rolls back', () => {
+    const rng = (0, _seeded_1.lcg)(20261003);
+    const R = 300, T = 300;
+    let firedWith = 0, firedWithout = 0;
+    const G = [-0.5, -0.3, -0.6];
+    const off = G.map((g) => 1 / (1 + g) - 1); // the unit runs 1.4–2.5× every peer: the GWDG 'hot GPU'
+    for (let r = 0; r < R; r++) {
+        let a = (0, peer_rank_1.initPeerRank)(SPEC), b = (0, peer_rank_1.initPeerRank)(SPEC);
+        let doneA = false, doneB = false;
+        for (let t = 0; t < T && !(doneA && doneB); t++) {
+            const base = 100 + 3 * gaussian(rng);
+            const peers = G.map((g) => (100 + 3 * gaussian(rng)) * (1 + g));
+            if (!doneA) {
+                const s = (0, peer_rank_1.stepPeerRank)(SPEC, a, { unit: base, peers, offsets: off });
+                a = s.state;
+                if (s.fire) {
+                    firedWith++;
+                    doneA = true;
+                }
+            }
+            if (!doneB) {
+                const s = (0, peer_rank_1.stepPeerRank)(SPEC, b, { unit: base, peers });
+                b = s.state;
+                if (s.fire) {
+                    firedWithout++;
+                    doneB = true;
+                }
+            }
+        }
+    }
+    strict_1.default.ok(firedWith / R <= 0.05 + 2.58 * Math.sqrt(0.05 * 0.95 / R), `with offsets ${firedWith}/${R}`);
+    strict_1.default.ok(firedWithout / R >= 0.9, `without offsets ${firedWithout}/${R}`);
+});
 //# sourceMappingURL=peer-rank.test.js.map

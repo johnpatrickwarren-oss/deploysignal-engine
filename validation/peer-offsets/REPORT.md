@@ -6,6 +6,19 @@
 - **Verdicts:** E1 PASS, E2 **FAIL**, E3 PASS, E4 **FAIL**. **Ship rule NOT MET. ADR 0040 is REJECTED as
   registered.** The code stays on its branch, unreleased.
 
+## Correction (2026-10-03, after the report was written; the verdicts stand, the stated reason does not)
+
+Found at the successor study's smoke: the registered gaps G = (g, −g/2, 0) put the second peer at
+1 + G = 0 when g = 2.0. In the EX-g2.0 cell the exact offset for that peer is 1/(1 + G) − 1 = ∞, which
+the module drops ("unusable offset"), so the cell ran with two peers and passed. In EST-g2.0-n the
+estimated offset is the median of unit / peer − 1 over a peer whose value is noise times a wandering
+factor near zero, so the offset is enormous and sign-unstable and the scaled reference is garbage.
+**EST-g2.0-n's 0.3059 measures the construction on a degenerate peer, not a ±10% wander of a 3× gap**,
+and §1's reading of it below is wrong. The P-g2.0 cell is affected the same way (its "power" is
+against a garbage reference). The ship rule is mechanical and E2 did fail as computed, so ADR 0040
+stays REJECTED as registered; the registration's error is the generator, mine. The successor
+`2026-10-peer-offsets-2` amends its generator before run 0 (second peer at 1/(1 + g) of the unit).
+
 ## 0. The headline
 
 | Cell | g | offsets | wander | m | Δ | T | Rollback | By 60 | Tick median, IQR | Verdict |

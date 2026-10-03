@@ -17,6 +17,6 @@ check('Q detail', Math.abs(by['Q-g0.5-r0.01'].proceed - 0.9603) < 5e-5 && by['Q-
 check('EST-g0.5-n ticks', by['EST-g0.5-n'].tick.median === 20 && by['EST-g0.5-n'].tick.q25 === 18 && by['EST-g0.5-n'].tick.q75 === 27);
 check('rep exact', by['R-off0'].rep_max_rel_diff === 0);
 check('endpoints', J.endpoints.E1 === 'PASS' && J.endpoints.E2 === 'FAIL' && J.endpoints.E3 === 'PASS' && J.endpoints.E4 === 'FAIL' && J.ship_rule === 'NOT MET' && report.includes('Ship rule NOT MET') && /ADR 0040 is REJECTED as\s+registered/.test(report));
-for (const q of ['I registered "expected to roll back\nnearly always"; wrong', 'exceeded it six-fold']) check(`quotes ${q.slice(0, 30)}`, report.includes(q));
+for (const q of ['put the second peer at\n1 + G = 0', 'not a ±10% wander of a 3× gap', 'I registered "expected to roll back\nnearly always"; wrong', 'exceeded it six-fold']) check(`quotes ${q.slice(0, 30)}`, report.includes(q));
 if (failed) { console.error(`${failed} check(s) failed`); process.exit(1); }
 console.log('check_report: all checks passed');

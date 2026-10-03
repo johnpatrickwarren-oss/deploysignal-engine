@@ -102,3 +102,18 @@ test('ADR 0040: H0 with persistent gaps (the unit 1.4–2.5× every peer) and ex
   assert.ok(firedWith / R <= 0.05 + 2.58 * Math.sqrt(0.05 * 0.95 / R), `with offsets ${firedWith}/${R}`);
   assert.ok(firedWithout / R >= 0.9, `without offsets ${firedWithout}/${R}`);
 });
+
+// ── ADR 0041: per-peer margin floors ────────────────────────────────────────────────────────────
+
+test('ADR 0041: a per-peer margin floor widens the band for that peer only; zeros reproduce ADR 0039/0040', () => {
+  // unit 110 vs peers 100, 100 at a 2% spec margin: worse than both
+  assert.deepEqual(peerRankScore(SPEC, { unit: 110, peers: [100, 100] }), { x: 1, peersScored: 2 });
+  // a 15% floor on the first peer: inside its band; the second still counts
+  assert.deepEqual(peerRankScore(SPEC, { unit: 110, peers: [100, 100], margins: [0.15, 0] }), { x: 0.5, peersScored: 2 });
+  // a floor smaller than the spec margin changes nothing
+  assert.deepEqual(peerRankScore(SPEC, { unit: 110, peers: [100, 100], margins: [0.01, 0.01] }), { x: 1, peersScored: 2 });
+  assert.deepEqual(peerRankScore(SPEC, { unit: 110, peers: [100, 100], margins: [0, 0], offsets: [0, 0] }), peerRankScore(SPEC, { unit: 110, peers: [100, 100] }));
+  assert.throws(() => peerRankScore(SPEC, { unit: 1, peers: [1, 2], margins: [0] }), /margins/);
+  // offsets and floors compose: peer 50 at offset +1.0 sits at 100; floor 0.15 puts 110 inside its band
+  assert.deepEqual(peerRankScore(SPEC, { unit: 110, peers: [50, 100], offsets: [1.0, 0], margins: [0.15, 0] }), { x: 0.5, peersScored: 2 });
+});

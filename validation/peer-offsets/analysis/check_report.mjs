@@ -1,0 +1,22 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+const HERE = dirname(fileURLToPath(import.meta.url)); const STUDY = join(HERE, '..');
+const RUN = 'run-20261003T135637Z';
+const report = readFileSync(join(STUDY, 'REPORT.md'), 'utf8');
+const J = JSON.parse(readFileSync(join(STUDY, 'results', RUN, 'results.json'), 'utf8'));
+let failed = 0; const check = (n, ok) => { if (!ok) { console.error(`FAIL ${n}`); failed++; } };
+const by = Object.fromEntries(J.results.map((r) => [r.cell, r]));
+const X = { 'R-off0': [0, 'PASS'], 'NG-g0.5': [0, 'reported'], 'EX-g0.5': [0, 'PASS'], 'EX-g2.0': [0, 'PASS'], 'EST-g0.5': [0, 'PASS'], 'EST-g0.5-n': [0.0029, 'PASS'], 'EST-g2.0-n': [0.3059, 'FAIL'], 'EST-g0.5-n-m0.10': [0, 'reported'], 'P-g0.5-r0.04': [0.964, 'FAIL'], 'P-g2.0-r0.04': [0.9996, 'reported'], 'Q-g0.5-r0.01': [0.0397, 'PASS'] };
+check('run pinned', report.includes(RUN) && J.R === 10000 && J.engine.sha.startsWith('4840da7') && J.engine.dirty.length === 0 && report.includes('`4840da7`'));
+check('cells in order', J.results.map((r) => r.cell).join() === Object.keys(X).join());
+for (const [c, [rb, v]] of Object.entries(X)) check(`${c}: ${rb} ${v}`, Math.abs(by[c].rollback - rb) < 5e-5 && by[c].verdict === v);
+check('EST-g2.0-n detail', by['EST-g2.0-n'].tick.median === 88 && by['EST-g2.0-n'].tick.q75 === 659 && Math.abs(by['EST-g2.0-n'].rollback_by_60 - 0.1273) < 5e-5 && report.includes('30.6%') && report.includes('after tick 659'));
+check('power detail', Math.abs(by['P-g0.5-r0.04'].rollback_by_60 - 0.9349) < 5e-5 && Math.abs(by['P-g0.5-r0.04'].proceed - 0.036) < 5e-5 && by['P-g0.5-r0.04'].tick.median === 16 && by['P-g0.5-r0.04'].tick.p90 === 40 && report.includes('0.9349'));
+check('Q detail', Math.abs(by['Q-g0.5-r0.01'].proceed - 0.9603) < 5e-5 && by['Q-g0.5-r0.01'].proceed_tick_median === 15 && report.includes('proceed 0.9603, median 15'));
+check('EST-g0.5-n ticks', by['EST-g0.5-n'].tick.median === 20 && by['EST-g0.5-n'].tick.q25 === 18 && by['EST-g0.5-n'].tick.q75 === 27);
+check('rep exact', by['R-off0'].rep_max_rel_diff === 0);
+check('endpoints', J.endpoints.E1 === 'PASS' && J.endpoints.E2 === 'FAIL' && J.endpoints.E3 === 'PASS' && J.endpoints.E4 === 'FAIL' && J.ship_rule === 'NOT MET' && report.includes('Ship rule NOT MET') && report.includes('ADR 0040 is REJECTED as registered'));
+for (const q of ['I registered "expected to roll back\nnearly always"; wrong', 'exceeded it six-fold']) check(`quotes ${q.slice(0, 30)}`, report.includes(q));
+if (failed) { console.error(`${failed} check(s) failed`); process.exit(1); }
+console.log('check_report: all checks passed');

@@ -1,0 +1,376 @@
+{
+  "study": "2026-10-designed-null-kinds",
+  "R": 10000,
+  "ALPHA": 0.05,
+  "BAR": 0.055622979637167475,
+  "SEED0": 20261003,
+  "engine": {
+    "version": "0.13.0-pre",
+    "sha": "5a67a3c55d0cda9b4d71e4a1256c54dac88ce81c",
+    "dirty": []
+  },
+  "node": "v25.9.0",
+  "generated": "2026-10-03T12:34:11.806Z",
+  "endpoints": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "PASS",
+    "E4": "PASS"
+  },
+  "ship_rule": "MET",
+  "results": [
+    {
+      "cell": "R0-rep",
+      "kind": "rate",
+      "params": {
+        "m": 0,
+        "psi": 1,
+        "het": false
+      },
+      "T": 60,
+      "R": 10000,
+      "fired": 0.0009,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": 54,
+        "q25": 48,
+        "q75": 57,
+        "p90": 59,
+        "min": 39,
+        "max": 59
+      },
+      "score_max_diff": 0,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "V-m0.2-ψ1",
+      "kind": "rate",
+      "params": {
+        "m": 0.2,
+        "psi": 1,
+        "het": false
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0,
+      "halts": 0,
+      "proceeds": 8431,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "V-m0.2-ψ1.1",
+      "kind": "rate",
+      "params": {
+        "m": 0.2,
+        "psi": 1.1,
+        "het": false
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0,
+      "halts": 0,
+      "proceeds": 476,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "V-m0.2-ψ1.2",
+      "kind": "rate",
+      "params": {
+        "m": 0.2,
+        "psi": 1.2,
+        "het": false
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0.0113,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": 180,
+        "q25": 134,
+        "q75": 236,
+        "p90": 283,
+        "min": 66,
+        "max": 300
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "H-m0.2-ψ1",
+      "kind": "rate",
+      "params": {
+        "m": 0.2,
+        "psi": 1,
+        "het": true
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0,
+      "halts": 0,
+      "proceeds": 9995,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "verdict": "reported"
+    },
+    {
+      "cell": "P-m0.2-ψ1.5",
+      "kind": "rate",
+      "params": {
+        "m": 0.2,
+        "psi": 1.5,
+        "het": false
+      },
+      "T": 60,
+      "R": 10000,
+      "fired": 0.2576,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": 52,
+        "q25": 47,
+        "q75": 57,
+        "p90": 59,
+        "min": 24,
+        "max": 60
+      },
+      "verdict": "reported"
+    },
+    {
+      "cell": "P-m0.2-ψ2.0",
+      "kind": "rate",
+      "params": {
+        "m": 0.2,
+        "psi": 2,
+        "het": false
+      },
+      "T": 60,
+      "R": 10000,
+      "fired": 0.9996,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": 32,
+        "q25": 28,
+        "q75": 35,
+        "p90": 39,
+        "min": 18,
+        "max": 60
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "P-m0.2-ψ3.0",
+      "kind": "rate",
+      "params": {
+        "m": 0.2,
+        "psi": 3,
+        "het": false
+      },
+      "T": 60,
+      "R": 10000,
+      "fired": 1,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": 19,
+        "q25": 18,
+        "q75": 21,
+        "p90": 22,
+        "min": 14,
+        "max": 27
+      },
+      "verdict": "reported"
+    },
+    {
+      "cell": "IV-ε0.002-f0",
+      "kind": "inv",
+      "params": {
+        "het": false,
+        "eps": 0.002,
+        "f": 0,
+        "lam": 10
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "IV-ε0.002-f0.001",
+      "kind": "inv",
+      "params": {
+        "het": false,
+        "eps": 0.002,
+        "f": 0.001,
+        "lam": 10
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "IV-ε0.002-f0.002",
+      "kind": "inv",
+      "params": {
+        "het": false,
+        "eps": 0.002,
+        "f": 0.002,
+        "lam": 10
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "IV-ε0.002-λ50",
+      "kind": "inv",
+      "params": {
+        "het": false,
+        "eps": 0.002,
+        "f": 0,
+        "lam": 50
+      },
+      "T": 300,
+      "R": 10000,
+      "fired": 0,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "verdict": "reported"
+    },
+    {
+      "cell": "IP-ε0.002-f0.005",
+      "kind": "inv",
+      "params": {
+        "het": false,
+        "eps": 0.002,
+        "f": 0.005,
+        "lam": 10
+      },
+      "T": 60,
+      "R": 10000,
+      "fired": 1,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": 9,
+        "q25": 9,
+        "q75": 10,
+        "p90": 10,
+        "min": 7,
+        "max": 13
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "IP-ε0.002-f0.01",
+      "kind": "inv",
+      "params": {
+        "het": false,
+        "eps": 0.002,
+        "f": 0.01,
+        "lam": 10
+      },
+      "T": 60,
+      "R": 10000,
+      "fired": 1,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": 6,
+        "q25": 6,
+        "q75": 7,
+        "p90": 7,
+        "min": 6,
+        "max": 8
+      },
+      "verdict": "reported"
+    },
+    {
+      "cell": "IP-ε0.002-f0.003",
+      "kind": "inv",
+      "params": {
+        "het": false,
+        "eps": 0.002,
+        "f": 0.003,
+        "lam": 10
+      },
+      "T": 60,
+      "R": 10000,
+      "fired": 1,
+      "halts": 0,
+      "proceeds": 0,
+      "tick": {
+        "median": 22,
+        "q25": 19,
+        "q75": 25,
+        "p90": 29,
+        "min": 11,
+        "max": 46
+      },
+      "verdict": "reported"
+    }
+  ]
+}

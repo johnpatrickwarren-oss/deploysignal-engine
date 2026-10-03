@@ -1,9 +1,14 @@
 # ADR 0038 — Designed-null kinds, part 1: a rollback margin for the twin's `rate` kind, and an invariant e-process
 
 - **Date:** 2026-10-03
-- **Status:** PROPOSED. Becomes ACCEPTED only if study `2026-10-designed-null-kinds` (T1, registered
-  beside this file before any implementation) meets its ship rule. Library only; no consumer
-  authority changes.
+- **Status:** ACCEPTED 2026-10-03 (library only; no consumer authority). Study
+  `2026-10-designed-null-kinds` (T1, registered beside this file before any implementation) run
+  `run-20261003T123340Z`: **ship rule MET** — rate margin m 0.2: false rollback 0.000 at ψ 1 and 1.1,
+  0.0113 at the boundary ψ 1.2 (bar 0.0556), ADR 0036 reproduced score for score at m 0, ×2 detected
+  0.9996 by tick 60 (median 32 against 26 unmargined), ×1.5 0.258 (against 0.934); invariant ε 0.002:
+  0.000 false fire at f 0, 0.001 and 0.002 and under five-fold boundary noise, 0.5% drops caught 1.000
+  at a median of 9 ticks. See `validation/designed-null-kinds/REPORT.md`, including Amendment 1 (the
+  invariant's ceiling, found before the harness) and the post-hoc no-proceed rerun.
 - **Register:** ADR 0036 (the randomized twin), ADR 0037 (the sign margin); DeploySignal
   `decisions/0001-twin-rollback-authority.md` (ACCEPTED 2026-10-03); knowledge
   `stats/twin-fault-shapes-2026-10-03` (the dropped-connection blind spot and the `no_response`

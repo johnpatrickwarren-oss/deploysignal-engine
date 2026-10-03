@@ -1,0 +1,39 @@
+{
+  "posthoc": true,
+  "note": "alphaProceed 1e-300; validity cells over the full 300 ticks; no verdict",
+  "BAR": 0.055622979637167475,
+  "results": [
+    {
+      "cell": "V-m0.2-ψ1",
+      "psi": 1,
+      "het": false,
+      "rollback": 0,
+      "ended_without_rollback": 10000,
+      "under_bar": true
+    },
+    {
+      "cell": "V-m0.2-ψ1.1",
+      "psi": 1.1,
+      "het": false,
+      "rollback": 0,
+      "ended_without_rollback": 10000,
+      "under_bar": true
+    },
+    {
+      "cell": "V-m0.2-ψ1.2",
+      "psi": 1.2,
+      "het": false,
+      "rollback": 0.0113,
+      "ended_without_rollback": 9887,
+      "under_bar": true
+    },
+    {
+      "cell": "H-m0.2-ψ1",
+      "psi": 1,
+      "het": true,
+      "rollback": 0,
+      "ended_without_rollback": 10000,
+      "under_bar": true
+    }
+  ]
+}

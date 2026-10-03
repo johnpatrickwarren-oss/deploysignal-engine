@@ -1,0 +1,180 @@
+{
+  "study": "2026-10-twin-rate-random-arrivals",
+  "T": 60,
+  "R": 10000,
+  "ALPHA": 0.05,
+  "BAR": 0.055622979637167475,
+  "TRAFFIC": 2440,
+  "P0": 0.005,
+  "PROCS": 4,
+  "SEED0": 20261003,
+  "engine": {
+    "version": "0.13.0-pre",
+    "sha": "ecb190102151054ba521aa9487b7bbeed3375379",
+    "dirty": []
+  },
+  "node": "v25.9.0",
+  "generated": "2026-10-03T04:52:42.313Z",
+  "endpoints": {
+    "E1": "PASS",
+    "E2": "PASS"
+  },
+  "results": [
+    {
+      "cell": "N-R",
+      "arrivals": "random",
+      "rho": 1,
+      "R": 10000,
+      "rollback_by_60": 0,
+      "undecided_at_60": 1,
+      "proceeds": 0,
+      "halts": 0,
+      "inconclusive": 10000,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "rollbacks_not_on_http_5xx_alone": 0,
+      "mean_events_per_tick": {
+        "canary": 6.107346666666666,
+        "control": 6.100935000000014
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "D-1.5",
+      "arrivals": "deterministic",
+      "rho": 1.5,
+      "R": 10000,
+      "rollback_by_60": 1,
+      "undecided_at_60": 0,
+      "proceeds": 0,
+      "halts": 0,
+      "inconclusive": 0,
+      "tick": {
+        "median": 40,
+        "q25": 40,
+        "q75": 41,
+        "p90": 41,
+        "p99": 42,
+        "min": 38,
+        "max": 43
+      },
+      "rollbacks_not_on_http_5xx_alone": 0,
+      "mean_events_per_tick": {
+        "canary": 9.128829821934188,
+        "control": 6.095892343269491
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "D-2.0",
+      "arrivals": "deterministic",
+      "rho": 2,
+      "R": 10000,
+      "rollback_by_60": 1,
+      "undecided_at_60": 0,
+      "proceeds": 0,
+      "halts": 0,
+      "inconclusive": 0,
+      "tick": {
+        "median": 25,
+        "q25": 25,
+        "q75": 26,
+        "p90": 26,
+        "p99": 26,
+        "min": 24,
+        "max": 26
+      },
+      "rollbacks_not_on_http_5xx_alone": 0,
+      "mean_events_per_tick": {
+        "canary": 12.139901358974432,
+        "control": 6.095477025641607
+      },
+      "verdict": "PASS"
+    },
+    {
+      "cell": "R-1.5",
+      "arrivals": "random",
+      "rho": 1.5,
+      "R": 10000,
+      "rollback_by_60": 0.9343,
+      "undecided_at_60": 0.0657,
+      "proceeds": 0,
+      "halts": 0,
+      "inconclusive": 657,
+      "tick": {
+        "median": 43,
+        "q25": 38,
+        "q75": 49,
+        "p90": 54,
+        "p99": 60,
+        "min": 21,
+        "max": 60
+      },
+      "rollbacks_not_on_http_5xx_alone": 0,
+      "mean_events_per_tick": {
+        "canary": 9.180509034873305,
+        "control": 6.043838082799636
+      },
+      "verdict": "reported"
+    },
+    {
+      "cell": "R-2.0",
+      "arrivals": "random",
+      "rho": 2,
+      "R": 10000,
+      "rollback_by_60": 1,
+      "undecided_at_60": 0,
+      "proceeds": 0,
+      "halts": 0,
+      "inconclusive": 0,
+      "tick": {
+        "median": 26,
+        "q25": 24,
+        "q75": 29,
+        "p90": 31,
+        "p99": 36,
+        "min": 17,
+        "max": 42
+      },
+      "rollbacks_not_on_http_5xx_alone": 0,
+      "mean_events_per_tick": {
+        "canary": 12.18187372181427,
+        "control": 6.058228812461864
+      },
+      "verdict": "reported"
+    },
+    {
+      "cell": "R-1.2",
+      "arrivals": "random",
+      "rho": 1.2,
+      "R": 10000,
+      "rollback_by_60": 0.0561,
+      "undecided_at_60": 0.9439,
+      "proceeds": 0,
+      "halts": 0,
+      "inconclusive": 9439,
+      "tick": {
+        "median": 54,
+        "q25": 49,
+        "q75": 58,
+        "p90": 59,
+        "p99": 60,
+        "min": 31,
+        "max": 60
+      },
+      "rollbacks_not_on_http_5xx_alone": 0,
+      "mean_events_per_tick": {
+        "canary": 7.3156359920621155,
+        "control": 6.094991337037276
+      },
+      "verdict": "reported"
+    }
+  ]
+}

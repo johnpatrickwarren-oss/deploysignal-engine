@@ -1,0 +1,278 @@
+{
+  "study": "2026-10-peer-offsets",
+  "R": 10000,
+  "ALPHA": 0.05,
+  "BAR": 0.055622979637167475,
+  "SEED0": 20261003,
+  "PRE": 576,
+  "engine": {
+    "version": "0.15.0-pre",
+    "sha": "4840da7b21ff4d93b466dfe800ad87432f00d8e3",
+    "dirty": []
+  },
+  "node": "v25.9.0",
+  "generated": "2026-10-03T14:00:22.776Z",
+  "endpoints": {
+    "E1": "PASS",
+    "E2": "FAIL",
+    "E3": "PASS",
+    "E4": "FAIL"
+  },
+  "ship_rule": "NOT MET",
+  "results": [
+    {
+      "cell": "R-off0",
+      "params": {
+        "g": 0,
+        "offsets": "zero",
+        "noise": false,
+        "m": 0.02,
+        "r": 0
+      },
+      "T": 300,
+      "R": 10000,
+      "rollback": 0,
+      "rollback_by_60": 0,
+      "proceed": 1,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null
+      },
+      "proceed_tick_median": 8,
+      "rep_max_rel_diff": 0,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "NG-g0.5",
+      "params": {
+        "g": 0.5,
+        "offsets": "none",
+        "noise": false,
+        "m": 0.02,
+        "r": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0,
+      "rollback_by_60": 0,
+      "proceed": 1,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null
+      },
+      "proceed_tick_median": 15,
+      "verdict": "reported"
+    },
+    {
+      "cell": "EX-g0.5",
+      "params": {
+        "g": 0.5,
+        "offsets": "exact",
+        "noise": false,
+        "m": 0.02,
+        "r": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0,
+      "rollback_by_60": 0,
+      "proceed": 1,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null
+      },
+      "proceed_tick_median": 8,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "EX-g2.0",
+      "params": {
+        "g": 2,
+        "offsets": "exact",
+        "noise": false,
+        "m": 0.02,
+        "r": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0,
+      "rollback_by_60": 0,
+      "proceed": 1,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null
+      },
+      "proceed_tick_median": 8,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "EST-g0.5",
+      "params": {
+        "g": 0.5,
+        "offsets": "est",
+        "noise": false,
+        "m": 0.02,
+        "r": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0,
+      "rollback_by_60": 0,
+      "proceed": 1,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null
+      },
+      "proceed_tick_median": 8,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "EST-g0.5-n",
+      "params": {
+        "g": 0.5,
+        "offsets": "est",
+        "noise": true,
+        "m": 0.02,
+        "r": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0.0029,
+      "rollback_by_60": 0.0029,
+      "proceed": 0.9971,
+      "tick": {
+        "median": 20,
+        "q25": 18,
+        "q75": 27,
+        "p90": 35
+      },
+      "proceed_tick_median": 10,
+      "verdict": "PASS"
+    },
+    {
+      "cell": "EST-g2.0-n",
+      "params": {
+        "g": 2,
+        "offsets": "est",
+        "noise": true,
+        "m": 0.02,
+        "r": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0.3059,
+      "rollback_by_60": 0.1273,
+      "proceed": 0.6941,
+      "tick": {
+        "median": 88,
+        "q25": 32,
+        "q75": 659,
+        "p90": 1201
+      },
+      "proceed_tick_median": 16,
+      "verdict": "FAIL"
+    },
+    {
+      "cell": "EST-g0.5-n-m0.10",
+      "params": {
+        "g": 0.5,
+        "offsets": "est",
+        "noise": true,
+        "m": 0.1,
+        "r": 0
+      },
+      "T": 2000,
+      "R": 10000,
+      "rollback": 0,
+      "rollback_by_60": 0,
+      "proceed": 1,
+      "tick": {
+        "median": null,
+        "q25": null,
+        "q75": null,
+        "p90": null
+      },
+      "proceed_tick_median": 7,
+      "verdict": "reported"
+    },
+    {
+      "cell": "P-g0.5-r0.04",
+      "params": {
+        "g": 0.5,
+        "offsets": "est",
+        "noise": true,
+        "m": 0.02,
+        "r": 0.04
+      },
+      "T": 300,
+      "R": 10000,
+      "rollback": 0.964,
+      "rollback_by_60": 0.9349,
+      "proceed": 0.036,
+      "tick": {
+        "median": 16,
+        "q25": 12,
+        "q75": 25,
+        "p90": 40
+      },
+      "proceed_tick_median": 20,
+      "verdict": "FAIL"
+    },
+    {
+      "cell": "P-g2.0-r0.04",
+      "params": {
+        "g": 2,
+        "offsets": "est",
+        "noise": true,
+        "m": 0.02,
+        "r": 0.04
+      },
+      "T": 300,
+      "R": 10000,
+      "rollback": 0.9996,
+      "rollback_by_60": 0.9324,
+      "proceed": 0.0004,
+      "tick": {
+        "median": 15,
+        "q25": 11,
+        "q75": 25,
+        "p90": 47
+      },
+      "proceed_tick_median": 20,
+      "verdict": "reported"
+    },
+    {
+      "cell": "Q-g0.5-r0.01",
+      "params": {
+        "g": 0.5,
+        "offsets": "est",
+        "noise": true,
+        "m": 0.02,
+        "r": 0.01
+      },
+      "T": 300,
+      "R": 10000,
+      "rollback": 0.0397,
+      "rollback_by_60": 0.0363,
+      "proceed": 0.9603,
+      "tick": {
+        "median": 26,
+        "q25": 18,
+        "q75": 40,
+        "p90": 59
+      },
+      "proceed_tick_median": 15,
+      "verdict": "PASS"
+    }
+  ]
+}

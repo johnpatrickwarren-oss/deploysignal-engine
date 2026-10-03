@@ -47,16 +47,17 @@ function tick(rng, cell, t, ar) {
 function replicate(cell, rng, repCheck) {
   const sp = spec(cell); let st = pr.initPeerRank(sp); const ar = new Array(cell.N).fill(0);
   let tst = repCheck ? twin.initTwinMetric() : null; const tsp = { id: 'sig', kind: 'sign', worse: 'higher', tolerance: 0.1, ...(cell.m > 0 ? { margin: { relative: cell.m } } : {}) };
-  let maxDiff = 0;
+  let maxDiff = 0, proceedTick = null;
   for (let t = 1; t <= cell.T; t++) {
     const v = tick(rng, cell, t, ar);
     const s = pr.stepPeerRank(sp, st, { unit: v[0], peers: v.slice(1) });
     if (repCheck) { tst = twin.updateTwinMetric(tsp, tst, { canary: v[0], control: v[1] }); const te = twin.twinMetricEvidence(tst); maxDiff = Math.max(maxDiff, Math.abs(s.rollbackE - te.rollbackE) / Math.max(1, te.rollbackE), Math.abs(s.proceedE - te.proceedE) / Math.max(1, te.proceedE)); }
     st = s.state;
-    if (s.fire) return { verdict: 'rollback', tick: t, maxDiff };
-    if (s.proceed) return { verdict: 'proceed', tick: t, maxDiff };
+    if (s.fire) return { verdict: 'rollback', tick: t, maxDiff, proceedTick };
+    // Amendment 1: V, M and S2-rep cells record the proceed and run the rollback bet to T
+    if (s.proceed && proceedTick === null) { proceedTick = t; if (cell.bar === 'power' || cell.bar === 'proceed') return { verdict: 'proceed', tick: t, maxDiff, proceedTick }; }
   }
-  return { verdict: 'extend', tick: null, maxDiff };
+  return { verdict: proceedTick !== null ? 'proceed' : 'extend', tick: null, maxDiff, proceedTick };
 }
 const q = (a, p) => a.length ? a[Math.min(a.length - 1, Math.floor(p * a.length))] : null;
 const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
@@ -66,8 +67,8 @@ const results = [];
 CELLS.forEach((cell, i) => {
   const rng = lcg(SEED0 + 7919 * i); const reps = []; let maxDiff = 0;
   for (let r = 0; r < R; r++) { const x = replicate(cell, rng, cell.bar === 'rep' && r === 0); reps.push(x); maxDiff = Math.max(maxDiff, x.maxDiff); }
-  const rb = reps.filter((x) => x.verdict === 'rollback'), pc = reps.filter((x) => x.verdict === 'proceed');
-  const ticks = rb.map((x) => x.tick).sort((a, b) => a - b), pticks = pc.map((x) => x.tick).sort((a, b) => a - b);
+  const rb = reps.filter((x) => x.verdict === 'rollback'), pc = reps.filter((x) => x.verdict === 'proceed'); // V/M/rep: ended at T with a proceed recorded and no rollback
+  const ticks = rb.map((x) => x.tick).sort((a, b) => a - b), pticks = reps.filter((x) => x.proceedTick !== null).map((x) => x.proceedTick).sort((a, b) => a - b);
   const rb60 = rb.filter((x) => x.tick <= 60).length / R;
   const res = { cell: cell.id, N: cell.N, m: cell.m, d: cell.d, r: cell.r, T: cell.T, R, rollback: rb.length / R, rollback_by_60: rb60, proceed: pc.length / R,
     tick: { median: q(ticks, 0.5), q25: q(ticks, 0.25), q75: q(ticks, 0.75), p90: q(ticks, 0.9) }, proceed_tick_median: q(pticks, 0.5), rep_max_rel_diff: cell.bar === 'rep' ? maxDiff : undefined };

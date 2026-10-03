@@ -1,0 +1,23 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+const HERE = dirname(fileURLToPath(import.meta.url)); const STUDY = join(HERE, '..');
+const RUN = 'run-20261003T140600Z';
+const report = readFileSync(join(STUDY, 'REPORT.md'), 'utf8');
+const J = JSON.parse(readFileSync(join(STUDY, 'results', RUN, 'results.json'), 'utf8'));
+let failed = 0; const check = (n, ok) => { if (!ok) { console.error(`FAIL ${n}`); failed++; } };
+const by = Object.fromEntries(J.results.map((r) => [r.cell, r]));
+const X = { 'R-zero': [0, null, 'PASS'], 'F-g0.5': [0, null, 'PASS'], 'F-g0.5-n': [0, null, 'PASS'], 'F-g2.0-n': [0, null, 'PASS'], 'F-g2.0-n-q0.75': [0, null, 'reported'], 'P-g0.5-n-r0.20': [1, 10, 'PASS'], 'P-g2.0-n-r0.30': [1, 21, 'PASS'], 'P-g0.5-n-r0.10': [1, 21, 'reported'], 'Q-g0.5-n-r0.02': [0, null, 'PASS'] };
+check('run pinned', report.includes(RUN) && J.R === 10000 && J.engine.sha.startsWith('7d3f578') && J.engine.dirty.length === 0 && report.includes('`7d3f578`'));
+check('cells in order', J.results.map((r) => r.cell).join() === Object.keys(X).join());
+for (const [c, [rb, med, v]] of Object.entries(X)) check(`${c}`, Math.abs(by[c].rollback - rb) < 5e-5 && by[c].tick.median === med && by[c].verdict === v);
+const fl = (c, i) => Math.round(by[c].realized_floor_median[i] * 1000) / 1000;
+check('floors', fl('F-g0.5', 1) === 0.088 && fl('F-g0.5-n', 1) === 0.15 && fl('F-g2.0-n', 1) === 1.049 && fl('F-g2.0-n-q0.75', 1) === 0.677 && fl('P-g2.0-n-r0.30', 1) === 1.052 && report.includes('0.041 / 1.049 / 0.059') && report.includes('0.028 / 0.677 / 0.039'));
+check('near-floor power 0.9569', Math.abs(by['P-g0.5-n-r0.10'].rollback_by_60 - 0.9569) < 5e-5 && by['P-g0.5-n-r0.10'].tick.q25 === 16 && by['P-g0.5-n-r0.10'].tick.q75 === 29 && report.includes('0.957 by tick 60'));
+check('P ticks', by['P-g0.5-n-r0.20'].tick.p90 === 14 && by['P-g0.5-n-r0.20'].tick.q25 === 9 && by['P-g2.0-n-r0.30'].tick.q75 === 21);
+check('Q proceed 1.0 median 7', by['Q-g0.5-n-r0.02'].proceed === 1 && by['Q-g0.5-n-r0.02'].proceed_tick_median === 7 && report.includes('proceed 1.0000, median 7'));
+check('rep exact', by['R-zero'].rep_max_rel_diff === 0);
+check('endpoints', ['E1', 'E2', 'E3', 'E4'].every((e) => J.endpoints[e] === 'PASS') && J.ship_rule === 'MET' && report.includes('Ship rule MET') && report.includes('ADR 0041 ACCEPTED'));
+for (const q of ['scaled the\n  second peer to zero', 'band of ±105%', 'The prediction mis-modelled the wander']) check(`quotes ${q.slice(0, 25)}`, report.includes(q));
+if (failed) { console.error(`${failed} check(s) failed`); process.exit(1); }
+console.log('check_report: all checks passed');

@@ -1,8 +1,14 @@
 # ADR 0041 — Designed-null kinds, part 3b: declared per-peer offsets with a margin floor from the pre-window's own spread
 
 - **Date:** 2026-10-03
-- **Status:** PROPOSED. ACCEPTED only if study `2026-10-peer-offsets-2` (T1, registered beside this file
-  before implementation) meets its ship rule. Supersedes ADR 0040 (REJECTED as registered: a fixed 2%
+- **Status:** ACCEPTED 2026-10-03 (library only). Study `2026-10-peer-offsets-2` run `run-20261003T140600Z`
+  (Amendment 1 before run 0 corrected the inherited generator's degenerate peer and re-sized the power
+  cells): **ship rule MET** — 0.000 false rollback over 2,000 ticks with offsets and floors from a
+  576-tick pre-window at 1.5× and 3× gaps, with and without a ±10% gap wander; ADR 0039 reproduced
+  wealth for wealth at zero; power 1.000 by tick 60 at Δ 0.20 and 0.30 above the gaps, 0.957 near the
+  floor; sub-floor proceed 1.000. The floor is the price: a peer whose gap wanders widely in the
+  pre-window gets a band as wide as the wander (1.05 for the peer below a 3× gap under this generator)
+  and contributes nothing. See `validation/peer-offsets-2/REPORT.md`. Supersedes ADR 0040 (REJECTED as registered: a fixed 2%
   margin did not cover a ±10% wander of a 3× gap, 0.3059 false rollback).
 - **Register:** ADR 0039, ADR 0040 and `validation/peer-offsets/REPORT.md`; DeploySignal
   `2026-10-peer-rank-gwdg` (26 of 44); the companion `2026-10-peer-offsets-gwdg` (T3, registered separately).

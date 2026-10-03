@@ -1,9 +1,15 @@
 # ADR 0040 — Designed-null kinds, part 3: declared per-peer offsets on the rank-among-peers kind (difference-in-differences)
 
 - **Date:** 2026-10-03
-- **Status:** PROPOSED. ACCEPTED only if study `2026-10-peer-offsets` (T1, registered beside this file
-  before implementation) meets its ship rule. The real-telemetry companion is DeploySignal
-  `2026-10-peer-offsets-gwdg` (T3 replay), registered separately, no authority.
+- **Status:** REJECTED 2026-10-03 as registered. Study `2026-10-peer-offsets` run `run-20261003T135637Z`:
+  **ship rule NOT MET** — exact offsets hold (0.000 over 2,000 ticks at 1.5× and 3× gaps), estimated
+  offsets hold without wander (0.000) and under a ±10% wander of a 1.5× gap (0.0029), but cell
+  EST-g2.0-n rolled back 0.3059 (bar 0.0556) and power at Δ 0.04 was 0.9349 by tick 60 against 0.95.
+  **Corrected the same day:** the failing cell's second peer was scaled by 1 + (−g/2) = 0 at g = 2.0, a
+  degenerate peer whose estimated offset is garbage; the registered generator, not the gap's wander, is
+  the measured reason (`validation/peer-offsets/REPORT.md`, Correction). The rejection stands as
+  computed. Superseded by ADR 0041 (a per-peer margin floor from the pre-window's spread, with the
+  generator corrected). The `offsets` field stays unreleased until ADR 0041's study rules.
 - **Register:** ADR 0039; DeploySignal study `2026-10-peer-offsets-gwdg`'s predecessor
   `2026-10-peer-rank-gwdg` (26 of 44 healthy GPU windows rolled back against node-mates: two working,
   two idle, a two-fold spread no margin up to 100% absorbs); the 2026-10-03 design note (John): remove

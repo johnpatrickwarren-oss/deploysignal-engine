@@ -4,6 +4,23 @@
 
 (nothing yet)
 
+## v0.16.0-pre — 2026-10-03 — designed-null kinds, part 3: per-peer offsets and margin floors on the rank kind (ADRs 0040, 0041)
+
+- **`PeerRankObservation.offsets`** (ADR 0040) and **`.margins`** (ADR 0041): one relative offset and one
+  relative margin floor per peer, declared by the caller from a pre-change window in which unit and
+  peers ran concurrently (offset = median of unit/peer − 1; floor = a declared quantile of its absolute
+  deviation). Peer j's reference becomes `peer_j · (1 + offsets[j])`; the band uses
+  `max(spec.margin.relative, margins[j])`. Absent or zero is ADR 0039. An unusable offset drops the peer
+  for the tick. The engine estimates nothing; the premise the consumer states is "the gap after the
+  change lies within the range it occupied before, up to the declared quantile".
+- **ADR 0040 REJECTED as registered** (study `2026-10-peer-offsets`: a cell whose registered gaps scaled
+  a peer to zero rolled back 0.3059; the report carries the correction that the generator, not the
+  gap's wander, was the reason). **ADR 0041 ACCEPTED** (study `2026-10-peer-offsets-2`, ship rule MET;
+  see its status line). `offsets` ships under ADR 0041's rule.
+- Why: DeploySignal `2026-10-peer-rank-gwdg` — 26 of 44 healthy GPU windows rolled back against
+  node-mates whose workloads differ two-fold; the companion `2026-10-peer-offsets-gwdg` replays the same
+  windows with offsets and floors from each GPU's 96-hour pre-window.
+
 ## v0.15.0-pre — 2026-10-03 — designed-null kinds, part 2: the rank-among-peers kind (ADR 0039)
 
 - **`detectors/peer-rank.ts`.** `PeerRankSpec { id, worse, tolerance, margin?, alpha }`, `initPeerRank`,

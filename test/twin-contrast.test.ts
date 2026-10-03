@@ -286,7 +286,7 @@ test('ADR 0037: with a margin a tick is worse only beyond the band; inside the b
 test('ADR 0037: margin validation — sign only, at least one component, finite and non-negative', () => {
   assert.doesNotThrow(() => checkTwinMetricSpec(LAT_M));
   assert.doesNotThrow(() => checkTwinMetricSpec({ ...LAT, margin: { absolute: 0 } }));
-  assert.throws(() => checkTwinMetricSpec({ ...ERR, margin: { relative: 0.1 } }), /sign kind only/);
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, margin: { absolute: 1 } }), /relative only/); // ADR 0038: a rate margin exists, relative only
   assert.throws(() => checkTwinMetricSpec({ ...LAT, margin: {} }), /relative or absolute/);
   assert.throws(() => checkTwinMetricSpec({ ...LAT, margin: { relative: -0.1 } }), RangeError);
   assert.throws(() => checkTwinMetricSpec({ ...LAT, margin: { absolute: Number.NaN } }), RangeError);
@@ -332,4 +332,52 @@ test('ADR 0037: the sign envelope names the T3 measurement and the margin premis
   assert.match(TWIN_SIGN_ENVELOPE.notes ?? '', /0\.2727/);
   assert.match(TWIN_SIGN_ENVELOPE.notes ?? '', /ADR 0037/);
   assert.match(TWIN_SIGN_ENVELOPE.notes ?? '', /larger than the margin/);
+});
+
+// ── ADR 0038: a rollback margin for the rate kind ───────────────────────────────────────────────
+
+test('ADR 0038: a rate margin is relative only, in [0, tolerance)', () => {
+  checkTwinMetricSpec({ ...ERR, margin: { relative: 0.2 } });
+  checkTwinMetricSpec({ ...ERR, margin: { relative: 0 } });
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, margin: { relative: 0.5 } }), /\[0, tolerance 0\.5\)/);
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, margin: { relative: -0.1 } }), /\[0, tolerance/);
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, margin: { absolute: 1 } }), /relative only/);
+  assert.throws(() => checkTwinMetricSpec({ ...ERR, margin: { relative: 0.1, absolute: 1 } }), /relative only/);
+});
+
+test('ADR 0038: m = 0 reproduces ADR 0036 score for score (closed-form traffic share)', () => {
+  const obs = { canaryEvents: 7, canaryTotal: 1200, controlEvents: 6, controlTotal: 1240 };
+  const a = twinScore(ERR, obs) as { x: number; rollbackNull: number; proceedNull: number };
+  const b = twinScore({ ...ERR, margin: { relative: 0 } }, obs) as typeof a;
+  assert.equal(a.rollbackNull, b.rollbackNull);
+  assert.equal(a.proceedNull, b.proceedNull);
+  assert.equal(a.x, b.x);
+});
+
+test('ADR 0038: with m > 0 the rollback null is the Fisher noncentral mean at ψ = 1 + m, between the traffic share and the proceed null', () => {
+  const obs = { canaryEvents: 9, canaryTotal: 1200, controlEvents: 6, controlTotal: 1240 };
+  const s = twinScore({ ...ERR, margin: { relative: 0.2 } }, obs) as { x: number; rollbackNull: number; proceedNull: number };
+  const share = 1200 / 2440;
+  const expected = fisherNoncentralMean(1200, 1240, 15, 1.2) / 15;
+  assert.ok(Math.abs(s.rollbackNull - expected) < 1e-12);
+  assert.ok(share < s.rollbackNull && s.rollbackNull < s.proceedNull, `${share} ${s.rollbackNull} ${s.proceedNull}`);
+});
+
+test('ADR 0038: rate H0 at a persistent excess equal to the margin (ψ = 1.2, m = 0.2): false rollback within the Ville bound', () => {
+  const spec: TwinMetricSpec = { ...ERR, margin: { relative: 0.2 } };
+  const rng = lcg(20261003);
+  const R = 400, T = 300, alpha = 0.05;
+  const oddsShift = (p: number, psi: number) => (psi * p) / (1 - p + psi * p);
+  const pc = oddsShift(0.005, 1.2), pk = 0.005;
+  let fired = 0;
+  for (let r = 0; r < R; r++) {
+    let st = initTwinMetric();
+    for (let t = 0; t < T; t++) {
+      const nc = poisson(rng, 1220), nk = poisson(rng, 1220);
+      const obs = { canaryEvents: Math.min(nc, poisson(rng, nc * pc)), canaryTotal: nc, controlEvents: Math.min(nk, poisson(rng, nk * pk)), controlTotal: nk };
+      st = updateTwinMetric(spec, st, obs);
+      if (twinMetricEvidence(st).rollbackE >= 1 / alpha) { fired++; break; }
+    }
+  }
+  assert.ok(fired / R <= alpha + 2.58 * Math.sqrt((alpha * (1 - alpha)) / R), `false rollback ${fired}/${R}`);
 });

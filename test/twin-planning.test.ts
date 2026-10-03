@@ -49,3 +49,13 @@ test('inputs out of range throw', () => {
   assert.throws(() => ticksToDetect({ kind: 'sign', excessProbability: 0.6, tieRate: 0, alpha: 0.05 }), RangeError);
   assert.throws(() => ticksToDetect({ kind: 'rate', canaryShare: 0, oddsRatio: 2, badEventsPerTick: 20, alpha: 0.05 }), RangeError);
 });
+
+test('ADR 0038: marginOddsRatio moves the null share; 1 reproduces ADR 0036; it must lie in [1, oddsRatio)', async () => {
+  const { ticksToDetect } = await import('../per-shard/twin-planning');
+  const base = { kind: 'rate' as const, canaryShare: 0.5, oddsRatio: 2, badEventsPerTick: 12.2, alpha: 0.025 };
+  assert.equal(ticksToDetect(base), ticksToDetect({ ...base, marginOddsRatio: 1 }));
+  assert.ok(ticksToDetect({ ...base, marginOddsRatio: 1.2 }) > ticksToDetect(base));
+  assert.equal(ticksToDetect({ ...base, marginOddsRatio: 2 }), Infinity); // no effect beyond the margin
+  assert.throws(() => ticksToDetect({ ...base, marginOddsRatio: 2.5 }), /marginOddsRatio/);
+  assert.throws(() => ticksToDetect({ ...base, marginOddsRatio: 0.9 }), /marginOddsRatio/);
+});

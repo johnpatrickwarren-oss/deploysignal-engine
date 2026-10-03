@@ -95,3 +95,15 @@ no bar moves.
 A real load balancer's in-flight distribution; unequal weights; missingness; the margin's
 interaction with Bonferroni beside other metrics; an absolute margin for rates (refused by
 construction); the peer-rank and two-sample kinds (later ADRs); any real service.
+
+## Amendment 1 — 2026-10-03, before run 0 (the invariant's range)
+
+Found at the first unit test, before the harness existed: with the paired bet's range `[0, 1]` the
+GRAPA shrinkage pseudo-observation (second moment `((hi − lo)/4)² = 1/16`) swamps observations of
+order 1e-3, so the invariant fired in 0 of 200 runs at f = 0.005 (2.5× the tolerance) inside 60
+ticks. The construction gains a declared `ceiling` c ∈ (tolerance, 1], default min(1, 10 ·
+tolerance), and scores x = min(c, max(0, (total − accounted)/total)) with `hi = c`. Clamping down
+preserves H0 (E[min(x, c)] ≤ E[x] ≤ tolerance), so the validity cells' reading is unchanged; the
+power cells now read the construction as it will ship. §2's cells, bars and predictions are
+unchanged; the default ceiling (0.02 at ε = 0.002) is what they run with. ADR 0038 §2 amended to
+match.

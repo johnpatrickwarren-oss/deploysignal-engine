@@ -52,13 +52,16 @@ export interface TwinMetricSpec {
    *  rate: excess odds ratio ρ in (0, 10] (0.2 = 20% more bad events per request).
    *  sign: excess probability τ in (0, 0.5) that the canary's tick is worse (0.1 = 60% of ticks). */
   tolerance: number;
-  /** ADR 0037, sign only. A tick scores "canary worse" only when the canary exceeds the control by
+  /** ADR 0037 (sign) and ADR 0038 (rate). A tick scores "canary worse" only when the canary exceeds the control by
    *  MORE than this margin in the worse direction: worse 'higher' → canary > control · (1 + relative)
    *  + absolute; worse 'lower' → canary < control · (1 − relative) − absolute. At least one of the
    *  two when present; relative ≥ 0, absolute ≥ 0 in the metric's unit. A tick inside the band
    *  scores 0 (not a tie): that one-sidedness is what absorbs a persistent arm-level offset smaller
    *  than the margin (ADR 0037, "Rejected"). Absent = ADR 0036's scoring, which the real-service
-   *  A/A (DeploySignal 2026-10-twin-aa-real) measured at 0.2727 false rollback on p99 latency. */
+   *  A/A (DeploySignal 2026-10-twin-aa-real) measured at 0.2727 false rollback on p99 latency.
+   *  rate (ADR 0038): `relative` only, an excess odds ratio m in [0, tolerance): the rollback null
+   *  becomes ψ ≤ 1 + m, with the per-tick null mean the Fisher noncentral mean at ψ = 1 + m over
+   *  the tick's bad-event total (the proceed side's function at a different ψ). m = 0 is ADR 0036. */
   margin?: { relative?: number; absolute?: number };
 }
 
@@ -96,8 +99,15 @@ export function checkTwinMetricSpec(spec: TwinMetricSpec): void {
     throw new RangeError(`twin-contrast: ${spec.id}: a sign tolerance is an excess probability in (0, 0.5), got ${spec.tolerance}`);
   }
   if (spec.margin !== undefined) {
-    if (spec.kind !== 'sign') throw new RangeError(`twin-contrast: ${spec.id}: margin applies to the sign kind only (ADR 0037)`);
     const { relative, absolute } = spec.margin;
+    if (spec.kind === 'rate') {
+      // ADR 0038: a rate margin is a relative excess odds ratio below the proceed tolerance.
+      if (absolute !== undefined) throw new RangeError(`twin-contrast: ${spec.id}: a rate margin is relative only (an excess odds ratio); absolute is refused (ADR 0038)`);
+      if (!(Number.isFinite(relative) && (relative as number) >= 0 && (relative as number) < spec.tolerance)) {
+        throw new RangeError(`twin-contrast: ${spec.id}: a rate margin.relative is an excess odds ratio in [0, tolerance ${spec.tolerance}), got ${relative}`);
+      }
+      return;
+    }
     if (relative === undefined && absolute === undefined) throw new RangeError(`twin-contrast: ${spec.id}: margin needs relative or absolute`);
     if (relative !== undefined && !(Number.isFinite(relative) && relative >= 0)) throw new RangeError(`twin-contrast: ${spec.id}: margin.relative must be a finite number >= 0, got ${relative}`);
     if (absolute !== undefined && !(Number.isFinite(absolute) && absolute >= 0)) throw new RangeError(`twin-contrast: ${spec.id}: margin.absolute must be a finite number >= 0, got ${absolute}`);
@@ -156,9 +166,13 @@ export function twinScore(spec: TwinMetricSpec, obs: TwinObservation): TwinScore
     const e = bc + bk;
     if (e === 0) return 'skip';
     if (Math.max(0, e - controlTotal) === Math.min(e, canaryTotal)) return 'skip';
+    // ADR 0038: with a rate margin m the rollback null is ψ ≤ 1 + m; its per-tick mean is the Fisher
+    // noncentral mean at ψ = 1 + m, increasing in ψ, so it bounds E[X] for every ψ ≤ 1 + m. At m = 0
+    // it is the traffic share (ADR 0036) — kept as the closed form so m = 0 reproduces it exactly.
+    const m = spec.margin?.relative ?? 0;
     return {
       x: bc / e,
-      rollbackNull: canaryTotal / (canaryTotal + controlTotal),
+      rollbackNull: m > 0 ? fisherNoncentralMean(canaryTotal, controlTotal, e, 1 + m) / e : canaryTotal / (canaryTotal + controlTotal),
       proceedNull: fisherNoncentralMean(canaryTotal, controlTotal, e, 1 + spec.tolerance) / e,
     };
   }

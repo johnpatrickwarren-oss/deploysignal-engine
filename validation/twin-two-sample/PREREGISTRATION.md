@@ -57,3 +57,26 @@ P1: E1 holds, 0.00–0.03 everywhere; V-d0.018 highest. P2: ≥ 0.95. P3: holds;
 
 More than two coordinates; a change in one coordinate's distribution shape with mean and variance
 held; unequal weights; the gate's missingness penalty; any real data (the companion replay).
+
+## Amendment 1 — 2026-10-03, before run 0 (two power devices found at the unit tests; no bar moves)
+
+At the unit tests, before the harness existed, the construction as registered had almost no power: with
+the standardization taken from the whole past, the shared seasonal level dominates both arms' vectors and
+the witness sees position in the season, not arm structure; and the raw kernel payoff F_t is of order
+0.03, so the bet at λ ≤ ½ grows by about 1.5% per tick (perfect correlation against independence: 0 of
+50 by tick 300). Two changes, both predictable (computed from the past only) and applied identically to
+both arms, so the null is untouched:
+
+- **Local level and scale** (`localWindow`, default 20 pairs): each coordinate is centred and scaled by
+  the recent pooled past rather than the whole past, removing the shared slow drift.
+- **Running-max normalization** of the payoff by the maximum of past |F| once ten ticks are in, as the
+  canonical Shekhar–Ramdas construction does (`_family-c-betting-witness.ts` comment, lines 57–92 of
+  the reference), then clamped to [−1, 1].
+
+With both, on a probe generator (not the study's): perfect correlation against independence fires in
+100 of 100 by tick 300 (median 124), variance ×2 in 59 of 100, a 3σ mean shift in 100 of 100 (median
+23), and the null fires 1 of 100 over 2,000 ticks. The probe also showed what the coordinate-wise margin
+costs a pattern test: a 2% band on a level of 100 with noise σ 1 collapses most pairs, and correlation
+power drops from 100 to 92 with the median tick from 124 to 186. The registered cells and bars stand;
+two **reported** cells are added, `P-rho0.8-m0` and `P-var2-m0` (the same effects with no margin), so the
+margin's price on patterns is measured rather than inferred.
